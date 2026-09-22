@@ -1,0 +1,27 @@
+{
+	"name": "@sylphx/cli-darwin-arm64",
+	"version": "0.24.0-rc.1",
+	"description": "The sylphx CLI binary for darwin arm64 (aarch64-apple-darwin). Install @sylphx/cli instead.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SylphxAI/sylphx-cli.git"
+	},
+	"homepage": "https://sylphx.com/docs",
+	"os": [
+		"darwin"
+	],
+	"cpu": [
+		"arm64"
+	],
+	"files": [
+		"bin/sylphx"
+	],
+	"publishConfig": {
+		"access": "public",
+		"tag": "next"
+	},
+	"sylphx": {
+		"target": "aarch64-apple-darwin"
+	}
+}

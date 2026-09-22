@@ -3,7 +3,7 @@
 # and must build from their own lock graph, apart from the platform workspace.
 [workspace]
 resolver = "2"
-members = ["rust"]
+members = ["rust", "mcp", "cli"]
 
 [workspace.package]
 edition = "2021"

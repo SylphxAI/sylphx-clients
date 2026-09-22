@@ -123,6 +123,7 @@
               "method": "access.orgs.create",
               "permission": "access:admin",
               "positional": null,
+              "resource_field": "org",
               "summary": "Creates an org. Access assigns the id.",
               "verb": "create"
             },
@@ -178,6 +179,7 @@
                 "field": "org.name",
                 "pattern": "orgs/{org}"
               },
+              "resource_field": "org",
               "sends_etag": true,
               "summary": "Updates an org.",
               "update_mask": "from-flags",
@@ -283,6 +285,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists projects in an org.",
@@ -291,6 +294,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "project.meta.labels",
                   "flag": "--meta.labels",
@@ -328,12 +339,8 @@
               "http": "POST /v1/{parent=orgs/*}/projects",
               "method": "access.projects.create",
               "permission": "access:admin",
-              "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}"
-              },
+              "positional": null,
+              "resource_field": "project",
               "summary": "Creates a project. Access assigns the id.",
               "verb": "create"
             },
@@ -383,6 +390,7 @@
                 "field": "project.name",
                 "pattern": "orgs/{org}/projects/{project}"
               },
+              "resource_field": "project",
               "sends_etag": true,
               "summary": "Updates a project.",
               "update_mask": "from-flags",
@@ -484,6 +492,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists environments in a project.",
@@ -492,6 +501,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "environment.meta.labels",
                   "flag": "--meta.labels",
@@ -540,12 +557,8 @@
               "http": "POST /v1/{parent=orgs/*/projects/*}/envs",
               "method": "access.envs.create",
               "permission": "access:admin",
-              "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}"
-              },
+              "positional": null,
+              "resource_field": "environment",
               "summary": "Creates an environment. Access assigns the id.",
               "verb": "create"
             },
@@ -595,6 +608,7 @@
                 "field": "environment.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
+              "resource_field": "environment",
               "sends_etag": true,
               "summary": "Updates an environment.",
               "update_mask": "from-flags",
@@ -696,6 +710,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists API keys in an environment.",
@@ -704,6 +719,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "api_key.meta.labels",
                   "flag": "--meta.labels",
@@ -765,12 +788,8 @@
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/api_keys",
               "method": "access.api_keys.create",
               "permission": "access:keys:write",
-              "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
-              },
+              "positional": null,
+              "resource_field": "api_key",
               "summary": "Creates an API key. Access assigns the id.",
               "verb": "create"
             },
@@ -819,6 +838,7 @@
                 "field": "api_key.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/api_keys/{api_key}"
               },
+              "resource_field": "api_key",
               "sends_etag": true,
               "summary": "Updates an API key.",
               "update_mask": "from-flags",
@@ -1065,6 +1085,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists a project's artifacts; filter by `digest`, `kind`, or `subject`.",
@@ -1073,6 +1094,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "artifact.meta.labels",
                   "flag": "--meta.labels",
@@ -1152,12 +1181,6 @@
                   ]
                 },
                 {
-                  "field": "artifact_id",
-                  "flag": "--artifact-id",
-                  "summary": "The id of the new artifact, the digest with `-` for `:`; the server derives it from `digest` when empty; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -1168,11 +1191,12 @@
               "method": "artifacts.artifacts.create",
               "permission": "artifacts:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}"
+                "arg": "ID",
+                "field": "artifact_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "artifact",
               "summary": "Registers an artifact whose bytes were pushed by digest; verification runs after.",
               "verb": "create"
             },
@@ -1402,6 +1426,7 @@
                 "field": "auth_config.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/auth_configs/{auth_config}"
               },
+              "resource_field": "auth_config",
               "sends_etag": true,
               "summary": "Updates an auth config.",
               "update_mask": "from-flags",
@@ -1465,6 +1490,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists end users.",
@@ -1474,9 +1500,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "end_user_id",
-                  "flag": "--end-user-id",
-                  "summary": "The end user id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -1535,11 +1563,12 @@
               "method": "auth.end_users.create",
               "permission": "auth:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "end_user_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "end_user",
               "summary": "Creates an end user.",
               "verb": "create"
             },
@@ -1607,6 +1636,7 @@
                 "field": "end_user.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/end_users/{end_user}"
               },
+              "resource_field": "end_user",
               "sends_etag": true,
               "summary": "Updates an end user.",
               "update_mask": "from-flags",
@@ -1787,6 +1817,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/end_users/{end_user}"
               },
               "summary": "Lists sessions.",
@@ -1869,6 +1900,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists customer organizations.",
@@ -1878,9 +1910,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "customer_organization_id",
-                  "flag": "--customer-organization-id",
-                  "summary": "The customer organization id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -1926,11 +1960,12 @@
               "method": "auth.customer_organizations.create",
               "permission": "auth:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "customer_organization_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "customer_organization",
               "summary": "Creates a customer organization.",
               "verb": "create"
             },
@@ -1991,6 +2026,7 @@
                 "field": "customer_organization.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}"
               },
+              "resource_field": "customer_organization",
               "sends_etag": true,
               "summary": "Updates a customer organization.",
               "update_mask": "from-flags",
@@ -2098,6 +2134,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}"
               },
               "summary": "Lists memberships.",
@@ -2107,9 +2144,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "membership_id",
-                  "flag": "--membership-id",
-                  "summary": "The membership id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -2157,11 +2196,12 @@
               "method": "auth.memberships.create",
               "permission": "auth:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}"
+                "arg": "ID",
+                "field": "membership_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "membership",
               "summary": "Creates a membership.",
               "verb": "create"
             },
@@ -2211,6 +2251,7 @@
                 "field": "membership.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}/memberships/{membership}"
               },
+              "resource_field": "membership",
               "sends_etag": true,
               "summary": "Updates a membership.",
               "update_mask": "from-flags",
@@ -2312,6 +2353,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists OAuth clients.",
@@ -2321,9 +2363,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "oauth_client_id",
-                  "flag": "--oauth-client-id",
-                  "summary": "The OAuth client id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -2432,11 +2476,12 @@
               "method": "auth.oauth_clients.create",
               "permission": "auth:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "oauth_client_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "oauth_client",
               "summary": "Creates an OAuth client.",
               "verb": "create"
             },
@@ -2549,6 +2594,7 @@
                 "field": "oauth_client.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/oauth_clients/{oauth_client}"
               },
+              "resource_field": "oauth_client",
               "sends_etag": true,
               "summary": "Updates an OAuth client.",
               "update_mask": "from-flags",
@@ -2808,6 +2854,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's billing accounts: exactly one, `default`.",
@@ -2885,6 +2932,7 @@
                 "field": "billing_account.name",
                 "pattern": "orgs/{org}/billing_accounts/{billing_account}"
               },
+              "resource_field": "billing_account",
               "sends_etag": true,
               "summary": "Updates a billing account: changes plan, spend limit, or billing email.",
               "update_mask": "from-flags",
@@ -2948,6 +2996,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's invoices.",
@@ -3011,6 +3060,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's usage reports, one per billing period.",
@@ -3143,6 +3193,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's budget leases.",
@@ -3214,6 +3265,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's trust policies.",
@@ -3222,6 +3274,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "trust_policy.meta.labels",
                   "flag": "--meta.labels",
@@ -3290,12 +3350,6 @@
                   "type": "duration"
                 },
                 {
-                  "field": "trust_policy_id",
-                  "flag": "--trust-policy-id",
-                  "summary": "The id of the new trust policy, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -3306,11 +3360,12 @@
               "method": "broker.trust_policies.create",
               "permission": "broker:admin",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}"
+                "arg": "ID",
+                "field": "trust_policy_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "trust_policy",
               "summary": "Creates a trust policy.",
               "verb": "create"
             },
@@ -3400,6 +3455,7 @@
                 "field": "trust_policy.name",
                 "pattern": "orgs/{org}/trust_policies/{trust_policy}"
               },
+              "resource_field": "trust_policy",
               "sends_etag": true,
               "summary": "Updates a trust policy.",
               "update_mask": "from-flags",
@@ -3547,6 +3603,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists builds in a project.",
@@ -3555,6 +3612,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "build.meta.labels",
                   "flag": "--meta.labels",
@@ -3627,12 +3692,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "build_id",
-                  "flag": "--build-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -3643,11 +3702,12 @@
               "method": "build.builds.create",
               "permission": "build:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}"
+                "arg": "ID",
+                "field": "build_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "build",
               "summary": "Creates a build. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -3749,6 +3809,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists build caches in a project.",
@@ -3805,6 +3866,7 @@
                 "field": "build_cache.name",
                 "pattern": "orgs/{org}/projects/{project}/build_caches/{build_cache}"
               },
+              "resource_field": "build_cache",
               "sends_etag": true,
               "summary": "Updates a build cache.",
               "update_mask": "from-flags",
@@ -3914,6 +3976,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists config flags in an environment.",
@@ -3922,6 +3985,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "config_flag.meta.labels",
                   "flag": "--meta.labels",
@@ -3983,12 +4054,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "config_flag_id",
-                  "flag": "--config-flag-id",
-                  "summary": "The id of the new config flag, the key evaluators ask for; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -3999,11 +4064,12 @@
               "method": "config.config_flags.create",
               "permission": "config:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "config_flag_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "config_flag",
               "summary": "Creates a config flag; the Operation is done when every Cell serves it.",
               "verb": "create",
               "waits": {
@@ -4076,6 +4142,7 @@
                 "field": "config_flag.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/config_flags/{config_flag}"
               },
+              "resource_field": "config_flag",
               "sends_etag": true,
               "summary": "Updates a config flag; the change rolls out in waves and the Operation is done when every Cell serves it.",
               "update_mask": "from-flags",
@@ -4187,6 +4254,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's connection providers.",
@@ -4195,6 +4263,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "connection_provider.meta.labels",
                   "flag": "--meta.labels",
@@ -4249,12 +4325,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "connection_provider_id",
-                  "flag": "--connection-provider-id",
-                  "summary": "The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -4265,11 +4335,12 @@
               "method": "connections.connection_providers.create",
               "permission": "connections:admin",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}"
+                "arg": "ID",
+                "field": "connection_provider_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "connection_provider",
               "summary": "Creates a connection provider.",
               "verb": "create"
             },
@@ -4338,6 +4409,7 @@
                 "field": "connection_provider.name",
                 "pattern": "orgs/{org}/connection_providers/{connection_provider}"
               },
+              "resource_field": "connection_provider",
               "sends_etag": true,
               "summary": "Updates a connection provider.",
               "update_mask": "from-flags",
@@ -4439,6 +4511,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's connections.",
@@ -4447,6 +4520,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "connection.meta.labels",
                   "flag": "--meta.labels",
@@ -4482,12 +4563,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "connection_id",
-                  "flag": "--connection-id",
-                  "summary": "The id of the new connection, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -4498,11 +4573,12 @@
               "method": "connections.connections.create",
               "permission": "connections:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}"
+                "arg": "ID",
+                "field": "connection_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "connection",
               "summary": "Records an installation; the controller confirms it with the provider.",
               "verb": "create",
               "waits": {
@@ -4549,6 +4625,7 @@
                 "field": "connection.name",
                 "pattern": "orgs/{org}/connections/{connection}"
               },
+              "resource_field": "connection",
               "sends_etag": true,
               "summary": "Updates a connection's metadata.",
               "update_mask": "from-flags",
@@ -4660,6 +4737,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists databases in a environment.",
@@ -4668,6 +4746,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "database.meta.labels",
                   "flag": "--meta.labels",
@@ -4713,12 +4799,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "database_id",
-                  "flag": "--database-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -4729,11 +4809,12 @@
               "method": "data.databases.create",
               "permission": "data:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "database_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "database",
               "summary": "Creates a database. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -4804,6 +4885,7 @@
                 "field": "database.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/databases/{database}"
               },
+              "resource_field": "database",
               "sends_etag": true,
               "summary": "Updates a database.",
               "update_mask": "from-flags",
@@ -5014,6 +5096,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists kv namespaces in a environment.",
@@ -5022,6 +5105,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "kv_namespace.meta.labels",
                   "flag": "--meta.labels",
@@ -5061,12 +5152,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "kv_namespace_id",
-                  "flag": "--kv-namespace-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -5077,11 +5162,12 @@
               "method": "data.kv_namespaces.create",
               "permission": "data:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "kv_namespace_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "kv_namespace",
               "summary": "Creates a kv namespace. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -5152,6 +5238,7 @@
                 "field": "kv_namespace.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/kv_namespaces/{kv_namespace}"
               },
+              "resource_field": "kv_namespace",
               "sends_etag": true,
               "summary": "Updates a kv namespace.",
               "update_mask": "from-flags",
@@ -5308,6 +5395,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists buckets in a environment.",
@@ -5316,6 +5404,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "bucket.meta.labels",
                   "flag": "--meta.labels",
@@ -5361,12 +5457,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "bucket_id",
-                  "flag": "--bucket-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -5377,11 +5467,12 @@
               "method": "data.buckets.create",
               "permission": "data:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "bucket_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "bucket",
               "summary": "Creates a bucket. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -5458,6 +5549,7 @@
                 "field": "bucket.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}"
               },
+              "resource_field": "bucket",
               "sends_etag": true,
               "summary": "Updates a bucket.",
               "update_mask": "from-flags",
@@ -5614,6 +5706,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists search indexs in a environment.",
@@ -5622,6 +5715,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "search_index.meta.labels",
                   "flag": "--meta.labels",
@@ -5661,12 +5762,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "search_index_id",
-                  "flag": "--search-index-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -5677,11 +5772,12 @@
               "method": "data.search_indexes.create",
               "permission": "data:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "search_index_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "search_index",
               "summary": "Creates a search index. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -5746,6 +5842,7 @@
                 "field": "search_index.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/search_indexes/{search_index}"
               },
+              "resource_field": "search_index",
               "sends_etag": true,
               "summary": "Updates a search index.",
               "update_mask": "from-flags",
@@ -5910,6 +6007,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists an org's entitlements: exactly one, `default`.",
@@ -5981,6 +6079,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists topics.",
@@ -5990,9 +6089,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "topic_id",
-                  "flag": "--topic-id",
-                  "summary": "The topic id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -6032,11 +6133,12 @@
               "method": "events.topics.create",
               "permission": "events:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "topic_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "topic",
               "summary": "Creates a topic.",
               "verb": "create"
             },
@@ -6091,6 +6193,7 @@
                 "field": "topic.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/topics/{topic}"
               },
+              "resource_field": "topic",
               "sends_etag": true,
               "summary": "Updates a topic.",
               "update_mask": "from-flags",
@@ -6222,6 +6325,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists events.",
@@ -6285,6 +6389,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists subscriptions.",
@@ -6294,9 +6399,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "subscription_id",
-                  "flag": "--subscription-id",
-                  "summary": "The subscription id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -6375,11 +6482,12 @@
               "method": "events.subscriptions.create",
               "permission": "events:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "subscription_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "subscription",
               "summary": "Creates a subscription.",
               "verb": "create"
             },
@@ -6466,6 +6574,7 @@
                 "field": "subscription.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/subscriptions/{subscription}"
               },
+              "resource_field": "subscription",
               "sends_etag": true,
               "summary": "Updates a subscription.",
               "update_mask": "from-flags",
@@ -6567,6 +6676,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists queues.",
@@ -6576,9 +6686,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "queue_id",
-                  "flag": "--queue-id",
-                  "summary": "The queue id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -6636,11 +6748,12 @@
               "method": "events.queues.create",
               "permission": "events:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "queue_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "queue",
               "summary": "Creates a queue.",
               "verb": "create"
             },
@@ -6713,6 +6826,7 @@
                 "field": "queue.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/queues/{queue}"
               },
+              "resource_field": "queue",
               "sends_etag": true,
               "summary": "Updates a queue.",
               "update_mask": "from-flags",
@@ -6960,6 +7074,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists webhook endpoints.",
@@ -6969,9 +7084,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "webhook_endpoint_id",
-                  "flag": "--webhook-endpoint-id",
-                  "summary": "The webhook endpoint id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -7036,11 +7153,12 @@
               "method": "events.webhook_endpoints.create",
               "permission": "events:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "webhook_endpoint_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "webhook_endpoint",
               "summary": "Creates a webhook endpoint.",
               "verb": "create"
             },
@@ -7120,6 +7238,7 @@
                 "field": "webhook_endpoint.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/webhook_endpoints/{webhook_endpoint}"
               },
+              "resource_field": "webhook_endpoint",
               "sends_etag": true,
               "summary": "Updates a webhook endpoint.",
               "update_mask": "from-flags",
@@ -7256,6 +7375,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/webhook_endpoints/{webhook_endpoint}"
               },
               "summary": "Lists webhook deliveries.",
@@ -7334,6 +7454,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists inbound endpoints.",
@@ -7343,9 +7464,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "inbound_endpoint_id",
-                  "flag": "--inbound-endpoint-id",
-                  "summary": "The inbound endpoint id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -7412,11 +7535,12 @@
               "method": "events.inbound_endpoints.create",
               "permission": "events:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "inbound_endpoint_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "inbound_endpoint",
               "summary": "Creates an inbound endpoint.",
               "verb": "create"
             },
@@ -7498,6 +7622,7 @@
                 "field": "inbound_endpoint.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/inbound_endpoints/{inbound_endpoint}"
               },
+              "resource_field": "inbound_endpoint",
               "sends_etag": true,
               "summary": "Updates an inbound endpoint.",
               "update_mask": "from-flags",
@@ -7599,6 +7724,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists realtime channels.",
@@ -7608,9 +7734,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "realtime_channel_id",
-                  "flag": "--realtime-channel-id",
-                  "summary": "The realtime channel id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -7656,11 +7784,12 @@
               "method": "events.realtime_channels.create",
               "permission": "events:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "realtime_channel_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "realtime_channel",
               "summary": "Creates a realtime channel.",
               "verb": "create"
             },
@@ -7721,6 +7850,7 @@
                 "field": "realtime_channel.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}"
               },
+              "resource_field": "realtime_channel",
               "sends_etag": true,
               "summary": "Updates a realtime channel.",
               "update_mask": "from-flags",
@@ -7830,6 +7960,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists services in a environment.",
@@ -7838,6 +7969,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "service.meta.labels",
                   "flag": "--meta.labels",
@@ -7988,12 +8127,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "service_id",
-                  "flag": "--service-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -8004,11 +8137,12 @@
               "method": "hosting.services.create",
               "permission": "hosting:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "service_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "service",
               "summary": "Creates a service. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -8190,6 +8324,7 @@
                 "field": "service.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
               },
+              "resource_field": "service",
               "sends_etag": true,
               "summary": "Updates a service.",
               "update_mask": "from-flags",
@@ -8305,6 +8440,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
               },
               "summary": "Lists rollouts in a service.",
@@ -8313,6 +8449,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "rollout.meta.labels",
                   "flag": "--meta.labels",
@@ -8340,12 +8484,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "rollout_id",
-                  "flag": "--rollout-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -8356,11 +8494,12 @@
               "method": "hosting.service_rollouts.create",
               "permission": "hosting:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
+                "arg": "ID",
+                "field": "rollout_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "rollout",
               "summary": "Creates a rollout.",
               "verb": "create"
             },
@@ -8510,6 +8649,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists previews in a environment.",
@@ -8518,6 +8658,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "preview.meta.labels",
                   "flag": "--meta.labels",
@@ -8553,12 +8701,6 @@
                   "type": "int"
                 },
                 {
-                  "field": "preview_id",
-                  "flag": "--preview-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -8569,11 +8711,12 @@
               "method": "hosting.previews.create",
               "permission": "hosting:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "preview_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "preview",
               "summary": "Creates a preview. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -8681,6 +8824,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists source links in a project.",
@@ -8689,6 +8833,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "source_link.meta.labels",
                   "flag": "--meta.labels",
@@ -8736,12 +8888,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "source_link_id",
-                  "flag": "--source-link-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -8752,11 +8898,12 @@
               "method": "hosting.source_links.create",
               "permission": "hosting:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}"
+                "arg": "ID",
+                "field": "source_link_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "source_link",
               "summary": "Creates a source link. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -8821,6 +8968,7 @@
                 "field": "source_link.name",
                 "pattern": "orgs/{org}/projects/{project}/source_links/{source_link}"
               },
+              "resource_field": "source_link",
               "sends_etag": true,
               "summary": "Updates a source link.",
               "update_mask": "from-flags",
@@ -8938,6 +9086,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists keys in an environment.",
@@ -8946,6 +9095,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "key.meta.labels",
                   "flag": "--meta.labels",
@@ -9006,12 +9163,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "key_id",
-                  "flag": "--key-id",
-                  "summary": "The id of the new key, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -9022,11 +9173,12 @@
               "method": "keys.keys.create",
               "permission": "keys:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "key_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "key",
               "summary": "Creates a key; the signer generates its first version.",
               "verb": "create",
               "waits": {
@@ -9085,6 +9237,7 @@
                 "field": "key.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/keys/{key}"
               },
+              "resource_field": "key",
               "sends_etag": true,
               "summary": "Updates a key's rotation period, deletion protection, or metadata.",
               "update_mask": "from-flags",
@@ -9425,6 +9578,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/keys/{key}"
               },
               "summary": "Lists a key's versions.",
@@ -9528,6 +9682,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists domains in a project.",
@@ -9536,6 +9691,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "domain.meta.labels",
                   "flag": "--meta.labels",
@@ -9574,12 +9737,6 @@
                   ]
                 },
                 {
-                  "field": "domain_id",
-                  "flag": "--domain-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -9590,11 +9747,12 @@
               "method": "network.domains.create",
               "permission": "network:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}"
+                "arg": "ID",
+                "field": "domain_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "domain",
               "summary": "Creates a domain. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -9657,6 +9815,7 @@
                 "field": "domain.name",
                 "pattern": "orgs/{org}/projects/{project}/domains/{domain}"
               },
+              "resource_field": "domain",
               "sends_etag": true,
               "summary": "Updates a domain.",
               "update_mask": "from-flags",
@@ -9785,6 +9944,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists certificates in a project.",
@@ -9848,6 +10008,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists routes in a environment.",
@@ -9856,6 +10017,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "route.meta.labels",
                   "flag": "--meta.labels",
@@ -9909,12 +10078,6 @@
                   "type": "int"
                 },
                 {
-                  "field": "route_id",
-                  "flag": "--route-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -9925,11 +10088,12 @@
               "method": "network.routes.create",
               "permission": "network:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "route_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "route",
               "summary": "Creates a route. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -10014,6 +10178,7 @@
                 "field": "route.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/routes/{route}"
               },
+              "resource_field": "route",
               "sends_etag": true,
               "summary": "Updates a route.",
               "update_mask": "from-flags",
@@ -10123,6 +10288,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
               "summary": "Lists egress identitys in a project.",
@@ -10131,6 +10297,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "egress_identity.meta.labels",
                   "flag": "--meta.labels",
@@ -10159,12 +10333,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "egress_identity_id",
-                  "flag": "--egress-identity-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10175,11 +10343,12 @@
               "method": "network.egress_identities.create",
               "permission": "network:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}"
+                "arg": "ID",
+                "field": "egress_identity_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "egress_identity",
               "summary": "Creates an egress identity. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -10232,6 +10401,7 @@
                 "field": "egress_identity.name",
                 "pattern": "orgs/{org}/projects/{project}/egress_identities/{egress_identity}"
               },
+              "resource_field": "egress_identity",
               "sends_etag": true,
               "summary": "Updates an egress identity.",
               "update_mask": "from-flags",
@@ -10341,6 +10511,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists private links in a environment.",
@@ -10349,6 +10520,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "private_link.meta.labels",
                   "flag": "--meta.labels",
@@ -10392,12 +10571,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "private_link_id",
-                  "flag": "--private-link-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10408,11 +10581,12 @@
               "method": "network.private_links.create",
               "permission": "network:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "private_link_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "private_link",
               "summary": "Creates a private link. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -10473,6 +10647,7 @@
                 "field": "private_link.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/private_links/{private_link}"
               },
+              "resource_field": "private_link",
               "sends_etag": true,
               "summary": "Updates a private link.",
               "update_mask": "from-flags",
@@ -10590,6 +10765,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists sending domains.",
@@ -10599,9 +10775,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "sending_domain_id",
-                  "flag": "--sending-domain-id",
-                  "summary": "The sending domain id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -10648,11 +10826,12 @@
               "method": "notify.sending_domains.create",
               "permission": "notify:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "sending_domain_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "sending_domain",
               "summary": "Creates a sending domain.",
               "verb": "create"
             },
@@ -10707,6 +10886,7 @@
                 "field": "sending_domain.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/sending_domains/{sending_domain}"
               },
+              "resource_field": "sending_domain",
               "sends_etag": true,
               "summary": "Updates a sending domain.",
               "update_mask": "from-flags",
@@ -10823,6 +11003,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists senders.",
@@ -10832,9 +11013,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "sender_id",
-                  "flag": "--sender-id",
-                  "summary": "The sender id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -10913,11 +11096,12 @@
               "method": "notify.senders.create",
               "permission": "notify:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "sender_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "sender",
               "summary": "Creates a sender.",
               "verb": "create"
             },
@@ -11011,6 +11195,7 @@
                 "field": "sender.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/senders/{sender}"
               },
+              "resource_field": "sender",
               "sends_etag": true,
               "summary": "Updates a sender.",
               "update_mask": "from-flags",
@@ -11127,6 +11312,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists recipients.",
@@ -11136,9 +11322,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "recipient_id",
-                  "flag": "--recipient-id",
-                  "summary": "The recipient id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -11211,11 +11399,12 @@
               "method": "notify.recipients.create",
               "permission": "notify:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "recipient_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "recipient",
               "summary": "Creates a recipient.",
               "verb": "create"
             },
@@ -11303,6 +11492,7 @@
                 "field": "recipient.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}"
               },
+              "resource_field": "recipient",
               "sends_etag": true,
               "summary": "Updates a recipient.",
               "update_mask": "from-flags",
@@ -11410,6 +11600,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}"
               },
               "summary": "Lists preferences.",
@@ -11479,6 +11670,7 @@
                 "field": "preference.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}/preferences/{preference}"
               },
+              "resource_field": "preference",
               "sends_etag": true,
               "summary": "Updates a preference.",
               "update_mask": "from-flags",
@@ -11580,6 +11772,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists suppressions.",
@@ -11589,9 +11782,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "suppression_id",
-                  "flag": "--suppression-id",
-                  "summary": "The suppression id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -11666,11 +11861,12 @@
               "method": "notify.suppressions.create",
               "permission": "notify:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "suppression_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "suppression",
               "summary": "Creates a suppression.",
               "verb": "create"
             },
@@ -11770,6 +11966,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists templates.",
@@ -11779,9 +11976,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "template_id",
-                  "flag": "--template-id",
-                  "summary": "The template id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -11893,11 +12092,12 @@
               "method": "notify.templates.create",
               "permission": "notify:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "template_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "template",
               "summary": "Creates a template.",
               "verb": "create"
             },
@@ -12024,6 +12224,7 @@
                 "field": "template.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/templates/{template}"
               },
+              "resource_field": "template",
               "sends_etag": true,
               "summary": "Updates a template.",
               "update_mask": "from-flags",
@@ -12125,6 +12326,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists messages.",
@@ -12134,9 +12336,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "message_id",
-                  "flag": "--message-id",
-                  "summary": "The message id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -12216,11 +12420,12 @@
               "method": "notify.messages.create",
               "permission": "notify:send",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "message_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "message",
               "summary": "Sends a Message.",
               "verb": "send"
             },
@@ -12301,6 +12506,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}"
               },
               "summary": "Lists inbox items.",
@@ -12409,6 +12615,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists broadcasts.",
@@ -12418,9 +12625,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "broadcast_id",
-                  "flag": "--broadcast-id",
-                  "summary": "The broadcast id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -12487,11 +12696,12 @@
               "method": "notify.broadcasts.create",
               "permission": "notify:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "broadcast_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "broadcast",
               "summary": "Creates a broadcast.",
               "verb": "create"
             },
@@ -12573,6 +12783,7 @@
                 "field": "broadcast.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/broadcasts/{broadcast}"
               },
+              "resource_field": "broadcast",
               "sends_etag": true,
               "summary": "Updates a broadcast.",
               "update_mask": "from-flags",
@@ -12934,6 +13145,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists error groups; filter by `state`, `service_name`, and `last_seen_time`.",
@@ -13086,6 +13298,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/error_groups/{error_group}"
               },
               "summary": "Lists error events.",
@@ -13157,6 +13370,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists releases in an environment, newest first by default.",
@@ -13165,6 +13379,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "release.meta.labels",
                   "flag": "--meta.labels",
@@ -13212,12 +13434,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "release_id",
-                  "flag": "--release-id",
-                  "summary": "The id of the new release, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -13228,11 +13444,12 @@
               "method": "release.releases.create",
               "permission": "release:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "release_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "release",
               "summary": "Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.",
               "verb": "create",
               "waits": {
@@ -13298,6 +13515,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists rollouts in an environment.",
@@ -13369,6 +13587,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}"
               },
               "summary": "Lists scale sets in a org.",
@@ -13377,6 +13596,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "scale_set.meta.labels",
                   "flag": "--meta.labels",
@@ -13424,12 +13651,6 @@
                   "type": "int"
                 },
                 {
-                  "field": "scale_set_id",
-                  "flag": "--scale-set-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -13440,11 +13661,12 @@
               "method": "runners.scale_sets.create",
               "permission": "runners:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}"
+                "arg": "ID",
+                "field": "scale_set_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "scale_set",
               "summary": "Creates a scale set. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -13509,6 +13731,7 @@
                 "field": "scale_set.name",
                 "pattern": "orgs/{org}/scale_sets/{scale_set}"
               },
+              "resource_field": "scale_set",
               "sends_etag": true,
               "summary": "Updates a scale set.",
               "update_mask": "from-flags",
@@ -13624,6 +13847,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/scale_sets/{scale_set}"
               },
               "summary": "Lists runners in a scale set.",
@@ -13753,6 +13977,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists pools in a environment.",
@@ -13761,6 +13986,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "pool.meta.labels",
                   "flag": "--meta.labels",
@@ -13814,12 +14047,6 @@
                   "type": "duration"
                 },
                 {
-                  "field": "pool_id",
-                  "flag": "--pool-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -13830,11 +14057,12 @@
               "method": "sandboxes.pools.create",
               "permission": "sandboxes:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "pool_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "pool",
               "summary": "Creates a pool. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -13912,6 +14140,7 @@
                 "field": "pool.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/pools/{pool}"
               },
+              "resource_field": "pool",
               "sends_etag": true,
               "summary": "Updates a pool.",
               "update_mask": "from-flags",
@@ -14021,6 +14250,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists leases in a environment.",
@@ -14029,6 +14259,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "lease.meta.labels",
                   "flag": "--meta.labels",
@@ -14132,12 +14370,6 @@
                   "type": "key=value"
                 },
                 {
-                  "field": "lease_id",
-                  "flag": "--lease-id",
-                  "summary": "The id segment of the name; the server assigns one when unset.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -14148,11 +14380,12 @@
               "method": "sandboxes.leases.create",
               "permission": "sandboxes:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "lease_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "lease",
               "summary": "Creates a lease.",
               "verb": "create"
             },
@@ -14535,6 +14768,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists secrets in an environment.",
@@ -14543,6 +14777,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "secret.meta.labels",
                   "flag": "--meta.labels",
@@ -14582,12 +14824,6 @@
                   "type": "bool"
                 },
                 {
-                  "field": "secret_id",
-                  "flag": "--secret-id",
-                  "summary": "The id of the new secret, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -14598,11 +14834,12 @@
               "method": "secrets.secrets.create",
               "permission": "secrets:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "secret_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "secret",
               "summary": "Creates a secret, without a value; add one with CreateSecretVersion.",
               "verb": "create"
             },
@@ -14657,6 +14894,7 @@
                 "field": "secret.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}"
               },
+              "resource_field": "secret",
               "sends_etag": true,
               "summary": "Updates a secret.",
               "update_mask": "from-flags",
@@ -14758,6 +14996,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}"
               },
               "summary": "Lists a secret's versions.",
@@ -14766,6 +15005,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "secret_version.meta.labels",
                   "flag": "--meta.labels",
@@ -14804,12 +15051,8 @@
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/secrets/*}/secret_versions",
               "method": "secrets.secret_versions.create",
               "permission": "secrets:write",
-              "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}"
-              },
+              "positional": null,
+              "resource_field": "secret_version",
               "summary": "Adds a value to a secret as its newest version. The value is never returned.",
               "verb": "create"
             },
@@ -14974,6 +15217,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists secret bindings in an environment.",
@@ -14982,6 +15226,14 @@
             {
               "effect": "write",
               "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
                 {
                   "field": "secret_binding.meta.labels",
                   "flag": "--meta.labels",
@@ -15058,12 +15310,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "secret_binding_id",
-                  "flag": "--secret-binding-id",
-                  "summary": "The id of the new secret binding, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when empty.",
-                  "type": "string"
-                },
-                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -15074,11 +15320,12 @@
               "method": "secrets.secret_bindings.create",
               "permission": "secrets:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "secret_binding_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "secret_binding",
               "summary": "Creates a secret binding.",
               "verb": "create"
             },
@@ -15176,6 +15423,7 @@
                 "field": "secret_binding.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/secret_bindings/{secret_binding}"
               },
+              "resource_field": "secret_binding",
               "sends_etag": true,
               "summary": "Updates a secret binding.",
               "update_mask": "from-flags",
@@ -15279,6 +15527,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists workflows.",
@@ -15288,9 +15537,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "workflow_id",
-                  "flag": "--workflow-id",
-                  "summary": "The workflow id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -15386,11 +15637,12 @@
               "method": "workflows.workflows.create",
               "permission": "workflows:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "workflow_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "workflow",
               "summary": "Creates a workflow.",
               "verb": "create"
             },
@@ -15501,6 +15753,7 @@
                 "field": "workflow.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}"
               },
+              "resource_field": "workflow",
               "sends_etag": true,
               "summary": "Updates a workflow.",
               "update_mask": "from-flags",
@@ -15608,6 +15861,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
               "summary": "Lists schedules.",
@@ -15617,9 +15871,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "schedule_id",
-                  "flag": "--schedule-id",
-                  "summary": "The schedule id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -15729,11 +15985,12 @@
               "method": "workflows.schedules.create",
               "permission": "workflows:write",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+                "arg": "ID",
+                "field": "schedule_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "schedule",
               "summary": "Creates a schedule.",
               "verb": "create",
               "waits": {
@@ -15862,6 +16119,7 @@
                 "field": "schedule.name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/schedules/{schedule}"
               },
+              "resource_field": "schedule",
               "sends_etag": true,
               "summary": "Updates a schedule.",
               "update_mask": "from-flags",
@@ -16041,6 +16299,7 @@
                 "arg": "PARENT",
                 "default_from_context": true,
                 "field": "parent",
+                "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}"
               },
               "summary": "Lists runs.",
@@ -16050,9 +16309,11 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "run_id",
-                  "flag": "--run-id",
-                  "summary": "The run id, the final name segment; the server assigns one when empty.",
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
                   "type": "string"
                 },
                 {
@@ -16098,11 +16359,12 @@
               "method": "workflows.runs.create",
               "permission": "workflows:run",
               "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}"
+                "arg": "ID",
+                "field": "run_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
+              "resource_field": "run",
               "summary": "Starts a Run of a Workflow.",
               "verb": "start"
             },

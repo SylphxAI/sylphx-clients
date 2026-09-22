@@ -1,0 +1,30 @@
+[package]
+name = "sylphx-cli"
+version = "0.24.0-rc.1"
+description = "The Sylphx CLI: every Sylphx API method as a command, generated from the Sylphx schema registry."
+keywords = ["sylphx", "cli", "cloud", "deploy"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository = "https://github.com/SylphxAI/sylphx-cli"
+
+[[bin]]
+name = "sylphx"
+path = "src/main.rs"
+
+[dependencies]
+sylphx = { path = "../rust", version = "0.1.0" }
+sylphx-mcp = { path = "../mcp", version = "0.24.0-rc.1" }
+clap = { version = "4.5", features = ["string", "wrap_help"] }
+clap_complete = "4.5"
+rpassword = "7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml_ng = "0.10"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util"] }

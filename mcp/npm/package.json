@@ -1,0 +1,35 @@
+{
+	"name": "@sylphx/mcp",
+	"version": "0.24.0-rc.1",
+	"description": "The Sylphx MCP server: every Sylphx API method as MCP tools (runs `sylphx mcp`).",
+	"license": "MIT",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SylphxAI/sylphx-mcp.git"
+	},
+	"homepage": "https://sylphx.com/docs",
+	"keywords": [
+		"sylphx",
+		"mcp",
+		"model-context-protocol",
+		"agents"
+	],
+	"bin": {
+		"sylphx-mcp": "bin/sylphx-mcp.js"
+	},
+	"files": [
+		"bin",
+		"README.md"
+	],
+	"dependencies": {
+		"@sylphx/cli": "0.24.0-rc.1"
+	},
+	"engines": {
+		"node": ">=18"
+	},
+	"publishConfig": {
+		"access": "public",
+		"tag": "next"
+	}
+}
