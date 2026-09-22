@@ -1,0 +1,13 @@
+# The generated Sylphx clients (docs/specs/one-platform/resource-api-and-clients.md §8).
+# A workspace of its own: these crates are published (MIT, mirrored per §9.1)
+# and must build from their own lock graph, apart from the platform workspace.
+[workspace]
+resolver = "2"
+members = ["rust"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/SylphxAI/sylphx-rs"
+homepage = "https://sylphx.com/docs"

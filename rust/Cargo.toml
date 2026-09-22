@@ -1,0 +1,29 @@
+[package]
+name = "sylphx"
+version = "0.1.0"
+description = "The Sylphx SDK: one API, one key, every Sylphx service. Generated from the Sylphx schema registry."
+keywords = ["sylphx", "sdk", "api", "cloud"]
+categories = ["api-bindings", "web-programming::http-client"]
+readme = "README.md"
+documentation = "https://docs.rs/sylphx"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[features]
+default = ["http"]
+# The production transport (reqwest + rustls). Without it, bring a `Transport`.
+http = ["dep:reqwest", "dep:tokio", "dep:uuid", "dep:fastrand"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"], optional = true }
+tokio = { version = "1", features = ["time"], optional = true }
+uuid = { version = "1", features = ["v7"], optional = true }
+fastrand = { version = "2", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
