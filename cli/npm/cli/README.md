@@ -4,7 +4,7 @@ Every Sylphx API method as a command, generated from the one schema, plus a
 small hand-written porcelain on the generated Rust SDK.
 
 ```sh
-npm install -g @sylphx/cli@next      # or: cargo install sylphx-cli --version 0.24.0-rc.1
+curl -fsSL https://github.com/SylphxAI/sylphx-clients/releases/latest/download/install.sh | sh   # or: npm i -g @sylphx/cli · cargo install sylphx-cli
 sylphx login                          # stores an Access key (verified with whoami)
 sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx/project.json)
 sylphx data databases create main --spec.compute-units 2

@@ -5,6 +5,11 @@
 import { spawn } from 'node:child_process'
 import { binaryPath } from '@sylphx/cli/resolve'
 
+const args = process.argv.slice(2)
+if (args.includes('--version') || args.includes('-V')) {
+	// The server is the CLI's `sylphx mcp`; its version is the CLI's.
+	args.splice(0, args.length, '--version')
+}
 let bin
 try {
 	bin = binaryPath()
@@ -12,7 +17,7 @@ try {
 	console.error(error.message)
 	process.exit(1)
 }
-const child = spawn(bin, ['mcp', ...process.argv.slice(2)], { stdio: 'inherit' })
+const child = spawn(bin, args[0] === '--version' ? args : ['mcp', ...args], { stdio: 'inherit' })
 child.on('error', (error) => {
 	console.error(`failed to run ${bin}: ${error.message}`)
 	process.exit(1)

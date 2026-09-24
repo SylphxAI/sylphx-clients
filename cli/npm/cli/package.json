@@ -1,12 +1,13 @@
 {
 	"name": "@sylphx/cli",
-	"version": "0.24.0-rc.1",
+	"version": "0.24.1",
 	"description": "The Sylphx CLI: every Sylphx API method as a command. npm channel of the native sylphx binary.",
 	"license": "MIT",
 	"type": "module",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/SylphxAI/sylphx-cli.git"
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "cli/npm/cli"
 	},
 	"homepage": "https://sylphx.com/docs",
 	"keywords": [
@@ -26,16 +27,17 @@
 		"README.md"
 	],
 	"optionalDependencies": {
-		"@sylphx/cli-darwin-arm64": "0.24.0-rc.1",
-		"@sylphx/cli-darwin-x64": "0.24.0-rc.1",
-		"@sylphx/cli-linux-arm64": "0.24.0-rc.1",
-		"@sylphx/cli-linux-x64": "0.24.0-rc.1"
+		"@sylphx/cli-darwin-arm64": "0.24.1",
+		"@sylphx/cli-darwin-x64": "0.24.1",
+		"@sylphx/cli-linux-arm64": "0.24.1",
+		"@sylphx/cli-linux-x64": "0.24.1"
 	},
 	"engines": {
 		"node": ">=18"
 	},
 	"publishConfig": {
 		"access": "public",
-		"tag": "next"
+		"tag": "next",
+		"provenance": true
 	}
 }

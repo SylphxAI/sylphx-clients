@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-cli"
-version = "0.24.0-rc.1"
+version = "0.24.1"
 description = "The Sylphx CLI: every Sylphx API method as a command, generated from the Sylphx schema registry."
 keywords = ["sylphx", "cli", "cloud", "deploy"]
 categories = ["command-line-utilities"]
@@ -9,7 +9,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 homepage.workspace = true
-repository = "https://github.com/SylphxAI/sylphx-cli"
+repository = "https://github.com/SylphxAI/sylphx-clients"
 
 [[bin]]
 name = "sylphx"
@@ -17,9 +17,10 @@ path = "src/main.rs"
 
 [dependencies]
 sylphx = { path = "../rust", version = "0.2.0" }
-sylphx-mcp = { path = "../mcp", version = "0.24.0-rc.1" }
+sylphx-mcp = { path = "../mcp", version = "0.24.1" }
 clap = { version = "4.5", features = ["string", "wrap_help"] }
 clap_complete = "4.5"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 rpassword = "7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

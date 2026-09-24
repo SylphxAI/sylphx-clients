@@ -14,6 +14,9 @@ pub struct Credentials {
     pub api_key: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub base_url: Option<String>,
+    /// A human session from `sylphx login` (the device flow).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session: Option<crate::auth::Session>,
 }
 
 /// `.sylphx/project.json`: full resource names.
@@ -128,28 +131,40 @@ pub fn write_link(dir: &Path, link: &Link) -> Result<PathBuf, String> {
     Ok(p)
 }
 
-/// Resolves the key and base URL: flag, then environment, then the stored
-/// login.
-pub fn client(api_key: Option<String>, base_url: Option<String>) -> Result<Option<Client>, String> {
-    let stored = load_credentials();
-    let key = api_key
-        .or_else(|| {
-            std::env::var("SYLPHX_API_KEY")
-                .ok()
-                .filter(|k| !k.is_empty())
-        })
-        .or(stored.api_key);
+/// Resolves the credential and base URL: `--api-key`, then `SYLPHX_API_KEY`,
+/// then the stored key, then the stored session (refreshed when stale).
+pub async fn client(
+    api_key: Option<String>,
+    base_url: Option<String>,
+) -> Result<Option<Client>, String> {
+    let mut stored = load_credentials();
     let url = base_url
         .or_else(|| {
             std::env::var("SYLPHX_BASE_URL")
                 .ok()
                 .filter(|u| !u.is_empty())
         })
-        .or(stored.base_url);
-    let Some(key) = key else {
-        return Ok(None);
+        .or(stored.base_url.clone());
+    let key = api_key
+        .or_else(|| {
+            std::env::var("SYLPHX_API_KEY")
+                .ok()
+                .filter(|k| !k.is_empty())
+        })
+        .or(stored.api_key.clone());
+    let bearer = match (key, stored.session.clone()) {
+        (Some(k), _) => k,
+        (None, Some(s)) if s.stale() => {
+            let api = crate::auth::api_root(url.as_deref());
+            let fresh = crate::auth::refresh(&api, &s).await?;
+            stored.session = Some(fresh.clone());
+            save_credentials(&stored)?;
+            fresh.access_token
+        }
+        (None, Some(s)) => s.access_token,
+        (None, None) => return Ok(None),
     };
-    let mut b = HttpTransport::builder().api_key(key);
+    let mut b = HttpTransport::builder().api_key(bearer);
     if let Some(u) = url {
         b = b.base_url(u);
     }

@@ -1,11 +1,12 @@
 {
 	"name": "@sylphx/cli-linux-x64",
-	"version": "0.24.0-rc.1",
+	"version": "0.24.1",
 	"description": "The sylphx CLI binary for linux x64 (x86_64-unknown-linux-gnu). Install @sylphx/cli instead.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/SylphxAI/sylphx-cli.git"
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "cli/npm/cli-linux-x64"
 	},
 	"homepage": "https://sylphx.com/docs",
 	"os": [
@@ -19,7 +20,8 @@
 	],
 	"publishConfig": {
 		"access": "public",
-		"tag": "next"
+		"tag": "next",
+		"provenance": true
 	},
 	"sylphx": {
 		"target": "x86_64-unknown-linux-gnu"
