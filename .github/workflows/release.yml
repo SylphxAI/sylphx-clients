@@ -1,0 +1,207 @@
+# Release of the generated Sylphx clients. Runs in the public mirror
+# SylphxAI/sylphx-clients, which SylphxAI/cloud's release-clients.yml
+# fast-forwards from `clients/` and tags `v{cli version}`. Public repository +
+# GitHub-hosted runners, so the binaries carry signed build provenance
+# (Sigstore, `gh attestation verify`) and the npm packages npm provenance.
+#
+# Every publish is idempotent (skipped when that version is on the registry)
+# and read back. npm packages go to their publishConfig dist-tag (`next`);
+# promotion to `latest` follows the production smoke (promote.yml).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re)run, e.g. v0.24.0'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+      - id: v
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          cli="$(sed -n 's/^version = "\(.*\)"/\1/p' cli/Cargo.toml | head -1)"
+          [ "$cli" = "$version" ] || { echo "::error::tag $TAG but cli/Cargo.toml is $cli"; exit 1; }
+          for p in cli/npm/*/package.json mcp/npm/package.json; do
+            [ "$(jq -r .version "$p")" = "$version" ] || { echo "::error::$p is not $version"; exit 1; }
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, asset: sylphx-cli-linux-x64, run: true }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, asset: sylphx-cli-linux-arm64, run: true }
+          - { os: macos-14, target: aarch64-apple-darwin, asset: sylphx-cli-darwin-arm64, run: true }
+          - { os: macos-14, target: x86_64-apple-darwin, asset: sylphx-cli-darwin-x64, run: false }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+          targets: ${{ matrix.target }}
+      - name: Build
+        run: |
+          set -euo pipefail
+          cargo build --release --locked -p sylphx-cli --target "${{ matrix.target }}"
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/sylphx" "dist/${{ matrix.asset }}"
+          chmod +x "dist/${{ matrix.asset }}"
+      - name: Smoke
+        if: matrix.run
+        run: |
+          set -euo pipefail
+          out="$("dist/${{ matrix.asset }}" --version)"
+          echo "$out"
+          [ "$out" = "sylphx ${{ needs.check.outputs.version }}" ]
+          "dist/${{ matrix.asset }}" data databases create --help >/dev/null
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+            | "dist/${{ matrix.asset }}" mcp | grep -q '"serverInfo"'
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  github-release:
+    needs: [check, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          pattern: sylphx-cli-*
+          merge-multiple: true
+      - name: Checksums and installer
+        run: |
+          set -euo pipefail
+          cp cli/install.sh dist/install.sh
+          cd dist && chmod +x sylphx-cli-* && sha256sum sylphx-cli-* install.sh > SHA256SUMS && cat SHA256SUMS
+      - name: Build provenance (Sigstore)
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: 'dist/sylphx-cli-*'
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            flags="--latest=false"
+            [ "${{ needs.check.outputs.prerelease }}" = true ] && flags="$flags --prerelease"
+            gh release create "$TAG" dist/* $flags --title "sylphx $TAG" \
+              --notes "The \`sylphx\` CLI, MCP server, and SDKs ${TAG}.
+
+          Install: \`curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/install.sh | sh\`
+          Verify a binary: \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`
+          npm: \`@sylphx/cli\`, \`@sylphx/mcp\`, \`@sylphx/sdk\` · crates.io: \`sylphx-cli\`, \`sylphx-mcp\`, \`sylphx\`"
+          fi
+          gh release view "$TAG" --json assets --jq '.assets[].name'
+
+  npm:
+    needs: [check, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          pattern: sylphx-cli-*
+          merge-multiple: true
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish() {
+            local dir="$1" name version tag
+            name="$(jq -r .name "$dir/package.json")"; version="$(jq -r .version "$dir/package.json")"
+            tag="$(jq -r '.publishConfig.tag // "latest"' "$dir/package.json")"
+            if [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ]; then
+              echo "$name@$version is on npm already"; return 0
+            fi
+            (cd "$dir" && npm publish --provenance --access public --tag "$tag")
+            for _ in $(seq 1 30); do
+              [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ] && { echo "readback: $name@$version ($tag)"; return 0; }
+              sleep 10
+            done
+            echo "::error::$name@$version did not appear on npm"; return 1
+          }
+          for a in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            install -Dm755 "dist/sylphx-cli-$a" "cli/npm/cli-$a/bin/sylphx"
+            publish "cli/npm/cli-$a"
+          done
+          publish cli/npm/cli
+          publish mcp/npm
+          (cd typescript && npm install --no-package-lock --no-audit --no-fund && npx tsc -p tsconfig.build.json)
+          publish typescript
+
+  crates:
+    needs: [check, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - name: Publish sylphx, sylphx-mcp, sylphx-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          on_registry() { curl -fsS -A 'SylphxAI-clients-release/1.0' "https://crates.io/api/v1/crates/$1/$2" >/dev/null 2>&1; }
+          for crate in sylphx sylphx-mcp sylphx-cli; do
+            version="$(cargo metadata --no-deps --format-version 1 | jq -r --arg c "$crate" '.packages[] | select(.name == $c) | .version')"
+            if on_registry "$crate" "$version"; then echo "$crate@$version is on crates.io already"; continue; fi
+            cargo publish --locked -p "$crate"
+            for _ in $(seq 1 30); do on_registry "$crate" "$version" && break; sleep 10; done
+            on_registry "$crate" "$version" || { echo "::error::$crate@$version did not appear"; exit 1; }
+            echo "readback: $crate@$version"
+          done
