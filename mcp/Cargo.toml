@@ -16,7 +16,7 @@ name = "sylphx-mcp"
 path = "src/main.rs"
 
 [dependencies]
-sylphx = { path = "../rust", version = "0.1.0" }
+sylphx = { path = "../rust", version = "0.2.0" }
 serde_json = "1"
 tokio = { version = "1", features = ["io-std", "io-util", "macros", "rt-multi-thread"] }
 
