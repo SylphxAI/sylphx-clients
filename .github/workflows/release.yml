@@ -148,6 +148,9 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - uses: actions/download-artifact@v6
         with:
           path: dist
@@ -178,7 +181,7 @@ jobs:
           done
           publish cli/npm/cli
           publish mcp/npm
-          (cd typescript && npm install --no-package-lock --no-audit --no-fund && npx tsc -p tsconfig.build.json)
+          (cd typescript && bun install --no-save && bun run build)
           publish typescript
 
   crates:

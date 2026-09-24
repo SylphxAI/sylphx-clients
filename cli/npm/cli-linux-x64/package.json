@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/cli-linux-x64",
-	"version": "0.24.0",
+	"version": "0.24.1",
 	"description": "The sylphx CLI binary for linux x64 (x86_64-unknown-linux-gnu). Install @sylphx/cli instead.",
 	"license": "MIT",
 	"repository": {
