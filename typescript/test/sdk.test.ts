@@ -148,6 +148,22 @@ describe('@sylphx/sdk', () => {
 		await expect(sx.invoke('nope.nope.get', {})).rejects.toThrow(TypeError)
 	})
 
+	test('a multi-pattern resource takes either parent', async () => {
+		const f = fake([
+			{ status: 200, body: {} },
+			{ status: 200, body: {} },
+		])
+		const sx = new Sylphx({ apiKey: 'k', fetch: f.fetch })
+		await sx.access.apiKeys.create({ parent: 'orgs/org_a', apiKey: {} })
+		expect(f.sent[0]!.url.pathname).toBe('/v1/orgs/org_a/api_keys')
+		await sx.invoke('access.api_keys.revoke', { name: 'orgs/org_a/api_keys/key_a' })
+		expect(f.sent[1]!.url.pathname).toBe('/v1/orgs/org_a/api_keys/key_a:revoke')
+		await expect(
+			(async () => sx.invoke('access.api_keys.revoke', { name: 'orgs/o/projects/p/api_keys/k' }))(),
+		).rejects.toThrow(TypeError)
+		expect(f.sent.length).toBe(2)
+	})
+
 	test('the method table is complete and keyed by id', () => {
 		for (const [id, spec] of Object.entries(METHODS)) expect(spec.id).toBe(id)
 		expect(METHODS['access.whoami']?.template).toBe('/v1/whoami')

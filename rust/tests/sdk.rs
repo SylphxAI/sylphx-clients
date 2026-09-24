@@ -280,6 +280,41 @@ fn invoke_builds_the_same_request_as_the_typed_call() {
 }
 
 #[test]
+fn a_multi_pattern_resource_takes_either_parent() {
+    // An org-wide key (AIP-123: `orgs/{org}/api_keys/{api_key}` beside the
+    // environment's), through the typed call and through `invoke`.
+    let client = Client::new(Recorder::default().reply(200, json!({})));
+    let mut request = access::CreateApiKeyRequest::default();
+    request.parent = "orgs/org_hk0101j9".into();
+    block_on(client.access().api_keys().create(request)).unwrap();
+    let sent = client_sent(&client);
+    assert_eq!(
+        (sent.method, sent.path.as_str()),
+        ("POST", "/v1/orgs/org_hk0101j9/api_keys")
+    );
+    let client = Client::new(Recorder::default().reply(200, json!({})));
+    block_on(client.invoke(
+        "access.api_keys.revoke",
+        json!({"name": "orgs/org_hk0101j9/api_keys/key_a"}),
+    ))
+    .unwrap();
+    assert_eq!(
+        client_sent(&client).path,
+        "/v1/orgs/org_hk0101j9/api_keys/key_a:revoke"
+    );
+    // Neither pattern: refused before the wire.
+    let client = Client::new(Recorder::default());
+    assert!(matches!(
+        block_on(client.invoke(
+            "access.api_keys.revoke",
+            json!({"name": "orgs/o/projects/p/api_keys/key_a"})
+        )),
+        Err(Error::InvalidArgument(_))
+    ));
+    assert!(sent_all(&client).is_empty());
+}
+
+#[test]
 fn invoke_puts_the_resource_field_in_the_body_and_the_rest_in_the_query() {
     let client = Client::new(Recorder::default().reply(200, json!({})));
     block_on(client.invoke(
