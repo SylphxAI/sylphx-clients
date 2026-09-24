@@ -18998,9 +18998,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Lists leases in a environment."
+        "title": "Lists leases in a environment. Filter on `meta.labels` (for example `labels.agent = \"a_123\"`), `status.state`, and `spec.kind`."
       },
-      "description": "Lists leases in a environment.",
+      "description": "Lists leases in a environment. Filter on `meta.labels` (for example\n`labels.agent = \"a_123\"`), `status.state`, and `spec.kind`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/leases",
       "input_schema": {
@@ -19046,9 +19046,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Creates a lease."
+        "title": "Creates a lease: granted now and returned READY (or GRANTED when `wait_ready` is false), or refused with a typed error. There is no queue."
       },
-      "description": "Creates a lease.",
+      "description": "Creates a lease: granted now and returned READY (or GRANTED when\n`wait_ready` is false), or refused with a typed error. There is no queue.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/leases",
       "input_schema": {
@@ -19092,6 +19092,67 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "browser": {
+                    "additionalProperties": false,
+                    "description": "The browser of a BROWSER lease.",
+                    "properties": {
+                      "headless": {
+                        "description": "Run headless instead of on the display. A headless browser has no stream\nand no computer actions; CDP only.",
+                        "type": "boolean"
+                      },
+                      "start_url": {
+                        "description": "The page opened at start; default `about:blank`.",
+                        "type": "string"
+                      },
+                      "user_data_dir": {
+                        "description": "The profile directory; put it on a volume to keep cookies and storage\nacross leases. Default a fresh profile.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
+                  "budget": {
+                    "additionalProperties": false,
+                    "description": "Spend bounds beyond `ttl` and `idle_timeout`.",
+                    "properties": {
+                      "max_cost_micros": {
+                        "description": "End COST_BUDGET once the shape's list price times wall seconds reaches\nthis many millionths of a US dollar.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "max_cpu_seconds": {
+                        "description": "End CPU_BUDGET after this many vCPU-seconds of guest CPU time.",
+                        "format": "int64",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
+                  "display": {
+                    "additionalProperties": false,
+                    "description": "The display of a DESKTOP, BROWSER, or ANDROID lease.",
+                    "properties": {
+                      "dpi": {
+                        "description": "Dots per inch; default 96.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "height": {
+                        "description": "Logical height in pixels; default 800.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "width": {
+                        "description": "Logical width in pixels; default 1280.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
                   "env": {
                     "additionalProperties": {
                       "type": "string"
@@ -19101,31 +19162,40 @@
                     "x-sylphx-immutable": true
                   },
                   "idle_timeout": {
-                    "description": "Release after no guest activity for this long.",
+                    "description": "End the lease IDLE after no data-plane call, stream input, or exec for\nthis long; unset never idles out.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
-                    "type": "string"
+                    "type": "string",
+                    "x-sylphx-immutable": true
                   },
                   "image": {
-                    "description": "The image: a Kernel Artifact by digest, or `template:<name>`.",
+                    "description": "The image: a Kernel Artifact by digest, or `template:<name>` (`base`,\n`desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
                   "kind": {
-                    "description": "What the image serves; default GENERAL.",
+                    "description": "What the machine serves; default GENERAL.",
                     "enum": [
                       "general",
                       "browser",
-                      "desktop"
+                      "desktop",
+                      "android"
                     ],
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
                   "network": {
                     "additionalProperties": false,
-                    "description": "The outbound policy.",
+                    "description": "The outbound policy. Change it on a running lease with `:setNetwork`.",
                     "properties": {
-                      "allowed_destinations": {
-                        "description": "Hosts and CIDRs reachable when `egress` is ALLOWLIST.",
+                      "allowed_cidrs": {
+                        "description": "Public CIDRs reachable when `egress` is ALLOWLIST.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "allowed_domains": {
+                        "description": "Hosts reachable when `egress` is ALLOWLIST: exact names or one leading\n`*.` wildcard label, for example `api.openai.com`, `*.github.com`.",
                         "items": {
                           "type": "string"
                         },
@@ -19141,8 +19211,7 @@
                         "type": "string"
                       }
                     },
-                    "type": "object",
-                    "x-sylphx-immutable": true
+                    "type": "object"
                   },
                   "pool": {
                     "description": "The Pool to take a warm machine from; default the platform pool for the\nshape and image.",
@@ -19154,7 +19223,7 @@
                     "description": "Guest ports to expose.",
                     "items": {
                       "additionalProperties": false,
-                      "description": "LeasePort is a guest port reachable at\n`{port}-{short_id}.sandboxes.sylphx.net`.",
+                      "description": "LeasePort is a guest port reachable through the lease's data plane.",
                       "properties": {
                         "port": {
                           "description": "The guest port.",
@@ -19188,16 +19257,86 @@
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "sandboxes.sylphx.com/Shape"
                   },
+                  "source_snapshot": {
+                    "description": "Boot from this Snapshot's disk and image instead of `image`.",
+                    "type": "string",
+                    "x-sylphx-immutable": true,
+                    "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
+                  },
                   "ttl": {
-                    "description": "Time to live from grant: 1 minute to 24 hours for microVMs, 24 hours to 30\ndays for macOS.",
+                    "description": "The maximum wall time from grant: 1 minute to 24 hours for microVMs, 24\nhours to 30 days for macOS. `:renew` extends it within the shape's bound.\nReaching it ends the lease EXPIRED.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "volumes": {
+                    "description": "Volumes attached at grant, each by name. A volume is attached to at most\none lease at a time; a volume already attached refuses the lease with\nRESOURCE_IN_USE.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "VolumeMount attaches a Volume to a lease.",
+                      "properties": {
+                        "mount_path": {
+                          "description": "The absolute guest path; default `/home/user/volumes/{volume id}`.",
+                          "type": "string"
+                        },
+                        "read_only": {
+                          "description": "Mount read-only.",
+                          "type": "boolean"
+                        },
+                        "volume": {
+                          "description": "The volume.",
+                          "type": "string",
+                          "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+                        }
+                      },
+                      "required": [
+                        "volume"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-sylphx-immutable": true
+                  },
+                  "webhook": {
+                    "additionalProperties": false,
+                    "description": "Where lease events are delivered as signed webhooks, in addition to\n`leases/*/events`.",
+                    "properties": {
+                      "kinds": {
+                        "description": "Deliver only these kinds; default every kind.",
+                        "items": {
+                          "description": "LeaseEventKind is what a LeaseEvent records.",
+                          "enum": [
+                            "granted",
+                            "ready",
+                            "refused",
+                            "ended",
+                            "renewed",
+                            "network_changed",
+                            "control_acquired",
+                            "control_released",
+                            "control_expired",
+                            "budget_warning",
+                            "paused",
+                            "resumed"
+                          ],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "uri": {
+                        "description": "The HTTPS URL that receives the POSTs.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "uri"
+                    ],
+                    "type": "object",
                     "x-sylphx-immutable": true
                   }
                 },
                 "required": [
                   "shape",
-                  "image",
                   "ttl"
                 ],
                 "type": "object"
@@ -19216,6 +19355,10 @@
             "description": "The parent to create in.",
             "type": "string",
             "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "skip_wait_ready": {
+            "description": "Return as soon as the machine is granted instead of when the guest is\nready. Default false: wait for READY, at most 60 seconds.",
+            "type": "boolean"
           },
           "validate_only": {
             "description": "Validate and return the result without writing anything.",
@@ -19284,9 +19427,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Releases a lease; the machine is destroyed and never leased again."
+        "title": "Ends a lease with END_REASON_RELEASED; the machine is destroyed and never leased again, and attached volumes are detached."
       },
-      "description": "Releases a lease; the machine is destroyed and never leased again.",
+      "description": "Ends a lease with END_REASON_RELEASED; the machine is destroyed and never\nleased again, and attached volumes are detached.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:release",
       "input_schema": {
@@ -19329,9 +19472,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Pauses a lease; the generation increases."
+        "title": "Pauses a lease: its disk is kept and its machine destroyed; the generation increases. Process memory is not kept."
       },
-      "description": "Pauses a lease; the generation increases.",
+      "description": "Pauses a lease: its disk is kept and its machine destroyed; the\ngeneration increases. Process memory is not kept.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:pause",
       "input_schema": {
@@ -19407,9 +19550,71 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Mints a lease token for the data plane, bound to the current generation."
+        "title": "Replaces a running lease's outbound policy. The generation does not change; the Cell applies it before the call returns."
       },
-      "description": "Mints a lease token for the data plane, bound to the current generation.",
+      "description": "Replaces a running lease's outbound policy. The generation does not\nchange; the Cell applies it before the call returns.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:setNetwork",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SetLeaseNetwork.",
+        "properties": {
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "network": {
+            "additionalProperties": false,
+            "description": "The new outbound policy; replaces the old one whole.",
+            "properties": {
+              "allowed_cidrs": {
+                "description": "Public CIDRs reachable when `egress` is ALLOWLIST.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "allowed_domains": {
+                "description": "Hosts reachable when `egress` is ALLOWLIST: exact names or one leading\n`*.` wildcard label, for example `api.openai.com`, `*.github.com`.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "egress": {
+                "description": "Default ALLOW.",
+                "enum": [
+                  "allow",
+                  "deny",
+                  "allowlist"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "network"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.set_network",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_leases_set_network"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Mints a lease token for the data plane, bound to the current generation. Hand it to a process that must not hold the Access key."
+      },
+      "description": "Mints a lease token for the data plane, bound to the current generation.\nHand it to a process that must not hold the Access key.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:mintToken",
       "input_schema": {
@@ -19429,7 +19634,7 @@
                 "guest",
                 "ports",
                 "cdp",
-                "desktop"
+                "computer"
               ],
               "type": "string"
             },
@@ -19458,9 +19663,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. Long-running or interactive processes use the guest protocol."
+        "title": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`."
       },
-      "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. Long-running or interactive processes use the guest\nprotocol.",
+      "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. Long-running or interactive processes use the guest\nprotocol at `status.endpoints.guest_uri`.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:exec",
       "input_schema": {
@@ -19468,7 +19673,7 @@
         "description": "The request of ExecLease.",
         "properties": {
           "command": {
-            "description": "The program and its arguments.",
+            "description": "The program and its arguments. Use `[\"bash\", \"-lc\", \"…\"]` for a shell.",
             "items": {
               "type": "string"
             },
@@ -19492,8 +19697,12 @@
             "type": "string"
           },
           "timeout": {
-            "description": "Kill the process after this long; default and at most 60 seconds.",
+            "description": "Kill the process after this long; default 60 seconds, at most 10\nminutes.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "user": {
+            "description": "The guest user; default `user`. `root` is allowed: the whole machine\nbelongs to the lessee.",
             "type": "string"
           },
           "working_directory": {
@@ -19600,10 +19809,93 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Exposes a guest port at `{port}-{short_id}.sandboxes.sylphx.net`."
+        "readOnlyHint": true,
+        "title": "Lists one directory in the lease."
       },
-      "description": "Exposes a guest port at `{port}-{short_id}.sandboxes.sylphx.net`.",
+      "description": "Lists one directory in the lease.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:listFiles",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListLeaseFiles.",
+        "properties": {
+          "depth": {
+            "description": "Descend this many levels; default 1.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "path": {
+            "description": "The absolute directory path in the guest.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.list_files",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_list_files"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Removes one file or directory tree in the lease."
+      },
+      "description": "Removes one file or directory tree in the lease.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:removeFile",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RemoveLeaseFile.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "path": {
+            "description": "The absolute path in the guest.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.remove_file",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_remove_file"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Exposes a guest port."
+      },
+      "description": "Exposes a guest port.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:openPort",
       "input_schema": {
@@ -19686,6 +19978,1372 @@
       "method_id": "sandboxes.leases.close_port",
       "permission": "sandboxes:exec",
       "tool": "sandboxes_leases_close_port"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Performs computer actions on a DESKTOP, BROWSER, or ANDROID lease, in order, and returns each action's result and, when `screenshot` is set, the screenshot taken after the last action. The actions are the Anthropic computer tool's and OpenAI computer use's, one-to-one (docs/services/sandboxes/computer-use.md). Refused CONTROL_HELD_BY_HUMAN while a human holds control."
+      },
+      "description": "Performs computer actions on a DESKTOP, BROWSER, or ANDROID lease, in\norder, and returns each action's result and, when `screenshot` is set,\nthe screenshot taken after the last action. The actions are the Anthropic\ncomputer tool's and OpenAI computer use's, one-to-one\n(docs/services/sandboxes/computer-use.md). Refused CONTROL_HELD_BY_HUMAN\nwhile a human holds control.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:act",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ActLease.",
+        "properties": {
+          "actions": {
+            "description": "The actions, performed in order; at most 64. An empty list with\n`screenshot` set only takes a screenshot.",
+            "items": {
+              "additionalProperties": false,
+              "description": "ComputerAction is one input or observation. Coordinates are logical display\npixels (`status.display`), origin top-left.",
+              "properties": {
+                "click": {
+                  "additionalProperties": false,
+                  "description": "Click (Anthropic `left_click`, `right_click`, `middle_click`,\n`double_click`, `triple_click`; OpenAI `click`, `double_click`; Android\ntap).",
+                  "properties": {
+                    "button": {
+                      "description": "Default LEFT.",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle",
+                        "back",
+                        "forward"
+                      ],
+                      "type": "string"
+                    },
+                    "count": {
+                      "description": "1 (default), 2 (double), or 3 (triple).",
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "modifiers": {
+                      "description": "Keys held during the click, xdotool names (`shift`, `ctrl`, `alt`,\n`super`).",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "position": {
+                      "additionalProperties": false,
+                      "description": "Where; unset clicks at the current pointer position.",
+                      "properties": {
+                        "x": {
+                          "description": "Pixels from the left edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "y": {
+                          "description": "Pixels from the top edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                },
+                "cursor_position": {
+                  "additionalProperties": false,
+                  "description": "Report the pointer position (Anthropic `cursor_position`).",
+                  "properties": {},
+                  "type": "object"
+                },
+                "drag": {
+                  "additionalProperties": false,
+                  "description": "Press, move along a path, release (Anthropic `left_click_drag`, OpenAI\n`drag`; Android swipe).",
+                  "properties": {
+                    "button": {
+                      "description": "Default LEFT.",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle",
+                        "back",
+                        "forward"
+                      ],
+                      "type": "string"
+                    },
+                    "duration": {
+                      "description": "Total time of the move; default 300 ms (Android swipe duration).",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                      "type": "string"
+                    },
+                    "modifiers": {
+                      "description": "Keys held during the drag, xdotool names.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "path": {
+                      "description": "At least two points.",
+                      "items": {
+                        "additionalProperties": false,
+                        "description": "Point is a position in logical display pixels.",
+                        "properties": {
+                          "x": {
+                            "description": "Pixels from the left edge.",
+                            "format": "int32",
+                            "type": "integer"
+                          },
+                          "y": {
+                            "description": "Pixels from the top edge.",
+                            "format": "int32",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "x",
+                          "y"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "type": "object"
+                },
+                "hold_key": {
+                  "additionalProperties": false,
+                  "description": "Hold a key combination for a duration (Anthropic `hold_key`).",
+                  "properties": {
+                    "combo": {
+                      "description": "The combination, xdotool syntax.",
+                      "type": "string"
+                    },
+                    "duration": {
+                      "description": "How long; at most 10 seconds.",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "combo",
+                    "duration"
+                  ],
+                  "type": "object"
+                },
+                "key": {
+                  "additionalProperties": false,
+                  "description": "Press a key combination (Anthropic `key`, OpenAI `keypress`; Android\nkey events).",
+                  "properties": {
+                    "combo": {
+                      "description": "The combination.",
+                      "type": "string"
+                    },
+                    "repeat": {
+                      "description": "Press it this many times; default 1.",
+                      "format": "int32",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "combo"
+                  ],
+                  "type": "object"
+                },
+                "mouse_down": {
+                  "additionalProperties": false,
+                  "description": "Press a button without releasing it (Anthropic `left_mouse_down`).",
+                  "properties": {
+                    "button": {
+                      "description": "Default LEFT.",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle",
+                        "back",
+                        "forward"
+                      ],
+                      "type": "string"
+                    },
+                    "position": {
+                      "additionalProperties": false,
+                      "description": "Where; unset acts at the current pointer position.",
+                      "properties": {
+                        "x": {
+                          "description": "Pixels from the left edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "y": {
+                          "description": "Pixels from the top edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                },
+                "mouse_up": {
+                  "additionalProperties": false,
+                  "description": "Release a button (Anthropic `left_mouse_up`).",
+                  "properties": {
+                    "button": {
+                      "description": "Default LEFT.",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle",
+                        "back",
+                        "forward"
+                      ],
+                      "type": "string"
+                    },
+                    "position": {
+                      "additionalProperties": false,
+                      "description": "Where; unset acts at the current pointer position.",
+                      "properties": {
+                        "x": {
+                          "description": "Pixels from the left edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "y": {
+                          "description": "Pixels from the top edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                },
+                "move": {
+                  "additionalProperties": false,
+                  "description": "Move the pointer (Anthropic `mouse_move`, OpenAI `move`).",
+                  "properties": {
+                    "position": {
+                      "additionalProperties": false,
+                      "description": "Where to.",
+                      "properties": {
+                        "x": {
+                          "description": "Pixels from the left edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "y": {
+                          "description": "Pixels from the top edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ],
+                  "type": "object"
+                },
+                "scroll": {
+                  "additionalProperties": false,
+                  "description": "Scroll (Anthropic `scroll`, OpenAI `scroll`).",
+                  "properties": {
+                    "delta_x": {
+                      "description": "Horizontal amount in `unit`.",
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "delta_y": {
+                      "description": "Vertical amount in `unit`.",
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "modifiers": {
+                      "description": "Keys held during the scroll, xdotool names.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "position": {
+                      "additionalProperties": false,
+                      "description": "Where; unset scrolls at the current pointer position.",
+                      "properties": {
+                        "x": {
+                          "description": "Pixels from the left edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "y": {
+                          "description": "Pixels from the top edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "type": "object"
+                    },
+                    "unit": {
+                      "description": "Default CLICKS (wheel notches, Anthropic `scroll_amount`); PIXELS (OpenAI\n`scroll_x`/`scroll_y`) are converted at 100 pixels per notch on desktops.",
+                      "enum": [
+                        "clicks",
+                        "pixels"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "take_screenshot": {
+                  "additionalProperties": false,
+                  "description": "Capture the display (Anthropic `screenshot`, OpenAI `screenshot`).",
+                  "properties": {
+                    "options": {
+                      "additionalProperties": false,
+                      "description": "How to encode it.",
+                      "properties": {
+                        "format": {
+                          "description": "Default PNG.",
+                          "enum": [
+                            "png",
+                            "jpeg",
+                            "webp"
+                          ],
+                          "type": "string"
+                        },
+                        "max_width": {
+                          "description": "Downscale to at most this width, keeping the aspect ratio; 0 keeps the\ndisplay size.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "quality": {
+                          "description": "JPEG and WebP quality 1 to 100; default 80.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "settle": {
+                          "description": "Wait this long after the last action before capturing, so the screen\nsettles; default 300 ms, at most 5 seconds.",
+                          "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": {
+                  "additionalProperties": false,
+                  "description": "Type text (Anthropic `type`, OpenAI `type`).",
+                  "properties": {
+                    "keystroke_delay": {
+                      "description": "Delay between keystrokes; default 12 ms.",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                      "type": "string"
+                    },
+                    "text": {
+                      "description": "The text; at most 64 KiB.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "wait": {
+                  "additionalProperties": false,
+                  "description": "Wait (Anthropic `wait`, OpenAI `wait`).",
+                  "properties": {
+                    "duration": {
+                      "description": "How long; at most 30 seconds.",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "duration"
+                  ],
+                  "type": "object"
+                },
+                "zoom": {
+                  "additionalProperties": false,
+                  "description": "Capture a region at full resolution (Anthropic `zoom`).",
+                  "properties": {
+                    "options": {
+                      "additionalProperties": false,
+                      "description": "How to encode it; the region is scaled to `options.max_width` when set.",
+                      "properties": {
+                        "format": {
+                          "description": "Default PNG.",
+                          "enum": [
+                            "png",
+                            "jpeg",
+                            "webp"
+                          ],
+                          "type": "string"
+                        },
+                        "max_width": {
+                          "description": "Downscale to at most this width, keeping the aspect ratio; 0 keeps the\ndisplay size.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "quality": {
+                          "description": "JPEG and WebP quality 1 to 100; default 80.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "settle": {
+                          "description": "Wait this long after the last action before capturing, so the screen\nsettles; default 300 ms, at most 5 seconds.",
+                          "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "region": {
+                      "additionalProperties": false,
+                      "description": "The region, in display pixels.",
+                      "properties": {
+                        "height": {
+                          "description": "Height.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "width": {
+                          "description": "Width.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "x": {
+                          "description": "Left edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        },
+                        "y": {
+                          "description": "Top edge.",
+                          "format": "int32",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "region"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "control_epoch": {
+            "description": "Act under this AGENT control epoch; 0 acts only while nobody holds\ncontrol.",
+            "format": "int64",
+            "type": "string"
+          },
+          "lease_generation": {
+            "description": "Refuse STALE_GENERATION unless the lease is at this generation; 0 skips\nthe check.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "screenshot": {
+            "additionalProperties": false,
+            "description": "Take a screenshot after the last action and return it.",
+            "properties": {
+              "format": {
+                "description": "Default PNG.",
+                "enum": [
+                  "png",
+                  "jpeg",
+                  "webp"
+                ],
+                "type": "string"
+              },
+              "max_width": {
+                "description": "Downscale to at most this width, keeping the aspect ratio; 0 keeps the\ndisplay size.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "quality": {
+                "description": "JPEG and WebP quality 1 to 100; default 80.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "settle": {
+                "description": "Wait this long after the last action before capturing, so the screen\nsettles; default 300 ms, at most 5 seconds.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.act",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_act"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Opens a read-only live view of a lease's display: a short-lived viewer token bound to the lease and its generation, an embeddable URL, and the WebRTC signaling endpoint with ICE servers. Input needs control (AcquireLeaseControl)."
+      },
+      "description": "Opens a read-only live view of a lease's display: a short-lived viewer\ntoken bound to the lease and its generation, an embeddable URL, and the\nWebRTC signaling endpoint with ICE servers. Input needs control\n(AcquireLeaseControl).",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:openStream",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of OpenLeaseStream.",
+        "properties": {
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "ttl": {
+            "description": "How long the token admits a new connection; at most and default 5\nminutes. A connected stream ends when the lease generation changes or the\ntoken is revoked.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.open_stream",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_open_stream"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Takes exclusive input control of a lease's display. A HUMAN acquire preempts an AGENT holder and returns a controller stream; an AGENT acquire is refused CONTROL_HELD_BY_HUMAN while a human holds control. Control lapses at `ttl`, which the Cell caps at 30 minutes."
+      },
+      "description": "Takes exclusive input control of a lease's display. A HUMAN acquire\npreempts an AGENT holder and returns a controller stream; an AGENT acquire\nis refused CONTROL_HELD_BY_HUMAN while a human holds control. Control\nlapses at `ttl`, which the Cell caps at 30 minutes.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:acquireControl",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AcquireLeaseControl.",
+        "properties": {
+          "holder": {
+            "description": "HUMAN or AGENT.",
+            "enum": [
+              "agent",
+              "human"
+            ],
+            "type": "string"
+          },
+          "holder_label": {
+            "description": "A label for the holder, for example the person's user id; recorded in\nthe audit events.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "preempt": {
+            "description": "For HUMAN: take control from another human.",
+            "type": "boolean"
+          },
+          "ttl": {
+            "description": "How long; default 10 minutes, capped at 30 minutes in the Cell.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "holder"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.acquire_control",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_acquire_control"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Releases control held under `epoch`; its controller tokens stop working."
+      },
+      "description": "Releases control held under `epoch`; its controller tokens stop working.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:releaseControl",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReleaseLeaseControl.",
+        "properties": {
+          "epoch": {
+            "description": "The epoch AcquireLeaseControl returned.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          }
+        },
+        "required": [
+          "name",
+          "epoch"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.release_control",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_release_control"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets who holds control of a lease's display."
+      },
+      "description": "Gets who holds control of a lease's display.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/leases/*}:getControl",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetLeaseControl.",
+        "properties": {
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.get_control",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_leases_get_control"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Installs an Android app (APK) on an ANDROID lease."
+      },
+      "description": "Installs an Android app (APK) on an ANDROID lease.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:installApp",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of InstallLeaseApp.",
+        "properties": {
+          "apk_path": {
+            "description": "The APK's path in the lease (write it with WriteLeaseFile first).",
+            "type": "string"
+          },
+          "grant_permissions": {
+            "description": "Grant every runtime permission the app declares.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          }
+        },
+        "required": [
+          "name",
+          "apk_path"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.leases.install_app",
+      "permission": "sandboxes:exec",
+      "tool": "sandboxes_leases_install_app"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets one lease event."
+      },
+      "description": "Gets one lease event.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/leases/*/lease_events/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetLeaseEvent.",
+        "properties": {
+          "name": {
+            "description": "The name of the event to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/LeaseEvent"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.lease_events.get",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_lease_events_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a lease's events in order. With `wait`, blocks up to that long for an event after `page_token` (long poll)."
+      },
+      "description": "Lists a lease's events in order. With `wait`, blocks up to that long\nfor an event after `page_token` (long poll).",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/leases/*}/lease_events",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListLeaseEvents.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over `kind`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/LeaseEvent"
+          },
+          "wait": {
+            "description": "Block up to this long (at most 60 seconds) when there is no event after\n`page_token`.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.lease_events.list",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_lease_events_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a volume."
+      },
+      "description": "Gets a volume.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/volumes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetVolume.",
+        "properties": {
+          "name": {
+            "description": "The name of the volume to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.volumes.get",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_volumes_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists volumes in a environment."
+      },
+      "description": "Lists volumes in a environment.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/volumes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListVolumes.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels, filterable fields, and Ready.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.volumes.list",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_volumes_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a volume."
+      },
+      "description": "Creates a volume.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/volumes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateVolume.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          },
+          "volume": {
+            "additionalProperties": false,
+            "description": "The volume to create; only spec and caller-writable metadata are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/volumes/{volume}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "size_gib": {
+                    "description": "Size in GiB, 1 to 1024; it may grow and never shrink.",
+                    "format": "int32",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "size_gib"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "volume_id": {
+            "description": "The id segment of the name; the server assigns one when unset.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "volume"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.volumes.create",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_volumes_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a volume: grows `spec.size_gib` and edits metadata."
+      },
+      "description": "Updates a volume: grows `spec.size_gib` and edits metadata.",
+      "effect": "write",
+      "http": "PATCH /v1/{volume.name=orgs/*/projects/*/envs/*/volumes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateVolume.",
+        "properties": {
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          },
+          "volume": {
+            "additionalProperties": false,
+            "description": "The volume to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/volumes/{volume}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "size_gib": {
+                    "description": "Size in GiB, 1 to 1024; it may grow and never shrink.",
+                    "format": "int32",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "size_gib"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "volume"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.volumes.update",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_volumes_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a volume and destroys its data. Refused RESOURCE_IN_USE while it is attached."
+      },
+      "description": "Deletes a volume and destroys its data. Refused RESOURCE_IN_USE while it\nis attached.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/volumes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteVolume.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the Resource does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the volume to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.volumes.delete",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_volumes_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a snapshot."
+      },
+      "description": "Gets a snapshot.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/snapshots/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetSnapshot.",
+        "properties": {
+          "name": {
+            "description": "The name of the snapshot to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.snapshots.get",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_snapshots_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists snapshots in a environment."
+      },
+      "description": "Lists snapshots in a environment.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/snapshots",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListSnapshots.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels, filterable fields, and Ready.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.snapshots.list",
+      "permission": "sandboxes:read",
+      "tool": "sandboxes_snapshots_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Captures a running lease's disk as a snapshot."
+      },
+      "description": "Captures a running lease's disk as a snapshot.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/snapshots",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateSnapshot.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
+          },
+          "snapshot": {
+            "additionalProperties": false,
+            "description": "The snapshot to create; only spec and caller-writable metadata are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/snapshots/{snapshot}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "include_memory": {
+                    "description": "Capture process memory too. Refused UNIMPLEMENTED until the microVM\nruntime exposes memory snapshots (sandboxes-e2b.md D1).",
+                    "type": "boolean",
+                    "x-sylphx-immutable": true
+                  },
+                  "retention": {
+                    "description": "Delete the snapshot after this long; default 7 days, at most 30 days.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "source_lease": {
+                    "description": "The running lease to capture.",
+                    "type": "string",
+                    "x-sylphx-immutable": true,
+                    "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+                  }
+                },
+                "required": [
+                  "source_lease"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "snapshot_id": {
+            "description": "The id segment of the name; the server assigns one when unset.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "snapshot"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.snapshots.create",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_snapshots_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a snapshot."
+      },
+      "description": "Deletes a snapshot.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/snapshots/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteSnapshot.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the Resource does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the snapshot to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.snapshots.delete",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_snapshots_delete"
     },
     {
       "annotations": {
@@ -22084,7 +23742,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@cbff780dd8580c9f8238c376d04cecbc13590e46010ba4e06b53c7338af6eb5b. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@cdf6473b36ca648759a7f4b1fc21554541d52a947477e6e9d1d7a6a9a79bdaa0. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
