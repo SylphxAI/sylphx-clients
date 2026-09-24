@@ -5,6 +5,7 @@
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
 //! `api`, `mcp`, `completion`) is hand-written on the same SDK.
 
+mod auth;
 mod context;
 mod output;
 mod tree;
@@ -17,6 +18,7 @@ use serde_json::{json, Map, Value};
 use sylphx::{Client, Error, HttpRequest};
 
 use context::Link;
+
 use output::Format;
 use tree::{MethodCmd, Tree};
 
@@ -76,12 +78,24 @@ fn cli(tree: &Tree) -> Command {
         ))
         .subcommand(
             Command::new("login")
-                .about("Store an Access key for this machine (verified with whoami)")
+                .about("Sign in: a browser approval (device flow), or an Access key with --api-key KEY|- (agents, CI)")
                 .arg(
                     Arg::new("with-token")
                         .long("with-token")
                         .action(ArgAction::SetTrue)
-                        .help("Read the key from standard input"),
+                        .help("Read an Access key from standard input (same as --api-key -)"),
+                )
+                .arg(
+                    Arg::new("org")
+                        .long("org")
+                        .value_name("ORG")
+                        .help("Organization (id or slug) when your account is in several"),
+                )
+                .arg(
+                    Arg::new("no-verify")
+                        .long("no-verify")
+                        .action(ArgAction::SetTrue)
+                        .help("Store the credential without calling whoami"),
                 ),
         )
         .subcommand(Command::new("logout").about("Forget the stored key"))
@@ -213,12 +227,16 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
     )?;
     let api_key = m.get_one::<String>("api-key").cloned();
     let base_url = m.get_one::<String>("base-url").cloned();
-    let client = || -> Result<Client, Failure> {
-        context::client(api_key.clone(), base_url.clone())?.ok_or_else(|| {
-            Failure::Usage(
-                "no Sylphx key: run `sylphx login`, set SYLPHX_API_KEY, or pass --api-key".into(),
-            )
-        })
+    let client = || async {
+        context::client(api_key.clone(), base_url.clone())
+            .await?
+            .ok_or_else(|| {
+                Failure::Usage(
+                    "not signed in: run `sylphx login` (browser), or give an Access key with \
+                     SYLPHX_API_KEY=sylphx_sk_… or `sylphx login --api-key -` (stdin)"
+                        .into(),
+                )
+            })
     };
     let (name, sub) = m.subcommand().expect("subcommand_required");
     match name {
@@ -227,10 +245,16 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 api_key.clone(),
                 base_url.clone(),
                 sub.get_flag("with-token"),
+                sub.get_one::<String>("org").cloned(),
+                sub.get_flag("no-verify"),
             )
             .await
         }
         "logout" => {
+            if let Some(s) = context::load_credentials().session {
+                let url = base_url.clone().or(context::load_credentials().base_url);
+                auth::sign_out(&auth::api_root(url.as_deref()), &s).await;
+            }
             if let Some(p) = context::credentials_path().filter(|p| p.exists()) {
                 std::fs::remove_file(&p).map_err(|e| format!("{}: {e}", p.display()))?;
                 println!("Logged out ({} removed).", p.display());
@@ -240,7 +264,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             Ok(())
         }
         "whoami" => {
-            let me = client()?.invoke("access.whoami", json!({})).await?;
+            let me = client().await?.invoke("access.whoami", json!({})).await?;
             println!(
                 "{}",
                 output::render(
@@ -254,7 +278,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             );
             Ok(())
         }
-        "link" => link(&client()?, sub).await,
+        "link" => link(&client().await?, sub).await,
         "api" => {
             let method = sub.get_one::<String>("method").expect("required").clone();
             let path = sub.get_one::<String>("path").expect("required").clone();
@@ -285,7 +309,8 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 "PATCH" => "PATCH",
                 _ => "DELETE",
             };
-            let v: Value = client()?
+            let v: Value = client()
+                .await?
                 .call(HttpRequest {
                     method,
                     path,
@@ -308,7 +333,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             Ok(())
         }
         "mcp" => {
-            let c = context::client(api_key.clone(), base_url.clone())?;
+            let c = context::client(api_key.clone(), base_url.clone()).await?;
             sylphx_mcp::serve_stdio(sylphx_mcp::Server::new(c))
                 .await
                 .map_err(|e| Failure::Usage(e.to_string()))
@@ -324,7 +349,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         service => {
             let (method, mm) = tree::find(tree, service, sub)
                 .ok_or_else(|| Failure::Usage(format!("unknown command under `{service}`")))?;
-            generated(&client()?, method, &mm, m, format).await
+            generated(&client().await?, method, &mm, m, format).await
         }
     }
 }
@@ -333,34 +358,60 @@ async fn login(
     api_key: Option<String>,
     base_url: Option<String>,
     with_token: bool,
+    org: Option<String>,
+    no_verify: bool,
 ) -> Result<(), Failure> {
-    let key = match api_key {
-        Some(k) => k,
-        None if with_token || !std::io::stdin().is_terminal() => {
-            let mut s = String::new();
-            std::io::stdin()
-                .read_to_string(&mut s)
-                .map_err(|e| e.to_string())?;
-            s.trim().to_string()
-        }
-        None => rpassword::prompt_password("Sylphx API key (sylphx_sk_…): ")
-            .map_err(|e| e.to_string())?,
+    let stdin_key = api_key.as_deref() == Some("-")
+        || (api_key.is_none() && (with_token || !std::io::stdin().is_terminal()));
+    let key = if stdin_key {
+        let mut s = String::new();
+        std::io::stdin()
+            .read_to_string(&mut s)
+            .map_err(|e| e.to_string())?;
+        Some(s.trim().to_string())
+    } else {
+        api_key
     };
-    if key.is_empty() {
-        return Err(Failure::Usage("no key given".into()));
+    let mut creds = context::Credentials {
+        base_url: base_url.clone(),
+        ..Default::default()
+    };
+    match key {
+        Some(k) if k.is_empty() => return Err(Failure::Usage("no key on stdin".into())),
+        Some(k) => {
+            if !k.starts_with("sylphx_sk_") && !k.starts_with("sylphx_pk_") {
+                eprintln!("warning: an Access key starts with sylphx_sk_ (secret) or sylphx_pk_ (publishable)");
+            }
+            creds.api_key = Some(k);
+        }
+        None => {
+            let api = auth::api_root(base_url.as_deref());
+            creds.session = Some(auth::device_login(&api, org).await?);
+        }
     }
-    let client = context::client(Some(key.clone()), base_url.clone())?.expect("a key was given");
-    let me = client.invoke("access.whoami", json!({})).await?;
-    let path = context::save_credentials(&context::Credentials {
-        api_key: Some(key),
-        base_url,
-    })?;
-    println!(
-        "Logged in as {} in {} (key stored in {}).",
-        me["principal"].as_str().unwrap_or("?"),
-        me["org"].as_str().unwrap_or("?"),
-        path.display()
-    );
+    let path = context::save_credentials(&creds)?;
+    if no_verify {
+        println!("Credential stored in {}.", path.display());
+        return Ok(());
+    }
+    let client = context::client(creds.api_key.clone(), base_url.clone())
+        .await?
+        .expect("a credential was stored");
+    match client.invoke("access.whoami", json!({})).await {
+        Ok(me) => println!(
+            "Signed in as {} (credential stored in {}).",
+            me["principal"]
+                .as_str()
+                .or_else(|| me["email"].as_str())
+                .or_else(|| me["user"]["email"].as_str())
+                .unwrap_or("?"),
+            path.display()
+        ),
+        Err(e) => {
+            let _ = std::fs::remove_file(&path);
+            return Err(e.into());
+        }
+    }
     Ok(())
 }
 

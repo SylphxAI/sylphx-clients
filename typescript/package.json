@@ -6,7 +6,8 @@
 	"type": "module",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/SylphxAI/sylphx-js.git"
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "typescript"
 	},
 	"homepage": "https://sylphx.com/docs",
 	"keywords": [
@@ -48,6 +49,7 @@
 	},
 	"publishConfig": {
 		"access": "public",
-		"tag": "next"
+		"tag": "next",
+		"provenance": true
 	}
 }

@@ -1,0 +1,41 @@
+# Promotes a release to `latest` once it passed the production smoke: the
+# npm dist-tag `latest` for @sylphx/cli (+ platform packages) and @sylphx/mcp,
+# and the GitHub Release's "Latest" mark (which `install.sh` follows).
+name: Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released version, e.g. 0.24.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: npm dist-tags
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          V: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          for p in @sylphx/cli-linux-x64 @sylphx/cli-linux-arm64 @sylphx/cli-darwin-x64 @sylphx/cli-darwin-arm64 @sylphx/cli @sylphx/mcp; do
+            npm dist-tag add "$p@$V" latest
+            [ "$(npm view "$p" dist-tags.latest)" = "$V" ] || { echo "::error::$p latest is not $V"; exit 1; }
+            echo "readback: $p latest = $V"
+          done
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ inputs.version }}
+        run: |
+          gh release edit "v$V" -R "$GITHUB_REPOSITORY" --prerelease=false --latest
+          gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName

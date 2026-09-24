@@ -1,12 +1,13 @@
 {
 	"name": "@sylphx/mcp",
-	"version": "0.24.0-rc.1",
+	"version": "0.24.0",
 	"description": "The Sylphx MCP server: every Sylphx API method as MCP tools (runs `sylphx mcp`).",
 	"license": "MIT",
 	"type": "module",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/SylphxAI/sylphx-mcp.git"
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "mcp/npm"
 	},
 	"homepage": "https://sylphx.com/docs",
 	"keywords": [
@@ -23,13 +24,14 @@
 		"README.md"
 	],
 	"dependencies": {
-		"@sylphx/cli": "0.24.0-rc.1"
+		"@sylphx/cli": "0.24.0"
 	},
 	"engines": {
 		"node": ">=18"
 	},
 	"publishConfig": {
 		"access": "public",
-		"tag": "next"
+		"tag": "next",
+		"provenance": true
 	}
 }
