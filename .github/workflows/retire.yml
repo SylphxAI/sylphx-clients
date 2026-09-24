@@ -1,0 +1,40 @@
+# Retires the crates the generated SDK replaced (resource-api-and-clients.md
+# §10, stage C): every version of each crate below is yanked on crates.io and
+# read back. Idempotent: a yanked version is skipped. Yanked versions still
+# build for projects that pin them in a Cargo.lock; a fresh resolution picks
+# the replacement, the `sylphx` crate.
+name: Retire legacy crates
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  yank:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - name: Yank every version
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          ua='SylphxAI-clients-retire/1.0 (https://github.com/SylphxAI/sylphx-clients)'
+          retired="sylphx-sdk sylphx-sdk-core sylphx-sdk-management sylphx-sdk-mock sylphx-sdk-baas
+                   sylphx-api-types sylphx-wire sylphx-wire-mock
+                   sylphx-apps-sdk sylphx-apps-sdk-core sylphx-apps-sdk-management sylphx-apps-sdk-mock
+                   sylphx-apps-api-types sylphx-identity-sdk"
+          for crate in $retired; do
+            for v in $(curl -fsS -A "$ua" "https://crates.io/api/v1/crates/$crate" | jq -r '.versions[] | select(.yanked | not) | .num'); do
+              cargo yank --version "$v" "$crate"
+              sleep 2
+            done
+            left="$(curl -fsS -A "$ua" "https://crates.io/api/v1/crates/$crate" | jq '[.versions[] | select(.yanked | not)] | length')"
+            [ "$left" = 0 ] || { echo "::error::$crate still has $left unyanked versions"; exit 1; }
+            echo "readback: $crate: every version yanked"
+          done
