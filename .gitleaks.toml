@@ -1,0 +1,25 @@
+# Gitleaks configuration for the public sylphx-clients repository (the split of
+# this directory). The release's pre-publish guard scans the split with it.
+title = "sylphx-clients gitleaks config"
+
+[extend]
+useDefault = true
+
+# The Sylphx secret key, as in the monorepo's config.
+[[rules]]
+id = "sylphx-secret-key"
+description = "Sylphx secret API key"
+regex = '''\bsylphx_sk_(?:live|test)_[a-z0-9]{4}[0-9A-Za-z]{16}_[0-9A-Za-z]{38}\b'''
+keywords = ["sylphx_sk_"]
+
+# The generated TypeScript SDK's field tables map a field's JS name to its wire
+# name (`['secret', 'secret', 'sylphx.secrets.v1.Secret']`); generic-api-key
+# reads those as a key named "secret". Only that exact shape, in those files
+# (condition AND), is allowed.
+[[allowlists]]
+description = "generated field-name tables in the TypeScript SDK"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^typescript/src/[a-z_]+\.ts$''']
+regexTarget = "line"
+regexes = ['''^\s*\['[A-Za-z]+', '[a-z_]+'(, '[A-Za-z0-9_.]+')?\],\s*$''']
