@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-mcp"
-version = "0.24.1"
+version = "0.25.0"
 description = "The Sylphx MCP server: every Sylphx API method as MCP tools, generated from the Sylphx schema registry."
 keywords = ["sylphx", "mcp", "mcp-server", "agents"]
 categories = ["command-line-utilities", "api-bindings"]

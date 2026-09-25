@@ -1810,7 +1810,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-cli"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "clap",
  "clap_complete",
@@ -1827,7 +1827,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-mcp"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "serde",
  "serde_json",

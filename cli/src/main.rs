@@ -7,6 +7,7 @@
 
 mod auth;
 mod context;
+mod names;
 mod output;
 mod tree;
 
@@ -432,25 +433,41 @@ async fn login(
 
 async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {
     let me = client.invoke("access.whoami", json!({})).await?;
-    let mut l = Link::from_whoami(&me);
-    for (k, slot) in [
-        ("org", &mut l.org),
-        ("project", &mut l.project),
-        ("env", &mut l.env),
-    ] {
-        if let Some(v) = sub.get_one::<String>(k) {
-            *slot = v.clone();
-        }
-    }
-    if l.org.is_empty() {
+    let mine = Link::from_whoami(&me);
+    let org = sub
+        .get_one::<String>("org")
+        .cloned()
+        .unwrap_or(mine.org.clone());
+    if org.is_empty() {
         return Err(Failure::Usage("the key names no org; pass --org".into()));
     }
+    let project = sub.get_one::<String>("project").cloned();
+    let env = sub.get_one::<String>("env").cloned();
+    // Flags may be slugs, ids, or full names; the link stores full names.
+    let l = if project.is_none() && env.is_none() && sub.get_one::<String>("org").is_none() {
+        mine
+    } else {
+        let project = project.or_else(|| (!mine.project.is_empty()).then(|| mine.project.clone()));
+        let (org, project, env) =
+            names::link_names(client, &org, project.as_deref(), env.as_deref()).await?;
+        Link {
+            org,
+            project: project.unwrap_or_default(),
+            env: env.unwrap_or_default(),
+        }
+    };
     let dir = std::env::current_dir().map_err(|e| e.to_string())?;
     let p = context::write_link(&dir, &l)?;
     println!(
         "Linked {} to {}.",
         dir.display(),
-        if l.env.is_empty() { &l.project } else { &l.env }
+        if !l.env.is_empty() {
+            &l.env
+        } else if !l.project.is_empty() {
+            &l.project
+        } else {
+            &l.org
+        }
     );
     println!("Wrote {}.", p.display());
     Ok(())
@@ -495,6 +512,10 @@ impl Defaults<'_> {
 
     /// A full name from a full name or a bare id below the default parent.
     async fn name(&mut self, value: &str, pattern: &str) -> Result<String, Failure> {
+        if value.starts_with("orgs/") {
+            // A full name may carry project and environment slugs.
+            return names::resolve(self.client, value).await;
+        }
         if value.contains('/') || !pattern.contains('/') {
             return Ok(value.to_string());
         }
@@ -536,7 +557,7 @@ async fn generated(
         let given = mm.get_one::<String>("__positional").cloned();
         let value = match (p.arg.as_str(), given) {
             ("ID", v) => v,
-            ("PARENT", Some(v)) => Some(v),
+            ("PARENT", Some(v)) => Some(names::resolve(client, &v).await?),
             ("PARENT", None)
                 if tree::get_path(&Value::Object(args.clone()), &p.field).is_none() =>
             {

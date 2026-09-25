@@ -1,6 +1,7 @@
 # Promotes a release to `latest` once it passed the production smoke: the
 # npm dist-tag `latest` for @sylphx/cli (+ platform packages) and @sylphx/mcp,
-# and the GitHub Release's "Latest" mark (which `install.sh` follows).
+# and the GitHub Release's "Latest" mark (which `install.sh` follows), then
+# opens the Homebrew tap's formula bump pull request.
 name: Promote
 
 on:
@@ -39,3 +40,46 @@ jobs:
         run: |
           gh release edit "v$V" -R "$GITHUB_REPOSITORY" --prerelease=false --latest
           gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName
+
+  homebrew:
+    needs: promote
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: v${{ inputs.version }}
+          persist-credentials: false
+      - name: Tap token (SylphxAI/homebrew-tap only)
+        id: token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          # sylphx-release-bot; a client ID is a valid JWT issuer.
+          app-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: SylphxAI
+          repositories: homebrew-tap
+          permission-contents: write
+          permission-pull-requests: write
+      # A pull request, not a push: the tap's merge queue runs brew style,
+      # brew audit --strict --online, and an install test before it lands.
+      - name: Formula bump pull request (auto-merge)
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          V: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          GH_TOKEN="${{ github.token }}" gh release download "v$V" -R "$GITHUB_REPOSITORY" -p SHA256SUMS -D "$RUNNER_TEMP"
+          scripts/brew-formula.sh "$V" "$RUNNER_TEMP/SHA256SUMS" > "$RUNNER_TEMP/sylphx.rb"
+          git clone -q "https://x-access-token:${GH_TOKEN}@github.com/SylphxAI/homebrew-tap.git" "$RUNNER_TEMP/tap"
+          cd "$RUNNER_TEMP/tap"
+          cp "$RUNNER_TEMP/sylphx.rb" Formula/sylphx.rb
+          if git diff --quiet; then echo "readback: the tap formula is already $V"; exit 0; fi
+          branch="sylphx-$V"
+          git -c user.name='sylphx-release-bot[bot]' -c user.email='sylphx-release-bot[bot]@users.noreply.github.com' \
+            commit -qam "feat: sylphx $V"
+          git push -q -f origin "HEAD:refs/heads/$branch"
+          url="$(gh pr list -R SylphxAI/homebrew-tap --head "$branch" --json url --jq '.[0].url // ""')"
+          [ -n "$url" ] || url="$(gh pr create -R SylphxAI/homebrew-tap --head "$branch" --title "feat: sylphx $V" \
+            --body "Formula for sylphx v$V, rendered by scripts/brew-formula.sh from the release's SHA256SUMS.")"
+          gh pr merge "$url" --auto
+          echo "readback: $url (auto-merge on; lands after ci-ok)"
