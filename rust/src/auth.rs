@@ -2517,3 +2517,7 @@ impl<'a, T: crate::runtime::Transport> OauthClientsCollection<'a, T> {
         self.client.call(http).await
     }
 }
+
+/// Hand-written (not generated): see `auth/verify.rs`.
+#[cfg(feature = "verify")]
+pub mod verify;

@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/sdk",
-	"version": "0.30.0",
+	"version": "0.31.0",
 	"description": "The Sylphx SDK: one API, one key, every Sylphx service. Generated from the Sylphx schema registry.",
 	"license": "MIT",
 	"type": "module",
@@ -17,16 +17,16 @@
 		"cloud"
 	],
 	"engines": {
-		"node": ">=20"
+		"node": ">=20.19"
 	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"default": "./dist/index.js"
 		},
 		"./*": {
 			"types": "./dist/*.d.ts",
-			"import": "./dist/*.js"
+			"default": "./dist/*.js"
 		}
 	},
 	"main": "./dist/index.js",

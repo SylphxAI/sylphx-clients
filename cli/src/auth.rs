@@ -20,7 +20,13 @@ fn http() -> Result<reqwest::Client, String> {
 
 /// `https://api.sylphx.com` (no trailing slash, no `/v1`).
 pub fn api_root(base_url: Option<&str>) -> String {
+    // The same API every other command uses: `--base-url`, then
+    // `SYLPHX_BASE_URL`, then production.
+    let env = std::env::var("SYLPHX_BASE_URL")
+        .ok()
+        .filter(|v| !v.trim().is_empty());
     base_url
+        .or(env.as_deref())
         .unwrap_or("https://api.sylphx.com")
         .trim_end_matches('/')
         .trim_end_matches("/v1")

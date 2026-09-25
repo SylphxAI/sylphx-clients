@@ -368,14 +368,18 @@ async fn login(
     org: Option<String>,
     no_verify: bool,
 ) -> Result<(), Failure> {
-    let stdin_key = api_key.as_deref() == Some("-")
-        || (api_key.is_none() && (with_token || !std::io::stdin().is_terminal()));
-    let key = if stdin_key {
+    // A key is read from stdin when asked for (`--api-key -`, `--with-token`)
+    // or piped in; an empty stdin that was not asked for (a script, an agent
+    // shell) falls through to the device flow.
+    let asked = api_key.as_deref() == Some("-") || (api_key.is_none() && with_token);
+    let piped = api_key.is_none() && !std::io::stdin().is_terminal();
+    let key = if asked || piped {
         let mut s = String::new();
         std::io::stdin()
             .read_to_string(&mut s)
             .map_err(|e| e.to_string())?;
-        Some(s.trim().to_string())
+        let s = s.trim().to_string();
+        (asked || !s.is_empty()).then_some(s)
     } else {
         api_key
     };

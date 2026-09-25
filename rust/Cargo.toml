@@ -1,6 +1,6 @@
 [package]
 name = "sylphx"
-version = "0.2.0"
+version = "0.3.0"
 description = "The Sylphx SDK: one API, one key, every Sylphx service. Generated from the Sylphx schema registry."
 keywords = ["sylphx", "sdk", "api", "cloud"]
 categories = ["api-bindings", "web-programming::http-client"]
@@ -13,15 +13,20 @@ repository.workspace = true
 homepage.workspace = true
 
 [features]
-default = ["http"]
+default = ["http", "verify"]
 # The production transport (reqwest + rustls). Without it, bring a `Transport`.
 http = ["dep:reqwest", "dep:tokio", "dep:uuid", "dep:fastrand"]
+# Offline verification of Sylphx-signed tokens (`sylphx::auth::verify`).
+verify = ["dep:p256", "dep:ed25519-dalek", "dep:base64"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"], optional = true }
-tokio = { version = "1", features = ["time"], optional = true }
+tokio = { version = "1", features = ["time", "sync"], optional = true }
+p256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"], optional = true }
+ed25519-dalek = { version = "2", default-features = false, features = ["std"], optional = true }
+base64 = { version = "0.22", optional = true }
 uuid = { version = "1", features = ["v7"], optional = true }
 fastrand = { version = "2", optional = true }
 

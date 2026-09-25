@@ -182,6 +182,7 @@ jobs:
           publish cli/npm/cli
           publish mcp/npm
           (cd typescript && bun install --no-save && bun run build)
+          scripts/smoke-npm.sh typescript
           publish typescript
 
   crates:

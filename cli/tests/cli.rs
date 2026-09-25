@@ -282,6 +282,43 @@ async fn list_defaults_to_the_linked_env_and_prints_a_table() {
         .starts_with(&format!("GET /v1/{ENV}/databases?page_size=10 ")));
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn login_with_an_empty_stdin_starts_the_device_flow() {
+    let (url, log) = serve(vec![
+        (
+            200,
+            json!({"device_code": "dc", "user_code": "BCDF-GHJK", "verification_uri": "https://sylphx.com/device",
+                   "verification_uri_complete": "https://sylphx.com/device?user_code=BCDF-GHJK",
+                   "interval": 1, "expires_in": 600}),
+        ),
+        (400, json!({"error": "access_denied"})),
+    ])
+    .await;
+    let sb = Sandbox::new("login-stdin");
+    let mut c = sb.cmd(&url, &["login", "--org", "acme"]);
+    c.env_remove("SYLPHX_API_KEY");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success());
+    assert!(
+        err.contains("https://sylphx.com/device?user_code=BCDF-GHJK"),
+        "{err}"
+    );
+    assert!(err.contains("denied"), "{err}");
+    let seen = log.lock().unwrap();
+    assert!(seen[0]
+        .line
+        .starts_with("POST /v1/access/device/authorize "));
+    assert!(
+        seen[0].body.contains("\"org\":\"acme\""),
+        "{}",
+        seen[0].body
+    );
+    assert!(seen[1].line.starts_with("POST /v1/access/device/token "));
+}
+
 #[test]
 fn mcp_answers_over_stdio() {
     let sb = Sandbox::new("mcp");

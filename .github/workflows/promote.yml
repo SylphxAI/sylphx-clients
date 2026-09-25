@@ -1,7 +1,7 @@
 # Promotes a release to `latest` once it passed the production smoke: the
-# npm dist-tag `latest` for @sylphx/cli (+ platform packages) and @sylphx/mcp,
-# and the GitHub Release's "Latest" mark (which `install.sh` follows), then
-# opens the Homebrew tap's formula bump pull request.
+# npm dist-tag `latest` for @sylphx/cli (+ platform packages), @sylphx/mcp and
+# @sylphx/sdk, and the GitHub Release's "Latest" mark (which `install.sh`
+# follows), then opens the Homebrew tap's formula bump pull request.
 name: Promote
 
 on:
@@ -33,6 +33,11 @@ jobs:
             [ "$(npm view "$p" dist-tags.latest)" = "$V" ] || { echo "::error::$p latest is not $V"; exit 1; }
             echo "readback: $p latest = $V"
           done
+          # The SDK has its own version; the release tag records it.
+          S="$(curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/v$V/typescript/package.json" | jq -r .version)"
+          npm dist-tag add "@sylphx/sdk@$S" latest
+          [ "$(npm view @sylphx/sdk dist-tags.latest)" = "$S" ] || { echo "::error::@sylphx/sdk latest is not $S"; exit 1; }
+          echo "readback: @sylphx/sdk latest = $S"
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
