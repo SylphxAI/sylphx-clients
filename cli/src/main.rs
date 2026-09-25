@@ -98,7 +98,7 @@ fn cli(tree: &Tree) -> Command {
                         .help("Store the credential without calling whoami"),
                 ),
         )
-        .subcommand(Command::new("logout").about("Forget the stored key"))
+        .subcommand(Command::new("logout").about("Revoke the stored key and forget it"))
         .subcommand(
             Command::new("whoami").about("Show the caller: principal, org, project, env, scopes"),
         )
@@ -251,15 +251,21 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             .await
         }
         "logout" => {
-            if let Some(s) = context::load_credentials().session {
-                let url = base_url.clone().or(context::load_credentials().base_url);
-                auth::sign_out(&auth::api_root(url.as_deref()), &s).await;
+            let creds = context::load_credentials();
+            if let Some(key) = context::stored_key(&creds) {
+                let url = base_url.clone().or(creds.base_url.clone());
+                if key.starts_with("sylphx_sk_") {
+                    if let Err(e) = auth::revoke_self(&auth::api_root(url.as_deref()), &key).await {
+                        eprintln!("warning: could not revoke the key server-side ({e}); revoke it in Settings → API keys");
+                    }
+                }
             }
-            if let Some(p) = context::credentials_path().filter(|p| p.exists()) {
-                std::fs::remove_file(&p).map_err(|e| format!("{}: {e}", p.display()))?;
-                println!("Logged out ({} removed).", p.display());
-            } else {
-                println!("Not logged in.");
+            match context::forget(&creds)? {
+                Some(p) => println!(
+                    "Logged out: the key is revoked and removed ({}).",
+                    p.display()
+                ),
+                None => println!("Not logged in."),
             }
             Ok(())
         }
@@ -372,43 +378,52 @@ async fn login(
     } else {
         api_key
     };
-    let mut creds = context::Credentials {
-        base_url: base_url.clone(),
-        ..Default::default()
-    };
-    match key {
+    let (key, key_name) = match key {
         Some(k) if k.is_empty() => return Err(Failure::Usage("no key on stdin".into())),
         Some(k) => {
             if !k.starts_with("sylphx_sk_") && !k.starts_with("sylphx_pk_") {
                 eprintln!("warning: an Access key starts with sylphx_sk_ (secret) or sylphx_pk_ (publishable)");
             }
-            creds.api_key = Some(k);
+            (k, None)
         }
         None => {
             let api = auth::api_root(base_url.as_deref());
-            creds.session = Some(auth::device_login(&api, org).await?);
+            let issued = auth::device_login(&api, org).await?;
+            eprintln!("Approved in {}.", issued.org_slug);
+            (
+                issued.api_key,
+                Some(issued.key_name).filter(|n| !n.is_empty()),
+            )
         }
-    }
-    let path = context::save_credentials(&creds)?;
+    };
+    let (path, in_keychain) = context::store_key(base_url.clone(), &key, key_name)?;
+    let where_ = if in_keychain {
+        "the OS keychain".to_string()
+    } else {
+        eprintln!(
+            "note: no OS keychain here; the key is in {} (mode 0600)",
+            path.display()
+        );
+        path.display().to_string()
+    };
     if no_verify {
-        println!("Credential stored in {}.", path.display());
+        println!("Credential stored in {where_}.");
         return Ok(());
     }
-    let client = context::client(creds.api_key.clone(), base_url.clone())
+    let client = context::client(Some(key.clone()), base_url.clone())
         .await?
         .expect("a credential was stored");
     match client.invoke("access.whoami", json!({})).await {
         Ok(me) => println!(
-            "Signed in as {} (credential stored in {}).",
+            "Signed in as {} (key stored in {where_}).",
             me["principal"]
                 .as_str()
                 .or_else(|| me["email"].as_str())
                 .or_else(|| me["user"]["email"].as_str())
                 .unwrap_or("?"),
-            path.display()
         ),
         Err(e) => {
-            let _ = std::fs::remove_file(&path);
+            let _ = context::forget(&context::load_credentials());
             return Err(e.into());
         }
     }

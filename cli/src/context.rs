@@ -7,16 +7,80 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sylphx::{Client, HttpTransport};
 
-/// `~/.config/sylphx/credentials.json` (mode 0600).
+/// `~/.config/sylphx/credentials.json` (mode 0600): where the key is, not the
+/// key. The key lives in the OS keychain (macOS Keychain, Secret Service /
+/// libsecret, Windows Credential Manager); only a machine with no keychain
+/// (a headless server) keeps it in this file, and `sylphx login` says so.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Credentials {
+    /// Set only when no keychain was available (`store = "file"`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api_key: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub base_url: Option<String>,
-    /// A human session from `sylphx login` (the device flow).
+    /// `keychain` or `file`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub session: Option<crate::auth::Session>,
+    pub store: Option<String>,
+    /// The key's Resource name, for `whoami` and the console's key list.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key_name: Option<String>,
+}
+
+const KEYCHAIN_SERVICE: &str = "sylphx";
+
+fn keychain_account(base_url: Option<&str>) -> String {
+    crate::auth::api_root(base_url)
+}
+
+fn keychain_entry(base_url: Option<&str>) -> Option<keyring::Entry> {
+    if std::env::var_os("SYLPHX_NO_KEYCHAIN").is_some() {
+        return None;
+    }
+    keyring::Entry::new(KEYCHAIN_SERVICE, &keychain_account(base_url)).ok()
+}
+
+/// Stores `key` in the keychain, else (no keychain) in the 0600 file.
+pub fn store_key(
+    base_url: Option<String>,
+    key: &str,
+    key_name: Option<String>,
+) -> Result<(PathBuf, bool), String> {
+    let in_keychain = keychain_entry(base_url.as_deref())
+        .map(|e| e.set_password(key).is_ok())
+        .unwrap_or(false);
+    let creds = Credentials {
+        api_key: (!in_keychain).then(|| key.to_string()),
+        base_url,
+        store: Some(if in_keychain { "keychain" } else { "file" }.into()),
+        key_name,
+    };
+    Ok((save_credentials(&creds)?, in_keychain))
+}
+
+/// The stored key, wherever it is.
+pub fn stored_key(c: &Credentials) -> Option<String> {
+    match c.store.as_deref() {
+        Some("keychain") => {
+            keychain_entry(c.base_url.as_deref()).and_then(|e| e.get_password().ok())
+        }
+        _ => c.api_key.clone(),
+    }
+}
+
+/// Removes the stored key and the credentials file.
+pub fn forget(c: &Credentials) -> Result<Option<PathBuf>, String> {
+    if c.store.as_deref() == Some("keychain") {
+        if let Some(e) = keychain_entry(c.base_url.as_deref()) {
+            let _ = e.delete_credential();
+        }
+    }
+    match credentials_path().filter(|p| p.exists()) {
+        Some(p) => {
+            std::fs::remove_file(&p).map_err(|e| format!("{}: {e}", p.display()))?;
+            Ok(Some(p))
+        }
+        None => Ok(None),
+    }
 }
 
 /// `.sylphx/project.json`: full resource names.
@@ -132,12 +196,12 @@ pub fn write_link(dir: &Path, link: &Link) -> Result<PathBuf, String> {
 }
 
 /// Resolves the credential and base URL: `--api-key`, then `SYLPHX_API_KEY`,
-/// then the stored key, then the stored session (refreshed when stale).
+/// then the stored key.
 pub async fn client(
     api_key: Option<String>,
     base_url: Option<String>,
 ) -> Result<Option<Client>, String> {
-    let mut stored = load_credentials();
+    let stored = load_credentials();
     let url = base_url
         .or_else(|| {
             std::env::var("SYLPHX_BASE_URL")
@@ -151,18 +215,9 @@ pub async fn client(
                 .ok()
                 .filter(|k| !k.is_empty())
         })
-        .or(stored.api_key.clone());
-    let bearer = match (key, stored.session.clone()) {
-        (Some(k), _) => k,
-        (None, Some(s)) if s.stale() => {
-            let api = crate::auth::api_root(url.as_deref());
-            let fresh = crate::auth::refresh(&api, &s).await?;
-            stored.session = Some(fresh.clone());
-            save_credentials(&stored)?;
-            fresh.access_token
-        }
-        (None, Some(s)) => s.access_token,
-        (None, None) => return Ok(None),
+        .or_else(|| stored_key(&stored));
+    let Some(bearer) = key else {
+        return Ok(None);
     };
     let mut b = HttpTransport::builder().api_key(bearer);
     if let Some(u) = url {

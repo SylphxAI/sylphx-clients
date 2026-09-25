@@ -1,42 +1,14 @@
-//! Human login (`sylphx login` without a key): the RFC 8628 device flow at
-//! Sylphx Identity, exchanged at the platform API for a session
-//! (`POST /v1/auth/identity-exchange`) that refreshes at `/v1/auth/refresh`.
-//! Agents and CI use an Access key instead (`SYLPHX_API_KEY` or
-//! `sylphx login --api-key -`).
+//! `sylphx login` without a key: the Kernel Access device grant
+//! (access-and-keys.md §7.1, RFC 8628). The CLI asks
+//! `POST /v1/access/device/authorize`, the human approves at
+//! `https://sylphx.com/device` on their console session, and the poll at
+//! `POST /v1/access/device/token` returns an org-wide Access key bound to
+//! their role in that org. The key is the one credential; there is no
+//! separate session.
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-
-/// The public CLI client Identity serves when `/v1/auth/cli/config` is not.
-const DEFAULT_ISSUER: &str = "https://api.identity.sylphx.com";
-
-/// A stored human session: the platform's access token and its rotating
-/// refresh token.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Session {
-    pub access_token: String,
-    pub refresh_token: String,
-    /// Unix seconds.
-    pub access_expires_at: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub org: Option<String>,
-}
-
-impl Session {
-    /// Refresh 60 s before expiry so a command never outlives its token.
-    pub fn stale(&self) -> bool {
-        now() + 60 >= self.access_expires_at
-    }
-}
-
-pub fn now() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
-}
 
 fn http() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
@@ -55,86 +27,83 @@ pub fn api_root(base_url: Option<&str>) -> String {
         .to_string()
 }
 
-async fn json_of(r: reqwest::Response, what: &str) -> Result<Value, String> {
-    let status = r.status();
-    let text = r.text().await.map_err(|e| format!("{what}: {e}"))?;
-    let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
-    if status.is_success() {
-        return Ok(v);
-    }
-    let code = v
-        .get("error")
-        .and_then(|e| e.get("code").or(Some(e)))
-        .and_then(Value::as_str)
+/// This machine's label in the key list (`cli:<host>`).
+pub fn host_label() -> String {
+    let raw = std::env::var("SYLPHX_DEVICE_NAME")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            std::env::var("HOSTNAME")
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+        })
+        .or_else(|| {
+            std::env::var("COMPUTERNAME")
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+        })
+        .or_else(|| {
+            std::fs::read_to_string("/etc/hostname")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+        })
+        .unwrap_or_default();
+    raw.chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+        .take(64)
+        .collect()
+}
+
+/// The key a device approval issued.
+#[derive(Debug, Clone)]
+pub struct Issued {
+    pub api_key: String,
+    pub org_slug: String,
+    pub key_name: String,
+}
+
+fn error_code(v: &Value) -> &str {
+    v.get("error")
+        .and_then(|e| e.as_str().or_else(|| e.get("code").and_then(Value::as_str)))
         .or_else(|| v.get("code").and_then(Value::as_str))
-        .unwrap_or("error");
-    Err(format!("{what} failed ({code}, HTTP {})", status.as_u16()))
+        .unwrap_or("error")
 }
 
-fn session_of(v: &Value, org: Option<String>) -> Result<Session, String> {
-    let s = |k: &[&str]| {
-        k.iter()
-            .find_map(|k| v.get(*k).and_then(Value::as_str))
-            .map(str::to_string)
-    };
-    let access_token =
-        s(&["access_token", "accessToken"]).ok_or("no access_token in the session")?;
-    let refresh_token =
-        s(&["refresh_token", "refreshToken"]).ok_or("no refresh_token in the session")?;
-    let expires_in = v
-        .get("expires_in")
-        .or_else(|| v.get("expiresIn"))
-        .and_then(Value::as_u64)
-        .unwrap_or(900);
-    Ok(Session {
-        access_token,
-        refresh_token,
-        access_expires_at: now() + expires_in,
-        org,
-    })
-}
-
-/// The device flow, then the exchange. Prints the approval URL and code to
-/// stderr and polls until approved or expired.
-pub async fn device_login(api: &str, org: Option<String>) -> Result<Session, String> {
+/// Starts the grant, prints where to approve, and polls until the key is
+/// issued, the human denies, or the code expires.
+pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, String> {
     let http = http()?;
-    let config: Value = match http.get(format!("{api}/v1/auth/cli/config")).send().await {
-        Ok(r) if r.status().is_success() => r.json().await.unwrap_or(Value::Null),
-        _ => Value::Null,
-    };
-    let issuer = config["issuer"]
-        .as_str()
-        .unwrap_or(DEFAULT_ISSUER)
-        .trim_end_matches('/')
-        .to_string();
-    let client_id = config["client_id"]
-        .as_str()
-        .ok_or("the platform names no CLI login client (GET /v1/auth/cli/config)")?
-        .to_string();
-    let started = json_of(
-        http.post(format!("{issuer}/v1/oauth/device_authorization"))
-            .form(&[
-                ("client_id", client_id.as_str()),
-                ("scope", "openid profile email offline_access"),
-            ])
-            .send()
-            .await
-            .map_err(|e| format!("device authorization: {e}"))?,
-        "device authorization",
-    )
-    .await?;
+    let mut body = json!({ "client": "sylphx-cli", "host": host_label() });
+    if let Some(o) = &org {
+        body["org"] = json!(o);
+    }
+    let r = http
+        .post(format!("{api}/v1/access/device/authorize"))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("device authorization: {e}"))?;
+    let status = r.status();
+    let started: Value = r.json().await.unwrap_or(Value::Null);
+    if !status.is_success() {
+        return Err(format!(
+            "device authorization failed ({}, HTTP {})",
+            error_code(&started),
+            status.as_u16()
+        ));
+    }
     let device_code = started["device_code"]
         .as_str()
-        .ok_or("no device_code from Identity")?
+        .ok_or("no device_code from Sylphx")?
         .to_string();
     let user_code = started["user_code"].as_str().unwrap_or("?").to_string();
-    // Identity issues the Account Portal approval page (RFC 8628 §3.3.1).
     let url = started["verification_uri_complete"]
         .as_str()
         .or_else(|| started["verification_uri"].as_str())
-        .ok_or("no verification_uri from Identity")?
+        .ok_or("no verification_uri from Sylphx")?
         .to_string();
-    let interval = started["interval"].as_u64().unwrap_or(5).max(1);
+    let mut interval = started["interval"].as_u64().unwrap_or(5).max(1);
     let expires = started["expires_in"].as_u64().unwrap_or(600);
     eprintln!("To sign in, open this URL in a browser and approve:");
     eprintln!();
@@ -143,100 +112,54 @@ pub async fn device_login(api: &str, org: Option<String>) -> Result<Session, Str
     eprintln!("Code: {user_code}  (expires in {} min)", expires / 60);
     let _ = open_browser(&url);
 
-    let deadline = now() + expires;
-    let mut wait = interval;
-    let identity_token = loop {
-        if now() > deadline {
-            return Err(
-                "the device code expired before it was approved; run `sylphx login` again".into(),
-            );
+    let deadline = std::time::Instant::now() + Duration::from_secs(expires);
+    loop {
+        tokio::time::sleep(Duration::from_secs(interval)).await;
+        if std::time::Instant::now() >= deadline {
+            return Err("the code expired before it was approved; run `sylphx login` again".into());
         }
-        tokio::time::sleep(Duration::from_secs(wait)).await;
         let r = http
-            .post(format!("{issuer}/v1/oauth/token"))
-            .form(&[
-                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-                ("client_id", client_id.as_str()),
-                ("device_code", device_code.as_str()),
-            ])
+            .post(format!("{api}/v1/access/device/token"))
+            .json(&json!({ "device_code": device_code }))
             .send()
             .await
             .map_err(|e| format!("device token: {e}"))?;
         let ok = r.status().is_success();
         let v: Value = r.json().await.unwrap_or(Value::Null);
         if ok {
-            break v["access_token"]
+            let api_key = v["api_key"]
                 .as_str()
-                .ok_or("Identity approved but returned no access_token")?
+                .ok_or("no api_key in the answer")?
                 .to_string();
+            return Ok(Issued {
+                api_key,
+                org_slug: v["org"]["slug"].as_str().unwrap_or_default().to_string(),
+                key_name: v["key"]["name"].as_str().unwrap_or_default().to_string(),
+            });
         }
-        match v["error"].as_str().unwrap_or("") {
+        match error_code(&v) {
             "authorization_pending" => {}
-            "slow_down" => wait += 5,
-            "access_denied" => return Err("the sign-in was denied in the browser".into()),
-            "expired_token" => {
-                return Err("the device code expired; run `sylphx login` again".into())
-            }
+            "slow_down" => interval += 5,
+            "access_denied" => return Err("the sign-in was denied".into()),
+            "expired_token" => return Err("the code expired; run `sylphx login` again".into()),
             other => return Err(format!("device token rejected ({other})")),
         }
-    };
-
-    let mut body = json!({ "identity_access_token": identity_token });
-    if let Some(o) = &org {
-        body["organization_id"] = json!(o);
     }
-    let r = http
-        .post(format!("{api}/v1/auth/identity-exchange"))
-        .json(&body)
+}
+
+/// `sylphx logout`: the key revokes itself (best effort; the local copy is
+/// removed either way).
+pub async fn revoke_self(api: &str, key: &str) -> Result<(), String> {
+    let r = http()?
+        .post(format!("{api}/v1/access/keys/self:revoke"))
+        .bearer_auth(key)
         .send()
         .await
-        .map_err(|e| format!("session exchange: {e}"))?;
-    let status = r.status();
-    let v: Value = r.json().await.unwrap_or(Value::Null);
-    if !status.is_success() {
-        let code = v["code"]
-            .as_str()
-            .or_else(|| v["error"]["code"].as_str())
-            .or_else(|| v["error"].as_str())
-            .unwrap_or("error");
-        if code == "identity_org_ambiguous" {
-            return Err(format!(
-                "your account is in several organizations; run `sylphx login --org <id-or-slug>` (one of {})",
-                v["orgs"]
-            ));
-        }
-        return Err(format!(
-            "session exchange failed ({code}, HTTP {})",
-            status.as_u16()
-        ));
-    }
-    session_of(&v, org)
-}
-
-/// Rotates a stale session at `/v1/auth/refresh`.
-pub async fn refresh(api: &str, s: &Session) -> Result<Session, String> {
-    let v = json_of(
-        http()?
-            .post(format!("{api}/v1/auth/refresh"))
-            .json(&json!({ "refresh_token": s.refresh_token }))
-            .send()
-            .await
-            .map_err(|e| format!("session refresh: {e}"))?,
-        "session refresh (run `sylphx login` again)",
-    )
-    .await?;
-    session_of(&v, s.org.clone())
-}
-
-/// Ends the session server-side (best effort).
-pub async fn sign_out(api: &str, s: &Session) {
-    if let Ok(h) = http() {
-        let _ = h
-            .post(format!("{api}/v1/auth/sign-out"))
-            .bearer_auth(&s.access_token)
-            .json(&json!({ "refresh_token": s.refresh_token }))
-            .send()
-            .await;
+        .map_err(|e| e.to_string())?;
+    if r.status().is_success() || r.status().as_u16() == 401 {
+        Ok(())
+    } else {
+        Err(format!("HTTP {}", r.status().as_u16()))
     }
 }
 
@@ -246,6 +169,8 @@ fn open_browser(url: &str) -> std::io::Result<()> {
     }
     let cmd = if cfg!(target_os = "macos") {
         "open"
+    } else if cfg!(windows) {
+        "explorer"
     } else {
         "xdg-open"
     };
@@ -271,14 +196,9 @@ mod tests {
     }
 
     #[test]
-    fn a_session_parses_both_casings_and_goes_stale() {
-        let s = session_of(
-            &json!({"accessToken": "a", "refresh_token": "r", "expires_in": 30}),
-            None,
-        )
-        .unwrap();
-        assert_eq!(s.access_token, "a");
-        assert!(s.stale(), "30 s left is inside the 60 s margin");
-        assert!(session_of(&json!({"access_token": "a"}), None).is_err());
+    fn error_codes_read_both_shapes() {
+        assert_eq!(error_code(&json!({"error": "slow_down"})), "slow_down");
+        assert_eq!(error_code(&json!({"error": {"code": "x"}})), "x");
+        assert_eq!(error_code(&json!({"code": "y"})), "y");
     }
 }
