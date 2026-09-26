@@ -32,6 +32,20 @@ for await (const project of sylphx.access.projects.listAll({ parent: me.org })) 
   `Retry-After`; each logical mutation sends one `Idempotency-Key`.
 - `sylphx.invoke('data.databases.get', { name })` calls any method by id with
   wire JSON.
+- In a browser, use the environment's publishable key
+  (`SYLPHX_PUBLISHABLE_KEY`, delivered by the platform to every service and
+  safe to ship in a bundle). It calls only browser-safe methods, such as error
+  capture:
+
+  ```ts
+  const sylphx = new Sylphx({ apiKey: PUBLISHABLE_KEY }) // e.g. from a public build-time variable
+  window.addEventListener('error', (e) =>
+  	sylphx.observability.errorGroups.capture({
+  		parent: 'orgs/-/projects/-/envs/-',
+  		errorEvent: { exceptionType: e.error?.name ?? 'Error', message: e.message, stack: e.error?.stack, release: RELEASE },
+  	}),
+  )
+  ```
 - Some services also have a data plane served at their own host, with the same
   key: Sylphx Data's objects and key-value entries are `sylphx.data.objects`
   and `sylphx.data.kv` (at `https://api.data.sylphx.com`). Every such call
