@@ -18495,6 +18495,189 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a source map (without its content)."
+      },
+      "description": "Gets a source map (without its content).",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/source_maps/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetSourceMap.",
+        "properties": {
+          "name": {
+            "description": "The name of the source map to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/SourceMap"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.source_maps.get",
+      "permission": "observability:read",
+      "tool": "observability_source_maps_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists source maps, newest first; filter by `release`."
+      },
+      "description": "Lists source maps, newest first; filter by `release`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/source_maps",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListSourceMaps.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; `release = \"…\"` only.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many, up to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The `next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/SourceMap"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.source_maps.list",
+      "permission": "observability:read",
+      "tool": "observability_source_maps_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets the environment's scrubbing policy (`scrubbing_policies/default`)."
+      },
+      "description": "Gets the environment's scrubbing policy (`scrubbing_policies/default`).",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/scrubbing_policies/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetScrubbingPolicy.",
+        "properties": {
+          "name": {
+            "description": "The name of the scrubbing policy to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/ScrubbingPolicy"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.scrubbing_policies.get",
+      "permission": "observability:read",
+      "tool": "observability_scrubbing_policies_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the environment's scrubbing policy."
+      },
+      "description": "Updates the environment's scrubbing policy.",
+      "effect": "write",
+      "http": "PATCH /v1/{scrubbing_policy.name=orgs/*/projects/*/envs/*/scrubbing_policies/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateScrubbingPolicy.",
+        "properties": {
+          "scrubbing_policy": {
+            "additionalProperties": false,
+            "description": "The scrubbing policy to update; `name` identifies it.",
+            "properties": {
+              "denied_fields": {
+                "description": "More field names to replace with `[Filtered]` wherever they appear in\ntags, extra data, request data, or breadcrumb data (case-insensitive,\nmatched as a substring), at most 64.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "keep_emails": {
+                "description": "Keep email addresses instead of replacing them with `[email]`.",
+                "type": "boolean"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata; `meta.etag` fences updates.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/scrubbing_policies/default`.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scrubbing_policy"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.scrubbing_policies.update",
+      "permission": "observability:write",
+      "tool": "observability_scrubbing_policies_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a release."
       },
       "description": "Gets a release.",
@@ -24499,7 +24682,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@446ceb843d4ff88057b0db68e2e54e4aea52d8143b72d66016122995b878de20. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@8927c3f6d325783ebbbbd0506071256df8f794131d8a194c120c604866b68e0d. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
