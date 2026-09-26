@@ -324,6 +324,8 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                     query,
                     body,
                     mutation: method != "GET",
+                    origin: None,
+                    effect_ids: false,
                 })
                 .await?;
             println!(
@@ -762,6 +764,8 @@ async fn wait(client: &Client, mut op: Value) -> Result<Value, Failure> {
                 query: vec![("timeout".into(), "60s".into())],
                 body: Some(json!({})),
                 mutation: false,
+                origin: None,
+                effect_ids: false,
             })
             .await?;
     }

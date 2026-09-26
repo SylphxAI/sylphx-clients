@@ -285,6 +285,8 @@ async fn wait_once<T: Transport>(client: &Client<T>, operation: Value) -> Result
             query: vec![("timeout".into(), "30s".into())],
             body: Some(json!({})),
             mutation: false,
+            origin: None,
+            effect_ids: false,
         })
         .await?;
     Ok(if op["done"] == true { settled(op) } else { op })

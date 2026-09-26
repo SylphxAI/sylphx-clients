@@ -36,6 +36,12 @@ async fn main() -> Result<(), sylphx::Error> {
   `Retry-After`, and sends one `Idempotency-Key` per logical mutation.
 - `Client::invoke("data.databases.get", json!({"name": "…"}))` calls any
   method by id with wire JSON.
+- Sylphx Data's objects and key-value entries (`sx.data().objects()`,
+  `sx.data().kv()`) are served at `https://api.data.sylphx.com` with the same
+  key; each call carries one `Sylphx-Effect-Id`, reused on its retries.
+- `SYLPHX_URL` and `SYLPHX_SECRET_URL` (per-project `<project>.api.sylphx.com`
+  hosts, retired on 2026-09-03) are not read; a base URL on such a host is
+  ignored with a warning.
 
 This crate is generated from the Sylphx schema registry by `sylphx-gen`; do
 not edit it by hand. Source: `clients/rust` in the Sylphx monorepo, published

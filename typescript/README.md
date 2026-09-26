@@ -32,7 +32,23 @@ for await (const project of sylphx.access.projects.listAll({ parent: me.org })) 
   `Retry-After`; each logical mutation sends one `Idempotency-Key`.
 - `sylphx.invoke('data.databases.get', { name })` calls any method by id with
   wire JSON.
+- Some services also have a data plane served at their own host, with the same
+  key: Sylphx Data's objects and key-value entries are `sylphx.data.objects`
+  and `sylphx.data.kv` (at `https://api.data.sylphx.com`). Every such call
+  carries one `Sylphx-Effect-Id`, reused on its retries, so a retried write is
+  applied once.
+- `SYLPHX_URL` and `SYLPHX_SECRET_URL` (per-project `<project>.api.sylphx.com`
+  hosts, retired on 2026-09-03) are not read; a base URL on such a host is
+  ignored with a warning.
 - Per-service subpath imports tree-shake: `import { DataApi } from '@sylphx/sdk/data'`.
+
+```ts
+// Bytes travel base64 (`body`, `value`); the bucket and namespace are Data
+// Resources of the environment (`sylphx.data.buckets`, `sylphx.data.kvNamespaces`).
+await sylphx.data.objects.put({ bucketId: 'uploads', key: `${orgId}/cv.pdf`, body: base64, contentType: 'application/pdf' })
+const { body } = await sylphx.data.objects.get({ bucketId: 'uploads', key: `${orgId}/cv.pdf` })
+const hits = await sylphx.data.kv.increment({ namespaceId: 'ratelimit', key: `ip:${ip}` })
+```
 
 This package is generated from the Sylphx schema registry by `sylphx-gen`; do
 not edit it by hand. Source: `clients/typescript` in the Sylphx monorepo,

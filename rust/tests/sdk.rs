@@ -542,6 +542,145 @@ mod http {
         assert_eq!(seen.lock().unwrap().len(), 2);
     }
 
+    fn data_client(url: &str, retries: u32) -> Client {
+        Client::new(
+            HttpTransport::builder()
+                .origin("https://api.data.sylphx.com", url)
+                .api_key("sylphx_sk_test")
+                .max_retries(retries)
+                .build()
+                .unwrap(),
+        )
+    }
+
+    #[tokio::test]
+    async fn the_data_plane_sends_one_effect_id_per_call_and_reuses_it_on_retry() {
+        let object = json!({"bucketId": "uploads", "key": "org_1/cv 2026+final.pdf",
+                            "contentType": "application/pdf", "size": "5", "version": "3"});
+        let (url, seen) = serve(vec![
+            (
+                503,
+                "retry-after: 0\r\n",
+                json!({"error": {"code": "unavailable", "message": "retry"}}),
+            ),
+            (200, "", json!({"object": object})),
+        ])
+        .await;
+        let mut req = sylphx::data::PutObjectRequest::default();
+        req.bucket_id = "uploads".into();
+        req.key = "org_1/cv 2026+final.pdf".into();
+        req.body = "aGVsbG8=".into();
+        req.content_type = "application/pdf".into();
+        let out = data_client(&url, 1)
+            .data()
+            .objects()
+            .put(req)
+            .await
+            .unwrap();
+        // Data answers ProtoJSON: camelCase names and string uint64s decode.
+        let stored = out.object.unwrap();
+        assert_eq!(stored.content_type, "application/pdf");
+        assert_eq!((stored.size, stored.version), (5, 3));
+        let seen = seen.lock().unwrap().clone();
+        assert_eq!(seen.len(), 2);
+        assert!(seen[0]
+            .head
+            .starts_with("PUT /v1/objects/uploads/org_1/cv%202026%2Bfinal.pdf "));
+        let e1 = header(&seen[0].head, "sylphx-effect-id").unwrap();
+        assert_eq!(
+            Some(e1),
+            header(&seen[1].head, "sylphx-effect-id"),
+            "reused on retry"
+        );
+        assert_eq!(uuid_version(e1), '7');
+        assert!(header(&seen[0].head, "idempotency-key").is_none());
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&seen[0].body).unwrap(),
+            json!({"body": "aGVsbG8=", "content_type": "application/pdf"})
+        );
+    }
+
+    #[tokio::test]
+    async fn every_data_plane_read_carries_an_effect_id_and_errors_map_to_registry_codes() {
+        let (url, seen) = serve(vec![(
+            404,
+            "",
+            json!({"error": {"code": "not_found", "message": "value not found", "occurrenceId": "occ_1"}}),
+        )])
+        .await;
+        let mut req = sylphx::data::GetValueRequest::default();
+        req.namespace_id = "ratelimit".into();
+        req.key = "ip:1".into();
+        match data_client(&url, 0).data().kv().get(req).await.unwrap_err() {
+            Error::Api {
+                code,
+                status,
+                detail,
+                ..
+            } => {
+                assert_eq!(code, sylphx::common::ErrorCode::ResourceNotFound);
+                assert_eq!(status, 404);
+                assert_eq!(detail, "not_found: value not found");
+            }
+            other => panic!("{other}"),
+        }
+        let seen = seen.lock().unwrap();
+        assert!(seen[0].head.starts_with("GET /v1/kv/ratelimit/ip%3A1 "));
+        assert!(header(&seen[0].head, "sylphx-effect-id").is_some());
+    }
+
+    #[tokio::test]
+    async fn an_explicit_zero_increment_is_sent() {
+        let (url, seen) = serve(vec![(
+            200,
+            "",
+            json!({"value": {"namespaceId": "n", "key": "k", "value": "Mw=="}}),
+        )])
+        .await;
+        let mut req = sylphx::data::IncrementValueRequest::default();
+        req.namespace_id = "n".into();
+        req.key = "k".into();
+        req.delta = Some(0);
+        data_client(&url, 0)
+            .data()
+            .kv()
+            .increment(req)
+            .await
+            .unwrap();
+        let seen = seen.lock().unwrap();
+        assert!(seen[0].head.starts_with("POST /v1/kv-increments "));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&seen[0].body).unwrap(),
+            json!({"namespace_id": "n", "key": "k", "delta": "0"})
+        );
+    }
+
+    #[test]
+    fn a_retired_per_project_host_is_never_called() {
+        assert!(sylphx::runtime::retired_base_url(
+            "https://gold-time-8ea5.api.sylphx.com/v1"
+        ));
+        assert!(sylphx::runtime::retired_base_url(
+            "sylphx://pk_x:sk_y@gold-time-8ea5.api.sylphx.com"
+        ));
+        assert!(!sylphx::runtime::retired_base_url("https://api.sylphx.com"));
+        let t = HttpTransport::builder()
+            .base_url("https://gold-time-8ea5.api.sylphx.com")
+            .build()
+            .unwrap();
+        assert_eq!(t.base_url(), "https://api.sylphx.com");
+    }
+
+    #[test]
+    fn a_key_with_an_empty_segment_is_refused() {
+        assert!(sylphx::runtime::protocol_param("a//b", true, "key").is_err());
+        assert!(sylphx::runtime::protocol_param("a/b", false, "bucket_id").is_err());
+        assert_eq!(
+            sylphx::runtime::protocol_param("a b/c", true, "key").unwrap(),
+            "a%20b/c"
+        );
+    }
+
     fn uuid_version(s: &str) -> char {
         s.chars().nth(14).unwrap()
     }
