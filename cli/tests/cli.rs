@@ -319,6 +319,36 @@ async fn login_with_an_empty_stdin_starts_the_device_flow() {
     assert!(seen[1].line.starts_with("POST /v1/access/device/token "));
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn login_keeps_polling_through_a_transient_server_error() {
+    let (url, log) = serve(vec![
+        (
+            200,
+            json!({"device_code": "dc", "user_code": "BCDF-GHJK", "verification_uri": "https://sylphx.com/device",
+                   "interval": 1, "expires_in": 600}),
+        ),
+        (503, json!({"code": "UNAVAILABLE"})),
+        (
+            200,
+            json!({"api_key": "sylphx_sk_test_issued", "org": {"slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}}),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("login-503");
+    let mut c = sb.cmd(&url, &["login", "--org", "acme", "--no-verify"]);
+    c.env_remove("SYLPHX_API_KEY");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{err}");
+    assert!(err.contains("Approved in acme"), "{err}");
+    let seen = log.lock().unwrap();
+    assert_eq!(seen.len(), 3);
+    assert!(seen[1].line.starts_with("POST /v1/access/device/token "));
+    assert!(seen[2].line.starts_with("POST /v1/access/device/token "));
+}
+
 #[test]
 fn mcp_answers_over_stdio() {
     let sb = Sandbox::new("mcp");

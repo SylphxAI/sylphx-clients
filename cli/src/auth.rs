@@ -124,12 +124,18 @@ pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, Stri
         if std::time::Instant::now() >= deadline {
             return Err("the code expired before it was approved; run `sylphx login` again".into());
         }
-        let r = http
+        // A network error, 429, or 5xx while waiting is transient: keep
+        // polling until the code expires (the approval may land meanwhile).
+        let r = match http
             .post(format!("{api}/v1/access/device/token"))
             .json(&json!({ "device_code": device_code }))
             .send()
             .await
-            .map_err(|e| format!("device token: {e}"))?;
+        {
+            Ok(r) if r.status().as_u16() == 429 || r.status().is_server_error() => continue,
+            Ok(r) => r,
+            Err(_) => continue,
+        };
         let ok = r.status().is_success();
         let v: Value = r.json().await.unwrap_or(Value::Null);
         if ok {
