@@ -28,16 +28,26 @@ jobs:
           V: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          # The registry serves reads from a cache: right after a dist-tag
+          # write, `npm view` can still show the old tag for some seconds
+          # (the 0.25.1 promotion failed its readback five times over this).
+          # Wait up to 60 s for the write to show before calling it failed.
+          readback() {
+            for _ in $(seq 1 12); do
+              [ "$(npm view "$1" dist-tags.latest --prefer-online)" = "$2" ] && { echo "readback: $1 latest = $2"; return 0; }
+              sleep 5
+            done
+            echo "::error::$1 latest is not $2 after 60 s"
+            return 1
+          }
           for p in @sylphx/cli-linux-x64 @sylphx/cli-linux-arm64 @sylphx/cli-darwin-x64 @sylphx/cli-darwin-arm64 @sylphx/cli @sylphx/mcp; do
             npm dist-tag add "$p@$V" latest
-            [ "$(npm view "$p" dist-tags.latest)" = "$V" ] || { echo "::error::$p latest is not $V"; exit 1; }
-            echo "readback: $p latest = $V"
+            readback "$p" "$V"
           done
           # The SDK has its own version; the release tag records it.
           S="$(curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/v$V/typescript/package.json" | jq -r .version)"
           npm dist-tag add "@sylphx/sdk@$S" latest
-          [ "$(npm view @sylphx/sdk dist-tags.latest)" = "$S" ] || { echo "::error::@sylphx/sdk latest is not $S"; exit 1; }
-          echo "readback: @sylphx/sdk latest = $S"
+          readback @sylphx/sdk "$S"
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
