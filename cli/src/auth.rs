@@ -67,6 +67,9 @@ pub struct Issued {
     pub api_key: String,
     pub org_slug: String,
     pub key_name: String,
+    /// How long after issue Access expects the key to verify
+    /// (`active_after_ms`, capped at 10 s).
+    pub active_after: Duration,
 }
 
 fn error_code(v: &Value) -> &str {
@@ -147,6 +150,9 @@ pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, Stri
                 api_key,
                 org_slug: v["org"]["slug"].as_str().unwrap_or_default().to_string(),
                 key_name: v["key"]["name"].as_str().unwrap_or_default().to_string(),
+                active_after: Duration::from_millis(
+                    v["active_after_ms"].as_u64().unwrap_or(0).min(10_000),
+                ),
             });
         }
         match error_code(&v) {

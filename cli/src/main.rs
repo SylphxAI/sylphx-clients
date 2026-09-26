@@ -385,6 +385,8 @@ async fn login(
     } else {
         api_key
     };
+    let issued_here = key.is_none();
+    let mut active_after = std::time::Duration::ZERO;
     let (key, key_name) = match key {
         Some(k) if k.is_empty() => return Err(Failure::Usage("no key on stdin".into())),
         Some(k) => {
@@ -397,6 +399,7 @@ async fn login(
             let api = auth::api_root(base_url.as_deref());
             let issued = auth::device_login(&api, org).await?;
             eprintln!("Approved in {}.", issued.org_slug);
+            active_after = issued.active_after;
             (
                 issued.api_key,
                 Some(issued.key_name).filter(|n| !n.is_empty()),
@@ -420,7 +423,28 @@ async fn login(
     let client = context::client(Some(key.clone()), base_url.clone())
         .await?
         .expect("a credential was stored");
-    match client.invoke("access.whoami", json!({})).await {
+    // A key Access issued seconds ago may not be verifiable yet
+    // (`key_not_yet_propagated`); network and server errors are transient too.
+    // Retry those for about 15 s. The stored key is kept unless Sylphx
+    // definitely rejects a key the user supplied.
+    // Access says when a key it just issued verifies (`active_after_ms`).
+    tokio::time::sleep(active_after).await;
+    let mut waits = [500u64, 1000, 2000, 4000, 8000].into_iter();
+    let outcome = loop {
+        match client.invoke("access.whoami", json!({})).await {
+            // A key issued seconds ago that a replica has not loaded yet
+            // answers `unknown_key` once the propagation window has passed.
+            Err(e) if transient_whoami(&e) || (issued_here && unknown_key(&e)) => {
+                match waits.next() {
+                    Some(ms) => tokio::time::sleep(std::time::Duration::from_millis(ms)).await,
+                    None => break Err((e, true)),
+                }
+            }
+            Err(e) => break Err((e, false)),
+            Ok(me) => break Ok(me),
+        }
+    };
+    match outcome {
         Ok(me) => println!(
             "Signed in as {} (key stored in {where_}).",
             me["principal"]
@@ -429,12 +453,49 @@ async fn login(
                 .or_else(|| me["user"]["email"].as_str())
                 .unwrap_or("?"),
         ),
-        Err(e) => {
+        Err((e, _)) if issued_here => {
+            eprintln!(
+                "The key is stored in {where_}, but Sylphx could not confirm it yet ({e}). \
+                 Run `sylphx whoami` in a minute; there is no need to sign in again."
+            );
+        }
+        Err((e, true)) => {
+            eprintln!(
+                "The key is stored in {where_}, but Sylphx could not confirm it yet ({e}). \
+                 Run `sylphx whoami` in a minute."
+            );
+        }
+        Err((e, false)) => {
             let _ = context::forget(&context::load_credentials());
             return Err(e.into());
         }
     }
     Ok(())
+}
+
+fn unknown_key(e: &Error) -> bool {
+    matches!(e, Error::Api { detail, .. } if detail.contains("unknown_key"))
+}
+
+/// A `whoami` failure worth retrying right after login: the key is not yet
+/// verifiable where the call landed, or the network or server was briefly
+/// unavailable.
+fn transient_whoami(e: &Error) -> bool {
+    match e {
+        Error::Api {
+            code,
+            status,
+            detail,
+            ..
+        } => {
+            *code == sylphx::common::ErrorCode::NotYetPropagated
+                || detail.contains("not_yet_propagated")
+                || *status == 429
+                || *status >= 500
+        }
+        Error::Transport(_) => true,
+        _ => false,
+    }
 }
 
 async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {

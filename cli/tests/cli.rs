@@ -330,7 +330,7 @@ async fn login_keeps_polling_through_a_transient_server_error() {
         (503, json!({"code": "UNAVAILABLE"})),
         (
             200,
-            json!({"api_key": "sylphx_sk_test_issued", "org": {"slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}}),
+            json!({"api_key": "sylphx_sk_test_issued", "org": {"slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}, "active_after_ms": 300}),
         ),
     ])
     .await;
@@ -347,6 +347,79 @@ async fn login_keeps_polling_through_a_transient_server_error() {
     assert_eq!(seen.len(), 3);
     assert!(seen[1].line.starts_with("POST /v1/access/device/token "));
     assert!(seen[2].line.starts_with("POST /v1/access/device/token "));
+}
+
+fn device_replies() -> Vec<(u16, Value)> {
+    vec![
+        (
+            200,
+            json!({"device_code": "dc", "user_code": "BCDF-GHJK", "verification_uri": "https://sylphx.com/device",
+                   "interval": 1, "expires_in": 600}),
+        ),
+        (
+            200,
+            json!({"api_key": "sylphx_sk_test_issued", "org": {"slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}, "active_after_ms": 300}),
+        ),
+    ]
+}
+
+fn not_yet() -> (u16, Value) {
+    (
+        401,
+        json!({"ok": false, "error": "key_not_yet_propagated", "code": "key_not_yet_propagated", "status": 401}),
+    )
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn login_waits_for_a_fresh_key_to_propagate() {
+    let mut replies = device_replies();
+    // Not yet propagated, then (window passed, replica not refreshed)
+    // unknown_key, then verified.
+    replies.extend([
+        not_yet(),
+        (
+            401,
+            json!({"ok": false, "error": "unknown_key", "code": "unknown_key", "status": 401}),
+        ),
+        (200, json!({"principal": "principal_kyle"})),
+    ]);
+    let (url, log) = serve(replies).await;
+    let sb = Sandbox::new("login-propagate");
+    let mut c = sb.cmd(&url, &["login", "--org", "acme"]);
+    c.env_remove("SYLPHX_API_KEY")
+        .env_remove("DBUS_SESSION_BUS_ADDRESS");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(stdout.contains("Signed in as principal_kyle"), "{stdout}");
+    assert_eq!(log.lock().unwrap().len(), 5);
+    let creds = std::fs::read_to_string(sb.dir.join("config/credentials.json")).unwrap_or_default();
+    assert!(creds.contains("sylphx_sk_test_issued"), "{creds}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn login_keeps_an_issued_key_it_cannot_confirm_yet() {
+    let mut replies = device_replies();
+    replies.extend(std::iter::repeat_with(not_yet).take(6));
+    let (url, _log) = serve(replies).await;
+    let sb = Sandbox::new("login-unconfirmed");
+    let mut c = sb.cmd(&url, &["login", "--org", "acme"]);
+    c.env_remove("SYLPHX_API_KEY")
+        .env_remove("DBUS_SESSION_BUS_ADDRESS");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{err}");
+    assert!(err.contains("no need to sign in again"), "{err}");
+    let creds = std::fs::read_to_string(sb.dir.join("config/credentials.json")).unwrap_or_default();
+    assert!(creds.contains("sylphx_sk_test_issued"), "{creds}");
 }
 
 #[test]

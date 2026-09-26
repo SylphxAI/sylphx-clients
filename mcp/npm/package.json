@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/mcp",
-	"version": "0.25.1",
+	"version": "0.25.2",
 	"description": "The Sylphx MCP server: every Sylphx API method as MCP tools (runs `sylphx mcp`).",
 	"license": "MIT",
 	"type": "module",
@@ -24,7 +24,7 @@
 		"README.md"
 	],
 	"dependencies": {
-		"@sylphx/cli": "0.25.1"
+		"@sylphx/cli": "0.25.2"
 	},
 	"engines": {
 		"node": ">=18"
