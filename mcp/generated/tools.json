@@ -16636,6 +16636,29 @@
                 "type": "array",
                 "x-sylphx-immutable": true
               },
+              "content": {
+                "additionalProperties": false,
+                "description": "Inline content, only with `mailbox`: the subject and bodies as written,\nnot rendered from a template.",
+                "properties": {
+                  "html_body": {
+                    "description": "The HTML body.",
+                    "type": "string"
+                  },
+                  "subject": {
+                    "description": "The subject.",
+                    "type": "string"
+                  },
+                  "text_body": {
+                    "description": "The plain-text body.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "subject"
+                ],
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
               "data": {
                 "additionalProperties": true,
                 "description": "Template variables.",
@@ -16647,6 +16670,12 @@
                 "format": "date-time",
                 "type": "string",
                 "x-sylphx-immutable": true
+              },
+              "mailbox": {
+                "description": "Send as this mailbox (its address, display name and, for a connected\nmailbox, its own SMTP) instead of a verified Sending Domain.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
               },
               "meta": {
                 "additionalProperties": false,
@@ -16677,11 +16706,24 @@
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/messages/{message}`.",
                 "type": "string"
               },
+              "parent_message_id": {
+                "description": "In-Reply-To: the Message-ID this answers, without angle brackets.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
               "recipient": {
                 "description": "The recipient.",
                 "type": "string",
                 "x-sylphx-immutable": true,
                 "x-sylphx-resource-reference": "notify.sylphx.com/Recipient"
+              },
+              "references": {
+                "description": "The thread's Message-IDs, oldest first, without angle brackets.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
               },
               "send_time": {
                 "description": "Send no earlier than this.",
@@ -16690,7 +16732,7 @@
                 "x-sylphx-immutable": true
               },
               "template": {
-                "description": "The template to render.",
+                "description": "The template to render; required unless `mailbox` and `content` are set.",
                 "type": "string",
                 "x-sylphx-immutable": true,
                 "x-sylphx-resource-reference": "notify.sylphx.com/Template"
@@ -16703,8 +16745,7 @@
             },
             "required": [
               "recipient",
-              "topic",
-              "template"
+              "topic"
             ],
             "type": "object"
           },
@@ -16769,6 +16810,635 @@
       "method_id": "notify.messages.cancel",
       "permission": "notify:send",
       "tool": "notify_messages_cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a mailbox."
+      },
+      "description": "Gets a mailbox.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMailbox.",
+        "properties": {
+          "name": {
+            "description": "The name of the mailbox to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailboxes.get",
+      "permission": "notify:read",
+      "tool": "notify_mailboxes_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists mailboxes."
+      },
+      "description": "Lists mailboxes.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/mailboxes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMailboxes.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailboxes.list",
+      "permission": "notify:read",
+      "tool": "notify_mailboxes_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a mailbox."
+      },
+      "description": "Creates a mailbox.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/mailboxes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateMailbox.",
+        "properties": {
+          "mailbox": {
+            "additionalProperties": false,
+            "description": "The mailbox to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "address": {
+                    "description": "The address, for example `support@example.com`.",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "append_sent": {
+                    "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
+                    "type": "boolean"
+                  },
+                  "backfill_start_time": {
+                    "description": "Read mail received on or after this day on the first poll.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "description": "The From display name of mail sent as this mailbox.",
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "description": "Poll and send; a disabled mailbox keeps its records.",
+                    "type": "boolean"
+                  },
+                  "imap": {
+                    "additionalProperties": false,
+                    "description": "IMAP, for a connected mailbox.",
+                    "properties": {
+                      "host": {
+                        "description": "The host name.",
+                        "type": "string"
+                      },
+                      "port": {
+                        "description": "The port; IMAP 993 and SMTP 465 when unset.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "security": {
+                        "description": "How the connection is secured.",
+                        "enum": [
+                          "tls",
+                          "starttls"
+                        ],
+                        "type": "string"
+                      },
+                      "username": {
+                        "description": "The login user; the mailbox address when unset.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "host"
+                    ],
+                    "type": "object"
+                  },
+                  "kind": {
+                    "description": "Connected or hosted.",
+                    "enum": [
+                      "connected",
+                      "hosted"
+                    ],
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "password": {
+                    "description": "The login password of both servers; write-only, sealed at rest.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "smtp": {
+                    "additionalProperties": false,
+                    "description": "SMTP submission, for a connected mailbox.",
+                    "properties": {
+                      "host": {
+                        "description": "The host name.",
+                        "type": "string"
+                      },
+                      "port": {
+                        "description": "The port; IMAP 993 and SMTP 465 when unset.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "security": {
+                        "description": "How the connection is secured.",
+                        "enum": [
+                          "tls",
+                          "starttls"
+                        ],
+                        "type": "string"
+                      },
+                      "username": {
+                        "description": "The login user; the mailbox address when unset.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "host"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "address"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "mailbox_id": {
+            "description": "The mailbox id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "mailbox"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailboxes.create",
+      "permission": "notify:write",
+      "tool": "notify_mailboxes_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a mailbox."
+      },
+      "description": "Updates a mailbox.",
+      "effect": "write",
+      "http": "PATCH /v1/{mailbox.name=orgs/*/projects/*/envs/*/mailboxes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateMailbox.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the mailbox when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "mailbox": {
+            "additionalProperties": false,
+            "description": "The mailbox to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "address": {
+                    "description": "The address, for example `support@example.com`.",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "append_sent": {
+                    "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
+                    "type": "boolean"
+                  },
+                  "backfill_start_time": {
+                    "description": "Read mail received on or after this day on the first poll.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "description": "The From display name of mail sent as this mailbox.",
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "description": "Poll and send; a disabled mailbox keeps its records.",
+                    "type": "boolean"
+                  },
+                  "imap": {
+                    "additionalProperties": false,
+                    "description": "IMAP, for a connected mailbox.",
+                    "properties": {
+                      "host": {
+                        "description": "The host name.",
+                        "type": "string"
+                      },
+                      "port": {
+                        "description": "The port; IMAP 993 and SMTP 465 when unset.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "security": {
+                        "description": "How the connection is secured.",
+                        "enum": [
+                          "tls",
+                          "starttls"
+                        ],
+                        "type": "string"
+                      },
+                      "username": {
+                        "description": "The login user; the mailbox address when unset.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "host"
+                    ],
+                    "type": "object"
+                  },
+                  "kind": {
+                    "description": "Connected or hosted.",
+                    "enum": [
+                      "connected",
+                      "hosted"
+                    ],
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "password": {
+                    "description": "The login password of both servers; write-only, sealed at rest.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "smtp": {
+                    "additionalProperties": false,
+                    "description": "SMTP submission, for a connected mailbox.",
+                    "properties": {
+                      "host": {
+                        "description": "The host name.",
+                        "type": "string"
+                      },
+                      "port": {
+                        "description": "The port; IMAP 993 and SMTP 465 when unset.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "security": {
+                        "description": "How the connection is secured.",
+                        "enum": [
+                          "tls",
+                          "starttls"
+                        ],
+                        "type": "string"
+                      },
+                      "username": {
+                        "description": "The login user; the mailbox address when unset.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "host"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "address"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mailbox"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailboxes.update",
+      "permission": "notify:write",
+      "tool": "notify_mailboxes_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a mailbox and its inbound email."
+      },
+      "description": "Deletes a mailbox and its inbound email.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteMailbox.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the mailbox does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Delete its inbound email with it; a mailbox holding inbound email is not\ndeleted without it.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the mailbox to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailboxes.delete",
+      "permission": "notify:write",
+      "tool": "notify_mailboxes_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Removes an address's personal data from every inbound email of the mailbox that it sent or that names it, keeping the dedupe keys so a poll never brings the mail back."
+      },
+      "description": "Removes an address's personal data from every inbound email of the\nmailbox that it sent or that names it, keeping the dedupe keys so a poll\nnever brings the mail back.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*}:eraseAddress",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of EraseMailboxAddress.",
+        "properties": {
+          "address": {
+            "description": "The email address whose data is removed.",
+            "type": "string"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the mailbox.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailboxes.erase_address",
+      "permission": "notify:write",
+      "tool": "notify_mailboxes_erase_address"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an inbound email."
+      },
+      "description": "Gets an inbound email.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetInboundEmail.",
+        "properties": {
+          "name": {
+            "description": "The name of the inbound email to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_emails.get",
+      "permission": "notify:read",
+      "tool": "notify_inbound_emails_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a mailbox's inbound email in feed order, oldest first."
+      },
+      "description": "Lists a mailbox's inbound email in feed order, oldest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/inbound_emails",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListInboundEmails.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The mailbox to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_emails.list",
+      "permission": "notify:read",
+      "tool": "notify_inbound_emails_list"
     },
     {
       "annotations": {
@@ -23829,7 +24499,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@319768ce752defa9d02611bfe923266f6cc56ce7cd067e6845cd6a507417c6aa. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@cba0c8031868f48f1259749a72b75edf200ff5d4d32fa1af0885a43944198055. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
