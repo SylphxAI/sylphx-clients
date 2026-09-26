@@ -15311,6 +15311,10 @@
                 },
                 "type": "array"
               },
+              "test": {
+                "description": "A test recipient: its messages are rendered and captured on the Message,\nnever delivered. An email address whose local part carries\n`+sylphx_test` is a test address whatever this says.",
+                "type": "boolean"
+              },
               "time_zone": {
                 "description": "IANA time zone for quiet hours and digests.",
                 "type": "string"
@@ -15447,6 +15451,10 @@
                   "type": "string"
                 },
                 "type": "array"
+              },
+              "test": {
+                "description": "A test recipient: its messages are rendered and captured on the Message,\nnever delivered. An email address whose local part carries\n`+sylphx_test` is a test address whatever this says.",
+                "type": "boolean"
               },
               "time_zone": {
                 "description": "IANA time zone for quiet hours and digests.",
@@ -16139,6 +16147,10 @@
                         "description": "The From address; its domain is a verified Sending Domain.",
                         "type": "string"
                       },
+                      "sender_name": {
+                        "description": "The From display name, for example the app's name.",
+                        "type": "string"
+                      },
                       "subject": {
                         "description": "The subject.",
                         "type": "string"
@@ -16197,6 +16209,23 @@
                     "required": [
                       "title"
                     ],
+                    "type": "object"
+                  },
+                  "send_limit": {
+                    "additionalProperties": false,
+                    "description": "A per-recipient send limit on messages rendered from this template;\nunset admits every message.",
+                    "properties": {
+                      "max_per_hour": {
+                        "description": "At most this many messages to one recipient in any hour; 0 is no limit.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "min_interval": {
+                        "description": "At least this long between two messages to one recipient.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
                     "type": "object"
                   },
                   "sms": {
@@ -16316,6 +16345,10 @@
                         "description": "The From address; its domain is a verified Sending Domain.",
                         "type": "string"
                       },
+                      "sender_name": {
+                        "description": "The From display name, for example the app's name.",
+                        "type": "string"
+                      },
                       "subject": {
                         "description": "The subject.",
                         "type": "string"
@@ -16374,6 +16407,23 @@
                     "required": [
                       "title"
                     ],
+                    "type": "object"
+                  },
+                  "send_limit": {
+                    "additionalProperties": false,
+                    "description": "A per-recipient send limit on messages rendered from this template;\nunset admits every message.",
+                    "properties": {
+                      "max_per_hour": {
+                        "description": "At most this many messages to one recipient in any hour; 0 is no limit.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "min_interval": {
+                        "description": "At least this long between two messages to one recipient.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
                     "type": "object"
                   },
                   "sms": {
@@ -16590,6 +16640,12 @@
                 "additionalProperties": true,
                 "description": "Template variables.",
                 "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "delivery_deadline_time": {
+                "description": "Deliver no later than this; a delivery still open then fails with\n`expired`. Unset retries for up to a day. The message record is kept.",
+                "format": "date-time",
+                "type": "string",
                 "x-sylphx-immutable": true
               },
               "meta": {
@@ -23773,7 +23829,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@f96e6cfd8c7cf67eed7eac4a69bb0ab9376d84cde229b86e6a26b9caa652bf63. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@319768ce752defa9d02611bfe923266f6cc56ce7cd067e6845cd6a507417c6aa. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
