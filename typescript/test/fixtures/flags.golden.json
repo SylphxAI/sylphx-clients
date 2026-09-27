@@ -1,0 +1,534 @@
+{
+	"schema": "flags/v2",
+	"schemaVersion": 2,
+	"cases": [
+		{
+			"id": "fnv-hello",
+			"op": "fnv1a32",
+			"input": {
+				"input": "hello"
+			},
+			"output": {
+				"hash": 1335831723
+			}
+		},
+		{
+			"id": "fnv-flag-user",
+			"op": "fnv1a32",
+			"input": {
+				"input": "new-feature:user-1"
+			},
+			"output": {
+				"hash": 900437449
+			}
+		},
+		{
+			"id": "fnv-flag-user2",
+			"op": "fnv1a32",
+			"input": {
+				"input": "new-feature:user-2"
+			},
+			"output": {
+				"hash": 850104592
+			}
+		},
+		{
+			"id": "bucket-user1",
+			"op": "consistent_bucket",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "new-feature",
+				"buckets": 100
+			},
+			"output": {
+				"bucket": 49
+			}
+		},
+		{
+			"id": "bucket-user2",
+			"op": "consistent_bucket",
+			"input": {
+				"identifier": "user-2",
+				"flagKey": "new-feature",
+				"buckets": 100
+			},
+			"output": {
+				"bucket": 92
+			}
+		},
+		{
+			"id": "rollout-0",
+			"op": "is_in_rollout",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "f",
+				"percentage": 0
+			},
+			"output": {
+				"inRollout": false
+			}
+		},
+		{
+			"id": "rollout-100",
+			"op": "is_in_rollout",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "f",
+				"percentage": 100
+			},
+			"output": {
+				"inRollout": true
+			}
+		},
+		{
+			"id": "rollout-user1-50",
+			"op": "is_in_rollout",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "new-feature",
+				"percentage": 50
+			},
+			"output": {
+				"inRollout": true
+			}
+		},
+		{
+			"id": "eval-disabled",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": false,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {}
+			},
+			"output": {
+				"enabled": false,
+				"reason": "flag_disabled"
+			}
+		},
+		{
+			"id": "eval-admin-block",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": true
+				},
+				"context": {
+					"userId": "u1",
+					"properties": {
+						"role": "member"
+					}
+				}
+			},
+			"output": {
+				"enabled": false,
+				"reason": "target_admin_only"
+			}
+		},
+		{
+			"id": "eval-admin-ok",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": true
+				},
+				"context": {
+					"userId": "u1",
+					"properties": {
+						"isAdmin": true
+					}
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-premium-block",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": true,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "u1",
+					"properties": {
+						"plan": "free"
+					}
+				}
+			},
+			"output": {
+				"enabled": false,
+				"reason": "target_premium_only"
+			}
+		},
+		{
+			"id": "eval-premium-ok",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": true,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "u1",
+					"properties": {
+						"plan": "pro"
+					}
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-no-user-context",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": true,
+					"rolloutPercentage": 50,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {}
+			},
+			"output": {
+				"enabled": false,
+				"reason": "no_user_context"
+			}
+		},
+		{
+			"id": "eval-rollout-user1",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "new-feature",
+					"enabled": true,
+					"rolloutPercentage": 50,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "user-1"
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-full-rollout",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-anonymous",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "new-feature",
+					"enabled": true,
+					"rolloutPercentage": 50,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"anonymousId": "anon-9"
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "mock-num-fnv-a",
+			"op": "fnv1a32",
+			"input": {
+				"input": "a"
+			},
+			"output": {
+				"hash": 3826002220
+			}
+		},
+		{
+			"id": "mock-num-fnv-test",
+			"op": "fnv1a32",
+			"input": {
+				"input": "test"
+			},
+			"output": {
+				"hash": 2949673445
+			}
+		},
+		{
+			"id": "mock-num-fnv-unicode",
+			"op": "fnv1a32",
+			"input": {
+				"input": "日本語"
+			},
+			"output": {
+				"hash": 2153733351
+			}
+		},
+		{
+			"id": "mock-num-fnv-emoji",
+			"op": "fnv1a32",
+			"input": {
+				"input": "🎉🚀"
+			},
+			"output": {
+				"hash": 3764300134
+			}
+		},
+		{
+			"id": "mock-num-consistent_bucket-zero",
+			"op": "consistent_bucket",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "new-feature",
+				"buckets": 0
+			},
+			"output": {
+				"bucket": 49
+			}
+		},
+		{
+			"id": "fnv-empty",
+			"op": "fnv1a32",
+			"input": {
+				"input": ""
+			},
+			"output": {
+				"hash": 2166136261
+			}
+		},
+		{
+			"id": "eval-rollout-out",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "new-feature",
+					"enabled": true,
+					"rolloutPercentage": 50,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "user-2"
+				}
+			},
+			"output": {
+				"enabled": false,
+				"reason": "rollout_percentage"
+			}
+		},
+		{
+			"id": "fnv-long",
+			"op": "fnv1a32",
+			"input": {
+				"input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			},
+			"output": {
+				"hash": 3647934341
+			}
+		},
+		{
+			"id": "bucket-buckets-1",
+			"op": "consistent_bucket",
+			"input": {
+				"identifier": "u1",
+				"flagKey": "f",
+				"buckets": 1
+			},
+			"output": {
+				"bucket": 0
+			}
+		},
+		{
+			"id": "bucket-buckets-1000",
+			"op": "consistent_bucket",
+			"input": {
+				"identifier": "u1",
+				"flagKey": "f",
+				"buckets": 1000
+			},
+			"output": {
+				"bucket": 567
+			}
+		},
+		{
+			"id": "rollout-1",
+			"op": "is_in_rollout",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "new-feature",
+				"percentage": 1
+			},
+			"output": {
+				"inRollout": false
+			}
+		},
+		{
+			"id": "rollout-99",
+			"op": "is_in_rollout",
+			"input": {
+				"identifier": "user-1",
+				"flagKey": "new-feature",
+				"percentage": 99
+			},
+			"output": {
+				"inRollout": true
+			}
+		},
+		{
+			"id": "eval-premium-enterprise",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "p",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": true,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "u",
+					"properties": {
+						"plan": "enterprise"
+					}
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-admin-role",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "a",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": true
+				},
+				"context": {
+					"userId": "u",
+					"properties": {
+						"role": "admin"
+					}
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-premium-isPremium",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "p",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": true,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "u",
+					"properties": {
+						"isPremium": true
+					}
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-rollout-in",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "new-feature",
+					"enabled": true,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": false
+				},
+				"context": {
+					"userId": "user-1"
+				}
+			},
+			"output": {
+				"enabled": true,
+				"reason": "default_enabled"
+			}
+		},
+		{
+			"id": "eval-disabled-admin",
+			"op": "evaluate",
+			"input": {
+				"flag": {
+					"key": "x",
+					"enabled": false,
+					"rolloutPercentage": 100,
+					"targetPremiumOnly": false,
+					"targetAdminOnly": true
+				},
+				"context": {
+					"userId": "u",
+					"properties": {
+						"isAdmin": true
+					}
+				}
+			},
+			"output": {
+				"enabled": false,
+				"reason": "flag_disabled"
+			}
+		}
+	]
+}

@@ -6089,6 +6089,10 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "client_visible": {
+                    "description": "Publishable keys (browsers, mobile apps) may evaluate it with\n`config_flags:evaluate`; default false, so a server-only flag's value\nnever reaches a device. Secret keys evaluate every flag.",
+                    "type": "boolean"
+                  },
                   "default_value": {
                     "description": "The value when no rule matches, or when the flag is disabled."
                   },
@@ -6104,22 +6108,65 @@
                     "description": "Targeting rules, first match wins.",
                     "items": {
                       "additionalProperties": false,
-                      "description": "TargetingRule serves a value to evaluations that match a condition, to a\nstable percentage of them.",
+                      "description": "TargetingRule serves a value to evaluations that match its conditions, to\na stable percentage of them.\n\nPercentages use one bucket per flag and evaluation subject: bucket =\nFNV-1a 32-bit of the UTF-8 string `{config_flag}:{subject}`, mod 100,\nwhere `{config_flag}` is the flag's id and `{subject}` the value of\n`bucket_attribute`. A rule matches when bucket < percentage. The bucket\ndoes not depend on the rule, so rules on the same attribute split\ncumulatively: 30/30/40 across three values is three rules at 30, 60 and\n100, and a subject keeps its bucket when the percentage grows.",
                       "properties": {
                         "bucket_attribute": {
-                          "description": "The context attribute hashed to pick the stable percentage, for example\n`user_id`; default the evaluation's subject.",
+                          "description": "The context attribute hashed for the bucket: `user_id`, `anonymous_id`,\nor an attribute path; default `user_id`, else `anonymous_id`. An\nevaluation without it never matches a rule below 100 percent.",
                           "type": "string"
                         },
-                        "condition": {
-                          "description": "A CEL expression over the evaluation context, for example\n`ctx.region == \"hk\" && ctx.plan == \"pro\"`.",
-                          "type": "string"
+                        "conditions": {
+                          "description": "Conditions over the evaluation context; all must hold. None matches\nevery evaluation.",
+                          "items": {
+                            "additionalProperties": false,
+                            "description": "TargetingCondition compares one attribute of the evaluation context with a\nvalue. The public contract is structured rather than an expression\nlanguage (CEL): every SDK evaluates rules locally, and a small table of\noperators is the same in Rust, TypeScript and any later SDK without an\nexpression runtime in each; a write is checked field by field against the\nschema; a console and an agent edit fields, not source text; and\nevaluation cost is bounded by the rule's size, with no program to run.\nThe operators are the ones customers already used.",
+                            "properties": {
+                              "attribute": {
+                                "description": "`user_id`, `anonymous_id`, or a path into the context's `attributes`,\ndot-separated (`plan`, `device.os`). Required, except with IN_SEGMENT and\nNOT_IN_SEGMENT.",
+                                "type": "string"
+                              },
+                              "operator": {
+                                "description": "The comparison.",
+                                "enum": [
+                                  "equals",
+                                  "not_equals",
+                                  "greater_than",
+                                  "greater_or_equal",
+                                  "less_than",
+                                  "less_or_equal",
+                                  "contains",
+                                  "not_contains",
+                                  "starts_with",
+                                  "ends_with",
+                                  "in",
+                                  "not_in",
+                                  "matches",
+                                  "semver_greater_than",
+                                  "semver_greater_or_equal",
+                                  "semver_less_than",
+                                  "semver_less_or_equal",
+                                  "in_segment",
+                                  "not_in_segment"
+                                ],
+                                "type": "string"
+                              },
+                              "value": {
+                                "description": "The value compared with; a list for IN and NOT_IN, a string for the\nstring, regular expression and semantic version operators."
+                              }
+                            },
+                            "required": [
+                              "operator",
+                              "value"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "description": {
                           "description": "What the rule is for.",
                           "type": "string"
                         },
                         "percentage": {
-                          "description": "The share of matching evaluations served `value`, from 0 to 100;\ndefault 100. The rest fall through to the next rule.",
+                          "description": "Serve `value` to evaluations whose bucket is below this, from 0 to 100;\ndefault 100. The rest fall through to the next rule.",
                           "format": "int32",
                           "type": "integer"
                         },
@@ -6128,7 +6175,6 @@
                         }
                       },
                       "required": [
-                        "condition",
                         "value"
                       ],
                       "type": "object"
@@ -6237,6 +6283,10 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "client_visible": {
+                    "description": "Publishable keys (browsers, mobile apps) may evaluate it with\n`config_flags:evaluate`; default false, so a server-only flag's value\nnever reaches a device. Secret keys evaluate every flag.",
+                    "type": "boolean"
+                  },
                   "default_value": {
                     "description": "The value when no rule matches, or when the flag is disabled."
                   },
@@ -6252,22 +6302,65 @@
                     "description": "Targeting rules, first match wins.",
                     "items": {
                       "additionalProperties": false,
-                      "description": "TargetingRule serves a value to evaluations that match a condition, to a\nstable percentage of them.",
+                      "description": "TargetingRule serves a value to evaluations that match its conditions, to\na stable percentage of them.\n\nPercentages use one bucket per flag and evaluation subject: bucket =\nFNV-1a 32-bit of the UTF-8 string `{config_flag}:{subject}`, mod 100,\nwhere `{config_flag}` is the flag's id and `{subject}` the value of\n`bucket_attribute`. A rule matches when bucket < percentage. The bucket\ndoes not depend on the rule, so rules on the same attribute split\ncumulatively: 30/30/40 across three values is three rules at 30, 60 and\n100, and a subject keeps its bucket when the percentage grows.",
                       "properties": {
                         "bucket_attribute": {
-                          "description": "The context attribute hashed to pick the stable percentage, for example\n`user_id`; default the evaluation's subject.",
+                          "description": "The context attribute hashed for the bucket: `user_id`, `anonymous_id`,\nor an attribute path; default `user_id`, else `anonymous_id`. An\nevaluation without it never matches a rule below 100 percent.",
                           "type": "string"
                         },
-                        "condition": {
-                          "description": "A CEL expression over the evaluation context, for example\n`ctx.region == \"hk\" && ctx.plan == \"pro\"`.",
-                          "type": "string"
+                        "conditions": {
+                          "description": "Conditions over the evaluation context; all must hold. None matches\nevery evaluation.",
+                          "items": {
+                            "additionalProperties": false,
+                            "description": "TargetingCondition compares one attribute of the evaluation context with a\nvalue. The public contract is structured rather than an expression\nlanguage (CEL): every SDK evaluates rules locally, and a small table of\noperators is the same in Rust, TypeScript and any later SDK without an\nexpression runtime in each; a write is checked field by field against the\nschema; a console and an agent edit fields, not source text; and\nevaluation cost is bounded by the rule's size, with no program to run.\nThe operators are the ones customers already used.",
+                            "properties": {
+                              "attribute": {
+                                "description": "`user_id`, `anonymous_id`, or a path into the context's `attributes`,\ndot-separated (`plan`, `device.os`). Required, except with IN_SEGMENT and\nNOT_IN_SEGMENT.",
+                                "type": "string"
+                              },
+                              "operator": {
+                                "description": "The comparison.",
+                                "enum": [
+                                  "equals",
+                                  "not_equals",
+                                  "greater_than",
+                                  "greater_or_equal",
+                                  "less_than",
+                                  "less_or_equal",
+                                  "contains",
+                                  "not_contains",
+                                  "starts_with",
+                                  "ends_with",
+                                  "in",
+                                  "not_in",
+                                  "matches",
+                                  "semver_greater_than",
+                                  "semver_greater_or_equal",
+                                  "semver_less_than",
+                                  "semver_less_or_equal",
+                                  "in_segment",
+                                  "not_in_segment"
+                                ],
+                                "type": "string"
+                              },
+                              "value": {
+                                "description": "The value compared with; a list for IN and NOT_IN, a string for the\nstring, regular expression and semantic version operators."
+                              }
+                            },
+                            "required": [
+                              "operator",
+                              "value"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "description": {
                           "description": "What the rule is for.",
                           "type": "string"
                         },
                         "percentage": {
-                          "description": "The share of matching evaluations served `value`, from 0 to 100;\ndefault 100. The rest fall through to the next rule.",
+                          "description": "Serve `value` to evaluations whose bucket is below this, from 0 to 100;\ndefault 100. The rest fall through to the next rule.",
                           "format": "int32",
                           "type": "integer"
                         },
@@ -6276,7 +6369,6 @@
                         }
                       },
                       "required": [
-                        "condition",
                         "value"
                       ],
                       "type": "object"
@@ -6371,6 +6463,587 @@
       "method_id": "config.config_flags.delete",
       "permission": "config:write",
       "tool": "config_config_flags_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Evaluates config flags of an environment for one evaluation context: each flag's value, and why. Browsers and mobile apps call it with a publishable key holding `config:evaluate`, which reads values, never rules."
+      },
+      "description": "Evaluates config flags of an environment for one evaluation context:\neach flag's value, and why. Browsers and mobile apps call it with a\npublishable key holding `config:evaluate`, which reads values, never\nrules.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/config_flags:evaluate",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of EvaluateConfigFlags.",
+        "properties": {
+          "config_flags": {
+            "description": "The ids of the flags to evaluate; empty evaluates every flag of the\nenvironment. An unknown id answers reason NOT_FOUND.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "context": {
+            "additionalProperties": false,
+            "description": "Who and what the evaluation is for.",
+            "properties": {
+              "anonymous_id": {
+                "description": "A stable id of a device or visitor; the bucketing subject when there is\nno `user_id`.",
+                "type": "string"
+              },
+              "attributes": {
+                "additionalProperties": true,
+                "description": "Anything else rules compare, for example `plan`, `country`,\n`app_version`.",
+                "type": "object"
+              },
+              "user_id": {
+                "description": "The signed-in user; the default bucketing subject.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "parent": {
+            "description": "The environment whose flags are evaluated.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigFlag"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "config.config_flags.evaluate",
+      "permission": "config:evaluate",
+      "tool": "config_config_flags_evaluate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "The environment's flags and segments in one read, for SDKs that evaluate locally. Poll it with `if_none_match` set to the last `etag`: an unchanged ruleset answers `not_modified` and nothing else."
+      },
+      "description": "The environment's flags and segments in one read, for SDKs that\nevaluate locally. Poll it with `if_none_match` set to the last `etag`:\nan unchanged ruleset answers `not_modified` and nothing else.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/config_flags:snapshot",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SnapshotConfigFlags.",
+        "properties": {
+          "if_none_match": {
+            "description": "The `etag` of the snapshot the caller holds; unchanged answers\n`not_modified`.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigFlag"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "config.config_flags.snapshot",
+      "permission": "config:read",
+      "tool": "config_config_flags_snapshot"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a config segment."
+      },
+      "description": "Gets a config segment.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/config_segments/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetConfigSegment.",
+        "properties": {
+          "name": {
+            "description": "The name of the config segment to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigSegment"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "config.config_segments.get",
+      "permission": "config:read",
+      "tool": "config_config_segments_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists config segments in an environment."
+      },
+      "description": "Lists config segments in an environment.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/config_segments",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListConfigSegments.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigSegment"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "config.config_segments.list",
+      "permission": "config:read",
+      "tool": "config_config_segments_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a config segment."
+      },
+      "description": "Creates a config segment.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/config_segments",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateConfigSegment.",
+        "properties": {
+          "config_segment": {
+            "additionalProperties": false,
+            "description": "The config segment to create; only spec is read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/config_segments/{config_segment}`;\nthe id is what IN_SEGMENT names.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "conditions": {
+                    "description": "Conditions over the evaluation context; all must hold.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "TargetingCondition compares one attribute of the evaluation context with a\nvalue. The public contract is structured rather than an expression\nlanguage (CEL): every SDK evaluates rules locally, and a small table of\noperators is the same in Rust, TypeScript and any later SDK without an\nexpression runtime in each; a write is checked field by field against the\nschema; a console and an agent edit fields, not source text; and\nevaluation cost is bounded by the rule's size, with no program to run.\nThe operators are the ones customers already used.",
+                      "properties": {
+                        "attribute": {
+                          "description": "`user_id`, `anonymous_id`, or a path into the context's `attributes`,\ndot-separated (`plan`, `device.os`). Required, except with IN_SEGMENT and\nNOT_IN_SEGMENT.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "The comparison.",
+                          "enum": [
+                            "equals",
+                            "not_equals",
+                            "greater_than",
+                            "greater_or_equal",
+                            "less_than",
+                            "less_or_equal",
+                            "contains",
+                            "not_contains",
+                            "starts_with",
+                            "ends_with",
+                            "in",
+                            "not_in",
+                            "matches",
+                            "semver_greater_than",
+                            "semver_greater_or_equal",
+                            "semver_less_than",
+                            "semver_less_or_equal",
+                            "in_segment",
+                            "not_in_segment"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "description": "The value compared with; a list for IN and NOT_IN, a string for the\nstring, regular expression and semantic version operators."
+                        }
+                      },
+                      "required": [
+                        "operator",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "description": {
+                    "description": "Who the segment is.",
+                    "type": "string"
+                  },
+                  "excluded": {
+                    "description": "Subjects never in the segment, whatever else holds.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "included": {
+                    "description": "Subjects always in the segment, by `user_id` or `anonymous_id`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "config_segment_id": {
+            "description": "The id of the new config segment, what IN_SEGMENT names.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigSegment"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "config_segment",
+          "config_segment_id"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "config.config_segments.create",
+      "permission": "config:write",
+      "tool": "config_config_segments_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a config segment; every flag naming it follows."
+      },
+      "description": "Updates a config segment; every flag naming it follows.",
+      "effect": "write",
+      "http": "PATCH /v1/{config_segment.name=orgs/*/projects/*/envs/*/config_segments/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateConfigSegment.",
+        "properties": {
+          "config_segment": {
+            "additionalProperties": false,
+            "description": "The config segment to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/config_segments/{config_segment}`;\nthe id is what IN_SEGMENT names.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "conditions": {
+                    "description": "Conditions over the evaluation context; all must hold.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "TargetingCondition compares one attribute of the evaluation context with a\nvalue. The public contract is structured rather than an expression\nlanguage (CEL): every SDK evaluates rules locally, and a small table of\noperators is the same in Rust, TypeScript and any later SDK without an\nexpression runtime in each; a write is checked field by field against the\nschema; a console and an agent edit fields, not source text; and\nevaluation cost is bounded by the rule's size, with no program to run.\nThe operators are the ones customers already used.",
+                      "properties": {
+                        "attribute": {
+                          "description": "`user_id`, `anonymous_id`, or a path into the context's `attributes`,\ndot-separated (`plan`, `device.os`). Required, except with IN_SEGMENT and\nNOT_IN_SEGMENT.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "The comparison.",
+                          "enum": [
+                            "equals",
+                            "not_equals",
+                            "greater_than",
+                            "greater_or_equal",
+                            "less_than",
+                            "less_or_equal",
+                            "contains",
+                            "not_contains",
+                            "starts_with",
+                            "ends_with",
+                            "in",
+                            "not_in",
+                            "matches",
+                            "semver_greater_than",
+                            "semver_greater_or_equal",
+                            "semver_less_than",
+                            "semver_less_or_equal",
+                            "in_segment",
+                            "not_in_segment"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "description": "The value compared with; a list for IN and NOT_IN, a string for the\nstring, regular expression and semantic version operators."
+                        }
+                      },
+                      "required": [
+                        "operator",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "description": {
+                    "description": "Who the segment is.",
+                    "type": "string"
+                  },
+                  "excluded": {
+                    "description": "Subjects never in the segment, whatever else holds.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "included": {
+                    "description": "Subjects always in the segment, by `user_id` or `anonymous_id`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "config_segment"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "config.config_segments.update",
+      "permission": "config:write",
+      "tool": "config_config_segments_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a config segment; refused while a flag names it."
+      },
+      "description": "Deletes a config segment; refused while a flag names it.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/config_segments/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteConfigSegment.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the config segment to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigSegment"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "config.config_segments.delete",
+      "permission": "config:write",
+      "tool": "config_config_segments_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a config change."
+      },
+      "description": "Gets a config change.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/config_changes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetConfigChange.",
+        "properties": {
+          "name": {
+            "description": "The name of the config change to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigChange"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "config.config_changes.get",
+      "permission": "config:read",
+      "tool": "config_config_changes_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists config changes in an environment."
+      },
+      "description": "Lists config changes in an environment.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/config_changes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListConfigChanges.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; `target = \"<flag or segment name>\"` is supported.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "config.sylphx.com/ConfigChange"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "config.config_changes.list",
+      "permission": "config:read",
+      "tool": "config_config_changes_list"
     },
     {
       "annotations": {
@@ -25513,7 +26186,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@5a34e8ad528d553a34388c40f9e0974abb2c71eaa0990538da340de8cf767f89. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@de3e58c8f11c0eb108f7ea7a09ae31922b944c59702a5a9baeffa85d593c838c. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"

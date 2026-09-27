@@ -1,0 +1,1024 @@
+{
+	"schema": "config-evaluate/v1",
+	"note": "Sylphx Config evaluation vectors: every SDK and the platform api must answer each case exactly (crates/sylphx-bc-tenancy/tests/flags_golden.rs, clients/typescript/test/config-flags.test.ts). Buckets: FNV-1a 32 of '{flag}:{subject}' mod 100; 'new-feature:user-1' = 49, 'new-feature:user-2' = 92.",
+	"cases": [
+		{
+			"id": "disabled-serves-default",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": false,
+				"rules": [
+					{
+						"value": true
+					}
+				]
+			},
+			"context": {},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "disabled"
+			}
+		},
+		{
+			"id": "no-rules-default",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": []
+			},
+			"context": {
+				"user_id": "u"
+			},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "equals",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "equals",
+								"value": "pro",
+								"attribute": "plan"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"plan": "pro"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "in-list",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "in",
+								"value": [
+									"pro",
+									"enterprise"
+								],
+								"attribute": "plan"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"plan": "enterprise"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "missing-attribute-not-in",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "not_in",
+								"value": [
+									"free"
+								],
+								"attribute": "plan"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "missing-attribute-not-equals",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "not_equals",
+								"value": "free",
+								"attribute": "plan"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "semver-gte",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "semver_greater_or_equal",
+								"value": "2.0.0",
+								"attribute": "app_version"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"app_version": "v2.1.0"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "semver-prerelease-below-release",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "semver_greater_or_equal",
+								"value": "2.0.0",
+								"attribute": "app_version"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"app_version": "2.0.0-rc.1"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "semver-not-a-version",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "semver_less_or_equal",
+								"value": "2.0.0",
+								"attribute": "app_version"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"app_version": "latest"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "regex-case-insensitive",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "matches",
+								"value": "@SYLPHX\\.com$",
+								"attribute": "email"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"email": "a@sylphx.com"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "contains-string",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "contains",
+								"value": "EXAMPLE",
+								"attribute": "email"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"email": "a@example.com"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "contains-list",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "contains",
+								"value": "beta",
+								"attribute": "tags"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"tags": [
+						"x",
+						"beta"
+					]
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "starts-ends",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "starts_with",
+								"value": "A@",
+								"attribute": "email"
+							},
+							{
+								"operator": "ends_with",
+								"value": ".COM",
+								"attribute": "email"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"email": "a@b.com"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "numeric-string",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "greater_than",
+								"value": 18,
+								"attribute": "age"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"age": "30"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "numbers-by-value",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "equals",
+								"value": 1,
+								"attribute": "n"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"n": 1.0
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "lexical-strings",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "less_than",
+								"value": "b",
+								"attribute": "tier"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"tier": "a"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "dot-path",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "equals",
+								"value": "ios",
+								"attribute": "device.os"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"device": {
+						"os": "ios"
+					}
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "user-id-attribute",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "in",
+								"value": [
+									"u1",
+									"u2"
+								],
+								"attribute": "user_id"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"user_id": "u2"
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "first-match-wins",
+			"flag": "f",
+			"spec": {
+				"value_type": "string",
+				"default_value": "z",
+				"enabled": true,
+				"rules": [
+					{
+						"value": "a"
+					},
+					{
+						"value": "b"
+					}
+				]
+			},
+			"context": {},
+			"segments": {},
+			"expect": {
+				"value": "a",
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "split-in",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 50
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-1"
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "split",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "split-out",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 50
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-2"
+			},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "split-anonymous",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 50
+					}
+				]
+			},
+			"context": {
+				"anonymous_id": "user-1"
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "split",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "split-no-subject",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 50
+					}
+				]
+			},
+			"context": {},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "split-zero",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 0
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-1"
+			},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "cumulative-split-middle",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "string",
+				"default_value": "z",
+				"enabled": true,
+				"rules": [
+					{
+						"value": "a",
+						"percentage": 30
+					},
+					{
+						"value": "b",
+						"percentage": 60
+					},
+					{
+						"value": "c"
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-1"
+			},
+			"segments": {},
+			"expect": {
+				"value": "b",
+				"reason": "split",
+				"rule_index": 1
+			}
+		},
+		{
+			"id": "cumulative-split-last",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "string",
+				"default_value": "z",
+				"enabled": true,
+				"rules": [
+					{
+						"value": "a",
+						"percentage": 30
+					},
+					{
+						"value": "b",
+						"percentage": 60
+					},
+					{
+						"value": "c"
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-2"
+			},
+			"segments": {},
+			"expect": {
+				"value": "c",
+				"reason": "targeting_match",
+				"rule_index": 2
+			}
+		},
+		{
+			"id": "bucket-attribute",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 50,
+						"bucket_attribute": "org"
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-2",
+				"attributes": {
+					"org": "user-1"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "split",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "bucket-attribute-missing",
+			"flag": "new-feature",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"value": true,
+						"percentage": 50,
+						"bucket_attribute": "org"
+					}
+				]
+			},
+			"context": {
+				"user_id": "user-1"
+			},
+			"segments": {},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "segment-included",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "in_segment",
+								"value": "beta"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"user_id": "vip",
+				"attributes": {
+					"country": "uk"
+				}
+			},
+			"segments": {
+				"beta": {
+					"included": [
+						"vip"
+					],
+					"excluded": [
+						"banned"
+					],
+					"conditions": [
+						{
+							"operator": "equals",
+							"value": "hk",
+							"attribute": "country"
+						}
+					]
+				}
+			},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "segment-excluded-beats-conditions",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "in_segment",
+								"value": "beta"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"user_id": "banned",
+				"attributes": {
+					"country": "hk"
+				}
+			},
+			"segments": {
+				"beta": {
+					"included": [
+						"vip"
+					],
+					"excluded": [
+						"banned"
+					],
+					"conditions": [
+						{
+							"operator": "equals",
+							"value": "hk",
+							"attribute": "country"
+						}
+					]
+				}
+			},
+			"expect": {
+				"value": false,
+				"reason": "default"
+			}
+		},
+		{
+			"id": "segment-conditions",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "in_segment",
+								"value": "beta"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"user_id": "u",
+				"attributes": {
+					"country": "hk"
+				}
+			},
+			"segments": {
+				"beta": {
+					"included": [
+						"vip"
+					],
+					"excluded": [
+						"banned"
+					],
+					"conditions": [
+						{
+							"operator": "equals",
+							"value": "hk",
+							"attribute": "country"
+						}
+					]
+				}
+			},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "not-in-unknown-segment",
+			"flag": "f",
+			"spec": {
+				"value_type": "bool",
+				"default_value": false,
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "not_in_segment",
+								"value": "ghost"
+							}
+						],
+						"value": true
+					}
+				]
+			},
+			"context": {
+				"user_id": "u"
+			},
+			"segments": {},
+			"expect": {
+				"value": true,
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		},
+		{
+			"id": "json-value",
+			"flag": "f",
+			"spec": {
+				"value_type": "json",
+				"default_value": {
+					"limit": 1
+				},
+				"enabled": true,
+				"rules": [
+					{
+						"conditions": [
+							{
+								"operator": "equals",
+								"value": "pro",
+								"attribute": "plan"
+							}
+						],
+						"value": {
+							"limit": 10
+						}
+					}
+				]
+			},
+			"context": {
+				"attributes": {
+					"plan": "pro"
+				}
+			},
+			"segments": {},
+			"expect": {
+				"value": {
+					"limit": 10
+				},
+				"reason": "targeting_match",
+				"rule_index": 0
+			}
+		}
+	]
+}
