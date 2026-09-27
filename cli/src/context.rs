@@ -9,8 +9,9 @@ use sylphx::{Client, HttpTransport};
 
 /// `~/.config/sylphx/credentials.json` (mode 0600): where the key is, not the
 /// key. The key lives in the OS keychain (macOS Keychain, Secret Service /
-/// libsecret, Windows Credential Manager); only a machine with no keychain
-/// (a headless server) keeps it in this file, and `sylphx login` says so.
+/// libsecret, Windows Credential Manager). A machine with no keychain keeps it
+/// in this file only in a directory the caller chose (`SYLPHX_CONFIG_DIR`) or
+/// with `sylphx login --store-file`, and `sylphx login` says so.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Credentials {
     /// Set only when no keychain was available (`store = "file"`).
@@ -39,15 +40,54 @@ fn keychain_entry(base_url: Option<&str>) -> Option<keyring::Entry> {
     keyring::Entry::new(KEYCHAIN_SERVICE, &keychain_account(base_url)).ok()
 }
 
-/// Stores `key` in the keychain, else (no keychain) in the 0600 file.
+/// Whether the OS keychain can hold the key: an entry exists or reads as
+/// absent (a locked or missing Secret Service, a container, or
+/// `SYLPHX_NO_KEYCHAIN` means no).
+fn keychain_usable(base_url: Option<&str>) -> bool {
+    keychain_entry(base_url)
+        .is_some_and(|e| matches!(e.get_password(), Ok(_) | Err(keyring::Error::NoEntry)))
+}
+
+/// Where a key may be kept without a keychain: a directory the caller chose
+/// (`SYLPHX_CONFIG_DIR`), or the default one only when asked (`--store-file`).
+/// The default `~/.config/sylphx` is shared by every process of the user, so a
+/// key written there silently becomes every session's identity.
+pub fn file_store_allowed(store_file: bool) -> bool {
+    store_file || std::env::var_os("SYLPHX_CONFIG_DIR").is_some_and(|d| !d.is_empty())
+}
+
+/// Checks, before any key is read or issued, that `sylphx login` can keep it.
+pub fn check_key_store(base_url: Option<&str>, store_file: bool) -> Result<(), String> {
+    if keychain_usable(base_url) || file_store_allowed(store_file) {
+        return Ok(());
+    }
+    let dir = config_dir()
+        .map(|d| d.display().to_string())
+        .unwrap_or_else(|| "~/.config/sylphx".into());
+    Err(format!(
+        "no OS keychain here, and a key saved in the shared default {dir} would become \
+         the identity of every process of this user. Choose one: give the key per process \
+         (SYLPHX_API_KEY), keep this login's key in its own directory \
+         (SYLPHX_CONFIG_DIR=<dir> sylphx login), or save it in {dir} anyway (--store-file)"
+    ))
+}
+
+/// Stores `key` in the keychain, else (no keychain) in the 0600 file where
+/// `file_store_allowed`; `check_key_store` refuses the rest up front.
 pub fn store_key(
     base_url: Option<String>,
     key: &str,
     key_name: Option<String>,
+    store_file: bool,
 ) -> Result<(PathBuf, bool), String> {
     let in_keychain = keychain_entry(base_url.as_deref())
         .map(|e| e.set_password(key).is_ok())
         .unwrap_or(false);
+    if !in_keychain && !file_store_allowed(store_file) {
+        return Err(check_key_store(base_url.as_deref(), store_file)
+            .err()
+            .unwrap_or_else(|| "the OS keychain refused the key".into()));
+    }
     let creds = Credentials {
         api_key: (!in_keychain).then(|| key.to_string()),
         base_url,

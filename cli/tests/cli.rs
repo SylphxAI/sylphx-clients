@@ -422,6 +422,91 @@ async fn login_keeps_an_issued_key_it_cannot_confirm_yet() {
     assert!(creds.contains("sylphx_sk_test_issued"), "{creds}");
 }
 
+/// No keychain and no directory of its own: the shared default is refused,
+/// before any key is read or any device grant is started.
+#[tokio::test(flavor = "multi_thread")]
+async fn login_refuses_the_shared_default_store_without_a_keychain() {
+    let (url, log) = serve(vec![]).await;
+    let sb = Sandbox::new("login-shared-default");
+    let home = sb.dir.join("home");
+    let shared = home.join(".config/sylphx/credentials.json");
+    for args in [
+        vec!["login", "--api-key", "sylphx_sk_test_given", "--no-verify"],
+        vec!["login", "--org", "acme"],
+    ] {
+        let mut c = sb.cmd(&url, &args);
+        c.env_remove("SYLPHX_API_KEY")
+            .env_remove("SYLPHX_CONFIG_DIR")
+            .env_remove("XDG_CONFIG_HOME")
+            .env("HOME", &home)
+            .env("SYLPHX_NO_KEYCHAIN", "1");
+        let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+            .await
+            .unwrap();
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(2), "{args:?}: {err}");
+        assert!(
+            err.contains("--store-file") && err.contains("SYLPHX_CONFIG_DIR"),
+            "{err}"
+        );
+    }
+    assert!(!shared.exists(), "nothing written to the shared default");
+    assert!(log.lock().unwrap().is_empty(), "no device grant started");
+}
+
+/// `--store-file` keeps the key in the default directory; `SYLPHX_CONFIG_DIR`
+/// keeps it in the chosen one.
+#[tokio::test(flavor = "multi_thread")]
+async fn login_stores_a_file_only_where_asked() {
+    let (url, _log) = serve(vec![]).await;
+    let sb = Sandbox::new("login-store-file");
+    let home = sb.dir.join("home");
+    let mut c = sb.cmd(
+        &url,
+        &[
+            "login",
+            "--api-key",
+            "sylphx_sk_test_given",
+            "--no-verify",
+            "--store-file",
+        ],
+    );
+    c.env_remove("SYLPHX_API_KEY")
+        .env_remove("SYLPHX_CONFIG_DIR")
+        .env_remove("XDG_CONFIG_HOME")
+        .env("HOME", &home)
+        .env("SYLPHX_NO_KEYCHAIN", "1");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let shared = std::fs::read_to_string(home.join(".config/sylphx/credentials.json")).unwrap();
+    assert!(shared.contains("sylphx_sk_test_given"), "{shared}");
+
+    let own = sb.dir.join("own-config");
+    let mut c = sb.cmd(
+        &url,
+        &["login", "--api-key", "sylphx_sk_test_own", "--no-verify"],
+    );
+    c.env_remove("SYLPHX_API_KEY")
+        .env("SYLPHX_CONFIG_DIR", &own)
+        .env("SYLPHX_NO_KEYCHAIN", "1");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stored = std::fs::read_to_string(own.join("credentials.json")).unwrap();
+    assert!(stored.contains("sylphx_sk_test_own"), "{stored}");
+}
+
 #[test]
 fn mcp_answers_over_stdio() {
     let sb = Sandbox::new("mcp");

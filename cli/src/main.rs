@@ -97,6 +97,12 @@ fn cli(tree: &Tree) -> Command {
                         .long("no-verify")
                         .action(ArgAction::SetTrue)
                         .help("Store the credential without calling whoami"),
+                )
+                .arg(
+                    Arg::new("store-file")
+                        .long("store-file")
+                        .action(ArgAction::SetTrue)
+                        .help("With no OS keychain, save the key in the default config directory's credentials.json (0600), shared by every process of this user; SYLPHX_CONFIG_DIR picks another directory"),
                 ),
         )
         .subcommand(Command::new("logout").about("Revoke the stored key and forget it"))
@@ -248,6 +254,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 sub.get_flag("with-token"),
                 sub.get_one::<String>("org").cloned(),
                 sub.get_flag("no-verify"),
+                sub.get_flag("store-file"),
             )
             .await
         }
@@ -369,7 +376,11 @@ async fn login(
     with_token: bool,
     org: Option<String>,
     no_verify: bool,
+    store_file: bool,
 ) -> Result<(), Failure> {
+    // Where the key will be kept is settled before a key is read or issued:
+    // a device key minted and then dropped would be a live key nobody holds.
+    context::check_key_store(base_url.as_deref(), store_file).map_err(Failure::Usage)?;
     // A key is read from stdin when asked for (`--api-key -`, `--with-token`)
     // or piped in; an empty stdin that was not asked for (a script, an agent
     // shell) falls through to the device flow.
@@ -406,7 +417,7 @@ async fn login(
             )
         }
     };
-    let (path, in_keychain) = context::store_key(base_url.clone(), &key, key_name)?;
+    let (path, in_keychain) = context::store_key(base_url.clone(), &key, key_name, store_file)?;
     let where_ = if in_keychain {
         "the OS keychain".to_string()
     } else {
