@@ -11101,18 +11101,22 @@
                     "description": "Stop delivering; deliveries queue until enabled.",
                     "type": "boolean"
                   },
+                  "event_types": {
+                    "description": "Which event types the endpoint receives: an exact type (`order.paid`), a\nprefix ending in `.*` (`order.*`), or `*` for every type; default `[\"*\"]`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "max_concurrent_deliveries": {
                     "description": "At most this many deliveries in flight; default 10.",
                     "format": "int32",
                     "type": "integer"
                   },
-                  "signing_key": {
-                    "description": "A Kernel Keys Key (sign-only, asymmetric) that signs deliveries.",
-                    "type": "string"
-                  },
-                  "signing_secret": {
-                    "description": "A Kernel Secrets Secret (write-only) for symmetric Standard Webhooks\nsigning.",
-                    "type": "string"
+                  "rate_limit_per_second": {
+                    "description": "At most this many attempts start per second; 0 is no limit. Deliveries\nover the limit wait their turn; none is dropped.",
+                    "format": "int32",
+                    "type": "integer"
                   },
                   "uri": {
                     "description": "The HTTPS URI deliveries are POSTed to; its host resolves to a public\naddress.",
@@ -11214,18 +11218,22 @@
                     "description": "Stop delivering; deliveries queue until enabled.",
                     "type": "boolean"
                   },
+                  "event_types": {
+                    "description": "Which event types the endpoint receives: an exact type (`order.paid`), a\nprefix ending in `.*` (`order.*`), or `*` for every type; default `[\"*\"]`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "max_concurrent_deliveries": {
                     "description": "At most this many deliveries in flight; default 10.",
                     "format": "int32",
                     "type": "integer"
                   },
-                  "signing_key": {
-                    "description": "A Kernel Keys Key (sign-only, asymmetric) that signs deliveries.",
-                    "type": "string"
-                  },
-                  "signing_secret": {
-                    "description": "A Kernel Secrets Secret (write-only) for symmetric Standard Webhooks\nsigning.",
-                    "type": "string"
+                  "rate_limit_per_second": {
+                    "description": "At most this many attempts start per second; 0 is no limit. Deliveries\nover the limit wait their turn; none is dropped.",
+                    "format": "int32",
+                    "type": "integer"
                   },
                   "uri": {
                     "description": "The HTTPS URI deliveries are POSTed to; its host resolves to a public\naddress.",
@@ -11313,9 +11321,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Redelivers every delivery to the endpoint in a time range, dead-lettered ones included."
+        "title": "Redelivers every dead-lettered delivery to the endpoint created in a time range, each as a new attempt."
       },
-      "description": "Redelivers every delivery to the endpoint in a time range, dead-lettered\nones included.",
+      "description": "Redelivers every dead-lettered delivery to the endpoint created in a time\nrange, each as a new attempt.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/webhook_endpoints/*}:replay",
       "input_schema": {
@@ -11348,6 +11356,72 @@
       "method_id": "events.webhook_endpoints.replay",
       "permission": "events:write",
       "tool": "events_webhook_endpoints_replay"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Replaces the endpoint's signing secret and returns the new one, once (`status.signing_secret`). For 24 hours deliveries carry a signature with each secret, so a receiver can switch without dropping one."
+      },
+      "description": "Replaces the endpoint's signing secret and returns the new one, once\n(`status.signing_secret`). For 24 hours deliveries carry a signature with\neach secret, so a receiver can switch without dropping one.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/webhook_endpoints/*}:rotateSecret",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RotateWebhookEndpointSecret.",
+        "properties": {
+          "etag": {
+            "description": "Rotate only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the webhook endpoint.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/WebhookEndpoint"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.webhook_endpoints.rotate_secret",
+      "permission": "events:write",
+      "tool": "events_webhook_endpoints_rotate_secret"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Sends a test event (`type` `sylphx.webhook.test`) to the endpoint alone, through the same signing, retries, and delivery log as any other event."
+      },
+      "description": "Sends a test event (`type` `sylphx.webhook.test`) to the endpoint alone,\nthrough the same signing, retries, and delivery log as any other event.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/webhook_endpoints/*}:test",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of TestWebhookEndpoint.",
+        "properties": {
+          "name": {
+            "description": "The name of the webhook endpoint.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/WebhookEndpoint"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.webhook_endpoints.test",
+      "permission": "events:write",
+      "tool": "events_webhook_endpoints_test"
     },
     {
       "annotations": {
@@ -26186,7 +26260,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@de3e58c8f11c0eb108f7ea7a09ae31922b944c59702a5a9baeffa85d593c838c. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@53ff9ca23ffd32dd43706c6e5d9665addd4e69279d925ba0189549a10e507171. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
