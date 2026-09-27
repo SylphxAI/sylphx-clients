@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   promote:
-    runs-on: ubuntu-24.04
+    runs-on: sylphx-linux-standard
     steps:
       - uses: actions/setup-node@v6
         with:
@@ -58,9 +58,10 @@ jobs:
 
   homebrew:
     needs: promote
-    runs-on: ubuntu-24.04
+    runs-on: sylphx-linux-standard
     steps:
       - uses: actions/checkout@v6
+        timeout-minutes: 10
         with:
           ref: v${{ inputs.version }}
           persist-credentials: false

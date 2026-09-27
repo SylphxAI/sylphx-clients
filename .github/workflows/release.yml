@@ -1,8 +1,10 @@
 # Release of the generated Sylphx clients. Runs in the public mirror
 # SylphxAI/sylphx-clients, which SylphxAI/cloud's release-clients.yml
-# fast-forwards from `clients/` and tags `v{cli version}`. Public repository +
-# GitHub-hosted runners, so the binaries carry signed build provenance
-# (Sigstore, `gh attestation verify`) and the npm packages npm provenance.
+# fast-forwards from `clients/` and tags `v{cli version}`. Builds run on Sylphx
+# runners (Linux: `sylphx-linux-standard`, macOS: our macOS pool) and the
+# binaries carry signed build provenance (Sigstore, `gh attestation verify`).
+# npm publish runs on GitHub's free standard runner (public repository) because
+# npm provenance is generated only there.
 #
 # Every publish is idempotent (skipped when that version is on the registry)
 # and read back. npm packages go to their publishConfig dist-tag (`next`);
@@ -27,12 +29,13 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-24.04
+    runs-on: sylphx-linux-standard
     outputs:
       version: ${{ steps.v.outputs.version }}
       prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v6
+        timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
       - id: v
@@ -47,20 +50,81 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
 
-  build:
+  # Linux binaries: built on our runners inside a digest-pinned Ubuntu 22.04
+  # (glibc 2.35), so they run on every distribution the hosted 22.04 image
+  # covered. There is no arm64 runner class: arm64 is cross-compiled and
+  # smoke-tested under QEMU.
+  build-linux:
     needs: check
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, asset: sylphx-cli-linux-x64, run: true }
-          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, asset: sylphx-cli-linux-arm64, run: true }
-          - { os: macos-14, target: aarch64-apple-darwin, asset: sylphx-cli-darwin-arm64, run: true }
-          - { os: macos-14, target: x86_64-apple-darwin, asset: sylphx-cli-darwin-x64, run: false }
-    runs-on: ${{ matrix.os }}
+          - { target: x86_64-unknown-linux-gnu, asset: sylphx-cli-linux-x64, run: '' }
+          - { target: aarch64-unknown-linux-gnu, asset: sylphx-cli-linux-arm64, run: 'qemu-aarch64 -L /usr/aarch64-linux-gnu' }
+    runs-on: sylphx-linux-standard
+    container: ubuntu:22.04@sha256:b8b6ee6aa931ecd9d0d952abc34dc0e5f7c6a30c6bb71b079fe399fde0329c02
+    timeout-minutes: 45
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+      AR_aarch64_unknown_linux_gnu: aarch64-linux-gnu-ar
+    steps:
+      - name: Build tools
+        run: |
+          set -eu
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            ca-certificates curl git build-essential pkg-config \
+            gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user >/dev/null
+      - uses: actions/checkout@v6
+        timeout-minutes: 10
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+          targets: ${{ matrix.target }}
+      - name: Build
+        run: |
+          set -eu
+          cargo build --release --locked -p sylphx-cli --target "${{ matrix.target }}"
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/sylphx" "dist/${{ matrix.asset }}"
+          chmod +x "dist/${{ matrix.asset }}"
+      - name: Smoke
+        run: |
+          set -eu
+          bin="${{ matrix.run }} dist/${{ matrix.asset }}"
+          out="$($bin --version)"
+          echo "$out"
+          [ "$out" = "sylphx ${{ needs.check.outputs.version }}" ]
+          $bin data databases create --help >/dev/null
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+            | $bin mcp | grep -q '"serverInfo"'
+          # No newer glibc symbol than Ubuntu 22.04's.
+          ! objdump -T "dist/${{ matrix.asset }}" 2>/dev/null | grep -oE 'GLIBC_2\.(3[6-9]|[4-9][0-9])' | head -1 | grep -q .
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  # macOS binaries: our macOS runners (Intel x86_64); arm64 is cross-compiled
+  # and has no smoke run.
+  build-macos:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-apple-darwin, asset: sylphx-cli-darwin-x64, run: true }
+          - { target: aarch64-apple-darwin, asset: sylphx-cli-darwin-arm64, run: false }
+    runs-on: [self-hosted, sylphx, macos, standard]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
+        timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
@@ -91,14 +155,15 @@ jobs:
           if-no-files-found: error
 
   github-release:
-    needs: [check, build]
-    runs-on: ubuntu-24.04
+    needs: [check, build-linux, build-macos]
+    runs-on: sylphx-linux-standard
     permissions:
       contents: write
       id-token: write
       attestations: write
     steps:
       - uses: actions/checkout@v6
+        timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
       - uses: actions/download-artifact@v6
@@ -134,14 +199,18 @@ jobs:
           fi
           gh release view "$TAG" --json assets --jq '.assets[].name'
 
+  # npm packages with npm provenance. The one job on a GitHub-hosted runner:
+  # the free standard label, allowed for public repositories (owner#750),
+  # because npm generates provenance only there.
   npm:
-    needs: [check, build]
+    needs: [check, build-linux, build-macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v6
+        timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
       - uses: actions/setup-node@v6
@@ -156,40 +225,55 @@ jobs:
           path: dist
           pattern: sylphx-cli-*
           merge-multiple: true
-      - name: Publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Pack what npm does not have yet
+        id: pack
         run: |
           set -euo pipefail
-          publish() {
-            local dir="$1" name version tag
+          out="$RUNNER_TEMP/npm"; mkdir -p "$out"; : > "$out/list"
+          pack() {
+            local dir="$1" name version tag tgz
             name="$(jq -r .name "$dir/package.json")"; version="$(jq -r .version "$dir/package.json")"
             tag="$(jq -r '.publishConfig.tag // "latest"' "$dir/package.json")"
             if [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ]; then
               echo "$name@$version is on npm already"; return 0
             fi
-            (cd "$dir" && npm publish --provenance --access public --tag "$tag")
-            for _ in $(seq 1 30); do
-              [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ] && { echo "readback: $name@$version ($tag)"; return 0; }
-              sleep 10
-            done
-            echo "::error::$name@$version did not appear on npm"; return 1
+            tgz="$(cd "$dir" && npm pack --silent --pack-destination "$out")"
+            echo "$out/$tgz $tag $name $version" >> "$out/list"
           }
           for a in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
             install -Dm755 "dist/sylphx-cli-$a" "cli/npm/cli-$a/bin/sylphx"
-            publish "cli/npm/cli-$a"
+            pack "cli/npm/cli-$a"
           done
-          publish cli/npm/cli
-          publish mcp/npm
+          pack cli/npm/cli
+          pack mcp/npm
           (cd typescript && bun install --no-save && bun run build)
           scripts/smoke-npm.sh typescript
-          publish typescript
+          pack typescript
+          cat "$out/list"
+          echo "any=$([ -s "$out/list" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Publish
+        if: steps.pack.outputs.any == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          while read -r tgz tag name version; do
+            npm publish "$tgz" --access public --tag "$tag" --provenance
+            ok=false
+            for _ in $(seq 1 30); do
+              [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ] && { ok=true; break; }
+              sleep 10
+            done
+            $ok || { echo "::error::$name@$version did not appear on npm"; exit 1; }
+            echo "readback: $name@$version ($tag)"
+          done < "$RUNNER_TEMP/npm/list"
 
   crates:
-    needs: [check, build]
-    runs-on: ubuntu-24.04
+    needs: [check, build-linux, build-macos]
+    runs-on: sylphx-linux-standard
     steps:
       - uses: actions/checkout@v6
+        timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable

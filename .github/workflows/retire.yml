@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   yank:
-    runs-on: ubuntu-24.04
+    runs-on: sylphx-linux-standard
     timeout-minutes: 20
     steps:
       - uses: dtolnay/rust-toolchain@stable
