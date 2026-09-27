@@ -47,8 +47,11 @@ for await (const project of sylphx.access.projects.listAll({ parent: me.org })) 
   )
   ```
 - Some services also have a data plane served at their own host, with the same
-  key: Sylphx Data's objects and key-value entries are `sylphx.data.objects`
-  and `sylphx.data.kv` (at `https://api.data.sylphx.com`). Every such call
+  key: Sylphx Data's objects, key-value entries, and search documents are
+  `sylphx.data.objects`, `sylphx.data.kv` (strings and counters, plus
+  `getMany`, hashes, lists, sorted sets, `scan`, and `expire`),
+  `sylphx.data.documents`, and `sylphx.data.search` (at
+  `https://api.data.sylphx.com`). Every such call
   carries one `Sylphx-Effect-Id`, reused on its retries, so a retried write is
   applied once.
 - `SYLPHX_URL` and `SYLPHX_SECRET_URL` (per-project `<project>.api.sylphx.com`
@@ -57,11 +60,16 @@ for await (const project of sylphx.access.projects.listAll({ parent: me.org })) 
 - Per-service subpath imports tree-shake: `import { DataApi } from '@sylphx/sdk/data'`.
 
 ```ts
-// Bytes travel base64 (`body`, `value`); the bucket and namespace are Data
-// Resources of the environment (`sylphx.data.buckets`, `sylphx.data.kvNamespaces`).
+// Bytes travel base64 (`body`, `value`, `documentJson`); the bucket, namespace,
+// and index are Data Resources of the environment (`sylphx.data.buckets`,
+// `sylphx.data.kvNamespaces`, `sylphx.data.searchIndexes`).
 await sylphx.data.objects.put({ bucketId: 'uploads', key: `${orgId}/cv.pdf`, body: base64, contentType: 'application/pdf' })
 const { body } = await sylphx.data.objects.get({ bucketId: 'uploads', key: `${orgId}/cv.pdf` })
 const hits = await sylphx.data.kv.increment({ namespaceId: 'ratelimit', key: `ip:${ip}` })
+await sylphx.data.kv.zsetAdd({ namespaceId: 'board', key: 'weekly', members: [{ member: userId, score: 120 }] })
+const { score } = await sylphx.data.kv.zsetScore({ namespaceId: 'board', key: 'weekly', member: userId })
+await sylphx.data.documents.put({ indexId: 'articles', documentId: slug, documentJson: btoa(JSON.stringify(article)) })
+const { hits: found } = await sylphx.data.search.query({ indexId: 'articles', query: 'pricing', limit: 10 })
 ```
 
 This package is generated from the Sylphx schema registry by `sylphx-gen`; do
