@@ -2085,6 +2085,11 @@
                 "additionalProperties": true,
                 "description": "App data readable by the end user's own tokens.",
                 "type": "object"
+              },
+              "unsafe_metadata": {
+                "additionalProperties": true,
+                "description": "App data the end user may write with their own session (preferences a\nsign-up form collects); never trust it for authorization.",
+                "type": "object"
               }
             },
             "type": "object"
@@ -2180,6 +2185,11 @@
               "public_metadata": {
                 "additionalProperties": true,
                 "description": "App data readable by the end user's own tokens.",
+                "type": "object"
+              },
+              "unsafe_metadata": {
+                "additionalProperties": true,
+                "description": "App data the end user may write with their own session (preferences a\nsign-up form collects); never trust it for authorization.",
                 "type": "object"
               }
             },
@@ -2336,6 +2346,37 @@
       "method_id": "auth.end_users.reactivate",
       "permission": "auth:write",
       "tool": "auth_end_users_reactivate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Clears an end user's sign-in lock (repeated failed sign-ins) now."
+      },
+      "description": "Clears an end user's sign-in lock (repeated failed sign-ins) now.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/end_users/*}:unlock",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UnlockEndUser.",
+        "properties": {
+          "name": {
+            "description": "The name of the end user.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.end_users.unlock",
+      "permission": "auth:write",
+      "tool": "auth_end_users_unlock"
     },
     {
       "annotations": {
@@ -3095,6 +3136,796 @@
       "method_id": "auth.memberships.delete",
       "permission": "auth:write",
       "tool": "auth_memberships_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an organization role."
+      },
+      "description": "Gets an organization role.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/organization_roles/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetOrganizationRole.",
+        "properties": {
+          "name": {
+            "description": "The name of the organization role to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/OrganizationRole"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.organization_roles.get",
+      "permission": "auth:read",
+      "tool": "auth_organization_roles_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists organization roles."
+      },
+      "description": "Lists organization roles.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/organization_roles",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListOrganizationRoles.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/OrganizationRole"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.organization_roles.list",
+      "permission": "auth:read",
+      "tool": "auth_organization_roles_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an organization role."
+      },
+      "description": "Creates an organization role.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/organization_roles",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateOrganizationRole.",
+        "properties": {
+          "organization_role": {
+            "additionalProperties": false,
+            "description": "The organization role to create; only caller-writable fields are read.",
+            "properties": {
+              "auto_assign": {
+                "description": "Whether new members and invitations without roles get this role.",
+                "type": "boolean"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/organization_roles/{organization_role}`;\nthe final segment is the role key memberships name, for example\n`hr_manager`.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "The app's permission strings `<resource>:<action>`, for example\n`invoices:read` or `org:payroll:approve`.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "organization_role_id": {
+            "description": "The organization role id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/OrganizationRole"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "organization_role"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.organization_roles.create",
+      "permission": "auth:write",
+      "tool": "auth_organization_roles_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates an organization role."
+      },
+      "description": "Updates an organization role.",
+      "effect": "write",
+      "http": "PATCH /v1/{organization_role.name=orgs/*/projects/*/envs/*/organization_roles/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateOrganizationRole.",
+        "properties": {
+          "organization_role": {
+            "additionalProperties": false,
+            "description": "The organization role to update; `name` identifies it.",
+            "properties": {
+              "auto_assign": {
+                "description": "Whether new members and invitations without roles get this role.",
+                "type": "boolean"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/organization_roles/{organization_role}`;\nthe final segment is the role key memberships name, for example\n`hr_manager`.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "The app's permission strings `<resource>:<action>`, for example\n`invoices:read` or `org:payroll:approve`.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "organization_role"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.organization_roles.update",
+      "permission": "auth:write",
+      "tool": "auth_organization_roles_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an organization role."
+      },
+      "description": "Deletes an organization role.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/organization_roles/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteOrganizationRole.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the organization role does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the organization role to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/OrganizationRole"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.organization_roles.delete",
+      "permission": "auth:write",
+      "tool": "auth_organization_roles_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an invitation."
+      },
+      "description": "Gets an invitation.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/customer_organizations/*/invitations/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetInvitation.",
+        "properties": {
+          "name": {
+            "description": "The name of the invitation to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Invitation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.invitations.get",
+      "permission": "auth:read",
+      "tool": "auth_invitations_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists invitations."
+      },
+      "description": "Lists invitations.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/customer_organizations/*}/invitations",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListInvitations.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Invitation"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.invitations.list",
+      "permission": "auth:read",
+      "tool": "auth_invitations_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an invitation."
+      },
+      "description": "Creates an invitation.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/customer_organizations/*}/invitations",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateInvitation.",
+        "properties": {
+          "invitation": {
+            "additionalProperties": false,
+            "description": "The invitation to create; only caller-writable fields are read.",
+            "properties": {
+              "email": {
+                "description": "The invited address.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}/invitations/{invitation}`.",
+                "type": "string"
+              },
+              "roles": {
+                "description": "Roles the membership gets; empty means the environment's default roles.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
+              "ttl": {
+                "description": "How long it stays open; default 7 days, at most 30.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "required": [
+              "email"
+            ],
+            "type": "object"
+          },
+          "invitation_id": {
+            "description": "The invitation id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Invitation"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "invitation"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.invitations.create",
+      "permission": "auth:write",
+      "tool": "auth_invitations_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Revokes a pending invitation."
+      },
+      "description": "Revokes a pending invitation.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/customer_organizations/*/invitations/*}:revoke",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RevokeInvitation.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the invitation.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Invitation"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.invitations.revoke",
+      "permission": "auth:write",
+      "tool": "auth_invitations_revoke"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Accepts a pending invitation for an end user whose verified email is the invited address, and creates the membership."
+      },
+      "description": "Accepts a pending invitation for an end user whose verified email is the\ninvited address, and creates the membership.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/customer_organizations/*/invitations/*}:accept",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AcceptInvitation.",
+        "properties": {
+          "end_user": {
+            "description": "The accepting end user; its verified email must be the invited address.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          },
+          "name": {
+            "description": "The name of the invitation.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Invitation"
+          }
+        },
+        "required": [
+          "name",
+          "end_user"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.invitations.accept",
+      "permission": "auth:write",
+      "tool": "auth_invitations_accept"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an email domain."
+      },
+      "description": "Gets an email domain.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/customer_organizations/*/email_domains/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetEmailDomain.",
+        "properties": {
+          "name": {
+            "description": "The name of the email domain to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EmailDomain"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.email_domains.get",
+      "permission": "auth:read",
+      "tool": "auth_email_domains_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists email domains."
+      },
+      "description": "Lists email domains.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/customer_organizations/*}/email_domains",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListEmailDomains.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EmailDomain"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.email_domains.list",
+      "permission": "auth:read",
+      "tool": "auth_email_domains_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an email domain; the answer names the TXT record to publish."
+      },
+      "description": "Creates an email domain; the answer names the TXT record to publish.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/customer_organizations/*}/email_domains",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateEmailDomain.",
+        "properties": {
+          "email_domain": {
+            "additionalProperties": false,
+            "description": "The email domain to create; only caller-writable fields are read.",
+            "properties": {
+              "domain": {
+                "description": "The domain, lowercase, for example `acme.com`.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}/email_domains/{email_domain}`.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "domain"
+            ],
+            "type": "object"
+          },
+          "email_domain_id": {
+            "description": "The email domain id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EmailDomain"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "email_domain"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.email_domains.create",
+      "permission": "auth:write",
+      "tool": "auth_email_domains_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an email domain."
+      },
+      "description": "Deletes an email domain.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/customer_organizations/*/email_domains/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteEmailDomain.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the email domain does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the email domain to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EmailDomain"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.email_domains.delete",
+      "permission": "auth:write",
+      "tool": "auth_email_domains_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Looks up the domain's TXT record now; found, the domain is verified."
+      },
+      "description": "Looks up the domain's TXT record now; found, the domain is verified.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/customer_organizations/*/email_domains/*}:verify",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of VerifyEmailDomain.",
+        "properties": {
+          "name": {
+            "description": "The name of the email domain.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EmailDomain"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.email_domains.verify",
+      "permission": "auth:write",
+      "tool": "auth_email_domains_verify"
     },
     {
       "annotations": {
@@ -24682,7 +25513,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@5a8df7a0cd27e6373c67d1645fbca2946e6962f362036fa2257f19c97ab7fe0f. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@5a34e8ad528d553a34388c40f9e0974abb2c71eaa0990538da340de8cf767f89. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
