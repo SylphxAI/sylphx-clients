@@ -112,6 +112,62 @@ describe('@sylphx/sdk', () => {
 		expect(f.sent[0]!.url.searchParams.get('update_mask')).toBe('meta.labels')
 	})
 
+	// A product-plane refusal names its reason in `error.status.message`; it
+	// must reach `detail`, which the CLI prints as
+	// `error: ETAG_MISMATCH (409): redeploy_refused: <reason>`.
+	test('a refused protocol call keeps the reason from error.status.message', async () => {
+		const f = fake([
+			{
+				status: 409,
+				body: {
+					ok: false,
+					error: {
+						status: { code: 6, message: 'commit_not_fully_built', details: [] },
+						code: 'redeploy_refused',
+					},
+				},
+			},
+		])
+		const sx = new Sylphx({ apiKey: 'k', fetch: f.fetch })
+		const err = await sx.access.envs
+			.update({ environment: { name: ENV }, updateMask: 'meta.labels' })
+			.catch((e) => e)
+		expect(err).toBeInstanceOf(SylphxError)
+		expect((err as SylphxError).code).toBe('ETAG_MISMATCH')
+		expect((err as SylphxError).detail).toBe('redeploy_refused: commit_not_fully_built')
+	})
+
+	test('error.message still wins over error.status.message', async () => {
+		const f = fake([
+			{
+				status: 404,
+				body: {
+					error: {
+						code: 'workspace_not_found',
+						message: 'no such workspace',
+						status: { message: 'must not win' },
+					},
+				},
+			},
+		])
+		const sx = new Sylphx({ apiKey: 'k', fetch: f.fetch })
+		const err = await sx.access.envs
+			.update({ environment: { name: ENV }, updateMask: 'meta.labels' })
+			.catch((e) => e)
+		expect(err).toBeInstanceOf(SylphxError)
+		expect((err as SylphxError).detail).toBe('workspace_not_found: no such workspace')
+	})
+
+	test('a refusal that names no message stays the code alone', async () => {
+		const f = fake([{ status: 409, body: { error: { code: 'redeploy_refused' } } }])
+		const sx = new Sylphx({ apiKey: 'k', fetch: f.fetch })
+		const err = await sx.access.envs
+			.update({ environment: { name: ENV }, updateMask: 'meta.labels' })
+			.catch((e) => e)
+		expect(err).toBeInstanceOf(SylphxError)
+		expect((err as SylphxError).detail).toBe('redeploy_refused')
+	})
+
 	test('a malformed name never leaves the client', async () => {
 		const f = fake([])
 		const sx = new Sylphx({ apiKey: 'k', fetch: f.fetch })

@@ -194,8 +194,12 @@ export function retiredBaseUrl(url: string): boolean {
 function protocolProblem(raw: Record<string, unknown>, status: number): ProblemDetails {
 	const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 	const nested = raw.error !== null && typeof raw.error === 'object' ? (raw.error as Record<string, unknown>) : undefined
+	// A product-plane refusal names its reason in `error.status.message`
+	// (`error.status` is the gRPC Status shape: `message` carries the
+	// customer-safe detail); `error.message` wins when a surface sets it.
+	const nestedStatus = nested !== undefined && nested.status !== null && typeof nested.status === 'object' ? (nested.status as Record<string, unknown>) : undefined
 	const own = nested !== undefined ? str(nested.code) : str(raw.code)
-	const message = nested !== undefined ? str(nested.message) : str(raw.error)
+	const message = nested !== undefined ? str(nested.message) || str(nestedStatus?.message) : str(raw.error)
 	const code =
 		({ 400: 'INVALID_FIELD', 401: 'UNAUTHENTICATED', 403: 'PERMISSION_DENIED', 404: 'RESOURCE_NOT_FOUND', 409: 'ETAG_MISMATCH', 412: 'ETAG_MISMATCH', 429: 'RATE_LIMITED', 503: 'UNAVAILABLE' } as Record<number, string>)[status] ?? 'INTERNAL'
 	const detail = own !== '' && message !== '' ? `${own}: ${message}` : own || message
