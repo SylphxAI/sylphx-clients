@@ -3496,14 +3496,12 @@
                 {
                   "field": "billing_account.spec.spend_limit.currency_code",
                   "flag": "--spec.spend-limit.currency-code",
-                  "required": true,
                   "summary": "ISO 4217 currency, for example `USD`.",
                   "type": "string"
                 },
                 {
                   "field": "billing_account.spec.spend_limit.units_minor",
                   "flag": "--spec.spend-limit.units-minor",
-                  "required": true,
                   "summary": "The amount in the currency's minor unit (cents for USD).",
                   "type": "int"
                 },
@@ -5279,14 +5277,12 @@
                 {
                   "field": "connection_provider.spec.github_app.app_id",
                   "flag": "--spec.github-app.app-id",
-                  "required": true,
                   "summary": "The App's numeric id.",
                   "type": "int"
                 },
                 {
                   "field": "connection_provider.spec.github_app.slug",
                   "flag": "--spec.github-app.slug",
-                  "required": true,
                   "summary": "The App's slug, for example `sylphx`.",
                   "type": "string"
                 },
@@ -5299,7 +5295,6 @@
                 {
                   "field": "connection_provider.spec.github_app.signing_key",
                   "flag": "--spec.github-app.signing-key",
-                  "required": true,
                   "summary": "The imported, non-exportable SIGN Key (RS256) that signs App assertions; only the Broker may use it.",
                   "type": "string"
                 },
@@ -5355,7 +5350,6 @@
                 {
                   "field": "connection_provider.spec.github_app.slug",
                   "flag": "--spec.github-app.slug",
-                  "required": true,
                   "summary": "The App's slug, for example `sylphx`.",
                   "type": "string"
                 },
@@ -5368,7 +5362,6 @@
                 {
                   "field": "connection_provider.spec.github_app.signing_key",
                   "flag": "--spec.github-app.signing-key",
-                  "required": true,
                   "summary": "The imported, non-exportable SIGN Key (RS256) that signs App assertions; only the Broker may use it.",
                   "type": "string"
                 },
@@ -9294,7 +9287,6 @@
                 {
                   "field": "service.spec.health.protocol",
                   "flag": "--spec.health.protocol",
-                  "required": true,
                   "summary": "How to probe.",
                   "type": "enum",
                   "values": [
@@ -9470,7 +9462,6 @@
                 {
                   "field": "service.spec.health.protocol",
                   "flag": "--spec.health.protocol",
-                  "required": true,
                   "summary": "How to probe.",
                   "type": "enum",
                   "values": [
@@ -11276,7 +11267,6 @@
                 {
                   "field": "route.spec.redirect.target_uri",
                   "flag": "--spec.redirect.target-uri",
-                  "required": true,
                   "summary": "The absolute URL to redirect to.",
                   "type": "string"
                 },
@@ -11355,7 +11345,6 @@
                 {
                   "field": "route.spec.redirect.target_uri",
                   "flag": "--spec.redirect.target-uri",
-                  "required": true,
                   "summary": "The absolute URL to redirect to.",
                   "type": "string"
                 },
@@ -12271,7 +12260,6 @@
                 {
                   "field": "sender.spec.push.platform",
                   "flag": "--spec.push.platform",
-                  "required": true,
                   "summary": "The push platform.",
                   "type": "enum",
                   "values": [
@@ -12283,14 +12271,12 @@
                 {
                   "field": "sender.spec.push.connection",
                   "flag": "--spec.push.connection",
-                  "required": true,
                   "summary": "The Kernel Connection holding the APNs, FCM, or VAPID credentials.",
                   "type": "string"
                 },
                 {
                   "field": "sender.spec.push.app_key",
                   "flag": "--spec.push.app-key",
-                  "required": true,
                   "summary": "The bundle id, package name, or web origin.",
                   "type": "string"
                 },
@@ -12359,7 +12345,6 @@
                 {
                   "field": "sender.spec.push.platform",
                   "flag": "--spec.push.platform",
-                  "required": true,
                   "summary": "The push platform.",
                   "type": "enum",
                   "values": [
@@ -12371,14 +12356,12 @@
                 {
                   "field": "sender.spec.push.connection",
                   "flag": "--spec.push.connection",
-                  "required": true,
                   "summary": "The Kernel Connection holding the APNs, FCM, or VAPID credentials.",
                   "type": "string"
                 },
                 {
                   "field": "sender.spec.push.app_key",
                   "flag": "--spec.push.app-key",
-                  "required": true,
                   "summary": "The bundle id, package name, or web origin.",
                   "type": "string"
                 },
@@ -13227,14 +13210,12 @@
                 {
                   "field": "template.spec.email.sender_address",
                   "flag": "--spec.email.sender-address",
-                  "required": true,
                   "summary": "The From address; its domain is a verified Sending Domain.",
                   "type": "string"
                 },
                 {
                   "field": "template.spec.email.subject",
                   "flag": "--spec.email.subject",
-                  "required": true,
                   "summary": "The subject.",
                   "type": "string"
                 },
@@ -13259,21 +13240,18 @@
                 {
                   "field": "template.spec.sms.sender",
                   "flag": "--spec.sms.sender",
-                  "required": true,
                   "summary": "The SMS Sender.",
                   "type": "string"
                 },
                 {
                   "field": "template.spec.sms.body",
                   "flag": "--spec.sms.body",
-                  "required": true,
                   "summary": "The body.",
                   "type": "string"
                 },
                 {
                   "field": "template.spec.push.title",
                   "flag": "--spec.push.title",
-                  "required": true,
                   "summary": "The title.",
                   "type": "string"
                 },
@@ -13292,7 +13270,6 @@
                 {
                   "field": "template.spec.inbox.title",
                   "flag": "--spec.inbox.title",
-                  "required": true,
                   "summary": "The title.",
                   "type": "string"
                 },
@@ -13366,14 +13343,12 @@
                 {
                   "field": "template.spec.email.sender_address",
                   "flag": "--spec.email.sender-address",
-                  "required": true,
                   "summary": "The From address; its domain is a verified Sending Domain.",
                   "type": "string"
                 },
                 {
                   "field": "template.spec.email.subject",
                   "flag": "--spec.email.subject",
-                  "required": true,
                   "summary": "The subject.",
                   "type": "string"
                 },
@@ -13398,21 +13373,18 @@
                 {
                   "field": "template.spec.sms.sender",
                   "flag": "--spec.sms.sender",
-                  "required": true,
                   "summary": "The SMS Sender.",
                   "type": "string"
                 },
                 {
                   "field": "template.spec.sms.body",
                   "flag": "--spec.sms.body",
-                  "required": true,
                   "summary": "The body.",
                   "type": "string"
                 },
                 {
                   "field": "template.spec.push.title",
                   "flag": "--spec.push.title",
-                  "required": true,
                   "summary": "The title.",
                   "type": "string"
                 },
@@ -13431,7 +13403,6 @@
                 {
                   "field": "template.spec.inbox.title",
                   "flag": "--spec.inbox.title",
-                  "required": true,
                   "summary": "The title.",
                   "type": "string"
                 },
@@ -13680,7 +13651,6 @@
                 {
                   "field": "message.content.subject",
                   "flag": "--content.subject",
-                  "required": true,
                   "summary": "The subject.",
                   "type": "string"
                 },
@@ -13870,7 +13840,6 @@
                 {
                   "field": "mailbox.spec.imap.host",
                   "flag": "--spec.imap.host",
-                  "required": true,
                   "summary": "The host name.",
                   "type": "string"
                 },
@@ -13899,7 +13868,6 @@
                 {
                   "field": "mailbox.spec.smtp.host",
                   "flag": "--spec.smtp.host",
-                  "required": true,
                   "summary": "The host name.",
                   "type": "string"
                 },
@@ -14002,7 +13970,6 @@
                 {
                   "field": "mailbox.spec.imap.host",
                   "flag": "--spec.imap.host",
-                  "required": true,
                   "summary": "The host name.",
                   "type": "string"
                 },
@@ -14031,7 +13998,6 @@
                 {
                   "field": "mailbox.spec.smtp.host",
                   "flag": "--spec.smtp.host",
-                  "required": true,
                   "summary": "The host name.",
                   "type": "string"
                 },
@@ -16430,7 +16396,6 @@
                 {
                   "field": "lease.spec.webhook.uri",
                   "flag": "--spec.webhook.uri",
-                  "required": true,
                   "summary": "The HTTPS URL that receives the POSTs.",
                   "type": "string"
                 },
@@ -18077,14 +18042,12 @@
                 {
                   "field": "secret_binding.spec.env_var.variable",
                   "flag": "--spec.env-var.variable",
-                  "required": true,
                   "summary": "The variable name, for example `DATABASE_PASSWORD`.",
                   "type": "string"
                 },
                 {
                   "field": "secret_binding.spec.file.path",
                   "flag": "--spec.file.path",
-                  "required": true,
                   "summary": "The absolute path, for example `/run/secrets/tls.key`.",
                   "type": "string"
                 },
@@ -18092,14 +18055,12 @@
                   "field": "secret_binding.spec.egress.hosts",
                   "flag": "--spec.egress.hosts",
                   "repeated": true,
-                  "required": true,
                   "summary": "The hosts the value may be sent to, for example `api.example.com`.",
                   "type": "string"
                 },
                 {
                   "field": "secret_binding.spec.egress.header",
                   "flag": "--spec.egress.header",
-                  "required": true,
                   "summary": "The request header to set, for example `Authorization`.",
                   "type": "string"
                 },
@@ -18175,14 +18136,12 @@
                 {
                   "field": "secret_binding.spec.env_var.variable",
                   "flag": "--spec.env-var.variable",
-                  "required": true,
                   "summary": "The variable name, for example `DATABASE_PASSWORD`.",
                   "type": "string"
                 },
                 {
                   "field": "secret_binding.spec.file.path",
                   "flag": "--spec.file.path",
-                  "required": true,
                   "summary": "The absolute path, for example `/run/secrets/tls.key`.",
                   "type": "string"
                 },
@@ -18190,14 +18149,12 @@
                   "field": "secret_binding.spec.egress.hosts",
                   "flag": "--spec.egress.hosts",
                   "repeated": true,
-                  "required": true,
                   "summary": "The hosts the value may be sent to, for example `api.example.com`.",
                   "type": "string"
                 },
                 {
                   "field": "secret_binding.spec.egress.header",
                   "flag": "--spec.egress.header",
-                  "required": true,
                   "summary": "The request header to set, for example `Authorization`.",
                   "type": "string"
                 },
@@ -18373,14 +18330,12 @@
                 {
                   "field": "workflow.spec.service_handler.service",
                   "flag": "--spec.service-handler.service",
-                  "required": true,
                   "summary": "The Hosting Service in the same environment.",
                   "type": "string"
                 },
                 {
                   "field": "workflow.spec.service_handler.path",
                   "flag": "--spec.service-handler.path",
-                  "required": true,
                   "summary": "The request path, for example `/api/sylphx/workflows`.",
                   "type": "string"
                 },
@@ -18478,14 +18433,12 @@
                 {
                   "field": "workflow.spec.service_handler.service",
                   "flag": "--spec.service-handler.service",
-                  "required": true,
                   "summary": "The Hosting Service in the same environment.",
                   "type": "string"
                 },
                 {
                   "field": "workflow.spec.service_handler.path",
                   "flag": "--spec.service-handler.path",
-                  "required": true,
                   "summary": "The request path, for example `/api/sylphx/workflows`.",
                   "type": "string"
                 },
@@ -18714,7 +18667,6 @@
                 {
                   "field": "schedule.spec.calendar.cron",
                   "flag": "--spec.calendar.cron",
-                  "required": true,
                   "summary": "A 5-field cron expression, for example `0 3 * * *`.",
                   "type": "string"
                 },
@@ -18727,7 +18679,6 @@
                 {
                   "field": "schedule.spec.interval.every",
                   "flag": "--spec.interval.every",
-                  "required": true,
                   "summary": "The period, 1s to 365d.",
                   "type": "duration"
                 },
@@ -18837,7 +18788,6 @@
                 {
                   "field": "schedule.spec.calendar.cron",
                   "flag": "--spec.calendar.cron",
-                  "required": true,
                   "summary": "A 5-field cron expression, for example `0 3 * * *`.",
                   "type": "string"
                 },
@@ -18850,7 +18800,6 @@
                 {
                   "field": "schedule.spec.interval.every",
                   "flag": "--spec.interval.every",
-                  "required": true,
                   "summary": "The period, 1s to 365d.",
                   "type": "duration"
                 },
