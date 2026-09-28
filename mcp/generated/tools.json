@@ -12156,6 +12156,92 @@
     },
     {
       "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Publishes one message to the channel: it is appended to the channel's history and pushed to every connected client. A retry with the same Idempotency-Key returns the first message."
+      },
+      "description": "Publishes one message to the channel: it is appended to the channel's\nhistory and pushed to every connected client. A retry with the same\nIdempotency-Key returns the first message.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:publish",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of PublishRealtimeMessages.",
+        "properties": {
+          "client_id": {
+            "description": "The publisher's client id, shown to subscribers.",
+            "type": "string"
+          },
+          "data": {
+            "description": "The payload; at most 64 KiB as JSON."
+          },
+          "message_type": {
+            "description": "The message name, 1 to 255 of `[A-Za-z0-9._:-]`.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the realtime channel.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeChannel"
+          }
+        },
+        "required": [
+          "name",
+          "message_type"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.realtime_channels.publish",
+      "permission": "events:publish",
+      "tool": "events_realtime_channels_publish"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Mints a subscribe token (`rtt_…`) for this channel alone, at most an hour long, for a browser or device that holds no key. A token that names a client id enters the channel's presence while it is connected."
+      },
+      "description": "Mints a subscribe token (`rtt_…`) for this channel alone, at most an hour\nlong, for a browser or device that holds no key. A token that names a\nclient id enters the channel's presence while it is connected.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:issueToken",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of IssueRealtimeChannelToken.",
+        "properties": {
+          "client_data": {
+            "description": "The client's presence data, at most 4 KiB as JSON."
+          },
+          "client_id": {
+            "description": "The client this token is for; with it, the connection enters presence.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the realtime channel.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeChannel"
+          },
+          "ttl": {
+            "description": "How long the token lives; default and at most 1 hour, at least 1 minute.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.realtime_channels.issue_token",
+      "permission": "events:publish",
+      "tool": "events_realtime_channels_issue_token"
+    },
+    {
+      "annotations": {
         "destructiveHint": true,
         "idempotentHint": true,
         "openWorldHint": false,
@@ -12182,6 +12268,10 @@
             "description": "Delete only if the current etag matches.",
             "type": "string"
           },
+          "force": {
+            "description": "Also delete the channel's history. Without it, a channel with retained\nmessages is still deleted and its history stops being readable.",
+            "type": "boolean"
+          },
           "name": {
             "description": "The name of the realtime channel to delete.",
             "type": "string",
@@ -12202,6 +12292,152 @@
       "method_id": "events.realtime_channels.delete",
       "permission": "events:write",
       "tool": "events_realtime_channels_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets one retained message of a channel."
+      },
+      "description": "Gets one retained message of a channel.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetRealtimeMessage.",
+        "properties": {
+          "name": {
+            "description": "The name of the message.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeMessage"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.realtime_messages.get",
+      "permission": "events:read",
+      "tool": "events_realtime_messages_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a channel's retained messages, oldest first."
+      },
+      "description": "Lists a channel's retained messages, oldest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/realtime_channels/*}/realtime_messages",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListRealtimeMessages.",
+        "properties": {
+          "filter": {
+            "description": "Empty, or `sequence > N` to start after message N (resume).",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The realtime channel.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeMessage"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.realtime_messages.list",
+      "permission": "events:read",
+      "tool": "events_realtime_messages_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets one client present in a channel."
+      },
+      "description": "Gets one client present in a channel.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_members/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetRealtimeMember.",
+        "properties": {
+          "name": {
+            "description": "The name of the member.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeMember"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.realtime_members.get",
+      "permission": "events:read",
+      "tool": "events_realtime_members_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the clients present in a channel now."
+      },
+      "description": "Lists the clients present in a channel now.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/realtime_channels/*}/realtime_members",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListRealtimeMembers.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The realtime channel.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeMember"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.realtime_members.list",
+      "permission": "events:read",
+      "tool": "events_realtime_members_list"
     },
     {
       "annotations": {
@@ -26260,7 +26496,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@53ff9ca23ffd32dd43706c6e5d9665addd4e69279d925ba0189549a10e507171. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@43d380047d58266a3de0ffeb89cc8971697562b82d196b1c633672b43c2d36bb. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
