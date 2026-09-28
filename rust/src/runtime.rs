@@ -315,7 +315,17 @@ fn protocol_problem(raw: &serde_json::Value, status: u16) -> crate::common::Prob
     let text =
         |v: Option<&serde_json::Value>| v.and_then(|v| v.as_str()).unwrap_or_default().to_string();
     let (own, message) = match raw.get("error") {
-        Some(e) if e.is_object() => (text(e.get("code")), text(e.get("message"))),
+        Some(e) if e.is_object() => {
+            // A product-plane envelope names its reason in
+            // `error.status.message` (the gRPC Status shape: `code` is the
+            // machine code, `message` the customer-safe detail);
+            // `error.message` wins when a surface sets it.
+            let mut message = text(e.get("message"));
+            if message.is_empty() {
+                message = text(e.get("status").and_then(|s| s.get("message")));
+            }
+            (text(e.get("code")), message)
+        }
         e => (text(raw.get("code")), text(e)),
     };
     let code = match status {
@@ -895,4 +905,52 @@ fn retryable_status(r: &HttpResponse) -> bool {
 fn backoff(attempt: u32) -> std::time::Duration {
     let cap = 250u64.saturating_mul(1 << attempt.min(5)).min(8_000);
     std::time::Duration::from_millis(fastrand::u64(0..=cap))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::protocol_problem;
+
+    /// A product-plane refusal names its reason in `error.status.message`
+    /// (`{"error": {"status": {"code": 6, "message": "<reason>"}, "code":
+    /// "redeploy_refused"}}`); the reason must reach `detail`, which the CLI
+    /// prints as `error: ETAG_MISMATCH (409): redeploy_refused: <reason>`.
+    #[test]
+    fn protocol_problem_keeps_the_reason_from_status_message() {
+        let raw = serde_json::json!({
+            "ok": false,
+            "error": {
+                "status": {"code": 6, "message": "commit_not_fully_built", "details": []},
+                "code": "redeploy_refused"
+            },
+            "process": "sylphx-apps-api",
+            "owner": "sylphx-apps-api/product"
+        });
+        let problem = protocol_problem(&raw, 409);
+        assert_eq!(problem.code, "ETAG_MISMATCH");
+        assert_eq!(problem.detail, "redeploy_refused: commit_not_fully_built");
+    }
+
+    /// `error.message` is the message when it is present; `error.status.message`
+    /// only fills in for it.
+    #[test]
+    fn protocol_problem_prefers_the_direct_error_message() {
+        let raw = serde_json::json!({
+            "error": {
+                "code": "workspace_not_found",
+                "message": "no such workspace",
+                "status": {"message": "must not win"}
+            }
+        });
+        let problem = protocol_problem(&raw, 404);
+        assert_eq!(problem.detail, "workspace_not_found: no such workspace");
+    }
+
+    /// A body that names no message anywhere stays the code alone.
+    #[test]
+    fn protocol_problem_without_a_message_stays_the_code() {
+        let raw = serde_json::json!({"error": {"code": "redeploy_refused"}});
+        let problem = protocol_problem(&raw, 409);
+        assert_eq!(problem.detail, "redeploy_refused");
+    }
 }
