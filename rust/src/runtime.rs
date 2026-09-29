@@ -772,6 +772,7 @@ impl HttpTransport {
         &self,
         request: &HttpRequest,
         effect_id: Option<&str>,
+        extra: &[(String, String)],
         deadline: Option<std::time::Instant>,
     ) -> Result<(HttpResponse, Option<std::time::Duration>), Error> {
         let method = reqwest::Method::from_bytes(request.method.as_bytes())
@@ -806,6 +807,12 @@ impl HttpTransport {
                 rb = rb.header("Idempotency-Key", k);
             }
             rb = rb.header("Sylphx-Effect-Id", k);
+        }
+        for (k, v) in extra
+            .iter()
+            .filter(|(k, _)| !k.eq_ignore_ascii_case("idempotency-key"))
+        {
+            rb = rb.header(k.as_str(), v.as_str());
         }
         if let Some(deadline) = deadline.filter(|_| !protocol) {
             let left = deadline.saturating_duration_since(std::time::Instant::now());
@@ -856,16 +863,37 @@ impl HttpTransport {
 #[cfg(feature = "http")]
 impl Transport for HttpTransport {
     async fn send(&self, request: HttpRequest) -> Result<HttpResponse, Error> {
+        self.send_with_headers(request, &[]).await
+    }
+}
+
+#[cfg(feature = "http")]
+impl HttpTransport {
+    /// Sends `request` with extra request headers (`If-Match`, or an
+    /// `Idempotency-Key` the caller derived, which replaces the generated
+    /// UUIDv7 and is reused across this call's retries).
+    pub async fn send_with_headers(
+        &self,
+        request: HttpRequest,
+        headers: &[(String, String)],
+    ) -> Result<HttpResponse, Error> {
         // One key per logical call, reused across its retries (§3.6): every
         // mutation, and every call of an effect-id surface.
-        let key =
-            (request.effect_ids || request.mutation).then(|| uuid::Uuid::now_v7().to_string());
+        let key = headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("idempotency-key"))
+            .map(|(_, v)| v.clone())
+            .or_else(|| {
+                (request.effect_ids || request.mutation).then(|| uuid::Uuid::now_v7().to_string())
+            });
         // A protocol mutation without effect ids is never resent.
         let resend = !(request.mutation && request.origin.is_some() && !request.effect_ids);
         let deadline = self.timeout.map(|t| std::time::Instant::now() + t);
         let mut attempt = 0u32;
         loop {
-            let result = self.send_once(&request, key.as_deref(), deadline).await;
+            let result = self
+                .send_once(&request, key.as_deref(), headers, deadline)
+                .await;
             let retry_after = match &result {
                 Ok((r, after)) if retryable_status(r) => *after,
                 // A GET, or a mutation that carries an idempotency key, is
