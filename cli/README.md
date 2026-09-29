@@ -26,3 +26,24 @@ sylphx mcp                            # the MCP server over stdio
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
 
 `generated/commands.json` is `sylphx-gen` output; never edit it.
+
+## Container image
+
+`clients/cli/Dockerfile` builds the CLI into a distroless image (no shell,
+CA certificates, uid 65532, writable `/tmp`); the Release v2 apply Job runs
+`sylphx apply ...` from it inside tenant environments. The build context is
+the repository root: `docker build -f clients/cli/Dockerfile .`.
+
+`.github/workflows/cli-image.yml` publishes it on every push to `main` that
+changes anything under `clients/`, as `registry.sylphx.com/library/sylphx-cli:<commit sha>`, and
+prints the digest reference in the run summary. Tenant namespaces pull it with
+the platform `registry-pull-secret`.
+
+The release controller pins the image by digest through one environment
+variable, set in `SylphxAI/infra` (`infra/addons/release-controller`, the
+controller Deployment's `env`):
+
+```yaml
+- name: SYLPHX_APPLY_CLI_IMAGE
+  value: registry.sylphx.com/library/sylphx-cli@sha256:<digest from the run summary>
+```
