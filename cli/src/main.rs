@@ -9,6 +9,7 @@ mod auth;
 mod context;
 mod names;
 mod output;
+mod token;
 mod tree;
 
 use std::io::{IsTerminal, Read, Write};
@@ -105,6 +106,18 @@ fn cli(tree: &Tree) -> Command {
                         .help("With no OS keychain, save the key in the default config directory's credentials.json (0600), shared by every process of this user; SYLPHX_CONFIG_DIR picks another directory"),
                 ),
         )
+        .subcommand(
+            Command::new("token")
+                .about("Print a short-lived token for one scope, from your login (for cargo and other tools)")
+                .long_about("Prints one token on stdout (nothing else) that carries only --scope and expires in 15 minutes. It is minted from your login (or SYLPHX_API_KEY) and cached for reuse until 2 minutes before it expires; the login key itself is never printed. Errors go to stderr with a non-zero exit.\n\nExample, in .cargo/config.toml:\n  credential-provider = [\"cargo:token-from-stdout\", \"sylphx\", \"token\", \"--scope\", \"hosting:deploy\"]")
+                .arg(
+                    Arg::new("scope")
+                        .long("scope")
+                        .value_name("SCOPE")
+                        .required(true)
+                        .help("A registered scope, e.g. hosting:deploy or ai:inference"),
+                ),
+        )
         .subcommand(Command::new("logout").about("Revoke the stored key and forget it"))
         .subcommand(
             Command::new("whoami").about("Show the caller: principal, org, project, env, scopes"),
@@ -179,6 +192,10 @@ async fn main() -> ExitCode {
             eprintln!("error: {e}");
             ExitCode::from(2)
         }
+        Err(Failure::Refused(e)) => {
+            eprintln!("error: {e}");
+            ExitCode::from(1)
+        }
         Err(Failure::Api(e)) => {
             eprintln!("{}", describe(&e));
             ExitCode::from(1)
@@ -188,6 +205,8 @@ async fn main() -> ExitCode {
 
 enum Failure {
     Usage(String),
+    /// A one-line reason on stderr, exit 1.
+    Refused(String),
     Api(Error),
 }
 
@@ -257,6 +276,14 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 sub.get_flag("store-file"),
             )
             .await
+        }
+        "token" => {
+            let scope = sub.get_one::<String>("scope").expect("required");
+            let t = token::token(scope, api_key.clone(), base_url.clone())
+                .await
+                .map_err(Failure::Refused)?;
+            println!("{t}");
+            Ok(())
         }
         "logout" => {
             let creds = context::load_credentials();

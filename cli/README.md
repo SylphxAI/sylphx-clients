@@ -8,6 +8,7 @@ curl -fsSL https://github.com/SylphxAI/sylphx-clients/releases/latest/download/i
 sylphx login                          # approve at sylphx.com/device; the org key goes to the OS keychain
                                       #   (your role's scopes, follows role changes, expires in 30 days; `sylphx logout` revokes it)
 sylphx login --api-key -              # agents and CI: an Access key on stdin (or SYLPHX_API_KEY)
+sylphx token --scope hosting:deploy   # one short-lived token (15 min) for one scope, on stdout only
 sylphx logout                         # revokes the key and forgets it
 sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx/project.json)
 sylphx data databases create main --spec.compute-units 2
@@ -24,6 +25,36 @@ sylphx mcp                            # the MCP server over stdio
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
+
+## `sylphx token --scope <scope>`
+
+Prints one token and a newline on stdout, for tools that need a credential for
+a single scope (cargo, deploy scripts). Everything else goes to stderr; the
+exit code is non-zero, with a one-line reason, when you are not signed in, the
+login may not grant the scope, or the scope is not registered.
+
+- The token is a child Access key in your login's own org/project/env, with
+  only that scope and a 15 minute life (label `token:<scope>`). Your login
+  key is never printed. Scopes are the registered ones (`packages:read`,
+  `packages:publish`, `hosting:deploy`, `ai:inference`, ...); an unregistered scope is refused.
+- It is cached in `<config dir>/token-cache/` (mode 0600) per login and
+  scope, and reused until 2 minutes before it expires, so a cargo build mints
+  one key, not one per crate. `sylphx logout` clears the cache.
+- With `SYLPHX_API_KEY` (CI) it mints from that key the same way. A key that
+  may not mint keys is printed as-is only when it carries the scope and
+  expires within 60 minutes (the key a GitHub Actions OIDC exchange issues);
+  otherwise the command refuses.
+- A login that may not grant the scope is refused; a per-scope step-up device
+  login needs server support that is not there yet.
+
+```toml
+# .cargo/config.toml
+[registries.example]
+credential-provider = ["cargo:token-from-stdout", "sylphx", "token", "--scope", "packages:read"]
+```
+
+Use `--scope packages:publish` for publishing. Neither is covered by the
+`*:read` / `*:write` wildcards, so a login must hold them by name.
 
 `generated/commands.json` is `sylphx-gen` output; never edit it.
 

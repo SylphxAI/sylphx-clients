@@ -7,6 +7,7 @@ small hand-written porcelain on the generated Rust SDK.
 curl -fsSL https://github.com/SylphxAI/sylphx-clients/releases/latest/download/install.sh | sh   # or: npm i -g @sylphx/cli · cargo install sylphx-cli
 sylphx login                          # approve at sylphx.com/device; the org key goes to the OS keychain
 sylphx login --api-key -              # agents and CI: an Access key on stdin (or SYLPHX_API_KEY)
+sylphx token --scope hosting:deploy   # one short-lived token (15 min) for one scope, on stdout only
 sylphx logout                         # revokes the key and forgets it
 sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx/project.json)
 sylphx data databases create main --spec.compute-units 2

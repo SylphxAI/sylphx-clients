@@ -542,3 +542,243 @@ fn mcp_answers_over_stdio() {
     assert_eq!(lines[0]["result"]["serverInfo"]["name"], "sylphx");
     assert!(lines[1]["result"]["tools"].as_array().unwrap().len() >= 4);
 }
+
+fn token_reply(secret: &str) -> Value {
+    json!({"name": format!("{ENV}/api_keys/key_child"), "spec": {"scopes": ["hosting:deploy"]},
+           "status": {"secret": secret}, "active_after_ms": 3000})
+}
+
+fn whoami_reply() -> Value {
+    json!({"principal": "principal_x", "api_key": format!("{ENV}/api_keys/key_self"),
+           "org": "orgs/org_a", "project": "orgs/org_a/projects/prj_a", "env": ENV,
+           "scopes": ["*:write"]})
+}
+
+fn civil(secs: u64) -> String {
+    // Enough of RFC 3339 for the tests: the date part via the same algorithm.
+    let z = (secs / 86400) as i64 + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z.rem_euclid(146097);
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    let r = secs % 86400;
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        r / 3600,
+        r % 3600 / 60,
+        r % 60
+    )
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn token_prints_only_a_minted_key_scoped_to_one_scope() {
+    let (url, log) = serve(vec![
+        (200, whoami_reply()),
+        (201, token_reply("sylphx_sk_child_1")),
+    ])
+    .await;
+    let sb = Sandbox::new("token-mint");
+    let out = run(&sb, &url, &["token", "--scope", "packages:read"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "sylphx_sk_child_1\n");
+    assert!(!String::from_utf8_lossy(&out.stderr).contains("sylphx_sk_child_1"));
+    let log = log.lock().unwrap().clone();
+    assert!(log[1]
+        .line
+        .starts_with(&format!("POST /v1/{ENV}/api_keys ")));
+    let body: Value = serde_json::from_str(&log[1].body).unwrap();
+    assert_eq!(body["spec"]["scopes"], json!(["packages:read"]));
+    assert_eq!(body["spec"]["label"], "token:packages:read");
+    let exp = body["spec"]["expire_time"].as_str().unwrap();
+    assert!(
+        exp.ends_with('Z') && exp > civil(now_secs()).as_str(),
+        "{exp}"
+    );
+    // The login key is used to mint, never printed.
+    assert!(log[1].head.contains("sylphx_sk_test"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn token_is_cached_until_shortly_before_it_expires() {
+    let (url, log) = serve(vec![
+        (200, whoami_reply()),
+        (201, token_reply("sylphx_sk_child_1")),
+    ])
+    .await;
+    let sb = Sandbox::new("token-cache");
+    let first = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
+    let second = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
+    assert_eq!(first.stdout, second.stdout);
+    assert_eq!(
+        log.lock().unwrap().len(),
+        2,
+        "the second call made no request"
+    );
+    let dir = sb.dir.join("config/token-cache");
+    let files: Vec<_> = std::fs::read_dir(&dir).unwrap().flatten().collect();
+    assert_eq!(files.len(), 1);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = files[0].metadata().unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+    }
+    // A different scope is a different token.
+    let (url2, log2) = serve(vec![
+        (200, whoami_reply()),
+        (201, token_reply("sylphx_sk_child_ai")),
+    ])
+    .await;
+    let other = run(&sb, &url2, &["token", "--scope", "ai:inference"]).await;
+    assert_eq!(
+        String::from_utf8_lossy(&other.stdout),
+        "sylphx_sk_child_ai\n"
+    );
+    assert_eq!(log2.lock().unwrap().len(), 2);
+
+    // Within 2 minutes of expiry the cache is not used.
+    let path = dir
+        .read_dir()
+        .unwrap()
+        .flatten()
+        .find(|f| {
+            std::fs::read_to_string(f.path())
+                .unwrap()
+                .contains("child_1")
+        })
+        .unwrap()
+        .path();
+    let soon = json!({"token": "sylphx_sk_child_1", "expires_at": now_secs() + 60});
+    std::fs::write(&path, soon.to_string()).unwrap();
+    let (url3, log3) = serve(vec![
+        (200, whoami_reply()),
+        (201, token_reply("sylphx_sk_child_2")),
+    ])
+    .await;
+    let again = run(&sb, &url3, &["token", "--scope", "hosting:deploy"]).await;
+    assert_eq!(
+        String::from_utf8_lossy(&again.stdout),
+        "sylphx_sk_child_2\n"
+    );
+    assert_eq!(log3.lock().unwrap().len(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn token_refuses_an_unregistered_scope() {
+    let (url, _log) = serve(vec![
+        (200, whoami_reply()),
+        (400, json!({"code": "INVALID_FIELD", "status": 400, "retryable": false, "detail": "scopes: unregistered scope nope:nope"})),
+    ])
+    .await;
+    let sb = Sandbox::new("token-unregistered");
+    let out = run(&sb, &url, &["token", "--scope", "nope:nope"]).await;
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("nope:nope") && err.contains("not a registered scope"),
+        "{err}"
+    );
+    // A malformed scope never reaches the network.
+    let bad = run(
+        &sb,
+        "http://127.0.0.1:9",
+        &["token", "--scope", "Not A Scope"],
+    )
+    .await;
+    assert!(!bad.status.success() && bad.stdout.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn token_says_when_signed_out() {
+    let sb = Sandbox::new("token-signed-out");
+    let mut c = sb.cmd(
+        "http://127.0.0.1:9",
+        &["token", "--scope", "hosting:deploy"],
+    );
+    c.env_remove("SYLPHX_API_KEY")
+        .env("SYLPHX_NO_KEYCHAIN", "1");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("not signed in"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn token_names_the_scope_a_login_may_not_grant() {
+    let (url, _log) = serve(vec![
+        (200, whoami_reply()),
+        (403, json!({"code": "PERMISSION_DENIED", "status": 403, "retryable": false, "detail": "the caller cannot grant hosting:deploy"})),
+    ])
+    .await;
+    let sb = Sandbox::new("token-denied");
+    let out = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("hosting:deploy"), "{err}");
+    assert_eq!(err.trim().lines().count(), 1, "{err}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn token_from_an_api_key_that_cannot_mint_prints_it_only_if_short_lived() {
+    let key = format!("{ENV}/api_keys/key_self");
+    let me = json!({"api_key": key, "org": "orgs/org_a", "project": "orgs/org_a/projects/prj_a",
+                    "env": ENV, "scopes": ["hosting:deploy"]});
+    let denied = || json!({"code": "PERMISSION_DENIED", "status": 403, "retryable": false, "detail": "missing access:keys:write"});
+    // Expires in 30 minutes: an exchange key, handed out as it is.
+    let (url, _l) = serve(vec![
+        (200, me.clone()),
+        (403, denied()),
+        (
+            200,
+            json!({"name": key, "spec": {"expire_time": civil(now_secs() + 1800)}}),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("token-ci-short");
+    let out = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "sylphx_sk_test\n");
+    // Expires in a day: refused.
+    let (url, _l) = serve(vec![
+        (200, me.clone()),
+        (403, denied()),
+        (
+            200,
+            json!({"name": key, "spec": {"expire_time": civil(now_secs() + 86400)}}),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("token-ci-long");
+    let out = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    // Not carrying the scope: refused without reading the key.
+    let (url, log) = serve(vec![(200, me), (403, denied())]).await;
+    let sb = Sandbox::new("token-ci-other");
+    let out = run(&sb, &url, &["token", "--scope", "ai:inference"]).await;
+    assert!(!out.status.success() && out.stdout.is_empty());
+    assert_eq!(log.lock().unwrap().len(), 2);
+}

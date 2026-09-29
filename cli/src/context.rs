@@ -114,6 +114,9 @@ pub fn forget(c: &Credentials) -> Result<Option<PathBuf>, String> {
             let _ = e.delete_credential();
         }
     }
+    if let Some(d) = config_dir() {
+        let _ = std::fs::remove_dir_all(d.join(crate::token::CACHE_DIR));
+    }
     match credentials_path().filter(|p| p.exists()) {
         Some(p) => {
             std::fs::remove_file(&p).map_err(|e| format!("{}: {e}", p.display()))?;
@@ -194,7 +197,7 @@ pub fn save_credentials(c: &Credentials) -> Result<PathBuf, String> {
 }
 
 #[cfg(unix)]
-fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     use std::os::unix::fs::OpenOptionsExt;
     let mut f = std::fs::OpenOptions::new()
@@ -207,7 +210,7 @@ fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 }
 
 #[cfg(not(unix))]
-fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::write(path, bytes)
 }
 
@@ -235,33 +238,45 @@ pub fn write_link(dir: &Path, link: &Link) -> Result<PathBuf, String> {
     Ok(p)
 }
 
+/// The credential a command runs as, and where it came from.
+pub struct Resolved {
+    pub key: String,
+    pub base_url: Option<String>,
+    /// Given for this process (`--api-key`, `SYLPHX_API_KEY`), not read from
+    /// the stored login.
+    pub explicit: bool,
+}
+
 /// Resolves the credential and base URL: `--api-key`, then `SYLPHX_API_KEY`,
 /// then the stored key.
-pub async fn client(
-    api_key: Option<String>,
-    base_url: Option<String>,
-) -> Result<Option<Client>, String> {
+pub fn resolve(api_key: Option<String>, base_url: Option<String>) -> Option<Resolved> {
     let stored = load_credentials();
-    let url = base_url
+    let base_url = base_url
         .or_else(|| {
             std::env::var("SYLPHX_BASE_URL")
                 .ok()
                 .filter(|u| !u.is_empty())
         })
         .or(stored.base_url.clone());
-    let key = api_key
-        .or_else(|| {
-            std::env::var("SYLPHX_API_KEY")
-                .ok()
-                .filter(|k| !k.is_empty())
-        })
-        .or_else(|| stored_key(&stored));
-    let Some(bearer) = key else {
-        return Ok(None);
-    };
-    let mut b = HttpTransport::builder().api_key(bearer);
-    if let Some(u) = url {
-        b = b.base_url(u);
+    let given = api_key.or_else(|| {
+        std::env::var("SYLPHX_API_KEY")
+            .ok()
+            .filter(|k| !k.is_empty())
+    });
+    let explicit = given.is_some();
+    let key = given.or_else(|| stored_key(&stored))?;
+    Some(Resolved {
+        key,
+        base_url,
+        explicit,
+    })
+}
+
+/// A client for a resolved credential.
+pub fn client_for(r: &Resolved) -> Result<Client, String> {
+    let mut b = HttpTransport::builder().api_key(r.key.clone());
+    if let Some(u) = &r.base_url {
+        b = b.base_url(u.clone());
     }
     if let Some(v) = std::env::var("SYLPHX_API_VERSION")
         .ok()
@@ -269,5 +284,15 @@ pub async fn client(
     {
         b = b.api_version(v);
     }
-    Ok(Some(Client::new(b.build().map_err(|e| e.to_string())?)))
+    Ok(Client::new(b.build().map_err(|e| e.to_string())?))
+}
+
+/// Resolves the credential and builds its client (`None` when signed out).
+pub async fn client(
+    api_key: Option<String>,
+    base_url: Option<String>,
+) -> Result<Option<Client>, String> {
+    resolve(api_key, base_url)
+        .map(|r| client_for(&r))
+        .transpose()
 }
