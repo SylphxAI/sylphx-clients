@@ -603,6 +603,15 @@ impl Defaults<'_> {
     }
 }
 
+/// A singleton's name: its parent and its literal segment; any other
+/// PARENT is the name as is.
+fn singleton_name(parent: String, suffix: Option<&str>) -> String {
+    match suffix {
+        Some(s) => format!("{parent}/{s}"),
+        None => parent,
+    }
+}
+
 async fn generated(
     client: &Client,
     method: &MethodCmd,
@@ -635,15 +644,19 @@ async fn generated(
         let given = mm.get_one::<String>("__positional").cloned();
         let value = match (p.arg.as_str(), given) {
             ("ID", v) => v,
-            ("PARENT", Some(v)) => Some(names::resolve(client, &v).await?),
+            ("PARENT", Some(v)) => Some(singleton_name(
+                names::resolve(client, &v).await?,
+                p.suffix.as_deref(),
+            )),
             ("PARENT", None)
                 if tree::get_path(&Value::Object(args.clone()), &p.field).is_none() =>
             {
-                Some(
+                Some(singleton_name(
                     defaults
                         .at(p.pattern.as_deref().unwrap_or_default())
                         .await?,
-                )
+                    p.suffix.as_deref(),
+                ))
             }
             (_, Some(v)) => Some(
                 defaults

@@ -64,6 +64,9 @@ pub struct Positional {
     pub optional: bool,
     #[serde(default)]
     pub default_from_context: bool,
+    /// A singleton's literal last segment: the name is the parent and it.
+    #[serde(default)]
+    pub suffix: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
