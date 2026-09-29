@@ -15,7 +15,7 @@ homepage.workspace = true
 [features]
 default = ["http", "verify"]
 # The production transport (reqwest + rustls). Without it, bring a `Transport`.
-http = ["dep:reqwest", "dep:tokio", "dep:uuid", "dep:fastrand"]
+http = ["dep:reqwest", "dep:tokio", "dep:fastrand"]
 # Offline verification of Sylphx-signed tokens (`sylphx::auth::verify`).
 verify = ["dep:p256", "dep:ed25519-dalek", "dep:base64"]
 
@@ -27,7 +27,8 @@ tokio = { version = "1", features = ["time", "sync"], optional = true }
 p256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"], optional = true }
 ed25519-dalek = { version = "2", default-features = false, features = ["std"], optional = true }
 base64 = { version = "0.22", optional = true }
-uuid = { version = "1", features = ["v7"], optional = true }
+# `sylphx::ids` mints and reads ids in every build.
+uuid = { version = "1", features = ["v7"] }
 fastrand = { version = "2", optional = true }
 
 [dev-dependencies]

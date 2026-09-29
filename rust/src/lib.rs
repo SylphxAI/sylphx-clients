@@ -26,6 +26,7 @@ pub mod data;
 pub mod entitlement;
 pub mod events;
 pub mod hosting;
+pub mod ids;
 pub mod keys;
 pub mod methods;
 pub mod network;
