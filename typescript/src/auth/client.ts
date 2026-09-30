@@ -387,8 +387,8 @@ export function createAuthClient(options: AuthClientOptions) {
 
 		/**
 		 * The URL to navigate to (`location.assign`) to start a social sign-in.
-		 * It is a redirect, not a fetch. The callback appends `sylphx_ticket`
-		 * (redeem it with `redeemTicket`) or `sylphx_error` to `redirectUrl`.
+		 * It is a redirect, not a fetch. The callback appends `auth_ticket`
+		 * (redeem it with `redeemTicket`) or `auth_error` to `redirectUrl`.
 		 */
 		oauthStartUrl(provider: string, input: { redirectUrl: string }): string {
 			return url(`/v1/client/oauth/${encodeURIComponent(provider)}/start`, {

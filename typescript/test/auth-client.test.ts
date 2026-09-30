@@ -154,15 +154,15 @@ describe('routes', () => {
 				branding: { name: 'N', logo_url: null, primary_color: null },
 				localization: { default_locale: 'en', locales: ['en'] },
 				api_origin: 'https://api.sylphx.com',
-				ticket_param: 'sylphx_ticket',
-				error_param: 'sylphx_error',
+				ticket_param: 'auth_ticket',
+				error_param: 'auth_error',
 			}),
 		)
 		const c = await createAuthClient({ publishableKey: KEY, fetch: s.fetch }).config()
 		expect(s.calls[0]?.init.method).toBe('GET')
 		expect(c.social[0]?.startUrl).toBe('https://x/start')
 		expect(c.localization.defaultLocale).toBe('en')
-		expect(c.ticketParam).toBe('sylphx_ticket')
+		expect(c.ticketParam).toBe('auth_ticket')
 	})
 
 	test('POST sign-in/password sends session_mode browser and remembers the token', async () => {

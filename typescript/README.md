@@ -91,9 +91,10 @@ const { session, user } = await auth.signInWithPassword({ email, password })
 await auth.getSession()
 await auth.signOut()
 
-// Social sign-in is a navigation; the callback appends ?sylphx_ticket=...
+// Social sign-in is a navigation; the callback appends ?auth_ticket=...
+// (config().ticketParam names it)
 location.assign(auth.oauthStartUrl('google', { redirectUrl: location.href }))
-await auth.redeemTicket(new URLSearchParams(location.search).get('sylphx_ticket')!)
+await auth.redeemTicket(new URLSearchParams(location.search).get('auth_ticket')!)
 ```
 
 - Every call carries `publishable_key` (or `instance`, the public slug) in the
