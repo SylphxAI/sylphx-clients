@@ -22,6 +22,7 @@ export type VerifyErrorCode =
 	| 'issuer'
 	| 'audience'
 	| 'keys'
+	| 'replayed'
 
 /** Why a token was refused. Every code means "do not trust this token". */
 export class VerifyError extends Error {
@@ -43,6 +44,8 @@ export interface Expect {
 	audience: string | string[]
 	/** Clock skew tolerated on exp, nbf, and iat, in seconds. Default 60. */
 	leewaySeconds?: number
+	/** Required JOSE `typ`, when set (callback receipts fix it). */
+	typ?: string
 }
 
 export interface Jwk {
@@ -128,6 +131,7 @@ export async function verifyWithKeys(token: string, keys: Jwks, expect: Expect, 
 	const header = json(h, 'header')
 	const alg = String(header.alg ?? '')
 	if (alg !== 'ES256' && alg !== 'EdDSA') throw new VerifyError('algorithm', `algorithm ${alg} is not accepted`)
+	if (expect.typ !== undefined && header.typ !== expect.typ) throw new VerifyError('malformed', 'unexpected token type')
 	const kid = typeof header.kid === 'string' ? header.kid : ''
 	const candidates = keys.keys.filter((k) => !kid || k.kid === kid)
 	if (candidates.length === 0) throw new VerifyError('unknown_key', `no key ${kid} in the issuer's key set`)
@@ -154,6 +158,66 @@ export async function verifyWithKeys(token: string, keys: Jwks, expect: Expect, 
 	if (want.length === 0 || !auds.some((a) => want.includes(a)))
 		throw new VerifyError('audience', 'the token is not for this audience')
 	return claims
+}
+
+/** Issuer of the receipt on every platform-originated callback (Task and program-run callbacks). */
+export const CALLBACK_RECEIPT_TYP = 'compute-tick-receipt+jwt'
+/** Clock skew a callback verifier tolerates; the replay guard keeps each `jti` this much past `exp`. */
+export const CALLBACK_LEEWAY_SECONDS = 30
+export const CALLBACK_RECEIPT_ISSUER = 'https://api.compute.sylphx.com'
+/**
+ * Where the receipt keys are published. Two keys overlap during a rotation and
+ * the token's `kid` picks one; `createVerifier` refetches on an unknown `kid`,
+ * so a rotation needs no change on the receiver.
+ */
+export const CALLBACK_RECEIPT_JWKS_URL =
+	'https://api.compute.sylphx.com/.well-known/compute-tick-receipt-jwks.json'
+
+/** Remembers admitted receipt ids (`jti`) until they expire. In memory; a fleet shares a store instead. */
+export interface ReplayGuard {
+	/** Throws `VerifyError('replayed')` for a missing or already admitted `jti`. */
+	admit(claims: Claims, now?: number): void
+}
+
+export function createReplayGuard(): ReplayGuard {
+	const seen = new Map<string, number>()
+	return {
+		admit(claims, now = Math.floor(Date.now() / 1000)) {
+			for (const [id, until] of seen) if (until <= now) seen.delete(id)
+			const jti = typeof claims.jti === 'string' ? claims.jti : ''
+			const exp = typeof claims.exp === 'number' ? claims.exp : 0
+			if (!jti || seen.has(jti)) throw new VerifyError('replayed', 'the receipt was already used')
+			seen.set(jti, exp + CALLBACK_LEEWAY_SECONDS)
+		},
+	}
+}
+
+/**
+ * Verifies the receipt (`Authorization: Bearer <receipt>`) on a Task or
+ * program-run callback: Compute issuer, `aud` equal to `callbackUrl` (the exact
+ * URL the platform was given), then `jti` admitted once.
+ *
+ *     const verifyCallback = createCallbackVerifier('https://app.example.com/hooks/task')
+ *     const claims = await verifyCallback(bearerToken) // throws VerifyError
+ */
+export function createCallbackVerifier(
+	callbackUrl: string,
+	options: { guard?: ReplayGuard; jwksUrl?: string; fetch?: typeof fetch } = {},
+): (token: string) => Promise<Claims> {
+	const verify = createVerifier({
+		issuer: CALLBACK_RECEIPT_ISSUER,
+		audience: callbackUrl,
+		leewaySeconds: CALLBACK_LEEWAY_SECONDS,
+		typ: CALLBACK_RECEIPT_TYP,
+		jwksUrl: options.jwksUrl ?? CALLBACK_RECEIPT_JWKS_URL,
+		fetch: options.fetch,
+	})
+	const guard = options.guard ?? createReplayGuard()
+	return async (token) => {
+		const claims = await verify(token)
+		guard.admit(claims)
+		return claims
+	}
 }
 
 export interface VerifierOptions extends Expect {

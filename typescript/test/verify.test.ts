@@ -1,7 +1,14 @@
 // @sylphx/sdk/auth/verify: offline JWS verification against a JWKS.
 
 import { describe, expect, test } from 'bun:test'
-import { createVerifier, type Jwks, VerifyError, verifyWithKeys } from '../src/auth/verify.js'
+import {
+	createCallbackVerifier,
+	createReplayGuard,
+	createVerifier,
+	type Jwks,
+	VerifyError,
+	verifyWithKeys,
+} from '../src/auth/verify.js'
 
 const NOW = 1_800_000_000
 const ISS = 'https://api.sylphx.com'
@@ -131,5 +138,52 @@ describe('auth/verify', () => {
 				'unknown_key',
 			)
 		expect(fetches).toBe(2)
+	})
+})
+
+describe('auth/verify callback receipts', () => {
+	const URL_ = 'https://hooks.example.com/task'
+	test('a receipt verifies for its URL once; replay, other URL and expiry are refused', async () => {
+		const pair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
+			'sign',
+			'verify',
+		])) as CryptoKeyPair
+		const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey)
+		const keys = {
+			keys: [{ kid: 'cb-1', kty: 'OKP', crv: 'Ed25519', x: jwk.x, alg: 'EdDSA', use: 'sig' }],
+		}
+		const now = Math.floor(Date.now() / 1000)
+		const mint = async (aud: string, jti: string, exp = now + 300) => {
+			const signed = `${b64(JSON.stringify({ alg: 'EdDSA', typ: 'compute-tick-receipt+jwt', kid: 'cb-1' }))}.${b64(
+				JSON.stringify({
+					iss: 'https://api.compute.sylphx.com',
+					aud,
+					jti,
+					iat: now,
+					nbf: now,
+					exp,
+				}),
+			)}`
+			const sig = await crypto.subtle.sign(
+				{ name: 'Ed25519' },
+				pair.privateKey,
+				new TextEncoder().encode(signed),
+			)
+			return `${signed}.${b64(new Uint8Array(sig))}`
+		}
+		const verify = createCallbackVerifier(URL_, {
+			guard: createReplayGuard(),
+			fetch: (async () => new Response(JSON.stringify(keys))) as unknown as typeof fetch,
+		})
+		const t = await mint(URL_, 's:1:t1')
+		expect((await verify(t)).jti).toBe('s:1:t1')
+		expect(await code(verify(t))).toBe('replayed')
+		expect(await code(verify(await mint('https://evil.example.com/x', 's:1:t2')))).toBe('audience')
+		expect(await code(verify(await mint(URL_, 's:1:t3', now - 120)))).toBe('expired')
+		// A jti stays remembered through exp + leeway.
+		const guard = createReplayGuard()
+		guard.admit({ jti: 'j', exp: now + 10 }, now)
+		expect(() => guard.admit({ jti: 'j', exp: now + 10 }, now + 35)).toThrow()
+		guard.admit({ jti: 'j', exp: now + 10 }, now + 41)
 	})
 })

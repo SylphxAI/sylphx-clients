@@ -42,6 +42,8 @@ pub enum VerifyError {
     Audience,
     /// The key set could not be fetched or read.
     Keys(String),
+    /// A callback receipt whose `jti` was already admitted ([`ReplayGuard`]).
+    Replayed,
 }
 
 impl std::fmt::Display for VerifyError {
@@ -55,6 +57,7 @@ impl std::fmt::Display for VerifyError {
             VerifyError::Issuer(i) => write!(f, "unexpected issuer {i}"),
             VerifyError::Audience => f.write_str("the token is not for this audience"),
             VerifyError::Keys(m) => write!(f, "key set: {m}"),
+            VerifyError::Replayed => f.write_str("the receipt was already used"),
         }
     }
 }
@@ -71,6 +74,8 @@ pub struct Expect {
     pub audiences: Vec<String>,
     /// Clock skew tolerated on `exp`, `nbf`, and `iat`.
     pub leeway: Duration,
+    /// Required JOSE `typ`, when set (callback receipts fix it).
+    pub typ: Option<String>,
 }
 
 impl Expect {
@@ -79,7 +84,13 @@ impl Expect {
             issuer: issuer.into().trim_end_matches('/').to_string(),
             audiences: vec![],
             leeway: Duration::from_secs(60),
+            typ: None,
         }
+    }
+
+    pub fn typ(mut self, typ: impl Into<String>) -> Expect {
+        self.typ = Some(typ.into());
+        self
     }
 
     pub fn audience(mut self, audience: impl Into<String>) -> Expect {
@@ -91,6 +102,60 @@ impl Expect {
         self.leeway = leeway;
         self
     }
+
+    /// What a callback receipt must carry: the Compute issuer and `aud` equal
+    /// to `callback_url`, the exact URL the platform was given for the
+    /// callback (scheme, host, path and query, byte for byte).
+    pub fn callback(callback_url: impl Into<String>) -> Expect {
+        Expect::issuer(CALLBACK_RECEIPT_ISSUER)
+            .audience(callback_url)
+            .leeway(Duration::from_secs(CALLBACK_LEEWAY_SECONDS))
+            .typ(CALLBACK_RECEIPT_TYP)
+    }
+}
+
+/// Remembers admitted receipt ids (`jti`) until they expire, so a captured
+/// receipt cannot be presented twice. In memory: a fleet of receivers behind
+/// one URL records `jti` until `exp` in a store they share instead.
+#[derive(Debug, Default)]
+pub struct ReplayGuard {
+    seen: std::sync::Mutex<std::collections::HashMap<String, i64>>,
+}
+
+impl ReplayGuard {
+    pub fn new() -> ReplayGuard {
+        ReplayGuard::default()
+    }
+
+    /// Admits verified `claims` once. A missing `jti` or a `jti` seen before
+    /// (and not yet expired) is [`VerifyError::Replayed`].
+    pub fn admit(&self, claims: &Claims, now: i64) -> Result<(), VerifyError> {
+        let (Some(jti), Some(exp)) = (claims.jti(), claims.expires_at()) else {
+            return Err(VerifyError::Replayed);
+        };
+        let mut seen = self.seen.lock().unwrap_or_else(|e| e.into_inner());
+        seen.retain(|_, until| *until > now);
+        if seen.contains_key(jti) {
+            return Err(VerifyError::Replayed);
+        }
+        // The verifier accepts until exp + leeway; remember at least that long.
+        seen.insert(jti.to_string(), exp + CALLBACK_LEEWAY_SECONDS as i64);
+        Ok(())
+    }
+}
+
+/// Verifies a callback receipt (`Authorization: Bearer <receipt>`) against the
+/// published keys, then admits its `jti` once.
+pub fn verify_callback_with_keys(
+    token: &str,
+    keys: &Jwks,
+    callback_url: &str,
+    guard: &ReplayGuard,
+    now: i64,
+) -> Result<Claims, VerifyError> {
+    let claims = verify_with_keys(token, keys, &Expect::callback(callback_url), now)?;
+    guard.admit(&claims, now)?;
+    Ok(claims)
 }
 
 /// A verified token's claims.
@@ -107,7 +172,24 @@ impl Claims {
     pub fn expires_at(&self) -> Option<i64> {
         self.0.get("exp").and_then(Value::as_i64)
     }
+    /// The token id (`jti`), the key a [`ReplayGuard`] remembers.
+    pub fn jti(&self) -> Option<&str> {
+        self.0.get("jti").and_then(Value::as_str)
+    }
 }
+
+/// Issuer of the receipt on every platform-originated callback (Task and
+/// program-run callbacks carry the same receipt a Compute Tick does).
+pub const CALLBACK_RECEIPT_TYP: &str = "compute-tick-receipt+jwt";
+/// Clock skew a callback verifier tolerates; a [`ReplayGuard`] keeps each
+/// `jti` this much past `exp`, so a receipt cannot be replayed inside it.
+pub const CALLBACK_LEEWAY_SECONDS: u64 = 30;
+pub const CALLBACK_RECEIPT_ISSUER: &str = "https://api.compute.sylphx.com";
+/// Where the receipt keys are published. Two keys overlap during a rotation;
+/// the token's `kid` picks one, so a verifier that refetches on an unknown
+/// `kid` (as [`Verifier`] does) never needs a change at rotation.
+pub const CALLBACK_RECEIPT_JWKS_URL: &str =
+    "https://api.compute.sylphx.com/.well-known/compute-tick-receipt-jwks.json";
 
 /// A JSON Web Key Set (RFC 7517), the keys this module can use.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -138,6 +220,8 @@ struct Header {
     alg: String,
     #[serde(default)]
     kid: String,
+    #[serde(default)]
+    typ: Option<String>,
 }
 
 fn part(s: &str, what: &str) -> Result<Vec<u8>, VerifyError> {
@@ -202,6 +286,13 @@ pub fn verify_with_keys(
         .map_err(|_| VerifyError::Malformed("header is not JSON".into()))?;
     if !matches!(header.alg.as_str(), "ES256" | "EdDSA") {
         return Err(VerifyError::Algorithm(header.alg));
+    }
+    if expect
+        .typ
+        .as_deref()
+        .is_some_and(|want| header.typ.as_deref() != Some(want))
+    {
+        return Err(VerifyError::Malformed("unexpected token type".into()));
     }
     let candidates: Vec<&Jwk> = keys
         .keys
@@ -282,6 +373,12 @@ impl Verifier {
     pub fn new(expect: Expect) -> Verifier {
         let url = format!("{}/v1/oauth/jwks.json", expect.issuer);
         Verifier::with_jwks_url(expect, url)
+    }
+
+    /// Verifies callback receipts for `callback_url` against
+    /// [`CALLBACK_RECEIPT_JWKS_URL`]. Check replay with [`ReplayGuard`].
+    pub fn callback(callback_url: impl Into<String>) -> Verifier {
+        Verifier::with_jwks_url(Expect::callback(callback_url), CALLBACK_RECEIPT_JWKS_URL)
     }
 
     pub fn with_jwks_url(expect: Expect, jwks_url: impl Into<String>) -> Verifier {
@@ -530,5 +627,101 @@ mod tests {
             c.insert("exp".into(), json!(NOW - 30));
         });
         assert!(verify_with_keys(&t, &keys, &expect(), NOW).is_ok());
+    }
+
+    fn receipt(
+        sk: &ed25519_dalek::SigningKey,
+        kid: &str,
+        aud: &str,
+        jti: &str,
+        exp: i64,
+    ) -> String {
+        use ed25519_dalek::Signer as _;
+        let signed = format!(
+            "{}.{}",
+            b64(json!({"alg": "EdDSA", "typ": "compute-tick-receipt+jwt", "kid": kid}).to_string().as_bytes()),
+            b64(json!({"iss": CALLBACK_RECEIPT_ISSUER, "aud": aud, "jti": jti, "iat": NOW, "nbf": NOW, "exp": exp}).to_string().as_bytes())
+        );
+        format!("{signed}.{}", b64(&sk.sign(signed.as_bytes()).to_bytes()))
+    }
+
+    #[test]
+    fn a_callback_receipt_verifies_for_its_url_once() {
+        let sk = ed25519_dalek::SigningKey::from_bytes(&[5u8; 32]);
+        // The shape the Compute JWKS publishes, extra fields included.
+        let keys: Jwks = serde_json::from_value(json!({"keys": [{
+            "issuer": CALLBACK_RECEIPT_ISSUER, "typ": "compute-tick-receipt+jwt",
+            "kty": "OKP", "crv": "Ed25519", "alg": "EdDSA", "use": "sig", "kid": "cb-1",
+            "x": b64(sk.verifying_key().as_bytes()),
+            "not_before_unix_seconds": 0, "not_after_unix_seconds": 4_102_444_800i64
+        }]}))
+        .unwrap();
+        let url = "https://hooks.example.com/task";
+        let guard = ReplayGuard::new();
+        let t = receipt(&sk, "cb-1", url, "s:2026:t1", NOW + 300);
+        let c = verify_callback_with_keys(&t, &keys, url, &guard, NOW).unwrap();
+        assert_eq!(c.jti(), Some("s:2026:t1"));
+        // The same receipt again is a replay, until it has expired.
+        assert_eq!(
+            verify_callback_with_keys(&t, &keys, url, &guard, NOW + 5),
+            Err(VerifyError::Replayed)
+        );
+        // A receipt for another URL is not for this receiver.
+        let other = receipt(
+            &sk,
+            "cb-1",
+            "https://evil.example.com/x",
+            "s:2026:t2",
+            NOW + 300,
+        );
+        assert_eq!(
+            verify_callback_with_keys(&other, &keys, url, &guard, NOW),
+            Err(VerifyError::Audience)
+        );
+        // Expired (past the leeway) is refused before replay is considered.
+        let old = receipt(&sk, "cb-1", url, "s:2026:t3", NOW - 120);
+        assert_eq!(
+            verify_callback_with_keys(&old, &keys, url, &guard, NOW),
+            Err(VerifyError::Expired)
+        );
+        // Rotation: a key set holding both keys verifies a receipt of either.
+        let sk2 = ed25519_dalek::SigningKey::from_bytes(&[6u8; 32]);
+        let mut both = keys.clone();
+        both.keys.push(Jwk {
+            kid: "cb-2".into(),
+            kty: "OKP".into(),
+            crv: "Ed25519".into(),
+            x: b64(sk2.verifying_key().as_bytes()),
+            y: String::new(),
+            alg: Some("EdDSA".into()),
+            use_: Some("sig".into()),
+        });
+        let t2 = receipt(&sk2, "cb-2", url, "s:2026:t4", NOW + 300);
+        assert!(verify_callback_with_keys(&t2, &both, url, &guard, NOW).is_ok());
+        // A jti stays remembered through exp + leeway, forgotten after.
+        let t5 = receipt(&sk, "cb-1", url, "s:2026:t5", NOW + 10);
+        assert!(verify_callback_with_keys(&t5, &keys, url, &guard, NOW).is_ok());
+        assert_eq!(
+            verify_callback_with_keys(&t5, &keys, url, &guard, NOW + 35),
+            Err(VerifyError::Replayed)
+        );
+        // A token of another type is refused.
+        let signed = format!(
+            "{}.{}",
+            b64(json!({"alg": "EdDSA", "kid": "cb-1"})
+                .to_string()
+                .as_bytes()),
+            b64(
+                json!({"iss": CALLBACK_RECEIPT_ISSUER, "aud": url, "jti": "x", "exp": NOW + 300})
+                    .to_string()
+                    .as_bytes()
+            )
+        );
+        use ed25519_dalek::Signer as _;
+        let untyped = format!("{signed}.{}", b64(&sk.sign(signed.as_bytes()).to_bytes()));
+        assert!(matches!(
+            verify_callback_with_keys(&untyped, &keys, url, &guard, NOW),
+            Err(VerifyError::Malformed(_))
+        ));
     }
 }

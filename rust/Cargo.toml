@@ -1,6 +1,6 @@
 [package]
 name = "sylphx"
-version = "0.3.0"
+version = "0.3.1"
 description = "The Sylphx SDK: one API, one key, every Sylphx service. Generated from the Sylphx schema registry."
 keywords = ["sylphx", "sdk", "api", "cloud"]
 categories = ["api-bindings", "web-programming::http-client"]
