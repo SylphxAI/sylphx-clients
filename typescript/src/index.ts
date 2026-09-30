@@ -40,6 +40,7 @@ export {
 } from './runtime.js'
 export { METHODS } from './methods.js'
 export * as ids from './ids.js'
+export * from './auth/client.js'
 
 export class Sylphx extends Client {
 	/** Sylphx Access (`preview`). */

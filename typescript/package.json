@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/sdk",
-	"version": "0.31.0",
+	"version": "0.32.0",
 	"description": "The Sylphx SDK: one API, one key, every Sylphx service. Generated from the Sylphx schema registry.",
 	"license": "MIT",
 	"type": "module",

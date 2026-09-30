@@ -75,3 +75,74 @@ const { hits: found } = await sylphx.data.search.query({ indexId: 'articles', qu
 This package is generated from the Sylphx schema registry by `sylphx-gen`; do
 not edit it by hand. Source: `clients/typescript` in the Sylphx monorepo,
 published from its MIT mirror.
+
+## Browser sign-in: `createAuthClient`
+
+A small client for Sylphx Auth's client API (`/v1/client/*`) in a browser app.
+It holds only a publishable key (`sylphx_pk_...`, public by design); a secret
+key given to it throws.
+
+```ts
+import { createAuthClient } from '@sylphx/sdk/auth/client' // also exported from '@sylphx/sdk'
+
+const auth = createAuthClient({ publishableKey: 'sylphx_pk_live_...' })
+const config = await auth.config() // methods, social providers, branding
+const { session, user } = await auth.signInWithPassword({ email, password })
+await auth.getSession()
+await auth.signOut()
+
+// Social sign-in is a navigation; the callback appends ?sylphx_ticket=...
+location.assign(auth.oauthStartUrl('google', { redirectUrl: location.href }))
+await auth.redeemTicket(new URLSearchParams(location.search).get('sylphx_ticket')!)
+```
+
+- Every call carries `publishable_key` (or `instance`, the public slug) in the
+  query string, same-origin or not: a browser preflight has no `Authorization`,
+  and the query is where Auth learns the environment before it answers CORS.
+  An existing query is kept and the parameter is never duplicated. The key is
+  never sent as a Bearer.
+- Options: `publishableKey` or `instance` (exactly one), `baseUrl`
+  (default `https://api.sylphx.com`), `fetch`, `credentials` (default `'omit'`;
+  `'include'` is opt-in), `sessionToken` (to restore a session).
+- Add your app's origin to `allowed_origins` on the environment's Auth Config
+  to make browsers refuse every origin you did not name.
+- Errors are `AuthClientError` subclasses keyed on the service's `code`
+  (`AuthUnauthorizedError`, `AuthMfaRequiredError`, `AuthRateLimitedError`
+  with `retryAfterSeconds`, `AuthNetworkError`, ...), not `SylphxError`.
+
+### The session is a bearer token in JavaScript (XSS trade-off)
+
+There is no cookie mode. The client asks for `session_mode: "browser"`, so the
+session token is a bearer value that page script holds. A script injected into
+your page (XSS) can read it. Keep the token out of URLs and logs, and keep a
+strict Content-Security-Policy.
+
+If your app has a backend and needs an HttpOnly cookie, use the server (BFF)
+pattern instead: the page only ever holds a one-time ticket, and your server
+redeems it with the secret key and sets the cookie on your own origin.
+
+```ts
+// Browser: sign in with the default server mode; hand the ticket to your backend.
+const res = await fetch(`https://api.sylphx.com/v1/client/sign-in/password?publishable_key=${pk}`, {
+	method: 'POST',
+	headers: { 'content-type': 'application/json' },
+	body: JSON.stringify({ email, password }), // session_mode defaults to "server"
+})
+const { ticket } = await res.json()
+await fetch('/auth/session', { method: 'POST', body: JSON.stringify({ ticket }) })
+
+// Your server (secret key stays here; forward the browser's User-Agent):
+const redeemed = await fetch('https://api.sylphx.com/v1/client/tickets:redeem', {
+	method: 'POST',
+	headers: {
+		authorization: `Bearer ${process.env.SYLPHX_AUTH_SECRET_KEY}`,
+		'content-type': 'application/json',
+		'user-agent': request.headers.get('user-agent') ?? '',
+	},
+	body: JSON.stringify({ ticket }),
+})
+const { session } = await redeemed.json()
+// Set-Cookie: session=<session.token>; HttpOnly; Secure; SameSite=Lax
+```
+
+`@sylphx/nextjs` ships this pattern as a route handler.
