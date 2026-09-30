@@ -29333,6 +29333,11 @@
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}/runs/{run}`.",
                 "type": "string"
               },
+              "schedule_time": {
+                "description": "When the first invocation is due: set it directly, or through\n`start_delay`; at most 365 days ahead. A Run cancelled before then closes\n`cancelled` with no invocation.",
+                "format": "date-time",
+                "type": "string"
+              },
               "start_delay": {
                 "description": "Delay the first invocation by this much.",
                 "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
@@ -29564,9 +29569,1642 @@
       "method_id": "workflows.runs.read_history",
       "permission": "workflows:read",
       "tool": "workflows_runs_read_history"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a job."
+      },
+      "description": "Gets a job.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/jobs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetJob.",
+        "properties": {
+          "name": {
+            "description": "The name of the job to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Job"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.jobs.get",
+      "permission": "workflows:read",
+      "tool": "workflows_jobs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists jobs."
+      },
+      "description": "Lists jobs.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/jobs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListJobs.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Job"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.jobs.list",
+      "permission": "workflows:read",
+      "tool": "workflows_jobs_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a job."
+      },
+      "description": "Creates a job.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/jobs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateJob.",
+        "properties": {
+          "job": {
+            "additionalProperties": false,
+            "description": "The job to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/jobs/{job}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "args": {
+                    "description": "Arguments; a run may replace them.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "build": {
+                    "description": "A build the project declares: its latest built image, in place of the\nservice's; the image needs no running service of its own. Exclusive with\n`image`.",
+                    "type": "string"
+                  },
+                  "command": {
+                    "description": "The entrypoint; empty keeps the image's.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "concurrency": {
+                    "description": "What a start does while a run is active; default forbid.",
+                    "enum": [
+                      "forbid",
+                      "queue",
+                      "allow"
+                    ],
+                    "type": "string"
+                  },
+                  "env": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Environment overrides on top of the service's env and Secret bindings.",
+                    "type": "object"
+                  },
+                  "image": {
+                    "description": "A digest-pinned image from this org's Artifacts, in place of the\nservice's image. Exclusive with `build`.",
+                    "type": "string"
+                  },
+                  "instance_type": {
+                    "description": "A Hosting instance type; default `standard`.",
+                    "type": "string"
+                  },
+                  "max_retries": {
+                    "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "service": {
+                    "description": "The Hosting Service whose env and Secret bindings every run takes, and\nwhose live Release image it runs unless `image` or `build` names another,\nso a Job never runs code the environment does not serve.",
+                    "type": "string"
+                  },
+                  "timeout": {
+                    "description": "One attempt's deadline, 10s to 24h; default 1h.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "service"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "job_id": {
+            "description": "The job id, the final name segment: `[a-z0-9-]{1,63}`.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Job"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "job"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "workflows.jobs.create",
+      "permission": "workflows:write",
+      "tool": "workflows_jobs_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a job. Runs already started keep the generation they pinned."
+      },
+      "description": "Updates a job. Runs already started keep the generation they pinned.",
+      "effect": "write",
+      "http": "PATCH /v1/{job.name=orgs/*/projects/*/envs/*/jobs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateJob.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the job when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "job": {
+            "additionalProperties": false,
+            "description": "The job to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/jobs/{job}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "args": {
+                    "description": "Arguments; a run may replace them.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "build": {
+                    "description": "A build the project declares: its latest built image, in place of the\nservice's; the image needs no running service of its own. Exclusive with\n`image`.",
+                    "type": "string"
+                  },
+                  "command": {
+                    "description": "The entrypoint; empty keeps the image's.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "concurrency": {
+                    "description": "What a start does while a run is active; default forbid.",
+                    "enum": [
+                      "forbid",
+                      "queue",
+                      "allow"
+                    ],
+                    "type": "string"
+                  },
+                  "env": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Environment overrides on top of the service's env and Secret bindings.",
+                    "type": "object"
+                  },
+                  "image": {
+                    "description": "A digest-pinned image from this org's Artifacts, in place of the\nservice's image. Exclusive with `build`.",
+                    "type": "string"
+                  },
+                  "instance_type": {
+                    "description": "A Hosting instance type; default `standard`.",
+                    "type": "string"
+                  },
+                  "max_retries": {
+                    "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "service": {
+                    "description": "The Hosting Service whose env and Secret bindings every run takes, and\nwhose live Release image it runs unless `image` or `build` names another,\nso a Job never runs code the environment does not serve.",
+                    "type": "string"
+                  },
+                  "timeout": {
+                    "description": "One attempt's deadline, 10s to 24h; default 1h.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "service"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "workflows.jobs.update",
+      "permission": "workflows:write",
+      "tool": "workflows_jobs_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a job."
+      },
+      "description": "Deletes a job.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/jobs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteJob.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the job does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also cancel active runs and delete Schedules targeting the job; without\nit a job with an active run or a Schedule fails with INVALID_STATE.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the job to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Job"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "workflows.jobs.delete",
+      "permission": "workflows:write",
+      "tool": "workflows_jobs_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts a run of a Job now. The same `Idempotency-Key` returns the same run for 24h; a Schedule fire uses `{job}:{intended time}`. With concurrency `forbid`, a start while a run is active fails with INVALID_STATE."
+      },
+      "description": "Starts a run of a Job now. The same `Idempotency-Key` returns the same\nrun for 24h; a Schedule fire uses `{job}:{intended time}`. With\nconcurrency `forbid`, a start while a run is active fails with\nINVALID_STATE.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/jobs/*}/job_runs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateJobRun.",
+        "properties": {
+          "job_run": {
+            "additionalProperties": false,
+            "description": "The run to start: `args` and `env` override the Job's for this run.",
+            "properties": {
+              "args": {
+                "description": "Arguments of this run (the Job's when empty).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
+              "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Environment overrides of this run.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/jobs/{job}/job_runs/{job_run}`.",
+                "type": "string"
+              },
+              "schedule_time": {
+                "description": "Start no earlier than this: set it directly, or through `start_delay`;\nat most 365 days ahead. A run cancelled before then makes no attempt.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "start_delay": {
+                "description": "Start no earlier than this long after the request.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "type": "object"
+          },
+          "job_run_id": {
+            "description": "The run id, the final name segment; the server assigns one when empty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The job to run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without starting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "job_run"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.job_runs.create",
+      "permission": "workflows:run",
+      "tool": "workflows_job_runs_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a job run."
+      },
+      "description": "Gets a job run.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/jobs/*/job_runs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetJobRun.",
+        "properties": {
+          "name": {
+            "description": "The name of the job run to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.job_runs.get",
+      "permission": "workflows:read",
+      "tool": "workflows_job_runs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a job's runs, newest first."
+      },
+      "description": "Lists a job's runs, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/jobs/*}/job_runs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListJobRuns.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.job_runs.list",
+      "permission": "workflows:read",
+      "tool": "workflows_job_runs_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Cancels a job run: SIGTERM, then SIGKILL after 30s. A closed run fails with INVALID_STATE."
+      },
+      "description": "Cancels a job run: SIGTERM, then SIGKILL after 30s. A closed run fails\nwith INVALID_STATE.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/jobs/*/job_runs/*}:cancel",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CancelJobRun.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the job run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          },
+          "reason": {
+            "description": "Why the run is cancelled.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.job_runs.cancel",
+      "permission": "workflows:run",
+      "tool": "workflows_job_runs_cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a page of a job run's log lines, oldest first. With `wait`, an empty page on a running run waits up to that long for new lines, so a client follows the log by passing each `next_page_token` back."
+      },
+      "description": "Reads a page of a job run's log lines, oldest first. With `wait`, an\nempty page on a running run waits up to that long for new lines, so a\nclient follows the log by passing each `next_page_token` back.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/jobs/*/job_runs/*}:readLogs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReadJobRunLogs.",
+        "properties": {
+          "name": {
+            "description": "The name of the job run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          },
+          "page_size": {
+            "description": "At most this many lines; default 500, clamped to 5000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "wait": {
+            "description": "On a running run, wait up to this long (at most 30s) for new lines\nbefore returning an empty page.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.job_runs.read_logs",
+      "permission": "workflows:read",
+      "tool": "workflows_job_runs_read_logs"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a distributed job."
+      },
+      "description": "Gets a distributed job.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetDistributedJob.",
+        "properties": {
+          "name": {
+            "description": "The name of the distributed job to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedJob"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_jobs.get",
+      "permission": "workflows:read",
+      "tool": "workflows_distributed_jobs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists distributed jobs."
+      },
+      "description": "Lists distributed jobs.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/distributed_jobs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListDistributedJobs.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedJob"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_jobs.list",
+      "permission": "workflows:read",
+      "tool": "workflows_distributed_jobs_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a distributed job."
+      },
+      "description": "Creates a distributed job.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/distributed_jobs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateDistributedJob.",
+        "properties": {
+          "distributed_job": {
+            "additionalProperties": false,
+            "description": "The distributed job to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/distributed_jobs/{distributed_job}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "checkpoint_uri": {
+                    "description": "`data://<bucket>/<prefix>/`: checkpoints go under `<run>/<shard>/`.",
+                    "type": "string"
+                  },
+                  "max_failed_shards": {
+                    "description": "Failed shards the run tolerates before it fails; default 0.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "output_uri": {
+                    "description": "`data://<bucket>/<prefix>/`: outputs go under `<run>/<shard>/`.",
+                    "type": "string"
+                  },
+                  "run_timeout": {
+                    "description": "The whole run's deadline; default 48h.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "scale": {
+                    "additionalProperties": false,
+                    "description": "Elastic bounds of the worker pool.",
+                    "properties": {
+                      "max_workers": {
+                        "description": "The most workers at once; the Cell and the org quota cap it too. Default 1.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "min_workers": {
+                        "description": "Workers kept while shards remain; default 1.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "scratch_gib": {
+                    "description": "Local NVMe scratch at `/scratch` per worker, GiB; 0 is none.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "shard_count": {
+                    "description": "A run that brings no shards of its own gets this many index-only shards.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "shard_retries": {
+                    "description": "Attempts a shard gets after a failure; a preemption is not one. Default 3.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "shard_timeout": {
+                    "description": "The longest one lease may live without the shard ending; default 30m.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "worker": {
+                    "additionalProperties": false,
+                    "description": "The worker container: its image, command, env and instance type.\n`timeout` is the longest one worker lives, so the pool turns over;\n`max_retries` and `concurrency` do not apply.",
+                    "properties": {
+                      "args": {
+                        "description": "Arguments; a run may replace them.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "build": {
+                        "description": "A build the project declares: its latest built image, in place of the\nservice's; the image needs no running service of its own. Exclusive with\n`image`.",
+                        "type": "string"
+                      },
+                      "command": {
+                        "description": "The entrypoint; empty keeps the image's.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "concurrency": {
+                        "description": "What a start does while a run is active; default forbid.",
+                        "enum": [
+                          "forbid",
+                          "queue",
+                          "allow"
+                        ],
+                        "type": "string"
+                      },
+                      "env": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Environment overrides on top of the service's env and Secret bindings.",
+                        "type": "object"
+                      },
+                      "image": {
+                        "description": "A digest-pinned image from this org's Artifacts, in place of the\nservice's image. Exclusive with `build`.",
+                        "type": "string"
+                      },
+                      "instance_type": {
+                        "description": "A Hosting instance type; default `standard`.",
+                        "type": "string"
+                      },
+                      "max_retries": {
+                        "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "service": {
+                        "description": "The Hosting Service whose env and Secret bindings every run takes, and\nwhose live Release image it runs unless `image` or `build` names another,\nso a Job never runs code the environment does not serve.",
+                        "type": "string"
+                      },
+                      "timeout": {
+                        "description": "One attempt's deadline, 10s to 24h; default 1h.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "service"
+                    ],
+                    "type": "object"
+                  },
+                  "worker_class": {
+                    "description": "Price and preemption class; default scavenger.",
+                    "enum": [
+                      "scavenger",
+                      "standard"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "worker"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "distributed_job_id": {
+            "description": "The distributed job id, the final name segment: `[a-z][a-z0-9-]{0,62}`.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedJob"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "distributed_job"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "workflows.distributed_jobs.create",
+      "permission": "workflows:write",
+      "tool": "workflows_distributed_jobs_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a distributed job. Runs already started keep the generation they pinned."
+      },
+      "description": "Updates a distributed job. Runs already started keep the generation they\npinned.",
+      "effect": "write",
+      "http": "PATCH /v1/{distributed_job.name=orgs/*/projects/*/envs/*/distributed_jobs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateDistributedJob.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the distributed job when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "distributed_job": {
+            "additionalProperties": false,
+            "description": "The distributed job to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/distributed_jobs/{distributed_job}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "checkpoint_uri": {
+                    "description": "`data://<bucket>/<prefix>/`: checkpoints go under `<run>/<shard>/`.",
+                    "type": "string"
+                  },
+                  "max_failed_shards": {
+                    "description": "Failed shards the run tolerates before it fails; default 0.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "output_uri": {
+                    "description": "`data://<bucket>/<prefix>/`: outputs go under `<run>/<shard>/`.",
+                    "type": "string"
+                  },
+                  "run_timeout": {
+                    "description": "The whole run's deadline; default 48h.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "scale": {
+                    "additionalProperties": false,
+                    "description": "Elastic bounds of the worker pool.",
+                    "properties": {
+                      "max_workers": {
+                        "description": "The most workers at once; the Cell and the org quota cap it too. Default 1.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "min_workers": {
+                        "description": "Workers kept while shards remain; default 1.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "scratch_gib": {
+                    "description": "Local NVMe scratch at `/scratch` per worker, GiB; 0 is none.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "shard_count": {
+                    "description": "A run that brings no shards of its own gets this many index-only shards.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "shard_retries": {
+                    "description": "Attempts a shard gets after a failure; a preemption is not one. Default 3.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "shard_timeout": {
+                    "description": "The longest one lease may live without the shard ending; default 30m.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "worker": {
+                    "additionalProperties": false,
+                    "description": "The worker container: its image, command, env and instance type.\n`timeout` is the longest one worker lives, so the pool turns over;\n`max_retries` and `concurrency` do not apply.",
+                    "properties": {
+                      "args": {
+                        "description": "Arguments; a run may replace them.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "build": {
+                        "description": "A build the project declares: its latest built image, in place of the\nservice's; the image needs no running service of its own. Exclusive with\n`image`.",
+                        "type": "string"
+                      },
+                      "command": {
+                        "description": "The entrypoint; empty keeps the image's.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "concurrency": {
+                        "description": "What a start does while a run is active; default forbid.",
+                        "enum": [
+                          "forbid",
+                          "queue",
+                          "allow"
+                        ],
+                        "type": "string"
+                      },
+                      "env": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Environment overrides on top of the service's env and Secret bindings.",
+                        "type": "object"
+                      },
+                      "image": {
+                        "description": "A digest-pinned image from this org's Artifacts, in place of the\nservice's image. Exclusive with `build`.",
+                        "type": "string"
+                      },
+                      "instance_type": {
+                        "description": "A Hosting instance type; default `standard`.",
+                        "type": "string"
+                      },
+                      "max_retries": {
+                        "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "service": {
+                        "description": "The Hosting Service whose env and Secret bindings every run takes, and\nwhose live Release image it runs unless `image` or `build` names another,\nso a Job never runs code the environment does not serve.",
+                        "type": "string"
+                      },
+                      "timeout": {
+                        "description": "One attempt's deadline, 10s to 24h; default 1h.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "service"
+                    ],
+                    "type": "object"
+                  },
+                  "worker_class": {
+                    "description": "Price and preemption class; default scavenger.",
+                    "enum": [
+                      "scavenger",
+                      "standard"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "worker"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "distributed_job"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "workflows.distributed_jobs.update",
+      "permission": "workflows:write",
+      "tool": "workflows_distributed_jobs_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a distributed job."
+      },
+      "description": "Deletes a distributed job.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteDistributedJob.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the distributed job does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also cancel active runs; without it a job with an active run fails with\nINVALID_STATE.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the distributed job to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedJob"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "workflows.distributed_jobs.delete",
+      "permission": "workflows:write",
+      "tool": "workflows_distributed_jobs_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts a run of a distributed job. The same `Idempotency-Key` returns the same run for 24h."
+      },
+      "description": "Starts a run of a distributed job. The same `Idempotency-Key` returns the\nsame run for 24h.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/distributed_jobs/*}/distributed_runs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateDistributedRun.",
+        "properties": {
+          "distributed_run": {
+            "additionalProperties": false,
+            "description": "The run to start: `args`, `env`, `shards` and `open_manifest`.",
+            "properties": {
+              "args": {
+                "description": "Arguments of every worker of this run (the job's when empty).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
+              "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Environment overrides of this run.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/distributed_jobs/{distributed_job}/distributed_runs/{distributed_run}`.",
+                "type": "string"
+              },
+              "open_manifest": {
+                "description": "Keep the manifest open: `:addShards` appends until it is closed.",
+                "type": "boolean",
+                "writeOnly": true
+              },
+              "shards": {
+                "description": "The run's own shards (the customer's planner output); without them the\njob's `shard_count` makes index-only shards.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "One shard as a run is started with it or appended to.",
+                  "properties": {
+                    "id": {
+                      "description": "The shard id, unique in the run; the server assigns one when empty.",
+                      "type": "string"
+                    },
+                    "input": {
+                      "description": "What the worker gets as its input, any JSON."
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array",
+                "writeOnly": true
+              }
+            },
+            "type": "object"
+          },
+          "distributed_run_id": {
+            "description": "The run id, the final name segment; the server assigns one when empty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The distributed job to run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without starting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "distributed_run"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.create",
+      "permission": "workflows:run",
+      "tool": "workflows_distributed_runs_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a distributed run: its state, shard and worker counts, and usage."
+      },
+      "description": "Gets a distributed run: its state, shard and worker counts, and usage.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*/distributed_runs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetDistributedRun.",
+        "properties": {
+          "name": {
+            "description": "The name of the distributed run to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.get",
+      "permission": "workflows:read",
+      "tool": "workflows_distributed_runs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a distributed job's runs, newest first."
+      },
+      "description": "Lists a distributed job's runs, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/distributed_jobs/*}/distributed_runs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListDistributedRuns.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.list",
+      "permission": "workflows:read",
+      "tool": "workflows_distributed_runs_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Cancels a distributed run: workers get SIGTERM and 30s, then leases are released; finished shards are kept. A closed run fails with INVALID_STATE."
+      },
+      "description": "Cancels a distributed run: workers get SIGTERM and 30s, then leases are\nreleased; finished shards are kept. A closed run fails with INVALID_STATE.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*/distributed_runs/*}:cancel",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CancelDistributedRun.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the distributed run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          },
+          "reason": {
+            "description": "Why the run is cancelled.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.cancel",
+      "permission": "workflows:run",
+      "tool": "workflows_distributed_runs_cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Appends shards to a run started with an open manifest; `close` ends the manifest, and the run ends once those shards are done."
+      },
+      "description": "Appends shards to a run started with an open manifest; `close` ends the\nmanifest, and the run ends once those shards are done.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*/distributed_runs/*}:addShards",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AddDistributedRunShards.",
+        "properties": {
+          "close": {
+            "description": "Close the manifest: the run ends once its shards are done.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the distributed run; its manifest must be open.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          },
+          "shards": {
+            "description": "The shards to append.",
+            "items": {
+              "additionalProperties": false,
+              "description": "One shard as a run is started with it or appended to.",
+              "properties": {
+                "id": {
+                  "description": "The shard id, unique in the run; the server assigns one when empty.",
+                  "type": "string"
+                },
+                "input": {
+                  "description": "What the worker gets as its input, any JSON."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.add_shards",
+      "permission": "workflows:run",
+      "tool": "workflows_distributed_runs_add_shards"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a page of the run's shards, in queue order."
+      },
+      "description": "Reads a page of the run's shards, in queue order.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*/distributed_runs/*}:readShards",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReadDistributedRunShards.",
+        "properties": {
+          "name": {
+            "description": "The name of the distributed run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          },
+          "page_size": {
+            "description": "At most this many; default 100, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "state_filter": {
+            "description": "Only shards in this state; unset reads every shard.",
+            "enum": [
+              "pending",
+              "leased",
+              "succeeded",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.read_shards",
+      "permission": "workflows:read",
+      "tool": "workflows_distributed_runs_read_shards"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a page of the run's workers."
+      },
+      "description": "Reads a page of the run's workers.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/distributed_jobs/*/distributed_runs/*}:readWorkers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReadDistributedRunWorkers.",
+        "properties": {
+          "name": {
+            "description": "The name of the distributed run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/DistributedRun"
+          },
+          "page_size": {
+            "description": "At most this many; default 100, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.distributed_runs.read_workers",
+      "permission": "workflows:read",
+      "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@b505f0082a8c2462b29f444aed4b67af792d08bd79686c0c8fb9188edf24f3b7. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@4504d1f23a0e5efdf7133f4277028db4c1c8b51f28e8f2bed123915eff9cf9a2. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
