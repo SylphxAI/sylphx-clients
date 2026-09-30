@@ -55,6 +55,7 @@ pub fn render(v: &Value, format: Format) -> String {
                 .to_string(),
         },
         Format::Table => match list_items(v) {
+            Some(items) if is_secret_list(items) => secrets_table(items),
             Some(items) => table(items),
             None => serde_yaml_ng::to_string(v)
                 .unwrap_or_default()
@@ -142,6 +143,73 @@ fn table(items: &[Value]) -> String {
     out
 }
 
+/// Secret rows (`…/secrets/{KEY}` with a `latest_version`): a list of them
+/// shows scope, version and active, so an env-wide row and a service row never
+/// look alike (cloud#11153).
+fn is_secret_list(items: &[Value]) -> bool {
+    !items.is_empty()
+        && items.iter().all(|i| {
+            i.get("name")
+                .and_then(Value::as_str)
+                .is_some_and(|n| n.contains("/secrets/") && !n.contains("/secret_versions/"))
+                && i.get("status")
+                    .is_some_and(|s| s.get("latest_version").is_some())
+        })
+}
+
+/// `env-wide`, or the service the Secret is scoped to.
+fn secret_scope(item: &Value) -> String {
+    item.get("spec")
+        .and_then(|s| s.get("scope"))
+        .and_then(|s| s.get("service"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("env-wide")
+        .to_string()
+}
+
+fn secrets_table(items: &[Value]) -> String {
+    let rows: Vec<[String; 4]> = items
+        .iter()
+        .map(|i| {
+            let name = i.get("name").and_then(Value::as_str).unwrap_or("-");
+            let version = i
+                .get("status")
+                .and_then(|s| s.get("latest_version"))
+                .and_then(Value::as_str)
+                .and_then(|v| v.rsplit('/').next())
+                .filter(|v| !v.is_empty())
+                .unwrap_or("-");
+            // The Secret list serves active variables only, so an absent flag
+            // reads as active; only an explicit `false` reads as inactive.
+            let active = i
+                .get("status")
+                .and_then(|s| s.get("active"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            [
+                name.to_string(),
+                secret_scope(i),
+                version.to_string(),
+                if active { "yes" } else { "no" }.to_string(),
+            ]
+        })
+        .collect();
+    let w0 = rows.iter().map(|r| r[0].len()).max().unwrap_or(0).max(4);
+    let w1 = rows.iter().map(|r| r[1].len()).max().unwrap_or(0).max(5);
+    let mut out = format!(
+        "{:<w0$}  {:<w1$}  {:<7}  ACTIVE",
+        "NAME", "SCOPE", "VERSION"
+    );
+    for r in rows {
+        out.push_str(&format!(
+            "\n{:<w0$}  {:<w1$}  {:<7}  {}",
+            r[0], r[1], r[2], r[3]
+        ));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -160,6 +228,42 @@ mod tests {
             render(&v, Format::Name),
             "orgs/o/projects/p/envs/e/databases/main\norgs/o/projects/p/envs/e/databases/logs"
         );
+    }
+
+    #[test]
+    fn a_secret_list_shows_scope_version_and_active() {
+        let p = "orgs/o/projects/p/envs/e/secrets";
+        let v = json!({"secrets": [
+            {"name": format!("{p}/API_KEY"),
+             "status": {"latest_version": format!("{p}/API_KEY/secret_versions/3"), "active": true}},
+            {"name": format!("{p}/CRON_SECRET"),
+             "spec": {"scope": {"service": "api"}},
+             "status": {"latest_version": format!("{p}/CRON_SECRET/secret_versions/2"), "active": false}}
+        ], "next_page_token": ""});
+        let t = render(&v, Format::Table);
+        let lines: Vec<&str> = t.lines().collect();
+        assert!(
+            lines[0].contains("SCOPE")
+                && lines[0].contains("VERSION")
+                && lines[0].contains("ACTIVE"),
+            "{t}"
+        );
+        assert!(
+            lines[1].contains("API_KEY")
+                && lines[1].contains("env-wide")
+                && lines[1].contains(" 3 ")
+                && lines[1].ends_with("yes"),
+            "{t}"
+        );
+        assert!(
+            lines[2].contains("CRON_SECRET")
+                && lines[2].contains(" api ")
+                && lines[2].ends_with("no"),
+            "{t}"
+        );
+        // Other collections keep the generic table.
+        let other = json!({"databases": [{"name": "orgs/o/projects/p/envs/e/databases/main"}]});
+        assert!(render(&other, Format::Table).contains("READY"));
     }
 
     #[test]
