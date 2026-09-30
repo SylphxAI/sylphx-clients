@@ -14691,6 +14691,1114 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a catalog."
+      },
+      "description": "Gets a catalog.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/catalogs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCatalog.",
+        "properties": {
+          "name": {
+            "description": "The name of the catalog to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Catalog"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.get",
+      "permission": "localization:read",
+      "tool": "localization_catalogs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists catalogs."
+      },
+      "description": "Lists catalogs.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/catalogs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListCatalogs.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Catalog"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.list",
+      "permission": "localization:read",
+      "tool": "localization_catalogs_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a catalog."
+      },
+      "description": "Creates a catalog.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/catalogs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateCatalog.",
+        "properties": {
+          "catalog": {
+            "additionalProperties": false,
+            "description": "The catalog to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "glossaries": {
+                    "description": "The glossaries this catalog applies, as Glossary names; at most 10.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "localization.sylphx.com/Glossary"
+                  },
+                  "locale_guidance": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Extra instructions per target locale, for example the vocabulary of a\nregion. Keys are target locales; at most 60 entries, each at most 2000\ncharacters.",
+                    "type": "object"
+                  },
+                  "pseudo_locales": {
+                    "description": "Pseudo-locales to generate at export. They are never stored or\ntranslated.",
+                    "items": {
+                      "description": "A pseudo-locale is a synthetic locale generated at export to test layout.",
+                      "enum": [
+                        "accented",
+                        "bidi",
+                        "wide"
+                      ],
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "source_locale": {
+                    "description": "The locale the source texts are written in, a BCP 47 tag such as `en`.",
+                    "type": "string"
+                  },
+                  "target_locales": {
+                    "description": "The locales to translate into, BCP 47 tags. `zh-Hant-HK` and `zh-Hant-TW`\nare separate locales. At most 60, each once.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "tone": {
+                    "description": "The brand voice every translation follows, at most 2000 characters.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source_locale"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "catalog_id": {
+            "description": "The catalog id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Catalog"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "catalog"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.create",
+      "permission": "localization:write",
+      "tool": "localization_catalogs_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a catalog."
+      },
+      "description": "Updates a catalog.",
+      "effect": "write",
+      "http": "PATCH /v1/{catalog.name=orgs/*/projects/*/envs/*/catalogs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateCatalog.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the catalog when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "catalog": {
+            "additionalProperties": false,
+            "description": "The catalog to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "glossaries": {
+                    "description": "The glossaries this catalog applies, as Glossary names; at most 10.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "localization.sylphx.com/Glossary"
+                  },
+                  "locale_guidance": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Extra instructions per target locale, for example the vocabulary of a\nregion. Keys are target locales; at most 60 entries, each at most 2000\ncharacters.",
+                    "type": "object"
+                  },
+                  "pseudo_locales": {
+                    "description": "Pseudo-locales to generate at export. They are never stored or\ntranslated.",
+                    "items": {
+                      "description": "A pseudo-locale is a synthetic locale generated at export to test layout.",
+                      "enum": [
+                        "accented",
+                        "bidi",
+                        "wide"
+                      ],
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "source_locale": {
+                    "description": "The locale the source texts are written in, a BCP 47 tag such as `en`.",
+                    "type": "string"
+                  },
+                  "target_locales": {
+                    "description": "The locales to translate into, BCP 47 tags. `zh-Hant-HK` and `zh-Hant-TW`\nare separate locales. At most 60, each once.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "tone": {
+                    "description": "The brand voice every translation follows, at most 2000 characters.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source_locale"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "catalog"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.update",
+      "permission": "localization:write",
+      "tool": "localization_catalogs_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a catalog."
+      },
+      "description": "Deletes a catalog.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/catalogs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteCatalog.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the catalog does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also delete the catalog's entries; without it, a catalog that has entries\nis refused with `INVALID_STATE`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the catalog to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Catalog"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.delete",
+      "permission": "localization:write",
+      "tool": "localization_catalogs_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Reads the source files and the committed translations into the catalog, then translates what is new or stale. Each call is idempotent and works within a bounded time; call again until `pending` is 0."
+      },
+      "description": "Reads the source files and the committed translations into the catalog,\nthen translates what is new or stale. Each call is idempotent and works\nwithin a bounded time; call again until `pending` is 0.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/catalogs/*}:sync",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SyncCatalog.",
+        "properties": {
+          "format": {
+            "description": "The format of the files.",
+            "enum": [
+              "sylphx_json",
+              "icu_json",
+              "gettext_po",
+              "xliff2"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the catalog.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Catalog"
+          },
+          "sources": {
+            "description": "The source-locale files; 1 to 500.",
+            "items": {
+              "additionalProperties": false,
+              "description": "A CatalogFile is one file of a catalog.",
+              "properties": {
+                "content": {
+                  "description": "The file's text, UTF-8; at most 4 MiB.",
+                  "type": "string"
+                },
+                "locale": {
+                  "description": "The file's locale, a BCP 47 tag.",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "The file's path. The service does not interpret it and echoes it back, for\nexample a namespace file name.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "locale",
+                "content"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "translations": {
+            "description": "The committed target-locale files; at most 10000. A text that differs from\nthe service's last export is recorded as a pinned human override.",
+            "items": {
+              "additionalProperties": false,
+              "description": "A CatalogFile is one file of a catalog.",
+              "properties": {
+                "content": {
+                  "description": "The file's text, UTF-8; at most 4 MiB.",
+                  "type": "string"
+                },
+                "locale": {
+                  "description": "The file's locale, a BCP 47 tag.",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "The file's path. The service does not interpret it and echoes it back, for\nexample a namespace file name.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "locale",
+                "content"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "validate_only": {
+            "description": "Validate the files and return the counts without writing or translating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "format",
+          "sources"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.sync",
+      "permission": "localization:write",
+      "tool": "localization_catalogs_sync"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Returns the catalog's files per locale in the requested format, with the QA report. A read with a request body, like a query."
+      },
+      "description": "Returns the catalog's files per locale in the requested format, with the QA\nreport. A read with a request body, like a query.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/catalogs/*}:export",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ExportCatalog.",
+        "properties": {
+          "format": {
+            "description": "The format of the files.",
+            "enum": [
+              "sylphx_json",
+              "icu_json",
+              "gettext_po",
+              "xliff2"
+            ],
+            "type": "string"
+          },
+          "locales": {
+            "description": "The locales to export; default every target locale and the pseudo-locales.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "The name of the catalog.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Catalog"
+          },
+          "source_fallback": {
+            "description": "Emit the source text for keys that have no passing translation, for\nruntimes that do not fall back to the source themselves.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "format"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.catalogs.export",
+      "permission": "localization:read",
+      "tool": "localization_catalogs_export"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a catalog entry."
+      },
+      "description": "Gets a catalog entry.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/catalogs/*/entries/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCatalogEntry.",
+        "properties": {
+          "name": {
+            "description": "The name of the catalog entry to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/CatalogEntry"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.entries.get",
+      "permission": "localization:read",
+      "tool": "localization_entries_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists catalog entries. The filter is limited to `state`, `locale`, and `qa_state`."
+      },
+      "description": "Lists catalog entries. The filter is limited to `state`, `locale`, and\n`qa_state`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/catalogs/*}/entries",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListCatalogEntries.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `state`, `locale`, and `qa_state`; for example\n`state = ENTRY_STATE_ACTIVE AND locale = \"ja\" AND qa_state = QA_STATE_FAILED`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The catalog to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/CatalogEntry"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.entries.list",
+      "permission": "localization:read",
+      "tool": "localization_entries_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Sets the text of one locale as a human override that AI never overwrites. QA runs on the text first; a text with a QA error is rejected with `INVALID_FIELD`, and the problem lists the findings."
+      },
+      "description": "Sets the text of one locale as a human override that AI never overwrites.\nQA runs on the text first; a text with a QA error is rejected with\n`INVALID_FIELD`, and the problem lists the findings.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/catalogs/*/entries/*}:pinTranslation",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of PinTranslation.",
+        "properties": {
+          "locale": {
+            "description": "The target locale.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the catalog entry.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/CatalogEntry"
+          },
+          "text": {
+            "description": "The translated message, a Unicode MessageFormat 2 pattern.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "locale",
+          "text"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.entries.pin_translation",
+      "permission": "localization:write",
+      "tool": "localization_entries_pin_translation"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Removes the human override of one locale; the next sync may translate it again."
+      },
+      "description": "Removes the human override of one locale; the next sync may translate it\nagain.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/catalogs/*/entries/*}:unpinTranslation",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UnpinTranslation.",
+        "properties": {
+          "locale": {
+            "description": "The target locale.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the catalog entry.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/CatalogEntry"
+          }
+        },
+        "required": [
+          "name",
+          "locale"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.entries.unpin_translation",
+      "permission": "localization:write",
+      "tool": "localization_entries_unpin_translation"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a glossary."
+      },
+      "description": "Gets a glossary.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/glossaries/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetGlossary.",
+        "properties": {
+          "name": {
+            "description": "The name of the glossary to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Glossary"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.glossaries.get",
+      "permission": "localization:read",
+      "tool": "localization_glossaries_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists glossarys."
+      },
+      "description": "Lists glossarys.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/glossaries",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListGlossaries.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Glossary"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.glossaries.list",
+      "permission": "localization:read",
+      "tool": "localization_glossaries_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a glossary."
+      },
+      "description": "Creates a glossary.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/glossaries",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateGlossary.",
+        "properties": {
+          "glossary": {
+            "additionalProperties": false,
+            "description": "The glossary to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/glossaries/{glossary}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "terms": {
+                    "description": "The terms; at most 5000.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A GlossaryTerm is one term and the rule for it.",
+                      "properties": {
+                        "case_sensitive": {
+                          "description": "Match the term's letter case exactly.",
+                          "type": "boolean"
+                        },
+                        "description": {
+                          "description": "A note for translators, at most 500 characters.",
+                          "type": "string"
+                        },
+                        "locales": {
+                          "description": "The locales the term applies to; empty is every locale.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "replacement": {
+                          "description": "Suggested wording; used by `TERM_RULE_FORBIDDEN`.",
+                          "type": "string"
+                        },
+                        "rule": {
+                          "description": "What to do with the term.",
+                          "enum": [
+                            "translate",
+                            "keep",
+                            "forbidden"
+                          ],
+                          "type": "string"
+                        },
+                        "term": {
+                          "description": "The term, as written in the source.",
+                          "type": "string"
+                        },
+                        "translations": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Locale to the required translation; used by `TERM_RULE_TRANSLATE`.",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "term",
+                        "rule"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "glossary_id": {
+            "description": "The glossary id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Glossary"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "glossary"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.glossaries.create",
+      "permission": "localization:write",
+      "tool": "localization_glossaries_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a glossary."
+      },
+      "description": "Updates a glossary.",
+      "effect": "write",
+      "http": "PATCH /v1/{glossary.name=orgs/*/projects/*/envs/*/glossaries/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateGlossary.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the glossary when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "glossary": {
+            "additionalProperties": false,
+            "description": "The glossary to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/glossaries/{glossary}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "terms": {
+                    "description": "The terms; at most 5000.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A GlossaryTerm is one term and the rule for it.",
+                      "properties": {
+                        "case_sensitive": {
+                          "description": "Match the term's letter case exactly.",
+                          "type": "boolean"
+                        },
+                        "description": {
+                          "description": "A note for translators, at most 500 characters.",
+                          "type": "string"
+                        },
+                        "locales": {
+                          "description": "The locales the term applies to; empty is every locale.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "replacement": {
+                          "description": "Suggested wording; used by `TERM_RULE_FORBIDDEN`.",
+                          "type": "string"
+                        },
+                        "rule": {
+                          "description": "What to do with the term.",
+                          "enum": [
+                            "translate",
+                            "keep",
+                            "forbidden"
+                          ],
+                          "type": "string"
+                        },
+                        "term": {
+                          "description": "The term, as written in the source.",
+                          "type": "string"
+                        },
+                        "translations": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Locale to the required translation; used by `TERM_RULE_TRANSLATE`.",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "term",
+                        "rule"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "glossary"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.glossaries.update",
+      "permission": "localization:write",
+      "tool": "localization_glossaries_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a glossary."
+      },
+      "description": "Deletes a glossary.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/glossaries/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteGlossary.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the glossary does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the glossary to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "localization.sylphx.com/Glossary"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "localization.glossaries.delete",
+      "permission": "localization:write",
+      "tool": "localization_glossaries_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a domain."
       },
       "description": "Gets a domain.",
@@ -26496,7 +27604,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@0fa762a86d779ab04e332e131e530c4049a971ca72bbf98a7f286cc97dcbff80. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@32d4b69cbd75356139faf2b8b9dd5714b14a3ce12b69f794c2e06d5b5b933e15. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"

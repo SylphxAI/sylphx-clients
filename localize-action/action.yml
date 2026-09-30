@@ -1,0 +1,75 @@
+name: Sylphx Localization
+description: Sync source strings with Sylphx Localization, wait for translation, and write the locale files.
+inputs:
+  catalog:
+    description: Catalog resource name, for example orgs/ORG/projects/PROJECT/envs/ENV/catalogs/web.
+    required: true
+  api-key:
+    description: Sylphx API key with localization:read and localization:write. Pass a repository secret.
+    required: true
+  files:
+    description: Newline-separated path templates containing {locale}, with an optional * glob in the last segment.
+    required: true
+  format:
+    description: sylphx-json, icu-json, gettext-po or xliff2.
+    default: sylphx-json
+  locale-map:
+    description: Optional newline-separated bcp47=dirname pairs, for example zh-Hans=zh.
+    default: ""
+  pseudo-locales:
+    description: Also write pseudo-locale files (true or false).
+    default: "false"
+  source-fallback:
+    description: Fill keys that have no passing translation with the source text (true or false), for runtimes that need every key present.
+    default: "false"
+  api-url:
+    description: API base URL.
+    default: https://api.sylphx.com
+  fail-on-qa:
+    description: Fail the step when QA does not pass (true or false).
+    default: "true"
+  max-wait:
+    description: Seconds to keep syncing until nothing is pending.
+    default: "600"
+  open-pr:
+    description: Commit changed locale files and create or update one pull request (true or false).
+    default: "false"
+  pr-branch:
+    description: Branch used for the pull request.
+    default: localization/update
+  github-token:
+    description: Token for gh, used only when open-pr is true.
+    default: ${{ github.token }}
+outputs:
+  qa-passed:
+    description: "true or false."
+    value: ${{ steps.run.outputs.qa-passed }}
+  translated-characters:
+    description: Source characters translated by this change (the billed quantity).
+    value: ${{ steps.run.outputs.translated-characters }}
+  changed-files:
+    description: Number of locale files written that differ from before.
+    value: ${{ steps.run.outputs.changed-files }}
+  report:
+    description: Path to the JSON report file.
+    value: ${{ steps.run.outputs.report }}
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        SYLPHX_API_KEY: ${{ inputs.api-key }}
+        LOCALIZE_CATALOG: ${{ inputs.catalog }}
+        LOCALIZE_FILES: ${{ inputs.files }}
+        LOCALIZE_FORMAT: ${{ inputs.format }}
+        LOCALIZE_LOCALE_MAP: ${{ inputs.locale-map }}
+        LOCALIZE_PSEUDO_LOCALES: ${{ inputs.pseudo-locales }}
+        LOCALIZE_SOURCE_FALLBACK: ${{ inputs.source-fallback }}
+        LOCALIZE_API_URL: ${{ inputs.api-url }}
+        LOCALIZE_FAIL_ON_QA: ${{ inputs.fail-on-qa }}
+        LOCALIZE_MAX_WAIT: ${{ inputs.max-wait }}
+        LOCALIZE_OPEN_PR: ${{ inputs.open-pr }}
+        LOCALIZE_PR_BRANCH: ${{ inputs.pr-branch }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: '"$GITHUB_ACTION_PATH/localize.sh"'
