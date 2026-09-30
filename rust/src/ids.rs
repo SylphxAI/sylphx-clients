@@ -237,6 +237,8 @@ pub const USR: Prefix = Prefix::new("usr", "User", "auth", Some("end_users"));
 pub const SESS: Prefix = Prefix::new("sess", "Session", "auth", Some("sessions"));
 /// AuthConfig (`acfg`, auth).
 pub const ACFG: Prefix = Prefix::new("acfg", "AuthConfig", "auth", Some("auth_configs"));
+/// AuthOrganization (`aorg`, auth).
+pub const AORG: Prefix = Prefix::new("aorg", "AuthOrganization", "auth", None);
 /// CustomerOrganization (`cor`, auth).
 pub const COR: Prefix = Prefix::new(
     "cor",
@@ -595,13 +597,13 @@ pub const SPU: Prefix = Prefix::new("spu", "StorePurchase", "money", Some("store
 
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
-    ORG, PRJ, ENV, KEY, PRN, DVG, OMB, MBR, USR, SESS, ACFG, COR, EDM, IVT, OAC, ORL, MDL, AI, LLM,
-    ART, BAC, BLS, INV, MET, PLAN, URP, BSUB, SITEM, AUSE, ACC, TXN, TPOL, BLD, BCC, CHG, FLAG,
-    SEG, CONN, CPRV, BKT, DB, KV, IDX, CUS, ENT, EVT, IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK,
-    PRV, SRL, SVC, SLNK, KMS, KMSV, CERT, DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MSG, PRF, RCP,
-    SND, SDM, SUP, TMPL, EEV, EGRP, LOG, SCRP, SMAP, TRC, ERR, REL, ROL, RUN, SSET, LSE, LEV, POOL,
-    SHP, SNAP, VOL, SBX, SEC, SECV, SECB, JOB, SCHED, WF, ESVC, DPL, TOK, TASK, CEX, VMNT, WKSP,
-    MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF, ALRT, DOC, FILE,
-    PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP, SLOG, CFG,
-    BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CSUB, EGNT, MACT, PSN, SCN, SPU,
+    ORG, PRJ, ENV, KEY, PRN, DVG, OMB, MBR, USR, SESS, ACFG, AORG, COR, EDM, IVT, OAC, ORL, MDL,
+    AI, LLM, ART, BAC, BLS, INV, MET, PLAN, URP, BSUB, SITEM, AUSE, ACC, TXN, TPOL, BLD, BCC, CHG,
+    FLAG, SEG, CONN, CPRV, BKT, DB, KV, IDX, CUS, ENT, EVT, IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD,
+    WHK, PRV, SRL, SVC, SLNK, KMS, KMSV, CERT, DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MSG, PRF,
+    RCP, SND, SDM, SUP, TMPL, EEV, EGRP, LOG, SCRP, SMAP, TRC, ERR, REL, ROL, RUN, SSET, LSE, LEV,
+    POOL, SHP, SNAP, VOL, SBX, SEC, SECV, SECB, JOB, SCHED, WF, ESVC, DPL, TOK, TASK, CEX, VMNT,
+    WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF, ALRT, DOC,
+    FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP,
+    SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CSUB, EGNT, MACT, PSN, SCN, SPU,
 ];

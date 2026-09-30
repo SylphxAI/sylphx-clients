@@ -31,6 +31,7 @@ export const PREFIXES = [
 	{ prefix: 'usr', entity: 'User', service: 'auth', collection: 'end_users' },
 	{ prefix: 'sess', entity: 'Session', service: 'auth', collection: 'sessions' },
 	{ prefix: 'acfg', entity: 'AuthConfig', service: 'auth', collection: 'auth_configs' },
+	{ prefix: 'aorg', entity: 'AuthOrganization', service: 'auth', collection: null },
 	{ prefix: 'cor', entity: 'CustomerOrganization', service: 'auth', collection: 'customer_organizations' },
 	{ prefix: 'edm', entity: 'EmailDomain', service: 'auth', collection: 'email_domains' },
 	{ prefix: 'ivt', entity: 'Invitation', service: 'auth', collection: 'invitations' },
