@@ -249,6 +249,9 @@ jobs:
           (cd typescript && bun install --no-save && bun run build)
           scripts/smoke-npm.sh typescript
           pack typescript
+          (cd next && bun install --no-save && bun run build)
+          scripts/smoke-npm.sh next
+          pack next
           cat "$out/list"
           echo "any=$([ -s "$out/list" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publish

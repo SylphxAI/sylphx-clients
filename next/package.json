@@ -1,0 +1,74 @@
+{
+	"name": "@sylphx/next",
+	"version": "0.1.0",
+	"description": "Next.js cache handlers for Sylphx: ISR and 'use cache' shared across replicas, on Sylphx KV and Buckets.",
+	"license": "MIT",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "next"
+	},
+	"homepage": "https://sylphx.com/docs",
+	"keywords": [
+		"sylphx",
+		"nextjs",
+		"isr",
+		"cache-handler"
+	],
+	"engines": {
+		"node": ">=20.19"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./cache-handler": {
+			"types": "./dist/cache-handler.d.ts",
+			"default": "./dist/cache-handler.js"
+		},
+		"./use-cache-handler": {
+			"types": "./dist/use-cache-handler.d.ts",
+			"default": "./dist/use-cache-handler.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"prepublishOnly": "bun run build"
+	},
+	"peerDependencies": {
+		"@sylphx/sdk": ">=0.32.0",
+		"next": ">=14.1.0",
+		"redis": ">=5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sylphx/sdk": {
+			"optional": true
+		},
+		"next": {
+			"optional": true
+		},
+		"redis": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.0",
+		"typescript": "5.9.3"
+	},
+	"publishConfig": {
+		"access": "public",
+		"tag": "next",
+		"provenance": true
+	}
+}
