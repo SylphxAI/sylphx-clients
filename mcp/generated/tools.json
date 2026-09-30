@@ -1718,6 +1718,324 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets an asset."
+      },
+      "description": "Gets an asset.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/assets/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAsset.",
+        "properties": {
+          "name": {
+            "description": "The name of the asset to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.get",
+      "permission": "assets:read",
+      "tool": "assets_assets_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists assets. The filter is limited to `kind`, `state`, and `review_state`."
+      },
+      "description": "Lists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/assets",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListAssets.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `kind`, `state`, and `review_state`; for\nexample `kind = ASSET_KIND_IMAGE AND state = ASSET_STATE_READY`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.list",
+      "permission": "assets:read",
+      "tool": "assets_assets_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records the recipes as assets and generates the variants that are missing. Each call is idempotent and works within a bounded time; call again until `pending` is 0."
+      },
+      "description": "Records the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/assets:generate",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GenerateAssets.",
+        "properties": {
+          "parent": {
+            "description": "The environment to generate in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          },
+          "recipes": {
+            "description": "The recipes the code declares; 1 to 1000.",
+            "items": {
+              "additionalProperties": false,
+              "description": "An AssetRecipe is what the code declares for one asset. The logical key is\nderived from it.",
+              "properties": {
+                "character_id": {
+                  "description": "The character this asset shows; only for `ASSET_KIND_CHARACTER`, encoded\nin the canonical text as `id=`.",
+                  "type": "string"
+                },
+                "key": {
+                  "description": "The key the caller computed, 16 lowercase hex characters. When it differs\nfrom the server's, the call is refused with `INVALID_FIELD` and the\nproblem carries the server's canonical text, which catches encoder drift.",
+                  "type": "string"
+                },
+                "kind": {
+                  "description": "What kind of asset to make.",
+                  "enum": [
+                    "image",
+                    "sfx",
+                    "music",
+                    "video",
+                    "character",
+                    "voice"
+                  ],
+                  "type": "string"
+                },
+                "locale": {
+                  "description": "The locale of the asset, a BCP 47 tag; empty for images.",
+                  "type": "string"
+                },
+                "params": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Kind-specific parameters in canonical text form, such as `\"2\"`,\n`\"1024x768\"`, `\"true\"` or a 16-hex key. At most 16 pairs; keys are\n`[a-z_]` up to 32 characters, values up to 256 characters.",
+                  "type": "object"
+                },
+                "prompt": {
+                  "description": "What to make, at most 8000 bytes. Empty only for `ASSET_KIND_CHARACTER`.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "prompt"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "validate_only": {
+            "description": "Validate the recipes and return the counts without writing or\ngenerating anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "recipes"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.generate",
+      "permission": "assets:write",
+      "tool": "assets_assets_generate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Returns the `assets.lock` entries and canonical text for the keys the call names, and only those. A read with a request body, like a query."
+      },
+      "description": "Returns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/assets:lock",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of LockAssets.",
+        "properties": {
+          "keys": {
+            "description": "The logical keys the code declares, 1 to 5000, each 16 lowercase hex\ncharacters. The lock holds only these, so a removed recipe drops out.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "description": "The environment to read from.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          }
+        },
+        "required": [
+          "parent",
+          "keys"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.lock",
+      "permission": "assets:read",
+      "tool": "assets_assets_lock"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Approves one variant and records who approved it."
+      },
+      "description": "Approves one variant and records who approved it.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:approveVariant",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ApproveVariant.",
+        "properties": {
+          "content_hash": {
+            "description": "The content hash of the variant, 64 lowercase hex characters.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the asset.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          }
+        },
+        "required": [
+          "name",
+          "content_hash"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.approve_variant",
+      "permission": "assets:write",
+      "tool": "assets_assets_approve_variant"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Rejects one variant. Its slot is freed and the next `:generate` fills it; the rejected file keeps serving at its URL."
+      },
+      "description": "Rejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:rejectVariant",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RejectVariant.",
+        "properties": {
+          "content_hash": {
+            "description": "The content hash of the variant, 64 lowercase hex characters.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the asset.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          }
+        },
+        "required": [
+          "name",
+          "content_hash"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.reject_variant",
+      "permission": "assets:write",
+      "tool": "assets_assets_reject_variant"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Retires one variant. Its URL answers 404 from then on and its slot is freed."
+      },
+      "description": "Retires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:retireVariant",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RetireVariant.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "content_hash": {
+            "description": "The content hash of the variant, 64 lowercase hex characters.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the asset.",
+            "type": "string",
+            "x-sylphx-resource-reference": "assets.sylphx.com/Asset"
+          },
+          "reason": {
+            "description": "Why the variant is retired, at most 500 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "content_hash",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "assets.assets.retire_variant",
+      "permission": "assets:write",
+      "tool": "assets_assets_retire_variant"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an auth config."
       },
       "description": "Gets an auth config.",
@@ -27604,7 +27922,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@32d4b69cbd75356139faf2b8b9dd5714b14a3ce12b69f794c2e06d5b5b933e15. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@b35a4f28ec11be6ab9e9ad2fd7a6b7c0fa380280dbff327240e0f25316985ec5. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
