@@ -1,0 +1,3 @@
+# Extra flags for the rust lane's clippy of this workspace (ci.yml). The lane
+# lints the affected packages once; ci-check.sh does not lint again.
+--all-targets -- -D warnings
