@@ -96,6 +96,16 @@ describe('auth/verify', () => {
 		).toBe('ok')
 	})
 
+	test('an omitted or empty audience refuses every token', async () => {
+		const { key, sign } = await es256()
+		const keys: Jwks = { keys: [key] }
+		const token = await sign({ alg: 'ES256', kid: 'k1' }, good)
+		for (const audience of [undefined, '', [], ['']]) {
+			const expect_ = { issuer: ISS, audience } as unknown as { issuer: string; audience: string }
+			expect(await code(verifyWithKeys(token, keys, expect_, NOW))).toBe('audience')
+		}
+	})
+
 	test('an unknown kid refetches the key set once, then verifies', async () => {
 		const a = await es256()
 		const b = await es256()

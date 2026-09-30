@@ -65,8 +65,9 @@ impl std::error::Error for VerifyError {}
 #[derive(Debug, Clone)]
 pub struct Expect {
     pub issuer: String,
-    /// Accepted audiences; the token must name at least one. Empty accepts
-    /// any audience (only for a caller that checks `aud` itself).
+    /// Accepted audiences; the token must name at least one. Empty refuses
+    /// every token: a verifier with no audience is a configuration error, not
+    /// a request to accept any `aud`.
     pub audiences: Vec<String>,
     /// Clock skew tolerated on `exp`, `nbf`, and `iat`.
     pub leeway: Duration,
@@ -238,15 +239,14 @@ pub fn verify_with_keys(
     if iss.trim_end_matches('/') != expect.issuer {
         return Err(VerifyError::Issuer(iss.to_string()));
     }
-    if !expect.audiences.is_empty() {
-        let auds: Vec<&str> = match claims.get("aud") {
-            Some(Value::String(a)) => vec![a.as_str()],
-            Some(Value::Array(a)) => a.iter().filter_map(Value::as_str).collect(),
-            _ => vec![],
-        };
-        if !auds.iter().any(|a| expect.audiences.iter().any(|e| e == a)) {
-            return Err(VerifyError::Audience);
-        }
+    let auds: Vec<&str> = match claims.get("aud") {
+        Some(Value::String(a)) => vec![a.as_str()],
+        Some(Value::Array(a)) => a.iter().filter_map(Value::as_str).collect(),
+        _ => vec![],
+    };
+    if expect.audiences.is_empty() || !auds.iter().any(|a| expect.audiences.iter().any(|e| e == a))
+    {
+        return Err(VerifyError::Audience);
     }
     Ok(Claims(claims))
 }
@@ -415,6 +415,18 @@ mod tests {
         );
         let t = format!("{signed}.{}", b64(&sk.sign(signed.as_bytes()).to_bytes()));
         assert!(verify_with_keys(&t, &keys, &expect(), NOW).is_ok());
+    }
+
+    #[test]
+    fn an_empty_audience_list_refuses_every_token() {
+        let (sk, jwk) = es256();
+        let keys = Jwks { keys: vec![jwk] };
+        let t = sign_es(&sk, json!({"alg": "ES256", "kid": "k1"}), good());
+        let none = Expect::issuer("https://api.sylphx.com");
+        assert_eq!(
+            verify_with_keys(&t, &keys, &none, NOW).unwrap_err(),
+            VerifyError::Audience
+        );
     }
 
     #[test]

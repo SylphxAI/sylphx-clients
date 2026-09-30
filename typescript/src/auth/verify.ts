@@ -36,8 +36,11 @@ export class VerifyError extends Error {
 
 export interface Expect {
 	issuer: string
-	/** Accepted audiences; the token must name at least one. Empty accepts any. */
-	audience?: string | string[]
+	/**
+	 * Accepted audiences; the token must name at least one. Required: an empty
+	 * or omitted audience refuses every token rather than accepting any `aud`.
+	 */
+	audience: string | string[]
 	/** Clock skew tolerated on exp, nbf, and iat, in seconds. Default 60. */
 	leewaySeconds?: number
 }
@@ -145,12 +148,11 @@ export async function verifyWithKeys(token: string, keys: Jwks, expect: Expect, 
 	const iss = typeof claims.iss === 'string' ? claims.iss : ''
 	if (iss.replace(/\/+$/, '') !== expect.issuer.replace(/\/+$/, ''))
 		throw new VerifyError('issuer', `unexpected issuer ${iss}`)
-	const want = expect.audience === undefined ? [] : [expect.audience].flat()
-	if (want.length > 0) {
-		const aud = claims.aud
-		const auds = typeof aud === 'string' ? [aud] : Array.isArray(aud) ? aud.filter((a): a is string => typeof a === 'string') : []
-		if (!auds.some((a) => want.includes(a))) throw new VerifyError('audience', 'the token is not for this audience')
-	}
+	const want = (expect.audience === undefined ? [] : [expect.audience].flat()).filter((a) => a !== '')
+	const aud = claims.aud
+	const auds = typeof aud === 'string' ? [aud] : Array.isArray(aud) ? aud.filter((a): a is string => typeof a === 'string') : []
+	if (want.length === 0 || !auds.some((a) => want.includes(a)))
+		throw new VerifyError('audience', 'the token is not for this audience')
 	return claims
 }
 
