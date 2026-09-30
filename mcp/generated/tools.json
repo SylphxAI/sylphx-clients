@@ -6,9 +6,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Returns the caller: the principal and the scope of the key or token that authenticated this request. Clients fill their org, project, and env defaults from it (resource-api-and-clients.md §3.2); every valid key may call it, whatever its scopes."
+        "title": "Returns the caller: the principal and the scope of the key or token that authenticated this request. Clients fill their org, project, and env defaults from it; every valid key may call it, whatever its scopes."
       },
-      "description": "Returns the caller: the principal and the scope of the key or token that\nauthenticated this request. Clients fill their org, project, and env\ndefaults from it (resource-api-and-clients.md §3.2); every valid key may\ncall it, whatever its scopes.",
+      "description": "Returns the caller: the principal and the scope of the key or token that\nauthenticated this request. Clients fill their org, project, and env\ndefaults from it; every valid key may call it, whatever its scopes.",
       "effect": "read",
       "http": "GET /v1/whoami",
       "input_schema": {
@@ -146,7 +146,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "api_version": {
-                    "description": "The API version (`YYYY-MM-DD`) requests are served at when neither the\nrequest nor the key pins one (§5).",
+                    "description": "The API version (`YYYY-MM-DD`) requests are served at when neither the\nrequest nor the key pins one.",
                     "type": "string"
                   },
                   "slug": {
@@ -233,7 +233,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "api_version": {
-                    "description": "The API version (`YYYY-MM-DD`) requests are served at when neither the\nrequest nor the key pins one (§5).",
+                    "description": "The API version (`YYYY-MM-DD`) requests are served at when neither the\nrequest nor the key pins one.",
                     "type": "string"
                   },
                   "slug": {
@@ -1099,7 +1099,7 @@
                     "type": "string"
                   },
                   "scopes": {
-                    "description": "Scopes `<service>:<action>` (access-and-keys.md §5.1), a subset of the\ncreator's effective scopes.",
+                    "description": "Scopes `<service>:<action>`, a subset of the creator's effective scopes.",
                     "items": {
                       "type": "string"
                     },
@@ -1212,7 +1212,7 @@
                     "type": "string"
                   },
                   "scopes": {
-                    "description": "Scopes `<service>:<action>` (access-and-keys.md §5.1), a subset of the\ncreator's effective scopes.",
+                    "description": "Scopes `<service>:<action>`, a subset of the creator's effective scopes.",
                     "items": {
                       "type": "string"
                     },
@@ -1302,9 +1302,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Revokes an API key immediately; revocation rides the priority chunk."
+        "title": "Revokes an API key immediately; revocation propagates on its own fast path, ahead of the bulk key data."
       },
-      "description": "Revokes an API key immediately; revocation rides the priority chunk.",
+      "description": "Revokes an API key immediately; revocation propagates on its own fast\npath, ahead of the bulk key data.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/api_keys/*}:revoke",
       "input_schema": {
@@ -2135,7 +2135,7 @@
                     "type": "array"
                   },
                   "captcha_secret": {
-                    "description": "A Kernel Secrets Secret holding the CAPTCHA verifier secret; unset\ndisables CAPTCHA.",
+                    "description": "The CAPTCHA verifier secret, held in Sylphx Secrets; unset disables\nCAPTCHA.",
                     "type": "string"
                   },
                   "lockout_enabled": {
@@ -5551,7 +5551,7 @@
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
                   "credential_kind": {
-                    "description": "What the Broker issues.",
+                    "description": "What the credential service issues.",
                     "enum": [
                       "access_token",
                       "runner_registration"
@@ -5578,7 +5578,7 @@
                     "type": "array"
                   },
                   "subjects": {
-                    "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Access principal names. The Cell segment is never stripped.",
+                    "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Sylphx Access principal names. The cell segment is never\nstripped.",
                     "items": {
                       "type": "string"
                     },
@@ -5677,7 +5677,7 @@
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
                   "credential_kind": {
-                    "description": "What the Broker issues.",
+                    "description": "What the credential service issues.",
                     "enum": [
                       "access_token",
                       "runner_registration"
@@ -5704,7 +5704,7 @@
                     "type": "array"
                   },
                   "subjects": {
-                    "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Access principal names. The Cell segment is never stripped.",
+                    "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Sylphx Access principal names. The cell segment is never\nstripped.",
                     "items": {
                       "type": "string"
                     },
@@ -5924,7 +5924,7 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Build arguments. Secret values bind through Kernel Secrets, never here.",
+                    "description": "Build arguments. Secret values bind through Sylphx Secrets, never here.",
                     "type": "object",
                     "x-sylphx-immutable": true
                   },
@@ -6361,9 +6361,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Creates a config flag; the Operation is done when every Cell serves it."
+        "title": "Creates a config flag; the Operation is done when every cell serves it."
       },
-      "description": "Creates a config flag; the Operation is done when every Cell serves it.",
+      "description": "Creates a config flag; the Operation is done when every cell serves it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/config_flags",
       "input_schema": {
@@ -6555,9 +6555,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Updates a config flag; the change rolls out in waves and the Operation is done when every Cell serves it."
+        "title": "Updates a config flag; the change rolls out in waves and the Operation is done when every cell serves it."
       },
-      "description": "Updates a config flag; the change rolls out in waves and the Operation is done when every Cell serves it.",
+      "description": "Updates a config flag; the change rolls out in waves and the Operation is\ndone when every cell serves it.",
       "effect": "write",
       "http": "PATCH /v1/{config_flag.name=orgs/*/projects/*/envs/*/config_flags/*}",
       "input_schema": {
@@ -7509,7 +7509,7 @@
                         "type": "string"
                       },
                       "signing_key": {
-                        "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the Broker may use it.",
+                        "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the credential service may use it.",
                         "type": "string",
                         "x-sylphx-resource-reference": "keys.sylphx.com/Key"
                       },
@@ -7631,7 +7631,7 @@
                         "type": "string"
                       },
                       "signing_key": {
-                        "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the Broker may use it.",
+                        "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the credential service may use it.",
                         "type": "string",
                         "x-sylphx-resource-reference": "keys.sylphx.com/Key"
                       },
@@ -12081,7 +12081,7 @@
                     "x-sylphx-resource-reference": "events.sylphx.com/Topic"
                   },
                   "verification_secret": {
-                    "description": "A Kernel Secrets Secret holding the provider's verification secret.",
+                    "description": "The provider's verification secret, held in Sylphx Secrets.",
                     "type": "string"
                   }
                 },
@@ -12199,7 +12199,7 @@
                     "x-sylphx-resource-reference": "events.sylphx.com/Topic"
                   },
                   "verification_secret": {
-                    "description": "A Kernel Secrets Secret holding the provider's verification secret.",
+                    "description": "The provider's verification secret, held in Sylphx Secrets.",
                     "type": "string"
                   }
                 },
@@ -13051,7 +13051,7 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Environment variables bound to Kernel Secrets: variable name to Secret\nname. The value never enters the spec.",
+                    "description": "Environment variables bound to Sylphx Secrets: variable name to Secret\nname. The value never enters the spec.",
                     "type": "object"
                   },
                   "size": {
@@ -13273,7 +13273,7 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Environment variables bound to Kernel Secrets: variable name to Secret\nname. The value never enters the spec.",
+                    "description": "Environment variables bound to Sylphx Secrets: variable name to Secret\nname. The value never enters the spec.",
                     "type": "object"
                   },
                   "size": {
@@ -13667,9 +13667,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Stops a Rollout; Cells it reached return to the previous Release."
+        "title": "Stops a Rollout; the cells it reached return to the previous Release."
       },
-      "description": "Stops a Rollout; Cells it reached return to the previous Release.",
+      "description": "Stops a Rollout; the cells it reached return to the previous Release.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}:abort",
       "input_schema": {
@@ -20278,7 +20278,7 @@
                         "type": "string"
                       },
                       "connection": {
-                        "description": "The Kernel Connection holding the APNs, FCM, or VAPID credentials.",
+                        "description": "The Connection holding the APNs, FCM, or VAPID credentials.",
                         "type": "string"
                       },
                       "platform": {
@@ -20414,7 +20414,7 @@
                         "type": "string"
                       },
                       "connection": {
-                        "description": "The Kernel Connection holding the APNs, FCM, or VAPID credentials.",
+                        "description": "The Connection holding the APNs, FCM, or VAPID credentials.",
                         "type": "string"
                       },
                       "platform": {
@@ -24277,25 +24277,25 @@
                               "additionalProperties": {
                                 "type": "string"
                               },
-                              "description": "Required Cell attributes, for example `{\"substrate\": \"metal\"}`.",
+                              "description": "Required cell attributes, for example `{\"substrate\": \"metal\"}`.",
                               "type": "object"
                             },
                             "cells": {
-                              "description": "Specific Cells, for example `hk01`; empty means any matching Cell.",
+                              "description": "Specific cells, for example `fs01`; empty means any matching cell.",
                               "items": {
                                 "type": "string"
                               },
                               "type": "array"
                             },
                             "regions": {
-                              "description": "Regions allowed, for example `hk`; empty means any.",
+                              "description": "Regions allowed, for example `fsn1`; empty means any.",
                               "items": {
                                 "type": "string"
                               },
                               "type": "array"
                             },
                             "replicas": {
-                              "description": "Replicas per Cell; default 1.",
+                              "description": "Replicas per cell; default 1.",
                               "format": "int32",
                               "type": "integer"
                             }
@@ -24354,7 +24354,7 @@
                         "type": "boolean"
                       },
                       "skip_waves": {
-                        "description": "Skip the waves and apply to every Cell together: break-glass only, and\nrefused for any other principal.",
+                        "description": "Skip the waves and apply to every cell together: break-glass only, and\nrefused for any other principal.",
                         "type": "boolean"
                       }
                     },
@@ -25109,7 +25109,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "image": {
-                    "description": "The image: a Kernel Artifact by digest, or `template:<name>`.",
+                    "description": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`.",
                     "type": "string"
                   },
                   "max_age": {
@@ -25231,7 +25231,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "image": {
-                    "description": "The image: a Kernel Artifact by digest, or `template:<name>`.",
+                    "description": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`.",
                     "type": "string"
                   },
                   "max_age": {
@@ -25540,7 +25540,7 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Plain environment variables. Secrets bind through Kernel Secrets, never\nhere.",
+                    "description": "Plain environment variables. Secrets bind through Sylphx Secrets, never\nhere.",
                     "type": "object",
                     "x-sylphx-immutable": true
                   },
@@ -25551,7 +25551,7 @@
                     "x-sylphx-immutable": true
                   },
                   "image": {
-                    "description": "The image: a Kernel Artifact by digest, or `template:<name>` (`base`,\n`desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.",
+                    "description": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`\n(`base`,\n`desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
@@ -25933,9 +25933,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Replaces a running lease's outbound policy. The generation does not change; the Cell applies it before the call returns."
+        "title": "Replaces a running lease's outbound policy. The generation does not change; the new policy applies before the call returns."
       },
-      "description": "Replaces a running lease's outbound policy. The generation does not\nchange; the Cell applies it before the call returns.",
+      "description": "Replaces a running lease's outbound policy. The generation does not\nchange; the new policy applies before the call returns.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:setNetwork",
       "input_schema": {
@@ -26949,9 +26949,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Takes exclusive input control of a lease's display. A HUMAN acquire preempts an AGENT holder and returns a controller stream; an AGENT acquire is refused CONTROL_HELD_BY_HUMAN while a human holds control. Control lapses at `ttl`, which the Cell caps at 30 minutes."
+        "title": "Takes exclusive input control of a lease's display. A HUMAN acquire preempts an AGENT holder and returns a controller stream; an AGENT acquire is refused CONTROL_HELD_BY_HUMAN while a human holds control. Control lapses at `ttl`, which the platform caps at 30 minutes."
       },
-      "description": "Takes exclusive input control of a lease's display. A HUMAN acquire\npreempts an AGENT holder and returns a controller stream; an AGENT acquire\nis refused CONTROL_HELD_BY_HUMAN while a human holds control. Control\nlapses at `ttl`, which the Cell caps at 30 minutes.",
+      "description": "Takes exclusive input control of a lease's display. A HUMAN acquire\npreempts an AGENT holder and returns a controller stream; an AGENT acquire\nis refused CONTROL_HELD_BY_HUMAN while a human holds control. Control\nlapses at `ttl`, which the platform caps at 30 minutes.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:acquireControl",
       "input_schema": {
@@ -26980,7 +26980,7 @@
             "type": "boolean"
           },
           "ttl": {
-            "description": "How long; default 10 minutes, capped at 30 minutes in the Cell.",
+            "description": "How long; default 10 minutes, capped at 30 minutes.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           }
@@ -27631,7 +27631,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "include_memory": {
-                    "description": "Capture process memory too. Refused UNIMPLEMENTED until the microVM\nruntime exposes memory snapshots (sandboxes-e2b.md D1).",
+                    "description": "Capture process memory too. Refused UNIMPLEMENTED until the microVM\nruntime exposes memory snapshots.",
                     "type": "boolean",
                     "x-sylphx-immutable": true
                   },
@@ -28474,7 +28474,7 @@
                 "properties": {
                   "egress": {
                     "additionalProperties": false,
-                    "description": "By the Cell's egress injector.",
+                    "description": "By egress injection into outgoing requests.",
                     "properties": {
                       "header": {
                         "description": "The request header to set, for example `Authorization`.",
@@ -28627,7 +28627,7 @@
                 "properties": {
                   "egress": {
                     "additionalProperties": false,
-                    "description": "By the Cell's egress injector.",
+                    "description": "By egress injection into outgoing requests.",
                     "properties": {
                       "header": {
                         "description": "The request header to set, for example `Authorization`.",
@@ -30984,7 +30984,7 @@
                     "type": "object"
                   },
                   "scratch_gib": {
-                    "description": "Local NVMe scratch at `/scratch` per worker, GiB; 0 is none.",
+                    "description": "Local scratch disk at `/scratch` per worker, GiB; 0 is none.",
                     "format": "int32",
                     "type": "integer"
                   },
@@ -31206,7 +31206,7 @@
                     "type": "object"
                   },
                   "scratch_gib": {
-                    "description": "Local NVMe scratch at `/scratch` per worker, GiB; 0 is none.",
+                    "description": "Local scratch disk at `/scratch` per worker, GiB; 0 is none.",
                     "format": "int32",
                     "type": "integer"
                   },
@@ -31763,7 +31763,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@1c7f0c9e8eb282e0dc6103c01a5554fb83acbd7dedd9360c9780f7c662a14ca4. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@d2c4bc4e63d34051cff8ad2a71a7e0dd897147a402e36274c63d254a3d0ffa42. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
@@ -31775,9 +31775,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Returns the caller: the principal and the scope of the key or token that authenticated this request. Clients fill their org, project, and env defaults from it (resource-api-and-clients.md §3.2); every valid key may call it, whatever its scopes."
+        "title": "Returns the caller: the principal and the scope of the key or token that authenticated this request. Clients fill their org, project, and env defaults from it; every valid key may call it, whatever its scopes."
       },
-      "description": "Returns the caller: the principal and the scope of the key or token that\nauthenticated this request. Clients fill their org, project, and env\ndefaults from it (resource-api-and-clients.md §3.2); every valid key may\ncall it, whatever its scopes.",
+      "description": "Returns the caller: the principal and the scope of the key or token that\nauthenticated this request. Clients fill their org, project, and env\ndefaults from it; every valid key may call it, whatever its scopes.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of Whoami.",
@@ -32234,7 +32234,7 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Environment variables bound to Kernel Secrets: variable name to Secret\nname. The value never enters the spec.",
+                    "description": "Environment variables bound to Sylphx Secrets: variable name to Secret\nname. The value never enters the spec.",
                     "type": "object"
                   },
                   "size": {
