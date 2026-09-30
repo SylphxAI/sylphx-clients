@@ -2,4 +2,4 @@
 # §4.1). A kind is listed only when it passes the computed rule (see
 # `src/eligibility.rs`) and the apply conformance tests. The conformance job
 # checks this list against the computed set.
-kinds = ["money.sylphx.com/Catalog"]
+kinds = []

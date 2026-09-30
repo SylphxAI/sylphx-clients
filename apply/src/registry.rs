@@ -23,7 +23,7 @@ where
 /// One registered Resource type.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ResourceType {
-    /// `money.sylphx.com/Catalog`.
+    /// `money.sylphx.com/PriceCatalog`.
     #[serde(default, rename = "type", deserialize_with = "null_default")]
     pub type_name: String,
     #[serde(default, deserialize_with = "null_default")]

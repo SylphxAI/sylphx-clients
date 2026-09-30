@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn the_list_is_the_pilot_kind_only() {
         let d = Declarable::embedded();
-        assert_eq!(d.kinds().collect::<Vec<_>>(), ["money.sylphx.com/Catalog"]);
+        assert_eq!(d.kinds().collect::<Vec<_>>(), Vec::<&str>::new());
     }
 
     #[test]

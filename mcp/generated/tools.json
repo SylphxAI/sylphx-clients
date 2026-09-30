@@ -16117,6 +16117,1650 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets the environment's catalog."
+      },
+      "description": "Gets the environment's catalog.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/price_catalogs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCatalog.",
+        "properties": {
+          "name": {
+            "description": "The name of the catalog to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/PriceCatalog"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.price_catalogs.get",
+      "permission": "billing:read",
+      "tool": "money_price_catalogs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the environment's catalog: its features and products, whole."
+      },
+      "description": "Updates the environment's catalog: its features and products, whole.",
+      "effect": "write",
+      "http": "PATCH /v1/{catalog.name=orgs/*/projects/*/envs/*/price_catalogs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateCatalog.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the catalog when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "catalog": {
+            "additionalProperties": false,
+            "description": "The catalog to write; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/price_catalogs/default`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "client_grant_ttl": {
+                    "description": "How long a signed store-purchase grant is valid, from the moment it is\nissued; a client re-verifies to renew it. Default 7 days, 1 hour to 30\ndays.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "features": {
+                    "description": "What an entitlement can grant.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A Feature is what an app checks, for example `plus` or\n`exports.per_month`.",
+                      "properties": {
+                        "display_name": {
+                          "description": "Shown to people.",
+                          "type": "string"
+                        },
+                        "key": {
+                          "description": "The key the app checks; `^[a-z][a-z0-9_.]{0,63}$`.",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "description": "`boolean` (on or off) or `limit` (a numeric allowance).",
+                          "enum": [
+                            "boolean",
+                            "limit"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "products": {
+                    "description": "What is sold.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A Product is one thing sold, with its prices and the features it grants.",
+                      "properties": {
+                        "consumable": {
+                          "description": "Whether one purchase is used up (a pack of game currency) rather than\nkept (an unlock or a subscription).",
+                          "type": "boolean"
+                        },
+                        "description": {
+                          "description": "Shown on checkout.",
+                          "type": "string"
+                        },
+                        "display_name": {
+                          "description": "Shown on checkout and invoices.",
+                          "type": "string"
+                        },
+                        "features": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Feature grants: a feature key and, for a `limit` feature, the allowance as\na decimal string; `true` for a boolean feature.",
+                          "type": "object"
+                        },
+                        "grants": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "What one unit grants in the app's own assets, by asset code, as decimal\nstrings, for example `{\"GEMS\": \"650\"}`. Carried in the signed grant so the\napp's server credits exactly this.",
+                          "type": "object"
+                        },
+                        "key": {
+                          "description": "The product key; `^[a-z][a-z0-9_]{0,63}$`.",
+                          "type": "string"
+                        },
+                        "prices": {
+                          "description": "The product's prices.",
+                          "items": {
+                            "additionalProperties": false,
+                            "description": "A Price is one way to pay for a product, named by its lookup key.",
+                            "properties": {
+                              "archived": {
+                                "description": "Whether checkout may sell this price.",
+                                "type": "boolean"
+                              },
+                              "key": {
+                                "description": "The lookup key the app uses; `^[a-z][a-z0-9_]{0,63}$`, unique in the\ncatalog.",
+                                "type": "string"
+                              },
+                              "recurring_interval": {
+                                "description": "Unset for a one-time price; `day`, `week`, `month`, or `year`.",
+                                "type": "string"
+                              },
+                              "recurring_interval_count": {
+                                "description": "Intervals per period; default 1.",
+                                "format": "int32",
+                                "type": "integer"
+                              },
+                              "tax_behavior": {
+                                "description": "`inclusive` (the amount includes tax) or `exclusive`.",
+                                "type": "string"
+                              },
+                              "trial_days": {
+                                "description": "Free trial days for a recurring price.",
+                                "format": "int32",
+                                "type": "integer"
+                              },
+                              "unit_amounts": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "description": "Unit amount per ISO 4217 currency code in upper case, as a decimal string\nof minor units, for example `{\"USD\": \"499\", \"GBP\": \"399\"}`. The first\ncurrency in code order is the processor's default.",
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "unit_amounts"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "store_product_ids": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Store product ids that sell this product, by store (`app_store`,\n`google_play`).",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "display_name"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "catalog"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.price_catalogs.update",
+      "permission": "billing:write",
+      "tool": "money_price_catalogs_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Pushes the catalog to the merchant account's processor now: products and prices by lookup key; an amount change makes a new price."
+      },
+      "description": "Pushes the catalog to the merchant account's processor now: products and\nprices by lookup key; an amount change makes a new price.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/price_catalogs/*}:sync",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SyncCatalog.",
+        "properties": {
+          "name": {
+            "description": "The catalog to push.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/PriceCatalog"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.price_catalogs.sync",
+      "permission": "billing:write",
+      "tool": "money_price_catalogs_sync"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a store connection."
+      },
+      "description": "Gets a store connection.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/store_connections/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetStoreConnection.",
+        "properties": {
+          "name": {
+            "description": "The name of the store connection to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConnection"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_connections.get",
+      "permission": "billing:read",
+      "tool": "money_store_connections_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists store connections."
+      },
+      "description": "Lists store connections.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/store_connections",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListStoreConnections.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConnection"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_connections.list",
+      "permission": "billing:read",
+      "tool": "money_store_connections_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a store connection; its credential is sealed and never returned."
+      },
+      "description": "Creates a store connection; its credential is sealed and never returned.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/store_connections",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateStoreConnection.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConnection"
+          },
+          "store_connection": {
+            "additionalProperties": false,
+            "description": "The store connection to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/store_connections/{store_connection}`;\nby convention `app-store` or `google-play`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "allow_sandbox": {
+                    "description": "Accept purchases the store marks as sandbox or license-test. Off in\nproduction: a sandbox purchase is then refused.",
+                    "type": "boolean"
+                  },
+                  "app_store": {
+                    "additionalProperties": false,
+                    "description": "The App Store.",
+                    "properties": {
+                      "account_token_prefix": {
+                        "description": "An earlier `appAccountToken` scheme the app's shipped builds use: the\ntoken is UUIDv5 in the URL namespace of this prefix followed by the\nsubject id (for example `https://accounts.example.com/v2/`). Tokens in\nMoney's own scheme are always accepted as well.",
+                        "type": "string"
+                      },
+                      "app_apple_id": {
+                        "description": "The app's Apple id, needed to verify production notifications.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "bundle_ids": {
+                        "description": "The apps' bundle ids.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "issuer_id": {
+                        "description": "The App Store Connect issuer id.",
+                        "type": "string"
+                      },
+                      "key_id": {
+                        "description": "The In-App Purchase key id.",
+                        "type": "string"
+                      },
+                      "private_key": {
+                        "description": "The In-App Purchase key (`.p8` PEM). Write-only: sealed on write, never\nreturned; omit it on update to keep the stored key.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      }
+                    },
+                    "required": [
+                      "bundle_ids",
+                      "issuer_id",
+                      "key_id"
+                    ],
+                    "type": "object"
+                  },
+                  "google_play": {
+                    "additionalProperties": false,
+                    "description": "Google Play.",
+                    "properties": {
+                      "notification_audience": {
+                        "description": "The audience Play's Pub/Sub push token must carry for real-time developer\nnotifications; unset refuses them.",
+                        "type": "string"
+                      },
+                      "notification_service_account": {
+                        "description": "The service account Pub/Sub pushes as.",
+                        "type": "string"
+                      },
+                      "package_names": {
+                        "description": "The apps' package names.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "service_account_json": {
+                        "description": "The service account's JSON key. Write-only: sealed on write, never\nreturned; omit it on update to keep the stored key.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      }
+                    },
+                    "required": [
+                      "package_names"
+                    ],
+                    "type": "object"
+                  },
+                  "require_account_token": {
+                    "description": "Refuse a purchase that does not carry the subject's account token (App\nStore `appAccountToken`, Play `obfuscatedAccountId`).",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "store_connection_id": {
+            "description": "The store connection id, the final name segment.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "store_connection_id",
+          "store_connection"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_connections.create",
+      "permission": "billing:write",
+      "tool": "money_store_connections_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a store connection; a new credential replaces the stored one."
+      },
+      "description": "Updates a store connection; a new credential replaces the stored one.",
+      "effect": "write",
+      "http": "PATCH /v1/{store_connection.name=orgs/*/projects/*/envs/*/store_connections/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateStoreConnection.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the store connection when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "store_connection": {
+            "additionalProperties": false,
+            "description": "The store connection to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/store_connections/{store_connection}`;\nby convention `app-store` or `google-play`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "allow_sandbox": {
+                    "description": "Accept purchases the store marks as sandbox or license-test. Off in\nproduction: a sandbox purchase is then refused.",
+                    "type": "boolean"
+                  },
+                  "app_store": {
+                    "additionalProperties": false,
+                    "description": "The App Store.",
+                    "properties": {
+                      "account_token_prefix": {
+                        "description": "An earlier `appAccountToken` scheme the app's shipped builds use: the\ntoken is UUIDv5 in the URL namespace of this prefix followed by the\nsubject id (for example `https://accounts.example.com/v2/`). Tokens in\nMoney's own scheme are always accepted as well.",
+                        "type": "string"
+                      },
+                      "app_apple_id": {
+                        "description": "The app's Apple id, needed to verify production notifications.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "bundle_ids": {
+                        "description": "The apps' bundle ids.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "issuer_id": {
+                        "description": "The App Store Connect issuer id.",
+                        "type": "string"
+                      },
+                      "key_id": {
+                        "description": "The In-App Purchase key id.",
+                        "type": "string"
+                      },
+                      "private_key": {
+                        "description": "The In-App Purchase key (`.p8` PEM). Write-only: sealed on write, never\nreturned; omit it on update to keep the stored key.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      }
+                    },
+                    "required": [
+                      "bundle_ids",
+                      "issuer_id",
+                      "key_id"
+                    ],
+                    "type": "object"
+                  },
+                  "google_play": {
+                    "additionalProperties": false,
+                    "description": "Google Play.",
+                    "properties": {
+                      "notification_audience": {
+                        "description": "The audience Play's Pub/Sub push token must carry for real-time developer\nnotifications; unset refuses them.",
+                        "type": "string"
+                      },
+                      "notification_service_account": {
+                        "description": "The service account Pub/Sub pushes as.",
+                        "type": "string"
+                      },
+                      "package_names": {
+                        "description": "The apps' package names.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "service_account_json": {
+                        "description": "The service account's JSON key. Write-only: sealed on write, never\nreturned; omit it on update to keep the stored key.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      }
+                    },
+                    "required": [
+                      "package_names"
+                    ],
+                    "type": "object"
+                  },
+                  "require_account_token": {
+                    "description": "Refuse a purchase that does not carry the subject's account token (App\nStore `appAccountToken`, Play `obfuscatedAccountId`).",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "store_connection"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_connections.update",
+      "permission": "billing:write",
+      "tool": "money_store_connections_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a store connection and its sealed credential."
+      },
+      "description": "Deletes a store connection and its sealed credential.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/store_connections/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteStoreConnection.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "The ETag the caller read; the delete fails if it changed.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the store connection to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConnection"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_connections.delete",
+      "permission": "billing:write",
+      "tool": "money_store_connections_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Verifies a store purchase with the store, binds it to the subject, and returns its record and a signed grant. Re-verifying returns the same record and grant. Called from the app's server with a secret key that holds `billing:write`; a publishable key cannot call it."
+      },
+      "description": "Verifies a store purchase with the store, binds it to the subject, and\nreturns its record and a signed grant. Re-verifying returns the same\nrecord and grant. Called from the app's server with a secret key that\nholds `billing:write`; a publishable key cannot call it.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/store_purchases:verify",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of VerifyStorePurchase.",
+        "properties": {
+          "package_name": {
+            "description": "Google Play: the package name, when the connection covers several.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment the purchase is verified in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StorePurchase"
+          },
+          "product_id": {
+            "description": "Google Play: the store product id (for a subscription, its id).",
+            "type": "string"
+          },
+          "purchase_token": {
+            "description": "Google Play: the purchase token.",
+            "type": "string"
+          },
+          "signed_transaction": {
+            "description": "App Store: the StoreKit 2 signed transaction (`jwsRepresentation`).",
+            "type": "string"
+          },
+          "store": {
+            "description": "`app_store` or `google_play`.",
+            "type": "string"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "description": "Who bought it.",
+            "properties": {
+              "customer_organization": {
+                "description": "A customer organization's id.",
+                "type": "string"
+              },
+              "end_user": {
+                "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "subject",
+          "store"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_purchases.verify",
+      "permission": "billing:write",
+      "tool": "money_store_purchases_verify"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a store purchase."
+      },
+      "description": "Gets a store purchase.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/store_purchases/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetStorePurchase.",
+        "properties": {
+          "name": {
+            "description": "The name of the store purchase to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StorePurchase"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_purchases.get",
+      "permission": "billing:read",
+      "tool": "money_store_purchases_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists store purchases, newest first."
+      },
+      "description": "Lists store purchases, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/store_purchases",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListStorePurchases.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over filterable fields, for example `transaction_id = \"…\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StorePurchase"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_purchases.list",
+      "permission": "billing:read",
+      "tool": "money_store_purchases_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a customer subscription."
+      },
+      "description": "Gets a customer subscription.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/customer_subscriptions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCustomerSubscription.",
+        "properties": {
+          "name": {
+            "description": "The name of the customer subscription to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CustomerSubscription"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.customer_subscriptions.get",
+      "permission": "billing:read",
+      "tool": "money_customer_subscriptions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists customer subscriptions, newest first."
+      },
+      "description": "Lists customer subscriptions, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/customer_subscriptions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListCustomerSubscriptions.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CustomerSubscription"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.customer_subscriptions.list",
+      "permission": "billing:read",
+      "tool": "money_customer_subscriptions_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Cancels a web subscription, now or at the period end, and optionally refunds its last payment (for example a statutory cancellation window)."
+      },
+      "description": "Cancels a web subscription, now or at the period end, and optionally\nrefunds its last payment (for example a statutory cancellation window).",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/customer_subscriptions/*}:cancel",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CancelCustomerSubscription.",
+        "properties": {
+          "at_period_end": {
+            "description": "End it at the period end (true) or now (false).",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The subscription to cancel.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CustomerSubscription"
+          },
+          "refund_last_payment": {
+            "description": "Refund the last payment in full; only with `at_period_end` false.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.customer_subscriptions.cancel",
+      "permission": "billing:write",
+      "tool": "money_customer_subscriptions_cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Resumes a web subscription set to cancel at its period end."
+      },
+      "description": "Resumes a web subscription set to cancel at its period end.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/customer_subscriptions/*}:resume",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ResumeCustomerSubscription.",
+        "properties": {
+          "name": {
+            "description": "The subscription to resume.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CustomerSubscription"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.customer_subscriptions.resume",
+      "permission": "billing:write",
+      "tool": "money_customer_subscriptions_resume"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an entitlement grant."
+      },
+      "description": "Gets an entitlement grant.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/entitlement_grants/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetEntitlementGrant.",
+        "properties": {
+          "name": {
+            "description": "The name of the entitlement grant to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/EntitlementGrant"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.entitlement_grants.get",
+      "permission": "billing:read",
+      "tool": "money_entitlement_grants_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists entitlement grants."
+      },
+      "description": "Lists entitlement grants.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListEntitlementGrants.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over filterable fields, for example `feature = \"plus\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/EntitlementGrant"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.entitlement_grants.list",
+      "permission": "billing:read",
+      "tool": "money_entitlement_grants_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Answers whether a subject holds a feature now, and how much of it."
+      },
+      "description": "Answers whether a subject holds a feature now, and how much of it.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants:check",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CheckEntitlement.",
+        "properties": {
+          "feature": {
+            "description": "The feature key.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to check in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/EntitlementGrant"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "description": "Who.",
+            "properties": {
+              "customer_organization": {
+                "description": "A customer organization's id.",
+                "type": "string"
+              },
+              "end_user": {
+                "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "subject",
+          "feature"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.entitlement_grants.check",
+      "permission": "billing:read",
+      "tool": "money_entitlement_grants_check"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a merchant account."
+      },
+      "description": "Gets a merchant account.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMerchantAccount.",
+        "properties": {
+          "name": {
+            "description": "The name of the merchant account to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.get",
+      "permission": "billing:read",
+      "tool": "money_merchant_accounts_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists merchant accounts."
+      },
+      "description": "Lists merchant accounts.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMerchantAccounts.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.list",
+      "permission": "billing:read",
+      "tool": "money_merchant_accounts_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts connecting a Stripe account: returns the processor's authorisation URL for an org owner to open, which the processor's redirect completes. With a restricted key in the request the account connects at once instead, and the connected merchant account comes back in the response."
+      },
+      "description": "Starts connecting a Stripe account: returns the processor's authorisation\nURL for an org owner to open, which the processor's redirect completes.\nWith a restricted key in the request the account connects at once\ninstead, and the connected merchant account comes back in the response.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ConnectMerchantAccount.",
+        "properties": {
+          "merchant_account_id": {
+            "description": "The merchant account id; default `default`.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment whose seller this becomes.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          },
+          "restricted_key": {
+            "description": "A Stripe restricted key (`rk_test_…` or `rk_live_…`); when set, no OAuth\nhappens: the account is read and connected at once. Write-only: sealed on\nwrite, never returned, never logged. A secret key (`sk_…`) is refused,\nbecause a restricted key can be limited to what payments need.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "return_url": {
+            "description": "Where the browser returns after the processor, with `status` and, on\nsuccess, `merchant_account` in the query. HTTPS only. Required for the\nOAuth connection; unused, and so optional, with `restricted_key`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.connect",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_connect"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Reads the connected account back from the processor."
+      },
+      "description": "Reads the connected account back from the processor.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RefreshMerchantAccount.",
+        "properties": {
+          "name": {
+            "description": "The merchant account to read back.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.refresh",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_refresh"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Disconnects the account: Sylphx loses access; checkout is refused."
+      },
+      "description": "Disconnects the account: Sylphx loses access; checkout is refused.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DisconnectMerchantAccount.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The merchant account to disconnect.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.disconnect",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_disconnect"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a hosted checkout for a subject."
+      },
+      "description": "Creates a hosted checkout for a subject.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/checkout_sessions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateCheckoutSession.",
+        "properties": {
+          "checkout_session": {
+            "additionalProperties": false,
+            "description": "The checkout to create; only caller-writable fields are read.",
+            "properties": {
+              "allow_promotion_codes": {
+                "description": "Whether the buyer may enter a promotion code.",
+                "type": "boolean",
+                "x-sylphx-immutable": true
+              },
+              "cancel_url": {
+                "description": "Where the buyer lands on cancel. HTTPS only.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "currency_code": {
+                "description": "The currency to charge in, upper-case ISO 4217; default the processor's\nchoice for the buyer among the prices' currencies.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "line_items": {
+                "description": "What is bought: catalog prices by lookup key. One recurring price makes a\nsubscription; one-time prices make an order.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "A Line Item is one catalog price and its quantity.",
+                  "properties": {
+                    "price": {
+                      "description": "The price's lookup key.",
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "description": "How many; default 1. Seats for a per-seat or family price.",
+                      "format": "int32",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "price"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
+              "locale": {
+                "description": "The page language, for example `en` or `zh-HK`; default automatic.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "metadata": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Copied to the subscription or order, for example attribution\n(`utm_source`, `ref`). At most 20 keys.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}`.",
+                "type": "string"
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "Who pays and is entitled.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "success_url": {
+                "description": "Where the buyer lands after paying; `{CHECKOUT_SESSION_ID}` is replaced\nby the processor's session id. HTTPS only.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              }
+            },
+            "required": [
+              "subject",
+              "line_items",
+              "success_url"
+            ],
+            "type": "object"
+          },
+          "checkout_session_id": {
+            "description": "The id, the final name segment; the server assigns one when empty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          }
+        },
+        "required": [
+          "parent",
+          "checkout_session"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.checkout_sessions.create",
+      "permission": "billing:write",
+      "tool": "money_checkout_sessions_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a checkout session."
+      },
+      "description": "Gets a checkout session.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCheckoutSession.",
+        "properties": {
+          "name": {
+            "description": "The name of the checkout session to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.checkout_sessions.get",
+      "permission": "billing:read",
+      "tool": "money_checkout_sessions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a customer portal session for a subject."
+      },
+      "description": "Creates a customer portal session for a subject.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/portal_sessions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreatePortalSession.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/PortalSession"
+          },
+          "portal_session": {
+            "additionalProperties": false,
+            "description": "The portal session to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/portal_sessions/{portal_session}`.",
+                "type": "string"
+              },
+              "return_url": {
+                "description": "Where the portal's back link goes. HTTPS only.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "Whose portal.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-sylphx-immutable": true
+              }
+            },
+            "required": [
+              "subject",
+              "return_url"
+            ],
+            "type": "object"
+          },
+          "portal_session_id": {
+            "description": "The id, the final name segment; the server assigns one when empty.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "portal_session"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.portal_sessions.create",
+      "permission": "billing:write",
+      "tool": "money_portal_sessions_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a portal session."
+      },
+      "description": "Gets a portal session.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/portal_sessions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetPortalSession.",
+        "properties": {
+          "name": {
+            "description": "The name of the portal session to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/PortalSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.portal_sessions.get",
+      "permission": "billing:read",
+      "tool": "money_portal_sessions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a domain."
       },
       "description": "Gets a domain.",
@@ -27922,7 +29566,7 @@
       "tool": "workflows_runs_read_history"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@b35a4f28ec11be6ab9e9ad2fd7a6b7c0fa380280dbff327240e0f25316985ec5. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@b505f0082a8c2462b29f444aed4b67af792d08bd79686c0c8fb9188edf24f3b7. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"

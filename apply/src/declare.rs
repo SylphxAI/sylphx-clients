@@ -23,7 +23,7 @@ pub struct DeclMeta {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Declaration {
-    /// The registry's resource type: `money.sylphx.com/Catalog`.
+    /// The registry's resource type: `money.sylphx.com/PriceCatalog`.
     pub kind: String,
     /// A slug; absent for a singleton.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -109,7 +109,7 @@ name = "ignored"
 name = "web"
 
 [[resource]]
-kind = "money.sylphx.com/Catalog"
+kind = "money.sylphx.com/PriceCatalog"
 
 [resource.spec]
 features = [{ key = "plus", kind = "boolean" }]
@@ -138,7 +138,7 @@ destroy = false
     fn toml_tables_parse_and_other_tables_are_ignored() {
         let d = Declarations::from_toml(TOML).unwrap();
         assert_eq!(d.resources.len(), 2);
-        assert_eq!(d.resources[0].kind, "money.sylphx.com/Catalog");
+        assert_eq!(d.resources[0].kind, "money.sylphx.com/PriceCatalog");
         assert_eq!(d.resources[0].name, None);
         assert_eq!(d.resources[0].spec["products"][0]["key"], "plus_monthly");
         assert_eq!(d.resources[1].name.as_deref(), Some("main"));
