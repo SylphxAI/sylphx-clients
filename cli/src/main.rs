@@ -7,6 +7,7 @@
 
 mod auth;
 mod context;
+mod enable;
 mod names;
 mod output;
 mod token;
@@ -177,6 +178,26 @@ fn cli(tree: &Tree) -> Command {
                 ),
         );
     for s in tree::service_commands(tree) {
+        // Enable Auth is porcelain on the generated `auth` service: it binds
+        // Sylphx Auth to an environment through the composition route.
+        let s = if s.get_name() == "auth" {
+            s.subcommand(
+                Command::new("enable")
+                    .about("Enable Sylphx Auth on an environment (idempotent); prints its instance")
+                    .arg(
+                        Arg::new("env")
+                            .long("env")
+                            .value_name("NAME|ID")
+                            .help("orgs/{org}/projects/{project}/envs/{env}, or an environment id in the linked project; default: the linked or key's environment"),
+                    ),
+            )
+            .subcommand(
+                Command::new("status")
+                    .about("Show whether Sylphx Auth is enabled, and its instance"),
+            )
+        } else {
+            s
+        };
         cmd = cmd.subcommand(s);
     }
     cmd
@@ -389,12 +410,96 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             clap_complete::generate(shell, &mut cmd, "sylphx", &mut std::io::stdout());
             Ok(())
         }
+        "auth" if matches!(sub.subcommand_name(), Some("enable" | "status")) => {
+            let (verb, vm) = sub.subcommand().expect("checked");
+            auth_enable(&client().await?, verb, vm, format).await
+        }
         service => {
             let (method, mm) = tree::find(tree, service, sub)
                 .ok_or_else(|| Failure::Usage(format!("unknown command under `{service}`")))?;
             generated(&client().await?, method, &mm, m, format).await
         }
     }
+}
+
+/// `sylphx auth enable [--env]` and `sylphx auth status`.
+async fn auth_enable(
+    client: &Client,
+    verb: &str,
+    sub: &ArgMatches,
+    format: Format,
+) -> Result<(), Failure> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let link = match context::find_link(&cwd) {
+        Some((_, l)) => l,
+        None => Link::from_whoami(&client.invoke("access.whoami", json!({})).await?),
+    };
+    // Full names may carry slugs; resolve them to ids first.
+    let given = sub.try_get_one::<String>("env").ok().flatten().cloned();
+    let (project, env) = match given {
+        Some(e) if e.starts_with("orgs/") => {
+            let full = names::resolve(client, &e).await?;
+            let project = full.split("/envs/").next().unwrap_or_default().to_string();
+            (project, full)
+        }
+        Some(e) => (link.project.clone(), e),
+        None => (link.project.clone(), link.env.clone()),
+    };
+    if project.is_empty() || env.is_empty() {
+        return Err(Failure::Usage(
+            "no environment: pass --env, or run `sylphx link --env …`".into(),
+        ));
+    }
+    let path = enable::bindings_path(&project);
+    let render = |v: &Value| {
+        output::render(
+            v,
+            if format == Format::Table {
+                Format::Yaml
+            } else {
+                format
+            },
+        )
+    };
+    if verb == "status" {
+        let list: Value = client
+            .call(HttpRequest {
+                method: "GET",
+                path,
+                query: vec![],
+                body: None,
+                mutation: false,
+                origin: None,
+                effect_ids: false,
+            })
+            .await?;
+        println!("{}", render(&enable::status(&list)));
+        return Ok(());
+    }
+    let answer: Value = client
+        .call(HttpRequest {
+            method: "PUT",
+            path,
+            query: vec![],
+            body: Some(enable::enable_body(&env)),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        })
+        .await?;
+    let instance = enable::organization_id(&answer).ok_or_else(|| {
+        Failure::Refused("Auth was bound but the answer names no instance".into())
+    })?;
+    if format == Format::Table {
+        println!("Sylphx Auth is enabled on {}.", enable::bare_id(&env));
+        println!("Instance (SYLPHX_AUTH_ORGANIZATION_ID): {instance}");
+    } else {
+        println!(
+            "{}",
+            render(&json!({"organizationId": instance, "binding": answer}))
+        );
+    }
+    Ok(())
 }
 
 async fn login(

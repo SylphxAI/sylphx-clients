@@ -782,3 +782,64 @@ async fn token_from_an_api_key_that_cannot_mint_prints_it_only_if_short_lived() 
     assert!(!out.status.success() && out.stdout.is_empty());
     assert_eq!(log.lock().unwrap().len(), 2);
 }
+
+/// Enable Auth binds Sylphx Auth into the linked environment's identity slot
+/// with the composition route's own request (`PUT .../composition/bindings`),
+/// and prints the instance the answer names. The route's server side is
+/// covered by the composition bind tests in `sylphx-apps-api`.
+#[tokio::test(flavor = "multi_thread")]
+async fn auth_enable_binds_the_linked_environment_and_prints_the_instance() {
+    let (url, log) = serve(vec![(
+        200,
+        json!({"status": "active", "providerId": "sylphx-auth",
+               "config": {"organizationId": "org-1"}}),
+    )])
+    .await;
+    let sb = Sandbox::new("auth-enable");
+    let out = run(&sb, &url, &["auth", "enable"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(text.contains("org-1"), "{text}");
+    let log = log.lock().unwrap().clone();
+    assert!(
+        log[0]
+            .line
+            .starts_with("PUT /v1/projects/prj_a/composition/bindings "),
+        "{}",
+        log[0].line
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(&log[0].body).unwrap(),
+        json!({"capabilityId": "identity", "slot": "identity",
+               "providerId": "sylphx-auth", "environmentId": "env_a"})
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn auth_status_reads_the_identity_bindings_back() {
+    let (url, log) = serve(vec![(
+        200,
+        json!({"bindings": [
+            {"slot": "identity", "environmentId": "e1", "providerId": "sylphx-auth",
+             "status": "active", "config": {"organizationId": "org-1"}},
+            {"slot": "email", "environmentId": "e1", "providerId": "x"}]}),
+    )])
+    .await;
+    let sb = Sandbox::new("auth-status");
+    let out = run(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(printed["enabled"], true, "{printed}");
+    assert_eq!(printed["bindings"][0]["organizationId"], "org-1");
+    assert!(log.lock().unwrap()[0]
+        .line
+        .starts_with("GET /v1/projects/prj_a/composition/bindings "));
+}
