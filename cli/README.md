@@ -13,6 +13,7 @@ sylphx logout                         # revokes the key and forgets it
 sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx/project.json)
 sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
+sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
 sylphx mcp                            # the MCP server over stdio
 ```
 
@@ -25,6 +26,11 @@ sylphx mcp                            # the MCP server over stdio
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
+- `sylphx devices run` installs an APK on a fresh Android device lease,
+  launches it (or a `--game-loop`), watches it with screenshots, and writes
+  `result.json`, `junit.xml`, `logcat.txt`, and `crash.txt` into `--out`
+  (`device-results/`). Exit 0 passed, 1 failed, 2 infrastructure; the lease is
+  released on the way out unless `--keep`.
 
 ## `sylphx token --scope <scope>`
 

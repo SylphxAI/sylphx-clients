@@ -3,10 +3,11 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `mcp`, `completion`) is hand-written on the same SDK.
+//! `api`, `devices`, `mcp`, `completion`) is hand-written on the same SDK.
 
 mod auth;
 mod context;
+mod devices;
 mod enable;
 mod names;
 mod output;
@@ -168,6 +169,7 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(Command::new("mcp").about("Run the Sylphx MCP server over stdio"))
+        .subcommand(devices::command())
         .subcommand(
             Command::new("completion")
                 .about("Print a shell completion script")
@@ -221,6 +223,7 @@ async fn main() -> ExitCode {
             eprintln!("{}", describe(&e));
             ExitCode::from(1)
         }
+        Err(Failure::Exit(code)) => ExitCode::from(code),
     }
 }
 
@@ -229,6 +232,9 @@ enum Failure {
     /// A one-line reason on stderr, exit 1.
     Refused(String),
     Api(Error),
+    /// The command ran to a verdict and printed its own report; the number is
+    /// its exit status (`sylphx devices run`).
+    Exit(u8),
 }
 
 impl From<String> for Failure {
@@ -341,6 +347,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             Ok(())
         }
         "link" => link(&client().await?, sub).await,
+        "devices" => devices::run(&client().await?, sub).await,
         "api" => {
             let method = sub.get_one::<String>("method").expect("required").clone();
             let path = sub.get_one::<String>("path").expect("required").clone();

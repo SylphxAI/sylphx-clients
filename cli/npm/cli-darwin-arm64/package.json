@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/cli-darwin-arm64",
-	"version": "0.25.2",
+	"version": "0.26.0",
 	"description": "The sylphx CLI binary for darwin arm64 (aarch64-apple-darwin). Install @sylphx/cli instead.",
 	"license": "MIT",
 	"repository": {
