@@ -424,9 +424,82 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         service => {
             let (method, mm) = tree::find(tree, service, sub)
                 .ok_or_else(|| Failure::Usage(format!("unknown command under `{service}`")))?;
+            if matches!(
+                method.method.as_str(),
+                "workflows.schedules.list" | "workflows.schedules.get"
+            ) {
+                return compute_schedules(api_key, base_url, method, &mm, format).await;
+            }
             generated(&client().await?, method, &mm, m, format).await
         }
     }
+}
+
+/// `sylphx workflows schedules list|get`: the schedules a manifest declares
+/// (`[[compute.schedules]]`) live in Compute, which answers them at
+/// `/v1/schedules` for the key's own project, with the last tick and the
+/// dead letters. The platform api's `schedules` collection only holds the
+/// retired cron rows, so these two verbs read Compute.
+async fn compute_schedules(
+    api_key: Option<String>,
+    base_url: Option<String>,
+    method: &MethodCmd,
+    mm: &ArgMatches,
+    format: Format,
+) -> Result<(), Failure> {
+    let url = std::env::var("SYLPHX_COMPUTE_URL")
+        .ok()
+        .filter(|u| !u.is_empty())
+        .or(base_url)
+        .or_else(|| {
+            std::env::var("SYLPHX_BASE_URL")
+                .ok()
+                .filter(|u| !u.is_empty())
+        })
+        .unwrap_or_else(|| "https://api.compute.sylphx.com".to_string());
+    let client = context::client(api_key, Some(url)).await?.ok_or_else(|| {
+        Failure::Usage(
+            "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY".into(),
+        )
+    })?;
+    let (path, query) = if method.verb == "get" {
+        let id = mm.get_one::<String>("__positional").ok_or_else(|| {
+            Failure::Usage("name the schedule: sylphx workflows schedules get <id>".into())
+        })?;
+        (format!("/v1/schedules/{}", enable::bare_id(id)), vec![])
+    } else {
+        let (values, _) = tree::flag_values(method, mm)?;
+        let mut query = vec![];
+        for (field, value) in values {
+            let key = match field.as_str() {
+                "page_size" => "limit",
+                "page_token" => "cursor",
+                _ => continue,
+            };
+            let text = match &value {
+                Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            query.push((key.to_string(), text));
+        }
+        ("/v1/schedules".to_string(), query)
+    };
+    let v: Value = client
+        .call(HttpRequest {
+            method: "GET",
+            path,
+            query,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        })
+        .await?;
+    let text = output::render(&v, format);
+    if !text.is_empty() {
+        println!("{text}");
+    }
+    Ok(())
 }
 
 /// `sylphx auth enable [--env]` and `sylphx auth status`.

@@ -843,3 +843,43 @@ async fn auth_status_reads_the_identity_bindings_back() {
         .line
         .starts_with("GET /v1/projects/prj_a/composition/bindings "));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn workflows_schedules_read_the_served_compute_route() {
+    let sched = json!({"id": "sched_1", "name": "nightly", "status": "active"});
+    let (url, log) = serve(vec![
+        (200, json!({"schedules": [sched.clone()], "limit": 50})),
+        (200, sched),
+    ])
+    .await;
+    let sb = Sandbox::new("schedules");
+    let out = run(&sb, &url, &["workflows", "schedules", "list", "-o", "json"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stdout).contains("sched_1"));
+    let out = run(
+        &sb,
+        &url,
+        &["workflows", "schedules", "get", "sched_1", "-o", "json"],
+    )
+    .await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let seen = log.lock().unwrap();
+    assert!(
+        seen[0].line.starts_with("GET /v1/schedules "),
+        "{}",
+        seen[0].line
+    );
+    assert!(
+        seen[1].line.starts_with("GET /v1/schedules/sched_1 "),
+        "{}",
+        seen[1].line
+    );
+}
