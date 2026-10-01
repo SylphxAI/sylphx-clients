@@ -55,10 +55,22 @@ pub fn host_label() -> String {
                 .filter(|s| !s.is_empty())
         })
         .unwrap_or_default();
-    raw.chars()
-        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
-        .take(64)
-        .collect()
+    // Other characters (a space, a middle dot) become one `-`, so two words
+    // never fuse into one; Access applies the same rule.
+    let mut out = String::new();
+    let mut gap = false;
+    for c in raw.chars() {
+        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
+            if gap && !out.is_empty() && !out.ends_with('-') && c != '-' {
+                out.push('-');
+            }
+            gap = false;
+            out.push(c);
+        } else {
+            gap = true;
+        }
+    }
+    out.chars().take(64).collect()
 }
 
 /// The key a device approval issued.
