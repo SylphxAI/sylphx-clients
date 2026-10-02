@@ -1222,6 +1222,7 @@
       "commands": [],
       "display_name": "Sylphx Artifacts",
       "noun": "artifacts",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -1421,6 +1422,7 @@
       "commands": [],
       "display_name": "Sylphx Generated Assets",
       "noun": "assets",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -4004,6 +4006,7 @@
       "commands": [],
       "display_name": "Sylphx Billing",
       "noun": "billing",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -4342,6 +4345,7 @@
       "commands": [],
       "display_name": "Sylphx Broker",
       "noun": "broker",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -4715,6 +4719,7 @@
       "commands": [],
       "display_name": "Sylphx Build",
       "noun": "build",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -5838,6 +5843,7 @@
       "commands": [],
       "display_name": "Sylphx Connections",
       "noun": "connections",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -7180,6 +7186,7 @@
       "commands": [],
       "display_name": "Sylphx Entitlement",
       "noun": "entitlement",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -10473,6 +10480,7 @@
       "commands": [],
       "display_name": "Sylphx Hosting",
       "noun": "hosting",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -11069,6 +11077,7 @@
       "commands": [],
       "display_name": "Sylphx Keys",
       "noun": "keys",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -13972,6 +13981,7 @@
       "commands": [],
       "display_name": "Sylphx Network",
       "noun": "network",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -17890,6 +17900,7 @@
       "commands": [],
       "display_name": "Sylphx Release",
       "noun": "release",
+      "served": false,
       "stage": "preview"
     },
     {
@@ -18222,6 +18233,7 @@
       "commands": [],
       "display_name": "Sylphx Runners",
       "noun": "runners",
+      "served": false,
       "stage": "preview"
     },
     {

@@ -1464,7 +1464,7 @@
         "readOnlyHint": true,
         "title": "Gets an artifact."
       },
-      "description": "Gets an artifact.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an artifact.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/artifacts/*}",
       "input_schema": {
@@ -1485,6 +1485,7 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.get",
       "permission": "artifacts:read",
+      "served": false,
       "tool": "artifacts_artifacts_get"
     },
     {
@@ -1495,7 +1496,7 @@
         "readOnlyHint": true,
         "title": "Lists a project's artifacts; filter by `digest`, `kind`, or `subject`."
       },
-      "description": "Lists a project's artifacts; filter by `digest`, `kind`, or `subject`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a project's artifacts; filter by `digest`, `kind`, or `subject`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/artifacts",
       "input_schema": {
@@ -1533,6 +1534,7 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.list",
       "permission": "artifacts:read",
+      "served": false,
       "tool": "artifacts_artifacts_list"
     },
     {
@@ -1543,7 +1545,7 @@
         "readOnlyHint": false,
         "title": "Registers an artifact whose bytes were pushed by digest; verification runs after."
       },
-      "description": "Registers an artifact whose bytes were pushed by digest; verification runs after.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Registers an artifact whose bytes were pushed by digest; verification runs after.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/artifacts",
       "input_schema": {
@@ -1665,6 +1667,7 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.create",
       "permission": "artifacts:write",
+      "served": false,
       "tool": "artifacts_artifacts_create"
     },
     {
@@ -1675,7 +1678,7 @@
         "readOnlyHint": false,
         "title": "Deletes an artifact; fails while a Release references it or a legal hold is active."
       },
-      "description": "Deletes an artifact; fails while a Release references it or a legal hold is active.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an artifact; fails while a Release references it or a legal hold is active.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/artifacts/*}",
       "input_schema": {
@@ -1710,6 +1713,7 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.delete",
       "permission": "artifacts:write",
+      "served": false,
       "tool": "artifacts_artifacts_delete"
     },
     {
@@ -1720,7 +1724,7 @@
         "readOnlyHint": true,
         "title": "Gets an asset."
       },
-      "description": "Gets an asset.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an asset.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/assets/*}",
       "input_schema": {
@@ -1741,6 +1745,7 @@
       "long_running": false,
       "method_id": "assets.assets.get",
       "permission": "assets:read",
+      "served": false,
       "tool": "assets_assets_get"
     },
     {
@@ -1751,7 +1756,7 @@
         "readOnlyHint": true,
         "title": "Lists assets. The filter is limited to `kind`, `state`, and `review_state`."
       },
-      "description": "Lists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/assets",
       "input_schema": {
@@ -1785,6 +1790,7 @@
       "long_running": false,
       "method_id": "assets.assets.list",
       "permission": "assets:read",
+      "served": false,
       "tool": "assets_assets_list"
     },
     {
@@ -1795,7 +1801,7 @@
         "readOnlyHint": false,
         "title": "Records the recipes as assets and generates the variants that are missing. Each call is idempotent and works within a bounded time; call again until `pending` is 0."
       },
-      "description": "Records the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/assets:generate",
       "input_schema": {
@@ -1871,6 +1877,7 @@
       "long_running": false,
       "method_id": "assets.assets.generate",
       "permission": "assets:write",
+      "served": false,
       "tool": "assets_assets_generate"
     },
     {
@@ -1881,7 +1888,7 @@
         "readOnlyHint": true,
         "title": "Returns the `assets.lock` entries and canonical text for the keys the call names, and only those. A read with a request body, like a query."
       },
-      "description": "Returns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Returns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/assets:lock",
       "input_schema": {
@@ -1910,6 +1917,7 @@
       "long_running": false,
       "method_id": "assets.assets.lock",
       "permission": "assets:read",
+      "served": false,
       "tool": "assets_assets_lock"
     },
     {
@@ -1920,7 +1928,7 @@
         "readOnlyHint": false,
         "title": "Approves one variant and records who approved it."
       },
-      "description": "Approves one variant and records who approved it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Approves one variant and records who approved it.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:approveVariant",
       "input_schema": {
@@ -1946,6 +1954,7 @@
       "long_running": false,
       "method_id": "assets.assets.approve_variant",
       "permission": "assets:write",
+      "served": false,
       "tool": "assets_assets_approve_variant"
     },
     {
@@ -1956,7 +1965,7 @@
         "readOnlyHint": false,
         "title": "Rejects one variant. Its slot is freed and the next `:generate` fills it; the rejected file keeps serving at its URL."
       },
-      "description": "Rejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Rejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:rejectVariant",
       "input_schema": {
@@ -1982,6 +1991,7 @@
       "long_running": false,
       "method_id": "assets.assets.reject_variant",
       "permission": "assets:write",
+      "served": false,
       "tool": "assets_assets_reject_variant"
     },
     {
@@ -1992,7 +2002,7 @@
         "readOnlyHint": false,
         "title": "Retires one variant. Its URL answers 404 from then on and its slot is freed."
       },
-      "description": "Retires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Retires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:retireVariant",
       "input_schema": {
@@ -2028,6 +2038,7 @@
       "long_running": false,
       "method_id": "assets.assets.retire_variant",
       "permission": "assets:write",
+      "served": false,
       "tool": "assets_assets_retire_variant"
     },
     {
@@ -4733,7 +4744,7 @@
         "readOnlyHint": true,
         "title": "Gets a meter."
       },
-      "description": "Gets a meter.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a meter.",
       "effect": "read",
       "http": "GET /v1/{name=meters/*}",
       "input_schema": {
@@ -4754,6 +4765,7 @@
       "long_running": false,
       "method_id": "billing.meters.get",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_meters_get"
     },
     {
@@ -4764,7 +4776,7 @@
         "readOnlyHint": true,
         "title": "Lists meters. Anonymous-readable: the pricing page renders from it."
       },
-      "description": "Lists meters. Anonymous-readable: the pricing page renders from it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists meters. Anonymous-readable: the pricing page renders from it.",
       "effect": "read",
       "http": "GET /v1/meters",
       "input_schema": {
@@ -4794,6 +4806,7 @@
       "long_running": false,
       "method_id": "billing.meters.list",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_meters_list"
     },
     {
@@ -4804,7 +4817,7 @@
         "readOnlyHint": true,
         "title": "Gets a plan."
       },
-      "description": "Gets a plan.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a plan.",
       "effect": "read",
       "http": "GET /v1/{name=plans/*}",
       "input_schema": {
@@ -4825,6 +4838,7 @@
       "long_running": false,
       "method_id": "billing.plans.get",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_plans_get"
     },
     {
@@ -4835,7 +4849,7 @@
         "readOnlyHint": true,
         "title": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it."
       },
-      "description": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
       "effect": "read",
       "http": "GET /v1/plans",
       "input_schema": {
@@ -4865,6 +4879,7 @@
       "long_running": false,
       "method_id": "billing.plans.list",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_plans_list"
     },
     {
@@ -4875,7 +4890,7 @@
         "readOnlyHint": true,
         "title": "Gets a billing account."
       },
-      "description": "Gets a billing account.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a billing account.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/billing_accounts/*}",
       "input_schema": {
@@ -4896,6 +4911,7 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.get",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_billing_accounts_get"
     },
     {
@@ -4906,7 +4922,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's billing accounts: exactly one, `default`."
       },
-      "description": "Lists an org's billing accounts: exactly one, `default`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's billing accounts: exactly one, `default`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/billing_accounts",
       "input_schema": {
@@ -4944,6 +4960,7 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.list",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_billing_accounts_list"
     },
     {
@@ -4954,7 +4971,7 @@
         "readOnlyHint": false,
         "title": "Updates a billing account: changes plan, spend limit, or billing email."
       },
-      "description": "Updates a billing account: changes plan, spend limit, or billing email.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a billing account: changes plan, spend limit, or billing email.",
       "effect": "write",
       "http": "PATCH /v1/{billing_account.name=orgs/*/billing_accounts/*}",
       "input_schema": {
@@ -5060,6 +5077,7 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.update",
       "permission": "billing:admin",
+      "served": false,
       "tool": "billing_billing_accounts_update"
     },
     {
@@ -5070,7 +5088,7 @@
         "readOnlyHint": false,
         "title": "Starts saving a payment method for the org: returns a client secret the console confirms with Stripe.js, so card data never reaches Sylphx. The saved method becomes the account's default and is charged off-session for each finalized invoice."
       },
-      "description": "Starts saving a payment method for the org: returns a client secret the\nconsole confirms with Stripe.js, so card data never reaches Sylphx. The\nsaved method becomes the account's default and is charged off-session\nfor each finalized invoice.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Starts saving a payment method for the org: returns a client secret the\nconsole confirms with Stripe.js, so card data never reaches Sylphx. The\nsaved method becomes the account's default and is charged off-session\nfor each finalized invoice.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/billing_accounts/*}:setupPaymentMethod",
       "input_schema": {
@@ -5091,6 +5109,7 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.setup_payment_method",
       "permission": "billing:admin",
+      "served": false,
       "tool": "billing_billing_accounts_setup_payment_method"
     },
     {
@@ -5101,7 +5120,7 @@
         "readOnlyHint": true,
         "title": "Gets an invoice."
       },
-      "description": "Gets an invoice.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an invoice.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/invoices/*}",
       "input_schema": {
@@ -5122,6 +5141,7 @@
       "long_running": false,
       "method_id": "billing.invoices.get",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_invoices_get"
     },
     {
@@ -5132,7 +5152,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's invoices."
       },
-      "description": "Lists an org's invoices.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's invoices.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/invoices",
       "input_schema": {
@@ -5170,6 +5190,7 @@
       "long_running": false,
       "method_id": "billing.invoices.list",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_invoices_list"
     },
     {
@@ -5180,7 +5201,7 @@
         "readOnlyHint": true,
         "title": "Gets an usage report."
       },
-      "description": "Gets an usage report.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an usage report.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/usage_reports/*}",
       "input_schema": {
@@ -5201,6 +5222,7 @@
       "long_running": false,
       "method_id": "billing.usage_reports.get",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_usage_reports_get"
     },
     {
@@ -5211,7 +5233,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's usage reports, one per billing period."
       },
-      "description": "Lists an org's usage reports, one per billing period.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's usage reports, one per billing period.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/usage_reports",
       "input_schema": {
@@ -5249,6 +5271,7 @@
       "long_running": false,
       "method_id": "billing.usage_reports.list",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_usage_reports_list"
     },
     {
@@ -5259,7 +5282,7 @@
         "readOnlyHint": true,
         "title": "Queries usage over any time range, bucketed and grouped: the usage summary the console charts. Reads rollups; never raw events."
       },
-      "description": "Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*}/usage_reports:query",
       "input_schema": {
@@ -5328,6 +5351,7 @@
       "long_running": false,
       "method_id": "billing.usage_reports.query",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_usage_reports_query"
     },
     {
@@ -5338,7 +5362,7 @@
         "readOnlyHint": true,
         "title": "Gets a budget lease."
       },
-      "description": "Gets a budget lease.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a budget lease.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/budget_leases/*}",
       "input_schema": {
@@ -5359,6 +5383,7 @@
       "long_running": false,
       "method_id": "billing.budget_leases.get",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_budget_leases_get"
     },
     {
@@ -5369,7 +5394,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's budget leases."
       },
-      "description": "Lists an org's budget leases.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's budget leases.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/budget_leases",
       "input_schema": {
@@ -5407,6 +5432,7 @@
       "long_running": false,
       "method_id": "billing.budget_leases.list",
       "permission": "billing:read",
+      "served": false,
       "tool": "billing_budget_leases_list"
     },
     {
@@ -5417,7 +5443,7 @@
         "readOnlyHint": true,
         "title": "Gets a trust policy."
       },
-      "description": "Gets a trust policy.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a trust policy.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/trust_policies/*}",
       "input_schema": {
@@ -5438,6 +5464,7 @@
       "long_running": false,
       "method_id": "broker.trust_policies.get",
       "permission": "broker:read",
+      "served": false,
       "tool": "broker_trust_policies_get"
     },
     {
@@ -5448,7 +5475,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's trust policies."
       },
-      "description": "Lists an org's trust policies.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's trust policies.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/trust_policies",
       "input_schema": {
@@ -5486,6 +5513,7 @@
       "long_running": false,
       "method_id": "broker.trust_policies.list",
       "permission": "broker:read",
+      "served": false,
       "tool": "broker_trust_policies_list"
     },
     {
@@ -5496,7 +5524,7 @@
         "readOnlyHint": false,
         "title": "Creates a trust policy."
       },
-      "description": "Creates a trust policy.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a trust policy.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/trust_policies",
       "input_schema": {
@@ -5617,6 +5645,7 @@
       "long_running": false,
       "method_id": "broker.trust_policies.create",
       "permission": "broker:admin",
+      "served": false,
       "tool": "broker_trust_policies_create"
     },
     {
@@ -5627,7 +5656,7 @@
         "readOnlyHint": false,
         "title": "Updates a trust policy."
       },
-      "description": "Updates a trust policy.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a trust policy.",
       "effect": "write",
       "http": "PATCH /v1/{trust_policy.name=orgs/*/trust_policies/*}",
       "input_schema": {
@@ -5742,6 +5771,7 @@
       "long_running": false,
       "method_id": "broker.trust_policies.update",
       "permission": "broker:admin",
+      "served": false,
       "tool": "broker_trust_policies_update"
     },
     {
@@ -5752,7 +5782,7 @@
         "readOnlyHint": false,
         "title": "Deletes a trust policy."
       },
-      "description": "Deletes a trust policy.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a trust policy.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/trust_policies/*}",
       "input_schema": {
@@ -5787,6 +5817,7 @@
       "long_running": false,
       "method_id": "broker.trust_policies.delete",
       "permission": "broker:admin",
+      "served": false,
       "tool": "broker_trust_policies_delete"
     },
     {
@@ -5797,7 +5828,7 @@
         "readOnlyHint": true,
         "title": "Gets a build."
       },
-      "description": "Gets a build.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a build.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/builds/*}",
       "input_schema": {
@@ -5818,6 +5849,7 @@
       "long_running": false,
       "method_id": "build.builds.get",
       "permission": "build:read",
+      "served": false,
       "tool": "build_builds_get"
     },
     {
@@ -5828,7 +5860,7 @@
         "readOnlyHint": true,
         "title": "Lists builds in a project."
       },
-      "description": "Lists builds in a project.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists builds in a project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/builds",
       "input_schema": {
@@ -5866,6 +5898,7 @@
       "long_running": false,
       "method_id": "build.builds.list",
       "permission": "build:read",
+      "served": false,
       "tool": "build_builds_list"
     },
     {
@@ -5876,7 +5909,7 @@
         "readOnlyHint": false,
         "title": "Creates a build. The Operation is done when the controller settles it."
       },
-      "description": "Creates a build. The Operation is done when the controller settles\nit.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a build. The Operation is done when the controller settles\nit.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/builds",
       "input_schema": {
@@ -6012,6 +6045,7 @@
       "long_running": true,
       "method_id": "build.builds.create",
       "permission": "build:write",
+      "served": false,
       "tool": "build_builds_create"
     },
     {
@@ -6022,7 +6056,7 @@
         "readOnlyHint": false,
         "title": "Cancels a queued or running Build; its lease is released and nothing is published."
       },
-      "description": "Cancels a queued or running Build; its lease is released and nothing\nis published.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Cancels a queued or running Build; its lease is released and nothing\nis published.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/builds/*}:cancel",
       "input_schema": {
@@ -6057,6 +6091,7 @@
       "long_running": true,
       "method_id": "build.builds.cancel",
       "permission": "build:write",
+      "served": false,
       "tool": "build_builds_cancel"
     },
     {
@@ -6067,7 +6102,7 @@
         "readOnlyHint": true,
         "title": "Gets a build cache."
       },
-      "description": "Gets a build cache.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a build cache.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/build_caches/*}",
       "input_schema": {
@@ -6088,6 +6123,7 @@
       "long_running": false,
       "method_id": "build.build_caches.get",
       "permission": "build:read",
+      "served": false,
       "tool": "build_build_caches_get"
     },
     {
@@ -6098,7 +6134,7 @@
         "readOnlyHint": true,
         "title": "Lists build caches in a project."
       },
-      "description": "Lists build caches in a project.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists build caches in a project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/build_caches",
       "input_schema": {
@@ -6136,6 +6172,7 @@
       "long_running": false,
       "method_id": "build.build_caches.list",
       "permission": "build:read",
+      "served": false,
       "tool": "build_build_caches_list"
     },
     {
@@ -6146,7 +6183,7 @@
         "readOnlyHint": false,
         "title": "Updates a build cache."
       },
-      "description": "Updates a build cache.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a build cache.",
       "effect": "write",
       "http": "PATCH /v1/{build_cache.name=orgs/*/projects/*/build_caches/*}",
       "input_schema": {
@@ -6225,6 +6262,7 @@
       "long_running": false,
       "method_id": "build.build_caches.update",
       "permission": "build:write",
+      "served": false,
       "tool": "build_build_caches_update"
     },
     {
@@ -6235,7 +6273,7 @@
         "readOnlyHint": false,
         "title": "Deletes a build cache."
       },
-      "description": "Deletes a build cache.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a build cache.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/build_caches/*}",
       "input_schema": {
@@ -6274,6 +6312,7 @@
       "long_running": false,
       "method_id": "build.build_caches.delete",
       "permission": "build:write",
+      "served": false,
       "tool": "build_build_caches_delete"
     },
     {
@@ -7371,7 +7410,7 @@
         "readOnlyHint": true,
         "title": "Gets a connection provider."
       },
-      "description": "Gets a connection provider.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a connection provider.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/connection_providers/*}",
       "input_schema": {
@@ -7392,6 +7431,7 @@
       "long_running": false,
       "method_id": "connections.connection_providers.get",
       "permission": "connections:read",
+      "served": false,
       "tool": "connections_connection_providers_get"
     },
     {
@@ -7402,7 +7442,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's connection providers."
       },
-      "description": "Lists an org's connection providers.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's connection providers.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/connection_providers",
       "input_schema": {
@@ -7440,6 +7480,7 @@
       "long_running": false,
       "method_id": "connections.connection_providers.list",
       "permission": "connections:read",
+      "served": false,
       "tool": "connections_connection_providers_list"
     },
     {
@@ -7450,7 +7491,7 @@
         "readOnlyHint": false,
         "title": "Creates a connection provider."
       },
-      "description": "Creates a connection provider.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a connection provider.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/connection_providers",
       "input_schema": {
@@ -7562,6 +7603,7 @@
       "long_running": false,
       "method_id": "connections.connection_providers.create",
       "permission": "connections:admin",
+      "served": false,
       "tool": "connections_connection_providers_create"
     },
     {
@@ -7572,7 +7614,7 @@
         "readOnlyHint": false,
         "title": "Updates a connection provider."
       },
-      "description": "Updates a connection provider.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a connection provider.",
       "effect": "write",
       "http": "PATCH /v1/{connection_provider.name=orgs/*/connection_providers/*}",
       "input_schema": {
@@ -7678,6 +7720,7 @@
       "long_running": false,
       "method_id": "connections.connection_providers.update",
       "permission": "connections:admin",
+      "served": false,
       "tool": "connections_connection_providers_update"
     },
     {
@@ -7688,7 +7731,7 @@
         "readOnlyHint": false,
         "title": "Deletes a connection provider; it must have no connections."
       },
-      "description": "Deletes a connection provider; it must have no connections.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a connection provider; it must have no connections.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/connection_providers/*}",
       "input_schema": {
@@ -7727,6 +7770,7 @@
       "long_running": false,
       "method_id": "connections.connection_providers.delete",
       "permission": "connections:admin",
+      "served": false,
       "tool": "connections_connection_providers_delete"
     },
     {
@@ -7737,7 +7781,7 @@
         "readOnlyHint": true,
         "title": "Gets a connection."
       },
-      "description": "Gets a connection.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a connection.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/connections/*}",
       "input_schema": {
@@ -7758,6 +7802,7 @@
       "long_running": false,
       "method_id": "connections.connections.get",
       "permission": "connections:read",
+      "served": false,
       "tool": "connections_connections_get"
     },
     {
@@ -7768,7 +7813,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's connections."
       },
-      "description": "Lists an org's connections.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's connections.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/connections",
       "input_schema": {
@@ -7806,6 +7851,7 @@
       "long_running": false,
       "method_id": "connections.connections.list",
       "permission": "connections:read",
+      "served": false,
       "tool": "connections_connections_list"
     },
     {
@@ -7816,7 +7862,7 @@
         "readOnlyHint": false,
         "title": "Records an installation; the controller confirms it with the provider."
       },
-      "description": "Records an installation; the controller confirms it with the provider.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records an installation; the controller confirms it with the provider.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/connections",
       "input_schema": {
@@ -7907,6 +7953,7 @@
       "long_running": true,
       "method_id": "connections.connections.create",
       "permission": "connections:write",
+      "served": false,
       "tool": "connections_connections_create"
     },
     {
@@ -7917,7 +7964,7 @@
         "readOnlyHint": false,
         "title": "Updates a connection's metadata."
       },
-      "description": "Updates a connection's metadata.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a connection's metadata.",
       "effect": "write",
       "http": "PATCH /v1/{connection.name=orgs/*/connections/*}",
       "input_schema": {
@@ -8002,6 +8049,7 @@
       "long_running": true,
       "method_id": "connections.connections.update",
       "permission": "connections:write",
+      "served": false,
       "tool": "connections_connections_update"
     },
     {
@@ -8012,7 +8060,7 @@
         "readOnlyHint": false,
         "title": "Forgets a connection. The installation itself is removed at the provider."
       },
-      "description": "Forgets a connection. The installation itself is removed at the provider.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Forgets a connection. The installation itself is removed at the provider.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/connections/*}",
       "input_schema": {
@@ -8047,6 +8095,7 @@
       "long_running": true,
       "method_id": "connections.connections.delete",
       "permission": "connections:write",
+      "served": false,
       "tool": "connections_connections_delete"
     },
     {
@@ -9710,7 +9759,7 @@
         "readOnlyHint": true,
         "title": "Gets an org's entitlement."
       },
-      "description": "Gets an org's entitlement.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an org's entitlement.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/entitlements/*}",
       "input_schema": {
@@ -9731,6 +9780,7 @@
       "long_running": false,
       "method_id": "entitlement.entitlements.get",
       "permission": "entitlement:read",
+      "served": false,
       "tool": "entitlement_entitlements_get"
     },
     {
@@ -9741,7 +9791,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's entitlements: exactly one, `default`."
       },
-      "description": "Lists an org's entitlements: exactly one, `default`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's entitlements: exactly one, `default`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/entitlements",
       "input_schema": {
@@ -9779,6 +9829,7 @@
       "long_running": false,
       "method_id": "entitlement.entitlements.list",
       "permission": "entitlement:read",
+      "served": false,
       "tool": "entitlement_entitlements_list"
     },
     {
@@ -12844,7 +12895,7 @@
         "readOnlyHint": true,
         "title": "Gets a service."
       },
-      "description": "Gets a service.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a service.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/services/*}",
       "input_schema": {
@@ -12865,6 +12916,7 @@
       "long_running": false,
       "method_id": "hosting.services.get",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_services_get"
     },
     {
@@ -12875,7 +12927,7 @@
         "readOnlyHint": true,
         "title": "Lists services in a environment."
       },
-      "description": "Lists services in a environment.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists services in a environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/services",
       "input_schema": {
@@ -12913,6 +12965,7 @@
       "long_running": false,
       "method_id": "hosting.services.list",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_services_list"
     },
     {
@@ -12923,7 +12976,7 @@
         "readOnlyHint": false,
         "title": "Creates a service. The Operation is done when the controller settles it."
       },
-      "description": "Creates a service. The Operation is done when the controller settles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a service. The Operation is done when the controller settles it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/services",
       "input_schema": {
@@ -13136,6 +13189,7 @@
       "long_running": true,
       "method_id": "hosting.services.create",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_services_create"
     },
     {
@@ -13146,7 +13200,7 @@
         "readOnlyHint": false,
         "title": "Updates a service."
       },
-      "description": "Updates a service.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a service.",
       "effect": "write",
       "http": "PATCH /v1/{service.name=orgs/*/projects/*/envs/*/services/*}",
       "input_schema": {
@@ -13357,6 +13411,7 @@
       "long_running": true,
       "method_id": "hosting.services.update",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_services_update"
     },
     {
@@ -13367,7 +13422,7 @@
         "readOnlyHint": false,
         "title": "Deletes a service."
       },
-      "description": "Deletes a service.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a service.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/services/*}",
       "input_schema": {
@@ -13410,6 +13465,7 @@
       "long_running": true,
       "method_id": "hosting.services.delete",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_services_delete"
     },
     {
@@ -13420,7 +13476,7 @@
         "readOnlyHint": true,
         "title": "Gets a rollout."
       },
-      "description": "Gets a rollout.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a rollout.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}",
       "input_schema": {
@@ -13441,6 +13497,7 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.get",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_service_rollouts_get"
     },
     {
@@ -13451,7 +13508,7 @@
         "readOnlyHint": true,
         "title": "Lists rollouts in a service."
       },
-      "description": "Lists rollouts in a service.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists rollouts in a service.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/services/*}/service_rollouts",
       "input_schema": {
@@ -13489,6 +13546,7 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.list",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_service_rollouts_list"
     },
     {
@@ -13499,7 +13557,7 @@
         "readOnlyHint": false,
         "title": "Creates a rollout."
       },
-      "description": "Creates a rollout.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a rollout.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/services/*}/service_rollouts",
       "input_schema": {
@@ -13581,6 +13639,7 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.create",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_service_rollouts_create"
     },
     {
@@ -13591,7 +13650,7 @@
         "readOnlyHint": false,
         "title": "Holds a Rollout at its current wave."
       },
-      "description": "Holds a Rollout at its current wave.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Holds a Rollout at its current wave.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}:pause",
       "input_schema": {
@@ -13620,6 +13679,7 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.pause",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_service_rollouts_pause"
     },
     {
@@ -13630,7 +13690,7 @@
         "readOnlyHint": false,
         "title": "Resumes a paused Rollout."
       },
-      "description": "Resumes a paused Rollout.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Resumes a paused Rollout.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}:resume",
       "input_schema": {
@@ -13659,6 +13719,7 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.resume",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_service_rollouts_resume"
     },
     {
@@ -13669,7 +13730,7 @@
         "readOnlyHint": false,
         "title": "Stops a Rollout; the cells it reached return to the previous Release."
       },
-      "description": "Stops a Rollout; the cells it reached return to the previous Release.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Stops a Rollout; the cells it reached return to the previous Release.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}:abort",
       "input_schema": {
@@ -13704,6 +13765,7 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.abort",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_service_rollouts_abort"
     },
     {
@@ -13714,7 +13776,7 @@
         "readOnlyHint": true,
         "title": "Gets a preview."
       },
-      "description": "Gets a preview.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a preview.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/previews/*}",
       "input_schema": {
@@ -13735,6 +13797,7 @@
       "long_running": false,
       "method_id": "hosting.previews.get",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_previews_get"
     },
     {
@@ -13745,7 +13808,7 @@
         "readOnlyHint": true,
         "title": "Lists previews in a environment."
       },
-      "description": "Lists previews in a environment.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists previews in a environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/previews",
       "input_schema": {
@@ -13783,6 +13846,7 @@
       "long_running": false,
       "method_id": "hosting.previews.list",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_previews_list"
     },
     {
@@ -13793,7 +13857,7 @@
         "readOnlyHint": false,
         "title": "Creates a preview. The Operation is done when the controller settles it."
       },
-      "description": "Creates a preview. The Operation is done when the controller settles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a preview. The Operation is done when the controller settles it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/previews",
       "input_schema": {
@@ -13885,6 +13949,7 @@
       "long_running": true,
       "method_id": "hosting.previews.create",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_previews_create"
     },
     {
@@ -13895,7 +13960,7 @@
         "readOnlyHint": false,
         "title": "Deletes a preview."
       },
-      "description": "Deletes a preview.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a preview.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/previews/*}",
       "input_schema": {
@@ -13934,6 +13999,7 @@
       "long_running": true,
       "method_id": "hosting.previews.delete",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_previews_delete"
     },
     {
@@ -13944,7 +14010,7 @@
         "readOnlyHint": true,
         "title": "Gets a source link."
       },
-      "description": "Gets a source link.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a source link.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/source_links/*}",
       "input_schema": {
@@ -13965,6 +14031,7 @@
       "long_running": false,
       "method_id": "hosting.source_links.get",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_source_links_get"
     },
     {
@@ -13975,7 +14042,7 @@
         "readOnlyHint": true,
         "title": "Lists source links in a project."
       },
-      "description": "Lists source links in a project.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists source links in a project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/source_links",
       "input_schema": {
@@ -14013,6 +14080,7 @@
       "long_running": false,
       "method_id": "hosting.source_links.list",
       "permission": "hosting:read",
+      "served": false,
       "tool": "hosting_source_links_list"
     },
     {
@@ -14023,7 +14091,7 @@
         "readOnlyHint": false,
         "title": "Creates a source link. The Operation is done when the controller settles it."
       },
-      "description": "Creates a source link. The Operation is done when the controller settles\nit.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a source link. The Operation is done when the controller settles\nit.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/source_links",
       "input_schema": {
@@ -14122,6 +14190,7 @@
       "long_running": true,
       "method_id": "hosting.source_links.create",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_source_links_create"
     },
     {
@@ -14132,7 +14201,7 @@
         "readOnlyHint": false,
         "title": "Updates a source link."
       },
-      "description": "Updates a source link.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a source link.",
       "effect": "write",
       "http": "PATCH /v1/{source_link.name=orgs/*/projects/*/source_links/*}",
       "input_schema": {
@@ -14229,6 +14298,7 @@
       "long_running": true,
       "method_id": "hosting.source_links.update",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_source_links_update"
     },
     {
@@ -14239,7 +14309,7 @@
         "readOnlyHint": false,
         "title": "Deletes a source link."
       },
-      "description": "Deletes a source link.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a source link.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/source_links/*}",
       "input_schema": {
@@ -14278,6 +14348,7 @@
       "long_running": true,
       "method_id": "hosting.source_links.delete",
       "permission": "hosting:write",
+      "served": false,
       "tool": "hosting_source_links_delete"
     },
     {
@@ -14288,7 +14359,7 @@
         "readOnlyHint": true,
         "title": "Gets a key."
       },
-      "description": "Gets a key.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a key.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/keys/*}",
       "input_schema": {
@@ -14309,6 +14380,7 @@
       "long_running": false,
       "method_id": "keys.keys.get",
       "permission": "keys:read",
+      "served": false,
       "tool": "keys_keys_get"
     },
     {
@@ -14319,7 +14391,7 @@
         "readOnlyHint": true,
         "title": "Lists keys in an environment."
       },
-      "description": "Lists keys in an environment.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists keys in an environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/keys",
       "input_schema": {
@@ -14357,6 +14429,7 @@
       "long_running": false,
       "method_id": "keys.keys.list",
       "permission": "keys:read",
+      "served": false,
       "tool": "keys_keys_list"
     },
     {
@@ -14367,7 +14440,7 @@
         "readOnlyHint": false,
         "title": "Creates a key; the signer generates its first version."
       },
-      "description": "Creates a key; the signer generates its first version.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a key; the signer generates its first version.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/keys",
       "input_schema": {
@@ -14479,6 +14552,7 @@
       "long_running": true,
       "method_id": "keys.keys.create",
       "permission": "keys:write",
+      "served": false,
       "tool": "keys_keys_create"
     },
     {
@@ -14489,7 +14563,7 @@
         "readOnlyHint": false,
         "title": "Updates a key's rotation period, deletion protection, or metadata."
       },
-      "description": "Updates a key's rotation period, deletion protection, or metadata.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a key's rotation period, deletion protection, or metadata.",
       "effect": "write",
       "http": "PATCH /v1/{key.name=orgs/*/projects/*/envs/*/keys/*}",
       "input_schema": {
@@ -14595,6 +14669,7 @@
       "long_running": true,
       "method_id": "keys.keys.update",
       "permission": "keys:write",
+      "served": false,
       "tool": "keys_keys_update"
     },
     {
@@ -14605,7 +14680,7 @@
         "readOnlyHint": false,
         "title": "Deletes a key and schedules every version's destruction."
       },
-      "description": "Deletes a key and schedules every version's destruction.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a key and schedules every version's destruction.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/keys/*}",
       "input_schema": {
@@ -14644,6 +14719,7 @@
       "long_running": true,
       "method_id": "keys.keys.delete",
       "permission": "keys:write",
+      "served": false,
       "tool": "keys_keys_delete"
     },
     {
@@ -14654,7 +14730,7 @@
         "readOnlyHint": false,
         "title": "Rotates a key: adds a version and makes it primary. Older versions keep verifying and decrypting until destroyed."
       },
-      "description": "Rotates a key: adds a version and makes it primary. Older versions keep\nverifying and decrypting until destroyed.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Rotates a key: adds a version and makes it primary. Older versions keep\nverifying and decrypting until destroyed.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:rotate",
       "input_schema": {
@@ -14683,6 +14759,7 @@
       "long_running": true,
       "method_id": "keys.keys.rotate",
       "permission": "keys:write",
+      "served": false,
       "tool": "keys_keys_rotate"
     },
     {
@@ -14693,7 +14770,7 @@
         "readOnlyHint": true,
         "title": "Signs data or a digest with a SIGN key. Every use is audited."
       },
-      "description": "Signs data or a digest with a SIGN key. Every use is audited.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Signs data or a digest with a SIGN key. Every use is audited.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:sign",
       "input_schema": {
@@ -14729,6 +14806,7 @@
       "long_running": false,
       "method_id": "keys.keys.sign",
       "permission": "keys:sign",
+      "served": false,
       "tool": "keys_keys_sign"
     },
     {
@@ -14739,7 +14817,7 @@
         "readOnlyHint": true,
         "title": "Verifies a signature made by a SIGN key."
       },
-      "description": "Verifies a signature made by a SIGN key.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Verifies a signature made by a SIGN key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:verify",
       "input_schema": {
@@ -14781,6 +14859,7 @@
       "long_running": false,
       "method_id": "keys.keys.verify",
       "permission": "keys:verify",
+      "served": false,
       "tool": "keys_keys_verify"
     },
     {
@@ -14791,7 +14870,7 @@
         "readOnlyHint": true,
         "title": "Encrypts data with an ENCRYPT key."
       },
-      "description": "Encrypts data with an ENCRYPT key.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Encrypts data with an ENCRYPT key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:encrypt",
       "input_schema": {
@@ -14824,6 +14903,7 @@
       "long_running": false,
       "method_id": "keys.keys.encrypt",
       "permission": "keys:encrypt",
+      "served": false,
       "tool": "keys_keys_encrypt"
     },
     {
@@ -14834,7 +14914,7 @@
         "readOnlyHint": true,
         "title": "Decrypts a ciphertext made by Encrypt with this key."
       },
-      "description": "Decrypts a ciphertext made by Encrypt with this key.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Decrypts a ciphertext made by Encrypt with this key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:decrypt",
       "input_schema": {
@@ -14866,6 +14946,7 @@
       "long_running": false,
       "method_id": "keys.keys.decrypt",
       "permission": "keys:decrypt",
+      "served": false,
       "tool": "keys_keys_decrypt"
     },
     {
@@ -14876,7 +14957,7 @@
         "readOnlyHint": true,
         "title": "Computes a MAC of data with a MAC key."
       },
-      "description": "Computes a MAC of data with a MAC key.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Computes a MAC of data with a MAC key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:macSign",
       "input_schema": {
@@ -14908,6 +14989,7 @@
       "long_running": false,
       "method_id": "keys.keys.mac_sign",
       "permission": "keys:sign",
+      "served": false,
       "tool": "keys_keys_mac_sign"
     },
     {
@@ -14918,7 +15000,7 @@
         "readOnlyHint": true,
         "title": "Verifies a MAC made by a MAC key, in constant time."
       },
-      "description": "Verifies a MAC made by a MAC key, in constant time.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Verifies a MAC made by a MAC key, in constant time.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:macVerify",
       "input_schema": {
@@ -14956,6 +15038,7 @@
       "long_running": false,
       "method_id": "keys.keys.mac_verify",
       "permission": "keys:verify",
+      "served": false,
       "tool": "keys_keys_mac_verify"
     },
     {
@@ -14966,7 +15049,7 @@
         "readOnlyHint": true,
         "title": "Gets a key version."
       },
-      "description": "Gets a key version.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a key version.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/keys/*/key_versions/*}",
       "input_schema": {
@@ -14987,6 +15070,7 @@
       "long_running": false,
       "method_id": "keys.key_versions.get",
       "permission": "keys:read",
+      "served": false,
       "tool": "keys_key_versions_get"
     },
     {
@@ -14997,7 +15081,7 @@
         "readOnlyHint": true,
         "title": "Lists a key's versions."
       },
-      "description": "Lists a key's versions.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a key's versions.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/keys/*}/key_versions",
       "input_schema": {
@@ -15035,6 +15119,7 @@
       "long_running": false,
       "method_id": "keys.key_versions.list",
       "permission": "keys:read",
+      "served": false,
       "tool": "keys_key_versions_list"
     },
     {
@@ -15045,7 +15130,7 @@
         "readOnlyHint": false,
         "title": "Schedules a key version's destruction after a 24-hour grace; the primary version cannot be destroyed."
       },
-      "description": "Schedules a key version's destruction after a 24-hour grace; the\nprimary version cannot be destroyed.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Schedules a key version's destruction after a 24-hour grace; the\nprimary version cannot be destroyed.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*/key_versions/*}:destroy",
       "input_schema": {
@@ -15080,6 +15165,7 @@
       "long_running": false,
       "method_id": "keys.key_versions.destroy",
       "permission": "keys:write",
+      "served": false,
       "tool": "keys_key_versions_destroy"
     },
     {
@@ -17842,7 +17928,7 @@
         "readOnlyHint": true,
         "title": "Gets a domain."
       },
-      "description": "Gets a domain.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a domain.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/domains/*}",
       "input_schema": {
@@ -17863,6 +17949,7 @@
       "long_running": false,
       "method_id": "network.domains.get",
       "permission": "network:read",
+      "served": false,
       "tool": "network_domains_get"
     },
     {
@@ -17873,7 +17960,7 @@
         "readOnlyHint": true,
         "title": "Lists domains in a project."
       },
-      "description": "Lists domains in a project.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists domains in a project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/domains",
       "input_schema": {
@@ -17911,6 +17998,7 @@
       "long_running": false,
       "method_id": "network.domains.list",
       "permission": "network:read",
+      "served": false,
       "tool": "network_domains_list"
     },
     {
@@ -17921,7 +18009,7 @@
         "readOnlyHint": false,
         "title": "Creates a domain. The Operation is done when the controller settles it."
       },
-      "description": "Creates a domain. The Operation is done when the controller settles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a domain. The Operation is done when the controller settles it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/domains",
       "input_schema": {
@@ -18013,6 +18101,7 @@
       "long_running": true,
       "method_id": "network.domains.create",
       "permission": "network:write",
+      "served": false,
       "tool": "network_domains_create"
     },
     {
@@ -18023,7 +18112,7 @@
         "readOnlyHint": false,
         "title": "Updates a domain."
       },
-      "description": "Updates a domain.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a domain.",
       "effect": "write",
       "http": "PATCH /v1/{domain.name=orgs/*/projects/*/domains/*}",
       "input_schema": {
@@ -18113,6 +18202,7 @@
       "long_running": true,
       "method_id": "network.domains.update",
       "permission": "network:write",
+      "served": false,
       "tool": "network_domains_update"
     },
     {
@@ -18123,7 +18213,7 @@
         "readOnlyHint": false,
         "title": "Deletes a domain."
       },
-      "description": "Deletes a domain.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a domain.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/domains/*}",
       "input_schema": {
@@ -18162,6 +18252,7 @@
       "long_running": true,
       "method_id": "network.domains.delete",
       "permission": "network:write",
+      "served": false,
       "tool": "network_domains_delete"
     },
     {
@@ -18172,7 +18263,7 @@
         "readOnlyHint": false,
         "title": "Checks the verification record now instead of at the next sweep."
       },
-      "description": "Checks the verification record now instead of at the next sweep.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Checks the verification record now instead of at the next sweep.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/domains/*}:verify",
       "input_schema": {
@@ -18193,6 +18284,7 @@
       "long_running": true,
       "method_id": "network.domains.verify",
       "permission": "network:write",
+      "served": false,
       "tool": "network_domains_verify"
     },
     {
@@ -18203,7 +18295,7 @@
         "readOnlyHint": true,
         "title": "Gets a certificate."
       },
-      "description": "Gets a certificate.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a certificate.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/certificates/*}",
       "input_schema": {
@@ -18224,6 +18316,7 @@
       "long_running": false,
       "method_id": "network.certificates.get",
       "permission": "network:read",
+      "served": false,
       "tool": "network_certificates_get"
     },
     {
@@ -18234,7 +18327,7 @@
         "readOnlyHint": true,
         "title": "Lists certificates in a project."
       },
-      "description": "Lists certificates in a project.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists certificates in a project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/certificates",
       "input_schema": {
@@ -18272,6 +18365,7 @@
       "long_running": false,
       "method_id": "network.certificates.list",
       "permission": "network:read",
+      "served": false,
       "tool": "network_certificates_list"
     },
     {
@@ -18282,7 +18376,7 @@
         "readOnlyHint": true,
         "title": "Gets a route."
       },
-      "description": "Gets a route.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a route.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/routes/*}",
       "input_schema": {
@@ -18303,6 +18397,7 @@
       "long_running": false,
       "method_id": "network.routes.get",
       "permission": "network:read",
+      "served": false,
       "tool": "network_routes_get"
     },
     {
@@ -18313,7 +18408,7 @@
         "readOnlyHint": true,
         "title": "Lists routes in a environment."
       },
-      "description": "Lists routes in a environment.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists routes in a environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/routes",
       "input_schema": {
@@ -18351,6 +18446,7 @@
       "long_running": false,
       "method_id": "network.routes.list",
       "permission": "network:read",
+      "served": false,
       "tool": "network_routes_list"
     },
     {
@@ -18361,7 +18457,7 @@
         "readOnlyHint": false,
         "title": "Creates a route. The Operation is done when the controller settles it."
       },
-      "description": "Creates a route. The Operation is done when the controller settles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a route. The Operation is done when the controller settles it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/routes",
       "input_schema": {
@@ -18472,6 +18568,7 @@
       "long_running": true,
       "method_id": "network.routes.create",
       "permission": "network:write",
+      "served": false,
       "tool": "network_routes_create"
     },
     {
@@ -18482,7 +18579,7 @@
         "readOnlyHint": false,
         "title": "Updates a route."
       },
-      "description": "Updates a route.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a route.",
       "effect": "write",
       "http": "PATCH /v1/{route.name=orgs/*/projects/*/envs/*/routes/*}",
       "input_schema": {
@@ -18591,6 +18688,7 @@
       "long_running": true,
       "method_id": "network.routes.update",
       "permission": "network:write",
+      "served": false,
       "tool": "network_routes_update"
     },
     {
@@ -18601,7 +18699,7 @@
         "readOnlyHint": false,
         "title": "Deletes a route."
       },
-      "description": "Deletes a route.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a route.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/routes/*}",
       "input_schema": {
@@ -18640,6 +18738,7 @@
       "long_running": true,
       "method_id": "network.routes.delete",
       "permission": "network:write",
+      "served": false,
       "tool": "network_routes_delete"
     },
     {
@@ -18650,7 +18749,7 @@
         "readOnlyHint": true,
         "title": "Gets an egress identity."
       },
-      "description": "Gets an egress identity.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an egress identity.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/egress_identities/*}",
       "input_schema": {
@@ -18671,6 +18770,7 @@
       "long_running": false,
       "method_id": "network.egress_identities.get",
       "permission": "network:read",
+      "served": false,
       "tool": "network_egress_identities_get"
     },
     {
@@ -18681,7 +18781,7 @@
         "readOnlyHint": true,
         "title": "Lists egress identitys in a project."
       },
-      "description": "Lists egress identitys in a project.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists egress identitys in a project.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/egress_identities",
       "input_schema": {
@@ -18719,6 +18819,7 @@
       "long_running": false,
       "method_id": "network.egress_identities.list",
       "permission": "network:read",
+      "served": false,
       "tool": "network_egress_identities_list"
     },
     {
@@ -18729,7 +18830,7 @@
         "readOnlyHint": false,
         "title": "Creates an egress identity. The Operation is done when the controller settles it."
       },
-      "description": "Creates an egress identity. The Operation is done when the controller\nsettles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates an egress identity. The Operation is done when the controller\nsettles it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/egress_identities",
       "input_schema": {
@@ -18813,6 +18914,7 @@
       "long_running": true,
       "method_id": "network.egress_identities.create",
       "permission": "network:write",
+      "served": false,
       "tool": "network_egress_identities_create"
     },
     {
@@ -18823,7 +18925,7 @@
         "readOnlyHint": false,
         "title": "Updates an egress identity."
       },
-      "description": "Updates an egress identity.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates an egress identity.",
       "effect": "write",
       "http": "PATCH /v1/{egress_identity.name=orgs/*/projects/*/egress_identities/*}",
       "input_schema": {
@@ -18905,6 +19007,7 @@
       "long_running": true,
       "method_id": "network.egress_identities.update",
       "permission": "network:write",
+      "served": false,
       "tool": "network_egress_identities_update"
     },
     {
@@ -18915,7 +19018,7 @@
         "readOnlyHint": false,
         "title": "Deletes an egress identity."
       },
-      "description": "Deletes an egress identity.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an egress identity.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/egress_identities/*}",
       "input_schema": {
@@ -18954,6 +19057,7 @@
       "long_running": true,
       "method_id": "network.egress_identities.delete",
       "permission": "network:write",
+      "served": false,
       "tool": "network_egress_identities_delete"
     },
     {
@@ -18964,7 +19068,7 @@
         "readOnlyHint": true,
         "title": "Gets a private link."
       },
-      "description": "Gets a private link.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a private link.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/private_links/*}",
       "input_schema": {
@@ -18985,6 +19089,7 @@
       "long_running": false,
       "method_id": "network.private_links.get",
       "permission": "network:read",
+      "served": false,
       "tool": "network_private_links_get"
     },
     {
@@ -18995,7 +19100,7 @@
         "readOnlyHint": true,
         "title": "Lists private links in a environment."
       },
-      "description": "Lists private links in a environment.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists private links in a environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/private_links",
       "input_schema": {
@@ -19033,6 +19138,7 @@
       "long_running": false,
       "method_id": "network.private_links.list",
       "permission": "network:read",
+      "served": false,
       "tool": "network_private_links_list"
     },
     {
@@ -19043,7 +19149,7 @@
         "readOnlyHint": false,
         "title": "Creates a private link. The Operation is done when the controller settles it."
       },
-      "description": "Creates a private link. The Operation is done when the controller settles\nit.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a private link. The Operation is done when the controller settles\nit.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/private_links",
       "input_schema": {
@@ -19142,6 +19248,7 @@
       "long_running": true,
       "method_id": "network.private_links.create",
       "permission": "network:write",
+      "served": false,
       "tool": "network_private_links_create"
     },
     {
@@ -19152,7 +19259,7 @@
         "readOnlyHint": false,
         "title": "Updates a private link."
       },
-      "description": "Updates a private link.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a private link.",
       "effect": "write",
       "http": "PATCH /v1/{private_link.name=orgs/*/projects/*/envs/*/private_links/*}",
       "input_schema": {
@@ -19249,6 +19356,7 @@
       "long_running": true,
       "method_id": "network.private_links.update",
       "permission": "network:write",
+      "served": false,
       "tool": "network_private_links_update"
     },
     {
@@ -19259,7 +19367,7 @@
         "readOnlyHint": false,
         "title": "Deletes a private link."
       },
-      "description": "Deletes a private link.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a private link.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/private_links/*}",
       "input_schema": {
@@ -19298,6 +19406,7 @@
       "long_running": true,
       "method_id": "network.private_links.delete",
       "permission": "network:write",
+      "served": false,
       "tool": "network_private_links_delete"
     },
     {
@@ -24123,7 +24232,7 @@
         "readOnlyHint": true,
         "title": "Gets a release."
       },
-      "description": "Gets a release.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a release.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/releases/*}",
       "input_schema": {
@@ -24144,6 +24253,7 @@
       "long_running": false,
       "method_id": "release.releases.get",
       "permission": "release:read",
+      "served": false,
       "tool": "release_releases_get"
     },
     {
@@ -24154,7 +24264,7 @@
         "readOnlyHint": true,
         "title": "Lists releases in an environment, newest first by default."
       },
-      "description": "Lists releases in an environment, newest first by default.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists releases in an environment, newest first by default.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/releases",
       "input_schema": {
@@ -24192,6 +24302,7 @@
       "long_running": false,
       "method_id": "release.releases.list",
       "permission": "release:read",
+      "served": false,
       "tool": "release_releases_list"
     },
     {
@@ -24202,7 +24313,7 @@
         "readOnlyHint": false,
         "title": "Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted."
       },
-      "description": "Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/releases",
       "input_schema": {
@@ -24391,6 +24502,7 @@
       "long_running": true,
       "method_id": "release.releases.create",
       "permission": "release:write",
+      "served": false,
       "tool": "release_releases_create"
     },
     {
@@ -24401,7 +24513,7 @@
         "readOnlyHint": true,
         "title": "Gets a rollout."
       },
-      "description": "Gets a rollout.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a rollout.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/rollouts/*}",
       "input_schema": {
@@ -24422,6 +24534,7 @@
       "long_running": false,
       "method_id": "release.rollouts.get",
       "permission": "release:read",
+      "served": false,
       "tool": "release_rollouts_get"
     },
     {
@@ -24432,7 +24545,7 @@
         "readOnlyHint": true,
         "title": "Lists rollouts in an environment."
       },
-      "description": "Lists rollouts in an environment.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists rollouts in an environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/rollouts",
       "input_schema": {
@@ -24470,6 +24583,7 @@
       "long_running": false,
       "method_id": "release.rollouts.list",
       "permission": "release:read",
+      "served": false,
       "tool": "release_rollouts_list"
     },
     {
@@ -24480,7 +24594,7 @@
         "readOnlyHint": true,
         "title": "Gets a scale set."
       },
-      "description": "Gets a scale set.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a scale set.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/scale_sets/*}",
       "input_schema": {
@@ -24501,6 +24615,7 @@
       "long_running": false,
       "method_id": "runners.scale_sets.get",
       "permission": "runners:read",
+      "served": false,
       "tool": "runners_scale_sets_get"
     },
     {
@@ -24511,7 +24626,7 @@
         "readOnlyHint": true,
         "title": "Lists scale sets in a org."
       },
-      "description": "Lists scale sets in a org.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists scale sets in a org.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/scale_sets",
       "input_schema": {
@@ -24549,6 +24664,7 @@
       "long_running": false,
       "method_id": "runners.scale_sets.list",
       "permission": "runners:read",
+      "served": false,
       "tool": "runners_scale_sets_list"
     },
     {
@@ -24559,7 +24675,7 @@
         "readOnlyHint": false,
         "title": "Creates a scale set. The Operation is done when the controller settles it."
       },
-      "description": "Creates a scale set. The Operation is done when the controller settles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a scale set. The Operation is done when the controller settles it.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/scale_sets",
       "input_schema": {
@@ -24659,6 +24775,7 @@
       "long_running": true,
       "method_id": "runners.scale_sets.create",
       "permission": "runners:write",
+      "served": false,
       "tool": "runners_scale_sets_create"
     },
     {
@@ -24669,7 +24786,7 @@
         "readOnlyHint": false,
         "title": "Updates a scale set."
       },
-      "description": "Updates a scale set.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a scale set.",
       "effect": "write",
       "http": "PATCH /v1/{scale_set.name=orgs/*/scale_sets/*}",
       "input_schema": {
@@ -24767,6 +24884,7 @@
       "long_running": true,
       "method_id": "runners.scale_sets.update",
       "permission": "runners:write",
+      "served": false,
       "tool": "runners_scale_sets_update"
     },
     {
@@ -24777,7 +24895,7 @@
         "readOnlyHint": false,
         "title": "Deletes a scale set."
       },
-      "description": "Deletes a scale set.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a scale set.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/scale_sets/*}",
       "input_schema": {
@@ -24820,6 +24938,7 @@
       "long_running": true,
       "method_id": "runners.scale_sets.delete",
       "permission": "runners:write",
+      "served": false,
       "tool": "runners_scale_sets_delete"
     },
     {
@@ -24830,7 +24949,7 @@
         "readOnlyHint": true,
         "title": "Gets a runner."
       },
-      "description": "Gets a runner.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a runner.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/scale_sets/*/runners/*}",
       "input_schema": {
@@ -24851,6 +24970,7 @@
       "long_running": false,
       "method_id": "runners.runners.get",
       "permission": "runners:read",
+      "served": false,
       "tool": "runners_runners_get"
     },
     {
@@ -24861,7 +24981,7 @@
         "readOnlyHint": true,
         "title": "Lists runners in a scale set."
       },
-      "description": "Lists runners in a scale set.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists runners in a scale set.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/scale_sets/*}/runners",
       "input_schema": {
@@ -24899,6 +25019,7 @@
       "long_running": false,
       "method_id": "runners.runners.list",
       "permission": "runners:read",
+      "served": false,
       "tool": "runners_runners_list"
     },
     {
@@ -31900,7 +32021,7 @@
         "readOnlyHint": true,
         "title": "Gets a billing account."
       },
-      "description": "Gets a billing account.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a billing account.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of GetBillingAccount.",
@@ -31927,7 +32048,7 @@
         "readOnlyHint": true,
         "title": "Queries usage over any time range, bucketed and grouped: the usage summary the console charts. Reads rollups; never raw events."
       },
-      "description": "Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of QueryUsageReports.",
@@ -32101,7 +32222,7 @@
         "readOnlyHint": true,
         "title": "Gets an org's entitlement."
       },
-      "description": "Gets an org's entitlement.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an org's entitlement.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of GetEntitlement.",
@@ -32128,7 +32249,7 @@
         "readOnlyHint": false,
         "title": "Creates a service. The Operation is done when the controller settles it."
       },
-      "description": "Creates a service. The Operation is done when the controller settles it.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a service. The Operation is done when the controller settles it.",
       "inputSchema": {
         "additionalProperties": false,
         "description": "The request of CreateService.",

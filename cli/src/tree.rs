@@ -19,9 +19,16 @@ pub struct ServiceCmd {
     pub noun: String,
     pub display_name: String,
     pub stage: String,
+    /// `false` when no backend serves the service yet (`contracts/services.toml`).
+    #[serde(default = "served_default")]
+    pub served: bool,
     #[serde(default)]
     pub commands: Vec<MethodCmd>,
     pub collections: Vec<CollectionCmd>,
+}
+
+fn served_default() -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize)]
@@ -180,6 +187,9 @@ pub fn service_commands(tree: &Tree) -> Vec<Command> {
             let mut about = s.display_name.clone();
             if s.stage == "preview" {
                 about.push_str(" (preview)");
+            }
+            if !s.served {
+                about.push_str(" - not available yet");
             }
             let mut cmd = Command::new(s.noun.clone())
                 .about(about)
