@@ -883,3 +883,89 @@ async fn workflows_schedules_read_the_served_compute_route() {
         seen[1].line
     );
 }
+
+fn seat_fixture() -> Value {
+    let w = |key: &str, secs: i64, util: f64| {
+        json!({
+            "window_key": key, "utilization": util, "used_percent": util * 100.0,
+            "limit_window_seconds": secs, "reset_at": "2099-01-01T00:00:00.000Z",
+            "observed_at": "2099-01-01T00:00:00.000Z", "limit_reached": util >= 1.0,
+            "state": "AVAILABLE",
+        })
+    };
+    json!({"object": "list", "data": [
+        {"id": "seat-ok", "provider": "claude", "state": "active", "last_success_at": null,
+         "quota_pressure": 0.4, "windows": [w("claude_5h", 18000, 0.1), w("claude_7d", 604800, 0.4)]},
+        {"id": "seat-spent", "provider": "claude", "state": "active", "last_success_at": null,
+         "quota_pressure": 1.0, "windows": [w("claude_5h", 18000, 1.0), w("claude_7d", 604800, 0.5)]},
+        {"id": "seat-login", "provider": "claude", "state": "reauth_required", "last_success_at": null,
+         "quota_pressure": null, "windows": []},
+    ]})
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ai_top_once_reads_the_operator_seats_and_shows_red_lines() {
+    let (url, log) = serve(vec![(200, seat_fixture())]).await;
+    let sb = Sandbox::new("ai-top");
+    let out = run(&sb, &url, &["ai", "top", "--once"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(text.contains("1 usable / 1 spent / 1 out"), "{text}");
+    assert!(
+        text.contains("RED  seat seat-login (claude): login needed"),
+        "{text}"
+    );
+    assert!(
+        text.contains("SESSIONS AND SUBAGENTS") && text.contains("n/a"),
+        "{text}"
+    );
+    assert!(!text.contains('\x1b'), "no colour off a terminal");
+    let seen = log.lock().unwrap();
+    assert!(
+        seen[0].line.starts_with("GET /v1/operator/seats "),
+        "{}",
+        seen[0].line
+    );
+    // the reading is kept for the pace
+    let kept = std::fs::read_to_string(sb.dir.join("config/ai-top-history.json")).unwrap();
+    assert!(kept.contains("seat-ok"), "{kept}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ai_top_json_is_one_document_with_the_missing_fields_named() {
+    let (url, _) = serve(vec![(200, seat_fixture())]).await;
+    let sb = Sandbox::new("ai-top-json");
+    let out = run(&sb, &url, &["ai", "top", "--json"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["seats"]["usable"], 1);
+    assert_eq!(v["seats"]["spent"], 1);
+    assert!(v["sessions"].is_null());
+    assert!(v["red"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|l| l.as_str().unwrap().contains("seat-login")));
+    assert!(!v["missing_api_fields"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ai_top_says_so_when_the_key_may_not_read_seats() {
+    let (url, _) = serve(vec![(
+        403,
+        json!({"code": "missing_scope", "error": {"code": "missing_scope", "message": "needs ai:operator:seats:read"}}),
+    )])
+    .await;
+    let sb = Sandbox::new("ai-top-403");
+    let out = run(&sb, &url, &["ai", "top", "--once"]).await;
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("missing_scope"));
+}

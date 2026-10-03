@@ -32,6 +32,33 @@ sylphx mcp                            # the MCP server over stdio
   (`device-results/`). Exit 0 passed, 1 failed, 2 infrastructure; the lease is
   released on the way out unless `--keep`.
 
+## `sylphx ai top`
+
+The operator live view of the AI gateway's seats, replacing `janus status`,
+`top`, `doctor` and `capacity`. It is read-only over `GET /v1/operator/seats`
+and needs a platform key with `ai:operator:seats:read` (`--base-url` points it
+at the gateway if `api.sylphx.com` does not route it).
+
+```sh
+sylphx ai top            # a terminal: refreshes every 10 s (--interval), Ctrl-C quits
+sylphx ai top --once     # print once (also the default off a terminal)
+sylphx ai top --json     # one JSON document (same as -o json)
+```
+
+It shows usable, spent and out-of-rotation seats; when the next spent seat
+comes back and the earliest weekly reset; and, at the 24h and 6h pace, the
+demand, seats needed, seats to add (with 25% headroom) and the simulated
+runway. Anything that needs a person is a red line: a seat that needs a login
+(`reauth_required`), is on hold (`subscription_required`), is quarantined or
+has no fresh reading, no usable seat, a pool that runs dry, seats to add.
+
+The pace is measured from the weekly-window readings each run keeps in
+`<config dir>/ai-top-history.json` (a week, at most one reading per 4
+minutes), so it reads `n/a` until about 6 hours of readings exist; leave a
+terminal open or run `--once` from a timer. Sessions and subagents (seat,
+model, effort, cache hit) and the API-equivalent value read `n/a` until the
+gateway's receipts carry them; `--json` lists the missing fields.
+
 ## `sylphx token --scope <scope>`
 
 Prints one token and a newline on stdout, for tools that need a credential for

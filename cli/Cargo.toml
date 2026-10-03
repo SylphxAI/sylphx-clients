@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-cli"
-version = "0.26.0"
+version = "0.27.0"
 description = "The Sylphx CLI: every Sylphx API method as a command, generated from the Sylphx schema registry."
 keywords = ["sylphx", "cli", "cloud", "deploy"]
 categories = ["command-line-utilities"]
