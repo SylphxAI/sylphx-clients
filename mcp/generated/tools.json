@@ -14381,7 +14381,7 @@
         "readOnlyHint": true,
         "title": "Gets a key."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a key.",
+      "description": "Gets a key.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/keys/*}",
       "input_schema": {
@@ -14402,7 +14402,6 @@
       "long_running": false,
       "method_id": "keys.keys.get",
       "permission": "keys:read",
-      "served": false,
       "tool": "keys_keys_get"
     },
     {
@@ -14413,7 +14412,7 @@
         "readOnlyHint": true,
         "title": "Lists keys in an environment."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists keys in an environment.",
+      "description": "Lists keys in an environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/keys",
       "input_schema": {
@@ -14451,7 +14450,6 @@
       "long_running": false,
       "method_id": "keys.keys.list",
       "permission": "keys:read",
-      "served": false,
       "tool": "keys_keys_list"
     },
     {
@@ -14462,7 +14460,7 @@
         "readOnlyHint": false,
         "title": "Creates a key; the signer generates its first version."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a key; the signer generates its first version.",
+      "description": "Creates a key; the signer generates its first version.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/keys",
       "input_schema": {
@@ -14574,7 +14572,6 @@
       "long_running": true,
       "method_id": "keys.keys.create",
       "permission": "keys:write",
-      "served": false,
       "tool": "keys_keys_create"
     },
     {
@@ -14585,7 +14582,7 @@
         "readOnlyHint": false,
         "title": "Updates a key's rotation period, deletion protection, or metadata."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a key's rotation period, deletion protection, or metadata.",
+      "description": "Updates a key's rotation period, deletion protection, or metadata.",
       "effect": "write",
       "http": "PATCH /v1/{key.name=orgs/*/projects/*/envs/*/keys/*}",
       "input_schema": {
@@ -14691,7 +14688,6 @@
       "long_running": true,
       "method_id": "keys.keys.update",
       "permission": "keys:write",
-      "served": false,
       "tool": "keys_keys_update"
     },
     {
@@ -14702,7 +14698,7 @@
         "readOnlyHint": false,
         "title": "Deletes a key and schedules every version's destruction."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a key and schedules every version's destruction.",
+      "description": "Deletes a key and schedules every version's destruction.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/keys/*}",
       "input_schema": {
@@ -14741,7 +14737,6 @@
       "long_running": true,
       "method_id": "keys.keys.delete",
       "permission": "keys:write",
-      "served": false,
       "tool": "keys_keys_delete"
     },
     {
@@ -14752,7 +14747,7 @@
         "readOnlyHint": false,
         "title": "Rotates a key: adds a version and makes it primary. Older versions keep verifying and decrypting until destroyed."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Rotates a key: adds a version and makes it primary. Older versions keep\nverifying and decrypting until destroyed.",
+      "description": "Rotates a key: adds a version and makes it primary. Older versions keep\nverifying and decrypting until destroyed.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:rotate",
       "input_schema": {
@@ -14781,7 +14776,6 @@
       "long_running": true,
       "method_id": "keys.keys.rotate",
       "permission": "keys:write",
-      "served": false,
       "tool": "keys_keys_rotate"
     },
     {
@@ -14792,7 +14786,7 @@
         "readOnlyHint": true,
         "title": "Signs data or a digest with a SIGN key. Every use is audited."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Signs data or a digest with a SIGN key. Every use is audited.",
+      "description": "Signs data or a digest with a SIGN key. Every use is audited.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:sign",
       "input_schema": {
@@ -14828,7 +14822,6 @@
       "long_running": false,
       "method_id": "keys.keys.sign",
       "permission": "keys:sign",
-      "served": false,
       "tool": "keys_keys_sign"
     },
     {
@@ -14839,7 +14832,7 @@
         "readOnlyHint": true,
         "title": "Verifies a signature made by a SIGN key."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Verifies a signature made by a SIGN key.",
+      "description": "Verifies a signature made by a SIGN key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:verify",
       "input_schema": {
@@ -14881,7 +14874,6 @@
       "long_running": false,
       "method_id": "keys.keys.verify",
       "permission": "keys:verify",
-      "served": false,
       "tool": "keys_keys_verify"
     },
     {
@@ -14892,7 +14884,7 @@
         "readOnlyHint": true,
         "title": "Encrypts data with an ENCRYPT key."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Encrypts data with an ENCRYPT key.",
+      "description": "Encrypts data with an ENCRYPT key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:encrypt",
       "input_schema": {
@@ -14925,7 +14917,6 @@
       "long_running": false,
       "method_id": "keys.keys.encrypt",
       "permission": "keys:encrypt",
-      "served": false,
       "tool": "keys_keys_encrypt"
     },
     {
@@ -14936,7 +14927,7 @@
         "readOnlyHint": true,
         "title": "Decrypts a ciphertext made by Encrypt with this key."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Decrypts a ciphertext made by Encrypt with this key.",
+      "description": "Decrypts a ciphertext made by Encrypt with this key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:decrypt",
       "input_schema": {
@@ -14968,7 +14959,6 @@
       "long_running": false,
       "method_id": "keys.keys.decrypt",
       "permission": "keys:decrypt",
-      "served": false,
       "tool": "keys_keys_decrypt"
     },
     {
@@ -14979,7 +14969,7 @@
         "readOnlyHint": true,
         "title": "Computes a MAC of data with a MAC key."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Computes a MAC of data with a MAC key.",
+      "description": "Computes a MAC of data with a MAC key.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:macSign",
       "input_schema": {
@@ -15011,7 +15001,6 @@
       "long_running": false,
       "method_id": "keys.keys.mac_sign",
       "permission": "keys:sign",
-      "served": false,
       "tool": "keys_keys_mac_sign"
     },
     {
@@ -15022,7 +15011,7 @@
         "readOnlyHint": true,
         "title": "Verifies a MAC made by a MAC key, in constant time."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Verifies a MAC made by a MAC key, in constant time.",
+      "description": "Verifies a MAC made by a MAC key, in constant time.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*}:macVerify",
       "input_schema": {
@@ -15060,7 +15049,6 @@
       "long_running": false,
       "method_id": "keys.keys.mac_verify",
       "permission": "keys:verify",
-      "served": false,
       "tool": "keys_keys_mac_verify"
     },
     {
@@ -15071,7 +15059,7 @@
         "readOnlyHint": true,
         "title": "Gets a key version."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a key version.",
+      "description": "Gets a key version.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/keys/*/key_versions/*}",
       "input_schema": {
@@ -15092,7 +15080,6 @@
       "long_running": false,
       "method_id": "keys.key_versions.get",
       "permission": "keys:read",
-      "served": false,
       "tool": "keys_key_versions_get"
     },
     {
@@ -15103,7 +15090,7 @@
         "readOnlyHint": true,
         "title": "Lists a key's versions."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a key's versions.",
+      "description": "Lists a key's versions.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/keys/*}/key_versions",
       "input_schema": {
@@ -15141,7 +15128,6 @@
       "long_running": false,
       "method_id": "keys.key_versions.list",
       "permission": "keys:read",
-      "served": false,
       "tool": "keys_key_versions_list"
     },
     {
@@ -15152,7 +15138,7 @@
         "readOnlyHint": false,
         "title": "Schedules a key version's destruction after a 24-hour grace; the primary version cannot be destroyed."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Schedules a key version's destruction after a 24-hour grace; the\nprimary version cannot be destroyed.",
+      "description": "Schedules a key version's destruction after a 24-hour grace; the\nprimary version cannot be destroyed.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/keys/*/key_versions/*}:destroy",
       "input_schema": {
@@ -15187,7 +15173,6 @@
       "long_running": false,
       "method_id": "keys.key_versions.destroy",
       "permission": "keys:write",
-      "served": false,
       "tool": "keys_key_versions_destroy"
     },
     {
