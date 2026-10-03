@@ -72,6 +72,19 @@ await sylphx.data.documents.put({ indexId: 'articles', documentId: slug, documen
 const { hits: found } = await sylphx.data.search.query({ indexId: 'articles', query: 'pricing', limit: 10 })
 ```
 
+### Object upload transport and older SDKs
+
+`data.objects.put` sends base64 bytes in an authenticated JSON request. Its
+HTTP Content-Type is `application/json`; the object's MIME is the JSON
+`contentType` field. It does not mint or PUT to presigned multipart URLs.
+
+The older `@sylphx/sdk@0.27.0` exported `storage.uploads.create` and sent
+Blob slices to presigned part URLs. That API is absent from this generated
+SDK: upgrading such a caller requires migrating its upload and file-management
+calls to Data's object API, not only changing its package pin. The old
+`@sylphx/sdk/react`, `/server`, and `/nextjs` integrations are not equivalent
+exports of this package either.
+
 This package is generated from the Sylphx schema registry by `sylphx-gen`; do
 not edit it by hand. Source: `clients/typescript` in the Sylphx monorepo,
 published from its MIT mirror.
