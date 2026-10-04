@@ -954,6 +954,172 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a service enablement."
+      },
+      "description": "Gets a service enablement.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/service_enablements/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetServiceEnablement.",
+        "properties": {
+          "name": {
+            "description": "The name of the service enablement to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/ServiceEnablement"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "access.service_enablements.get",
+      "permission": "access:read",
+      "tool": "access_service_enablements_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the service enablements of a project, one per service."
+      },
+      "description": "Lists the service enablements of a project, one per service.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*}/service_enablements",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListServiceEnablements.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels, filterable spec fields, and Ready.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/ServiceEnablement"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "access.service_enablements.list",
+      "permission": "access:read",
+      "tool": "access_service_enablements_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Enables or disables a service on a project (`spec.enabled`)."
+      },
+      "description": "Enables or disables a service on a project (`spec.enabled`).",
+      "effect": "write",
+      "http": "PATCH /v1/{service_enablement.name=orgs/*/projects/*/service_enablements/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateServiceEnablement.",
+        "properties": {
+          "service_enablement": {
+            "additionalProperties": false,
+            "description": "The service enablement to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/service_enablements/{service}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "enabled": {
+                    "description": "Whether the project's keys may reach the service.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "service_enablement"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "access.service_enablements.update",
+      "permission": "access:admin",
+      "tool": "access_service_enablements_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an API key."
       },
       "description": "Gets an API key.",
@@ -1724,7 +1890,7 @@
         "readOnlyHint": true,
         "title": "Gets an asset."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an asset.",
+      "description": "Gets an asset.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/assets/*}",
       "input_schema": {
@@ -1745,7 +1911,6 @@
       "long_running": false,
       "method_id": "assets.assets.get",
       "permission": "assets:read",
-      "served": false,
       "tool": "assets_assets_get"
     },
     {
@@ -1756,7 +1921,7 @@
         "readOnlyHint": true,
         "title": "Lists assets. The filter is limited to `kind`, `state`, and `review_state`."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
+      "description": "Lists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/assets",
       "input_schema": {
@@ -1790,7 +1955,6 @@
       "long_running": false,
       "method_id": "assets.assets.list",
       "permission": "assets:read",
-      "served": false,
       "tool": "assets_assets_list"
     },
     {
@@ -1801,7 +1965,7 @@
         "readOnlyHint": false,
         "title": "Records the recipes as assets and generates the variants that are missing. Each call is idempotent and works within a bounded time; call again until `pending` is 0."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
+      "description": "Records the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/assets:generate",
       "input_schema": {
@@ -1877,7 +2041,6 @@
       "long_running": false,
       "method_id": "assets.assets.generate",
       "permission": "assets:write",
-      "served": false,
       "tool": "assets_assets_generate"
     },
     {
@@ -1888,7 +2051,7 @@
         "readOnlyHint": true,
         "title": "Returns the `assets.lock` entries and canonical text for the keys the call names, and only those. A read with a request body, like a query."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Returns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
+      "description": "Returns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/assets:lock",
       "input_schema": {
@@ -1917,7 +2080,6 @@
       "long_running": false,
       "method_id": "assets.assets.lock",
       "permission": "assets:read",
-      "served": false,
       "tool": "assets_assets_lock"
     },
     {
@@ -1928,7 +2090,7 @@
         "readOnlyHint": false,
         "title": "Approves one variant and records who approved it."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Approves one variant and records who approved it.",
+      "description": "Approves one variant and records who approved it.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:approveVariant",
       "input_schema": {
@@ -1954,7 +2116,6 @@
       "long_running": false,
       "method_id": "assets.assets.approve_variant",
       "permission": "assets:write",
-      "served": false,
       "tool": "assets_assets_approve_variant"
     },
     {
@@ -1965,7 +2126,7 @@
         "readOnlyHint": false,
         "title": "Rejects one variant. Its slot is freed and the next `:generate` fills it; the rejected file keeps serving at its URL."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Rejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
+      "description": "Rejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:rejectVariant",
       "input_schema": {
@@ -1991,7 +2152,6 @@
       "long_running": false,
       "method_id": "assets.assets.reject_variant",
       "permission": "assets:write",
-      "served": false,
       "tool": "assets_assets_reject_variant"
     },
     {
@@ -2002,7 +2162,7 @@
         "readOnlyHint": false,
         "title": "Retires one variant. Its URL answers 404 from then on and its slot is freed."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Retires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
+      "description": "Retires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/assets/*}:retireVariant",
       "input_schema": {
@@ -2038,7 +2198,6 @@
       "long_running": false,
       "method_id": "assets.assets.retire_variant",
       "permission": "assets:write",
-      "served": false,
       "tool": "assets_assets_retire_variant"
     },
     {
@@ -32346,7 +32505,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@f36ecb46429ea0c761e065a2fd1e58466f30159040ea709b03d0ce775ba806ca. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@04e1ecbfe774a1a19c4948892114a2dfa4a5502a024d780c13f5d41103b96d5d. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
