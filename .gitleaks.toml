@@ -13,7 +13,7 @@ regex = '''\bsylphx_sk_(?:live|test)_[a-z0-9]{4}[0-9A-Za-z]{16}_[0-9A-Za-z]{38}\
 keywords = ["sylphx_sk_"]
 
 # The generated TypeScript SDK's field tables map a field's JS name to its wire
-# name (`['secret', 'secret', 'sylphx.secrets.v1.Secret']`); generic-api-key
+# name (`['secret', 'secret', 'sylphx.secrets.v1.Secret']`; names may carry digits); generic-api-key
 # reads those as a key named "secret". Only that exact shape, in those files
 # (condition AND), is allowed.
 [[allowlists]]
@@ -22,4 +22,4 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 paths = ['''(^|/)typescript/src/[a-z_]+\.ts$''']
 regexTarget = "line"
-regexes = ['''^\s*\['[A-Za-z]+', '[a-z_]+'(, '[A-Za-z0-9_.]+')?\],\s*$''']
+regexes = ['''^\s*\['[A-Za-z][A-Za-z0-9]*', '[a-z][a-z0-9_]*'(, '[A-Za-z0-9_.]+')?\],\s*$''']
