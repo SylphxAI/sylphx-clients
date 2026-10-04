@@ -78,8 +78,10 @@ const POOL_PURPOSE: &str = "build-workspace";
 /// The pool label naming a workspace's region; home-region workspaces have
 /// none, so the pool without `--region` is what it always was.
 const POOL_REGION: &str = "build-region";
-/// The `build-packages` egress preset: package and toolchain hosts.
-const BUILD_PACKAGES: [&str; 7] = [
+/// The `build-packages` egress preset: package and toolchain hosts, and the
+/// build-cache gateway's public name (a lease on the public network reaches
+/// the cache there with its run token; in-cluster leases use the Service).
+const BUILD_PACKAGES: [&str; 8] = [
     "index.crates.io",
     "static.crates.io",
     "static.rust-lang.org",
@@ -87,7 +89,17 @@ const BUILD_PACKAGES: [&str; 7] = [
     "github.com",
     "codeload.github.com",
     "objects.githubusercontent.com",
+    "build-cache.sylphx.net",
 ];
+
+/// The lease's egress allow-list: the preset, then each `--allow-host`.
+fn allowed_domains(extra: &[String]) -> Vec<String> {
+    BUILD_PACKAGES
+        .iter()
+        .map(|h| h.to_string())
+        .chain(extra.iter().cloned())
+        .collect()
+}
 
 /// Prepares the workspace as root: the mount root belongs to the guest user,
 /// and the manifest is offered compressed for the client to read.
@@ -1040,11 +1052,7 @@ impl Run<'_> {
         spec.idle_timeout = IDLE_TIMEOUT.into();
         let mut net = sbx::LeaseNetwork::default();
         net.egress = Some(sbx::EgressPolicy::Allowlist);
-        net.allowed_domains = BUILD_PACKAGES
-            .iter()
-            .map(|h| h.to_string())
-            .chain(self.o.allow_hosts.iter().cloned())
-            .collect();
+        net.allowed_domains = allowed_domains(&self.o.allow_hosts);
         spec.network = Some(net);
         if let Some(volume) = volume {
             let mut mount = sbx::VolumeMount::default();
@@ -1507,6 +1515,16 @@ mod tests {
         let (_, b) = m.subcommand().unwrap();
         let (_, r) = b.subcommand().unwrap();
         Opts::parse(r)
+    }
+
+    #[test]
+    fn lease_egress_allows_the_package_hosts_the_cache_gateway_and_allow_hosts() {
+        let d = allowed_domains(&["proxy.golang.org".to_string()]);
+        assert_eq!(d.len(), BUILD_PACKAGES.len() + 1);
+        assert!(d.contains(&"build-cache.sylphx.net".to_string()));
+        assert!(d.contains(&"index.crates.io".to_string()));
+        assert_eq!(d.last().map(String::as_str), Some("proxy.golang.org"));
+        assert_eq!(allowed_domains(&[]).len(), BUILD_PACKAGES.len());
     }
 
     #[test]
