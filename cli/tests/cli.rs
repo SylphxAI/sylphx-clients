@@ -118,6 +118,7 @@ impl Sandbox {
             .current_dir(&self.dir)
             .env("SYLPHX_BASE_URL", url)
             .env("SYLPHX_API_KEY", "sylphx_sk_test")
+            .env("SYLPHX_BUILD_CACHE_URL", "http://127.0.0.1:9")
             .env("SYLPHX_CONFIG_DIR", self.dir.join("config"))
             .stdin(Stdio::null());
         c
@@ -972,7 +973,12 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     ];
     let (url2, log) = serve_bytes_at(&url, replies).await;
     assert_eq!(url, url2);
-    let out = run(&sb, &url, &["build", "run", "--", "cargo", "test"]).await;
+    let out = run(
+        &sb,
+        &url,
+        &["build", "run", "--no-cache", "--", "cargo", "test"],
+    )
+    .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(3), "{err}");
     assert_eq!(
@@ -1520,4 +1526,503 @@ async fn ai_top_says_so_when_the_key_may_not_read_seats() {
     let out = run(&sb, &url, &["ai", "top", "--once"]).await;
     assert_eq!(out.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&out.stderr).contains("missing_scope"));
+}
+
+// ---- the shared build cache ------------------------------------------------
+
+const CACHE_TOKEN: &str = "cache-token-0123456789-do-not-print";
+
+fn cache_reply() -> Value {
+    json!({
+        "token": CACHE_TOKEN,
+        "expires_at": "2026-10-04T12:00:00Z",
+        "org": "org_a",
+        "cache": "prj_a",
+        "read_scopes": ["protected", "dev"],
+        "write_scope": "dev",
+        "env": {
+            "SCCACHE_WEBDAV_ENDPOINT": "https://cache.test/sccache",
+            "SCCACHE_WEBDAV_TOKEN": CACHE_TOKEN,
+            "TURBO_API": "https://cache.test",
+            "TURBO_TOKEN": CACHE_TOKEN,
+            "TURBO_TEAM": "team_prj_a",
+            "SCCACHE_IGNORE_SERVER_IO_ERROR": "1"
+        }
+    })
+}
+
+async fn run_with(
+    sb: &Sandbox,
+    url: &str,
+    args: &[&str],
+    tweak: impl FnOnce(&mut Command),
+) -> std::process::Output {
+    let mut c = sb.cmd(url, args);
+    tweak(&mut c);
+    tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap()
+}
+
+/// A server that takes connections and never answers.
+async fn hanging_server() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move {
+        let mut held = Vec::new();
+        while let Ok((sock, _)) = listener.accept().await {
+            held.push(sock);
+        }
+    });
+    url
+}
+
+/// The sandbox and guest stub of a run up to the start of the command: an
+/// empty pool, a new workspace, a ready lease, its token, and the sync.
+/// `tail` is what happens from the command on.
+async fn build_stub(tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
+    let lease = format!("{ENV}/leases/l1");
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut replies = vec![
+        json_reply(json!({"volumes": []})),
+        json_reply(
+            json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
+        ),
+        json_reply(
+            json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+        ),
+        json_reply(json!({"token": "h.p.s", "generation": 1})),
+        envd_process("", 0),
+        (404, "text/plain", b"file not found".to_vec()),
+        json_reply(json!({})),
+        json_reply(json!({})),
+        envd_process("", 0),
+    ];
+    replies.extend(tail);
+    serve_bytes_on(listener, replies).await
+}
+
+fn ended() -> (u16, &'static str, Vec<u8>) {
+    (
+        200,
+        "application/json",
+        json!({"name": format!("{ENV}/leases/l1"), "status": {"state": "ending"}})
+            .to_string()
+            .into_bytes(),
+    )
+}
+
+/// The environment the command was started with (the 10th call).
+fn started_env(log: &Log) -> Value {
+    let seen = log.lock().unwrap();
+    let start = &seen[9];
+    assert!(start.line.starts_with("POST /process.Process/Start"));
+    let text = &start.body;
+    let from = text.find("{\"process\"").expect("a JSON message");
+    let end = text.rfind('}').unwrap();
+    let v: Value = serde_json::from_str(&text[from..=end]).unwrap();
+    v["process"]["envs"].clone()
+}
+
+fn sylphx_lines(stderr: &str) -> Vec<&str> {
+    stderr
+        .lines()
+        .filter(|l| l.starts_with("sylphx:"))
+        .collect()
+}
+
+fn project(dir: &std::path::Path) {
+    git_init(dir);
+    std::fs::write(dir.join("a.txt"), "a\n").unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
+    let sb = Sandbox::new("cache-run");
+    project(&sb.dir);
+    let (cache, clog) = serve(vec![(200, cache_reply())]).await;
+    let (url, log) = build_stub(vec![envd_process("built\n", 0), ended()]).await;
+    let out = run_with(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--timeout",
+            "10m",
+            "--env",
+            "TURBO_TEAM=mine",
+            "--",
+            "make",
+        ],
+        |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(out.status.code(), Some(0), "{err}");
+    // The mint: the key as a bearer, and the run's access, network and life.
+    let seen = clog.lock().unwrap();
+    assert_eq!(seen.len(), 1);
+    assert!(
+        seen[0].line.starts_with("POST /v1/tokens"),
+        "{}",
+        seen[0].line
+    );
+    assert!(
+        seen[0]
+            .head
+            .to_ascii_lowercase()
+            .contains("authorization: bearer sylphx_sk_test"),
+        "{}",
+        seen[0].head
+    );
+    let body: Value = serde_json::from_str(&seen[0].body).unwrap();
+    assert_eq!(
+        body,
+        json!({"project": "prj_a", "access": "write", "ttl_seconds": 1500, "network": "cluster"})
+    );
+    // The command's environment: the cache's, the user's --env winning.
+    let env = started_env(&log);
+    assert_eq!(env["SCCACHE_WEBDAV_ENDPOINT"], "https://cache.test/sccache");
+    assert_eq!(env["SCCACHE_WEBDAV_TOKEN"], CACHE_TOKEN);
+    assert_eq!(env["TURBO_TEAM"], "mine");
+    // The token is in no event, no log line and no error.
+    assert!(!stdout.contains(CACHE_TOKEN), "{stdout}");
+    assert!(!err.contains(CACHE_TOKEN), "{err}");
+    let events: Vec<Value> = stdout
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let running = events.iter().find(|e| e["type"] == "running").unwrap();
+    assert_eq!(running["cache"], true);
+    assert!(!err.contains("build cache unavailable"), "{err}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_caps_the_token_life_at_the_longest_run() {
+    let sb = Sandbox::new("cache-ttl");
+    project(&sb.dir);
+    let (cache, clog) = serve(vec![(200, cache_reply())]).await;
+    let (url, _log) = build_stub(vec![envd_process("", 0), ended()]).await;
+    let out = run_with(
+        &sb,
+        &url,
+        &["build", "run", "--timeout", "6h", "--", "make"],
+        |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(0));
+    let body: Value = serde_json::from_str(&clog.lock().unwrap()[0].body).unwrap();
+    assert_eq!(body["ttl_seconds"], 22500);
+}
+
+/// Whatever goes wrong minting, the run builds without the cache, says so on
+/// exactly one line, and stays within three `sylphx:` lines.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_builds_without_the_cache_when_it_cannot_be_minted() {
+    let hang = hanging_server().await;
+    let (e503, _) = serve(vec![(
+        503,
+        json!({"error": {"code": "UNAVAILABLE", "message": "store down"}}),
+    )])
+    .await;
+    let (e403, _) = serve(vec![(
+        403,
+        json!({"error": {"code": "PERMISSION_DENIED", "message": "no"}}),
+    )])
+    .await;
+    let (e401, _) = serve(vec![(
+        401,
+        json!({"error": {"code": "UNAUTHENTICATED", "message": "no"}}),
+    )])
+    .await;
+    let (e400, _) = serve(vec![(
+        400,
+        json!({"error": {"code": "INVALID_ARGUMENT", "message": "ttl"}}),
+    )])
+    .await;
+    let (junk, _) = serve_bytes(vec![(200, "application/json", b"{not json".to_vec())]).await;
+    let (noenv, _) = serve(vec![(200, json!({"token": CACHE_TOKEN}))]).await;
+    let cases: Vec<(&str, String, &str)> = vec![
+        ("503", e503, "HTTP 503 UNAVAILABLE"),
+        ("403", e403, "HTTP 403 PERMISSION_DENIED"),
+        ("401", e401, "HTTP 401 UNAUTHENTICATED"),
+        ("400", e400, "HTTP 400 INVALID_ARGUMENT"),
+        ("json", junk, "unreadable reply"),
+        ("noenv", noenv, "unreadable reply"),
+        ("down", "http://127.0.0.1:9".into(), "unreachable"),
+        ("timeout", hang, "timed out"),
+    ];
+    for (name, cache, reason) in cases {
+        let sb = Sandbox::new(&format!("cache-fail-{name}"));
+        project(&sb.dir);
+        let (url, log) = build_stub(vec![envd_process("ok\n", 0), ended()]).await;
+        let out = run_with(&sb, &url, &["build", "run", "--", "make"], |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        })
+        .await;
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(0), "{name}: {err}");
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "ok\n", "{name}");
+        let warn: Vec<&str> = err.lines().filter(|l| l.contains("build cache")).collect();
+        assert_eq!(
+            warn,
+            [format!(
+                "sylphx: warning: build cache unavailable ({reason}); building without it"
+            )],
+            "{name}: {err}"
+        );
+        assert!(sylphx_lines(&err).len() <= 3, "{name}: {err}");
+        assert_eq!(started_env(&log), json!({}), "{name}");
+        assert!(!err.contains(CACHE_TOKEN), "{name}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
+    let sb = Sandbox::new("cache-off");
+    project(&sb.dir);
+    let (cache, clog) = serve(vec![(200, cache_reply())]).await;
+    let (url, log) = build_stub(vec![envd_process("", 0), ended()]).await;
+    let out = run_with(
+        &sb,
+        &url,
+        &["build", "run", "--no-cache", "--", "make"],
+        |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "{err}");
+    assert!(clog.lock().unwrap().is_empty(), "no token was asked for");
+    assert!(!err.contains("build cache"), "{err}");
+    assert_eq!(sylphx_lines(&err).len(), 3, "{err}");
+    assert_eq!(started_env(&log), json!({}));
+}
+
+/// An error from the machine that happens to repeat the token does not
+/// carry it out.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_errors_never_carry_the_token() {
+    let sb = Sandbox::new("cache-scrub");
+    project(&sb.dir);
+    let (cache, _) = serve(vec![(200, cache_reply())]).await;
+    let echo = format!("boom {CACHE_TOKEN}").into_bytes();
+    let (url, _log) = build_stub(vec![
+        (500, "text/plain", echo),
+        (
+            200,
+            "application/json",
+            json!({"name": format!("{ENV}/leases/l1"), "status": {"state": "ready"}})
+                .to_string()
+                .into_bytes(),
+        ),
+        ended(),
+    ])
+    .await;
+    let out = run_with(&sb, &url, &["build", "run", "--", "make"], |c| {
+        c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+    })
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(125), "{err}");
+    assert!(err.contains("sylphx: error:"), "{err}");
+    assert!(!err.contains(CACHE_TOKEN), "{err}");
+}
+
+fn fake_sccache_dir(name: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("sylphx-sccache-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let bin = dir.join("sccache");
+    std::fs::write(&bin, "#!/bin/sh\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    dir
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_cache_env_prints_shell_exports_from_a_read_token() {
+    let sb = Sandbox::new("cache-env");
+    let mut reply = cache_reply();
+    reply["env"]["ODD"] = json!("it's $HOME `x` \"y\"");
+    let (cache, clog) = serve(vec![(200, reply)]).await;
+    let with = fake_sccache_dir("with");
+    let out = run_with(&sb, "http://127.0.0.1:9", &["build", "cache", "env"], |c| {
+        c.env("SYLPHX_BUILD_CACHE_URL", &cache)
+            .env("PATH", &with)
+            .env_remove("RUSTC_WRAPPER");
+    })
+    .await;
+    let _ = std::fs::remove_dir_all(&with);
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "{err}");
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    assert!(
+        stdout.contains(&format!("export SCCACHE_WEBDAV_TOKEN='{CACHE_TOKEN}'\n")),
+        "{stdout}"
+    );
+    assert!(
+        stdout.ends_with("export RUSTC_WRAPPER=sccache\n"),
+        "{stdout}"
+    );
+    assert!(!err.contains(CACHE_TOKEN), "{err}");
+    // A shell reads the quoting back to the same values.
+    let script = format!("{stdout}\nprintf %s \"$ODD\"");
+    let echoed = Command::new("sh").arg("-c").arg(script).output().unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&echoed.stdout),
+        "it's $HOME `x` \"y\""
+    );
+    let seen = clog.lock().unwrap();
+    assert_eq!(seen.len(), 1);
+    let body: Value = serde_json::from_str(&seen[0].body).unwrap();
+    assert_eq!(
+        body,
+        json!({"project": "prj_a", "access": "read", "ttl_seconds": 43200, "network": "public"})
+    );
+    assert!(
+        seen[0]
+            .head
+            .to_ascii_lowercase()
+            .contains("authorization: bearer sylphx_sk_test"),
+        "{}",
+        seen[0].head
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_cache_env_adds_the_wrapper_only_when_it_is_missing_and_usable() {
+    let with = fake_sccache_dir("wrapper");
+    let without = std::env::temp_dir().join(format!("sylphx-no-sccache-{}", std::process::id()));
+    std::fs::create_dir_all(&without).unwrap();
+    for (name, path, wrapper, want) in [
+        ("none", &without, None, false),
+        ("set", &with, Some("other"), false),
+        ("present", &with, None, true),
+    ] {
+        let sb = Sandbox::new(&format!("cache-wrapper-{name}"));
+        let (cache, _) = serve(vec![(200, cache_reply())]).await;
+        let out = run_with(&sb, "http://127.0.0.1:9", &["build", "cache", "env"], |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache).env("PATH", path);
+            match wrapper {
+                Some(w) => c.env("RUSTC_WRAPPER", w),
+                None => c.env_remove("RUSTC_WRAPPER"),
+            };
+        })
+        .await;
+        assert_eq!(out.status.code(), Some(0), "{name}");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert_eq!(stdout.contains("RUSTC_WRAPPER"), want, "{name}: {stdout}");
+    }
+    let _ = std::fs::remove_dir_all(&with);
+    let _ = std::fs::remove_dir_all(&without);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_cache_env_json_is_the_env_object_and_takes_a_project() {
+    let sb = Sandbox::new("cache-env-json");
+    let (cache, clog) = serve(vec![(200, cache_reply())]).await;
+    let out = run_with(
+        &sb,
+        "http://127.0.0.1:9",
+        &[
+            "build",
+            "cache",
+            "env",
+            "--project",
+            "prj_other",
+            "-o",
+            "json",
+        ],
+        |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(0));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v, cache_reply()["env"]);
+    let body: Value = serde_json::from_str(&clog.lock().unwrap()[0].body).unwrap();
+    assert_eq!(body["project"], "prj_other");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_cache_env_failures_exit_125_or_2_and_say_why() {
+    let (e503, _) = serve(vec![(
+        503,
+        json!({"error": {"code": "UNAVAILABLE", "message": "store down"}}),
+    )])
+    .await;
+    let (e403, _) = serve(vec![(
+        403,
+        json!({"error": {"code": "PERMISSION_DENIED", "message": "key lacks build:cache.read"}}),
+    )])
+    .await;
+    let (e400, _) = serve(vec![(
+        400,
+        json!({"error": {"code": "INVALID_ARGUMENT", "message": "unknown project"}}),
+    )])
+    .await;
+    let (junk, _) = serve_bytes(vec![(200, "application/json", b"<html>".to_vec())]).await;
+    let hang = hanging_server().await;
+    for (name, cache, code, said) in [
+        ("503", e503, 125, "store down"),
+        ("403", e403, 125, "key lacks build:cache.read"),
+        ("400", e400, 2, "unknown project"),
+        ("junk", junk, 125, "unreadable reply"),
+        ("down", "http://127.0.0.1:9".to_string(), 125, "unreachable"),
+        ("hang", hang, 125, "timed out"),
+        ("http", "http://cache.example.com".to_string(), 2, "https"),
+    ] {
+        let sb = Sandbox::new(&format!("cache-env-fail-{name}"));
+        let out = run_with(&sb, "http://127.0.0.1:9", &["build", "cache", "env"], |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        })
+        .await;
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(code), "{name}: {err}");
+        assert!(
+            err.contains("error:") && err.contains(said),
+            "{name}: {err}"
+        );
+        assert!(out.stdout.is_empty(), "{name}: nothing on stdout");
+        assert!(!err.contains("sylphx_sk_test"), "{name}: {err}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_cache_env_needs_a_project_and_a_key() {
+    // No linked project and a key that names none: usage, and no mint.
+    let sb = Sandbox::new("cache-env-noproject");
+    std::fs::remove_file(sb.dir.join(".sylphx/project.json")).unwrap();
+    let (api, _) = serve(vec![(200, json!({"org": "orgs/org_a"}))]).await;
+    let (cache, clog) = serve(vec![(200, cache_reply())]).await;
+    let out = run_with(&sb, &api, &["build", "cache", "env"], |c| {
+        c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+    })
+    .await;
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("no project"));
+    assert!(clog.lock().unwrap().is_empty());
+    // Signed out: a platform failure, as for `build run`.
+    let out = run_with(&sb, "http://127.0.0.1:9", &["build", "cache", "env"], |c| {
+        c.env_remove("SYLPHX_API_KEY");
+    })
+    .await;
+    assert_eq!(out.status.code(), Some(125));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("not signed in"));
 }

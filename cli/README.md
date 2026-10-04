@@ -15,6 +15,7 @@ sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
+eval "$(sylphx build cache env)"      # point local sccache and Turbo at the project's shared build cache
 sylphx build run --region gra --queue-timeout 120s -- cargo check   # in region gra, or exit 125 after 2 min
 sylphx mcp                            # the MCP server over stdio
 ```
@@ -51,6 +52,18 @@ sylphx mcp                            # the MCP server over stdio
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
   prints what a cold run would send. Files: `git ls-files` (tracked and
   untracked, not ignored) minus `.sylphxignore`.
+- The run also gets the project's shared build cache (sccache, Turbo): the
+  CLI mints a cache token with your key before the command starts and merges
+  the cache's environment into the command's (your `--env` wins). If the
+  cache cannot be reached the run builds without it and prints one
+  `sylphx: warning: build cache unavailable (…)` line; `--no-cache` skips it.
+  The token is never printed, logged or put in an event.
+- `sylphx build cache env [--project ID] [-o json]` mints a read-only token
+  (12 h) and prints `export NAME='value'` lines for a POSIX shell (plus
+  `export RUSTC_WRAPPER=sccache` when sccache is installed and the variable
+  is unset); `-o json` prints the environment as an object. The output holds
+  a credential. Exit 0; 2 usage; 125 platform failure. The gateway is
+  `https://build-cache.sylphx.com`, or `SYLPHX_BUILD_CACHE_URL`.
 
 ## `sylphx ai top`
 

@@ -27,6 +27,7 @@ mod sync;
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -35,6 +36,7 @@ use serde_json::{json, Value};
 use sylphx::sandboxes as sbx;
 use sylphx::{Client, HttpRequest};
 
+use crate::build_cache;
 use crate::devices::{duration, parent_env, release_request, state, why, wire};
 use crate::Failure;
 use guest::{Event, Fault, Guest};
@@ -140,7 +142,7 @@ exit 0
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, machine lost); 130 interrupted.\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, machine lost); 130 interrupted.\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -160,6 +162,8 @@ pub fn command() -> Command {
             .help("Where artifacts land (default .sylphx/out/<run id>/)"))
         .arg(Arg::new("env").long("env").value_name("NAME=VALUE").action(ArgAction::Append)
             .help("Non-secret environment for the command (repeatable)"))
+        .arg(Arg::new("no-cache").long("no-cache").action(ArgAction::SetTrue)
+            .help("Do not use the shared build cache (no token is minted)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
             .help("Extra egress host beyond the package hosts (repeatable)"))
         .arg(Arg::new("fresh").long("fresh").action(ArgAction::SetTrue)
@@ -184,6 +188,7 @@ pub struct Opts {
     env: BTreeMap<String, String>,
     allow_hosts: Vec<String>,
     fresh: bool,
+    no_cache: bool,
     dry_run: bool,
     quiet: bool,
     json: bool,
@@ -278,6 +283,7 @@ impl Opts {
             env,
             allow_hosts,
             fresh: m.get_flag("fresh"),
+            no_cache: m.get_flag("no-cache"),
             dry_run: m.get_flag("dry-run"),
             quiet: m.get_flag("quiet"),
             json: m.get_one::<String>("output").map(String::as_str) == Some("json"),
@@ -380,6 +386,8 @@ struct Held(Mutex<HeldState>);
 struct HeldState {
     lease: Option<String>,
     proc: Option<(Guest, u64)>,
+    /// Cache token values: removed from any text that leaves the process.
+    secrets: Vec<String>,
 }
 
 impl Held {
@@ -398,7 +406,11 @@ struct Stats {
 }
 
 /// `sylphx build run`. `client` is the signed-in client, or why there is none.
-pub async fn run(client: Result<Client, Failure>, m: &ArgMatches) -> Result<(), Failure> {
+pub async fn run(
+    client: Result<Client, Failure>,
+    key: Option<String>,
+    m: &ArgMatches,
+) -> Result<(), Failure> {
     let opts = Opts::parse(m).map_err(Failure::Usage)?;
     let out = Out {
         json: opts.json,
@@ -427,13 +439,14 @@ pub async fn run(client: Result<Client, Failure>, m: &ArgMatches) -> Result<(), 
     let held = Held::default();
     let stats = Mutex::new(Stats::default());
     let outcome = tokio::select! {
-        o = execute(&client, &opts, &out, &held, &stats) => o,
+        o = execute(&client, key.as_deref(), &opts, &out, &held, &stats) => o,
         _ = interrupted() => Outcome::Interrupted,
     };
     // Stop the command first, so nothing more is written to the workspace,
     // then end the machine. Either is bounded: an unreachable API must not
     // hold the caller.
     let (lease, proc) = held.with(|h| (h.lease.take(), h.proc.take()));
+    let outcome = scrub(outcome, &held.with(|h| h.secrets.clone()));
     if matches!(outcome, Outcome::Interrupted) {
         if let Some((g, pid)) = proc {
             let _ = tokio::time::timeout(Duration::from_secs(5), g.signal(pid, "SIGKILL")).await;
@@ -570,6 +583,7 @@ fn human(b: u64) -> String {
 
 async fn execute(
     client: &Client,
+    key: Option<&str>,
     o: &Opts,
     out: &Out,
     held: &Held,
@@ -601,6 +615,9 @@ async fn execute(
         parent,
         repo,
         tree,
+        key,
+        cache_url: build_cache::base_url(),
+        cache_warned: AtomicBool::new(false),
         no_volumes: false,
     };
     let mut preempted = false;
@@ -634,6 +651,11 @@ struct Run<'a> {
     parent: String,
     repo: String,
     tree: sync::Tree,
+    /// The caller's key, for minting the cache token.
+    key: Option<&'a str>,
+    cache_url: String,
+    /// The one `build cache unavailable` warning is given once per run.
+    cache_warned: AtomicBool,
     /// The region refused a workspace Volume (`SHAPE_NOT_OFFERED`): every
     /// attempt of this run leases a machine without one.
     no_volumes: bool,
@@ -681,19 +703,26 @@ impl Run<'_> {
             Err(e) => return self.lost_or(&name, e).await,
         };
         let shape = format!("build-{}", self.o.size);
-        self.out.progress(&format!(
-            "running on {shape}, {} workspace{}",
-            if warm { "warm" } else { "cold" },
-            if m.volume {
-                String::new()
-            } else {
-                format!(" on its own disk (no Volumes{})", self.where_())
-            }
-        ));
+        let (cache, warned) = self.cache().await;
+        // At most three `sylphx:` lines: a warning takes the place of this one.
+        if !warned {
+            self.out.progress(&format!(
+                "running on {shape}, {} workspace{}",
+                if warm { "warm" } else { "cold" },
+                if m.volume {
+                    String::new()
+                } else {
+                    format!(" on its own disk (no Volumes{})", self.where_())
+                }
+            ));
+        }
         self.out.event(
-            json!({"type": "running", "lease": name, "size": self.o.size, "region": self.region(), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume}),
+            json!({"type": "running", "lease": name, "size": self.o.size, "region": self.region(), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume, "cache": !cache.is_empty()}),
         );
-        let code = match self.exec(&mut guest, &mut minted, &name, m.volume).await {
+        let code = match self
+            .exec(&mut guest, &mut minted, &name, m.volume, cache)
+            .await
+        {
             Ok(Some(c)) => c,
             Ok(None) => return Attempt::Done(Outcome::TimedOut),
             Err(e) => return self.lost_or(&name, e).await,
@@ -707,6 +736,42 @@ impl Run<'_> {
             }
         }
         Attempt::Done(Outcome::Ran(code))
+    }
+
+    /// The cache environment for the command, minted just before it starts so
+    /// the token covers the run. Empty with `--no-cache`, and when no token
+    /// can be had (a cache that is missing only slows the build); the bool
+    /// says the warning line was written.
+    async fn cache(&self) -> (BTreeMap<String, String>, bool) {
+        if self.o.no_cache {
+            return (BTreeMap::new(), false);
+        }
+        let minted = match (self.key, build_cache::project_id(&self.parent)) {
+            (Some(key), Some(project)) => {
+                let req = build_cache::run_request(project, self.o.timeout);
+                build_cache::mint(&self.cache_url, key, &req).await
+            }
+            (None, _) => Err(build_cache::MintError::NoProject("not signed in".into())),
+            (_, None) => Err(build_cache::MintError::NoProject(
+                "the environment names no project".into(),
+            )),
+        };
+        match minted {
+            Ok(m) => {
+                self.held.with(|h| h.secrets.extend(m.secrets()));
+                (m.env, false)
+            }
+            Err(e) => {
+                let first = !self.cache_warned.swap(true, Ordering::Relaxed);
+                if first {
+                    eprintln!(
+                        "sylphx: warning: build cache unavailable ({}); building without it",
+                        e.short()
+                    );
+                }
+                (BTreeMap::new(), first)
+            }
+        }
     }
 
     /// A guest fault means the machine may be gone: if the lease ended
@@ -1217,6 +1282,7 @@ impl Run<'_> {
         minted: &mut Instant,
         lease: &str,
         volume: bool,
+        cache: BTreeMap<String, String>,
     ) -> Result<Option<i32>, Fault> {
         let mut args = vec![
             "/bin/sh".to_string(),
@@ -1232,7 +1298,10 @@ impl Run<'_> {
             if volume { "0" } else { "1" }.into(),
         ];
         args.extend(self.o.command.iter().cloned());
-        let mut p = g.start(USER, &args, "", &self.o.env).await?;
+        // The command's own `--env` wins over the cache's.
+        let mut env = cache;
+        env.extend(self.o.env.clone());
+        let mut p = g.start(USER, &args, "", &env).await?;
         let deadline = tokio::time::Instant::now() + self.o.timeout;
         let mut tick = tokio::time::interval(KEEPALIVE);
         tick.tick().await;
@@ -1355,6 +1424,17 @@ fn api(what: &str, e: &sylphx::Error) -> Outcome {
         _ => false,
     };
     Outcome::platform(format!("{what}: {}", why(e)), retryable)
+}
+
+/// An outcome's text with the cache token removed.
+fn scrub(outcome: Outcome, secrets: &[String]) -> Outcome {
+    match outcome {
+        Outcome::Platform { reason, retryable } => Outcome::Platform {
+            reason: build_cache::scrub(&reason, secrets),
+            retryable,
+        },
+        other => other,
+    }
 }
 
 /// Whether a Volume is one of this pool's workspaces: this repository's, in

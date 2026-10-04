@@ -3,12 +3,13 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `devices`, `build run`, `mcp`, `completion`, `ai top`) is hand-written on the
+//! `api`, `devices`, `build run`, `build cache env`, `mcp`, `completion`, `ai top`) is hand-written on the
 //! same SDK.
 
 mod ai_top;
 mod ai_top_run;
 mod auth;
+mod build_cache;
 mod build_run;
 mod context;
 mod devices;
@@ -205,6 +206,7 @@ fn cli(tree: &Tree) -> Command {
             // `build run` is porcelain on the generated `build` service: a
             // command on a remote build machine (`build_run/`).
             s.subcommand(build_run::command())
+                .subcommand(build_cache::command())
         } else if s.get_name() == "ai" {
             s.subcommand(
                 Command::new("top")
@@ -453,7 +455,13 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "build" if sub.subcommand_name() == Some("run") => {
             let (_, rm) = sub.subcommand().expect("checked");
-            build_run::run(client().await, rm).await
+            let key = context::resolve(api_key.clone(), base_url.clone()).map(|r| r.key);
+            build_run::run(client().await, key, rm).await
+        }
+        "build" if sub.subcommand_name() == Some("cache") => {
+            let (_, cm) = sub.subcommand().expect("checked");
+            let creds = context::resolve(api_key.clone(), base_url.clone());
+            build_cache::run(creds, cm, format).await
         }
         "ai" if sub.subcommand_name() == Some("top") => {
             let (_, tm) = sub.subcommand().expect("checked");
