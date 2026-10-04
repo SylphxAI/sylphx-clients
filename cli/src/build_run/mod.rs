@@ -9,6 +9,15 @@
 //! ([`sync`]), runs the command next to the warm `target/`, and always
 //! releases the lease. A preempted run is retried once.
 //!
+//! `--region` runs in that region's Cell, with that region's warm workspaces
+//! (a Volume lives in one Cell); no `--region` is the project's home region.
+//! A region whose Cell offers no Volumes refuses the workspace at once
+//! (`SHAPE_NOT_OFFERED`); the run then leases the machine with no Volume and
+//! builds on its own disk: a cold workspace that ends with the lease, with
+//! no local sccache (only a remote build cache the machine is given).
+//! `--queue-timeout` bounds the wait for a machine: past it the run answers
+//! 125, retryable, so a caller can try another region.
+//!
 //! Exit codes: the command's own; 2 usage; 124 `--timeout`; 125 a platform
 //! failure (with `retryable` in the `result` event); 130 interrupted.
 
@@ -44,8 +53,11 @@ const MAX_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
 /// Sync, toolchain install and copy-back on top of `--timeout`.
 const TTL_SLACK: Duration = Duration::from_secs(30 * 60);
 const IDLE_TIMEOUT: &str = "600s";
-/// How long a run waits for a machine before it answers 125 (retryable).
-const ADMISSION: Duration = Duration::from_secs(30 * 60);
+/// How long a run waits for a machine before it answers 125 (retryable),
+/// unless `--queue-timeout` says otherwise.
+const DEFAULT_QUEUE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+/// A Volume reaches available within this, or the run gives up on it.
+const VOLUME_WAIT: Duration = Duration::from_secs(300);
 /// A warm workspace pins the run to its node; past this the run takes a
 /// fresh workspace on any node instead (a cold build, never a failed one).
 const PIN_WAIT: Duration = Duration::from_secs(120);
@@ -61,6 +73,9 @@ const MAX_WARM: usize = 10;
 const VOLUME_GIB: i32 = 200;
 const VOLUME_CLASS: &str = "local";
 const POOL_PURPOSE: &str = "build-workspace";
+/// The pool label naming a workspace's region; home-region workspaces have
+/// none, so the pool without `--region` is what it always was.
+const POOL_REGION: &str = "build-region";
 /// The `build-packages` egress preset: package and toolchain hosts.
 const BUILD_PACKAGES: [&str; 7] = [
     "index.crates.io",
@@ -85,14 +100,19 @@ if [ -f "$W/.sylphx/manifest" ]; then
 fi
 "#;
 
-/// Runs the command (`$3…`) in `$W/tree/$R` with the build caches on the
+/// Runs the command (`$4…`) in `$W/tree/$R` with the build caches on the
 /// workspace: `target/`, the Cargo home, sccache, and rustup's toolchains
-/// (installed from the tree's `rust-toolchain.toml` on first use).
-const RUN: &str = r#"W=$1 R=$2
-shift 2
+/// (installed from the tree's `rust-toolchain.toml` on first use). `$3` is 1
+/// on a machine without a Volume: its disk ends with the lease, so sccache
+/// runs only against a remote cache the machine is given, never a local
+/// directory that would double `target/` on the same disk.
+const RUN: &str = r#"W=$1 R=$2 E=$3
+shift 3
 export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache"
 export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}" PATH="$W/cargo/bin:$PATH"
-if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then export RUSTC_WRAPPER=sccache; fi
+if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
+  if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
+fi
 cd "$W/tree/$R" || exit 125
 if command -v rustup >/dev/null 2>&1; then
   export RUSTUP_HOME="$W/rustup"
@@ -120,7 +140,7 @@ exit 0
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, sync failed, machine lost); 130 interrupted.\n\nExample: sylphx build run -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, machine lost); 130 interrupted.\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -130,6 +150,10 @@ pub fn command() -> Command {
             .help("Machine size: standard (8 vCPU), large (16), xlarge (32)"))
         .arg(Arg::new("timeout").long("timeout").value_name("DURATION")
             .help("Wall-clock limit for the command (default 60m, at most 6h)"))
+        .arg(Arg::new("region").long("region").value_name("REGION")
+            .help("Region to run in (default: the project's home region); each region keeps its own warm workspaces"))
+        .arg(Arg::new("queue-timeout").long("queue-timeout").value_name("DURATION")
+            .help("Longest wait for a build machine before exiting 125, retryable (default 30m, at most 6h)"))
         .arg(Arg::new("artifact").long("artifact").value_name("GLOB").action(ArgAction::Append)
             .help("Copy matching files back after the run (repeatable; relative to PATH on the remote side)"))
         .arg(Arg::new("out").long("out").value_name("DIR")
@@ -153,6 +177,8 @@ pub struct Opts {
     command: Vec<String>,
     size: String,
     timeout: Duration,
+    region: Option<String>,
+    queue_timeout: Duration,
     artifacts: Vec<String>,
     out: Option<PathBuf>,
     env: BTreeMap<String, String>,
@@ -188,6 +214,26 @@ impl Opts {
         if timeout.is_zero() || timeout > MAX_TIMEOUT {
             return Err("--timeout is more than 0s and at most 6h".into());
         }
+        let queue_timeout = match m.get_one::<String>("queue-timeout") {
+            Some(v) => duration(v, "--queue-timeout")?,
+            None => DEFAULT_QUEUE_TIMEOUT,
+        };
+        if queue_timeout.is_zero() || queue_timeout > MAX_TIMEOUT {
+            return Err("--queue-timeout is more than 0s and at most 6h".into());
+        }
+        let region = m.get_one::<String>("region").cloned();
+        if let Some(r) = &region {
+            let ok = !r.is_empty()
+                && r.len() <= 32
+                && r.starts_with(|c: char| c.is_ascii_lowercase())
+                && r.chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+            if !ok {
+                return Err(format!(
+                    "--region {r}: give a region name such as gra (lower-case letters, digits, -)"
+                ));
+            }
+        }
         let mut env = BTreeMap::new();
         for kv in m.get_many::<String>("env").into_iter().flatten() {
             let (k, v) = kv
@@ -222,6 +268,8 @@ impl Opts {
                 .cloned()
                 .unwrap_or_else(|| "large".into()),
             timeout,
+            region,
+            queue_timeout,
             artifacts: m
                 .get_many::<String>("artifact")
                 .map(|v| v.cloned().collect())
@@ -553,6 +601,7 @@ async fn execute(
         parent,
         repo,
         tree,
+        no_volumes: false,
     };
     let mut preempted = false;
     loop {
@@ -585,15 +634,33 @@ struct Run<'a> {
     parent: String,
     repo: String,
     tree: sync::Tree,
+    /// The region refused a workspace Volume (`SHAPE_NOT_OFFERED`): every
+    /// attempt of this run leases a machine without one.
+    no_volumes: bool,
 }
 
 /// A ready machine with its workspace.
 struct Machine {
     lease: sbx::Lease,
     warm_volume: bool,
+    /// Whether a Volume is mounted at [`WS`] (else the machine's own disk).
+    volume: bool,
 }
 
 impl Run<'_> {
+    /// The region asked for, or "" for the home region.
+    fn region(&self) -> &str {
+        self.o.region.as_deref().unwrap_or("")
+    }
+
+    /// " in region `<r>`" when a region was asked for.
+    fn where_(&self) -> String {
+        match &self.o.region {
+            Some(r) => format!(" in region {r}"),
+            None => String::new(),
+        }
+    }
+
     fn add(&self, f: impl FnOnce(&mut Stats)) {
         f(&mut self.stats.lock().expect("not poisoned"));
     }
@@ -609,19 +676,24 @@ impl Run<'_> {
             Err(e) => return self.lost_or(&name, e).await,
         };
         let mut minted = Instant::now();
-        let warm = match self.sync(&guest, m.warm_volume).await {
+        let warm = match self.sync(&guest, &m).await {
             Ok(w) => w,
             Err(e) => return self.lost_or(&name, e).await,
         };
         let shape = format!("build-{}", self.o.size);
         self.out.progress(&format!(
-            "running on {shape}, {} workspace",
-            if warm { "warm" } else { "cold" }
+            "running on {shape}, {} workspace{}",
+            if warm { "warm" } else { "cold" },
+            if m.volume {
+                String::new()
+            } else {
+                format!(" on its own disk (no Volumes{})", self.where_())
+            }
         ));
         self.out.event(
-            json!({"type": "running", "lease": name, "size": self.o.size, "workspace": if warm { "warm" } else { "cold" }}),
+            json!({"type": "running", "lease": name, "size": self.o.size, "region": self.region(), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume}),
         );
-        let code = match self.exec(&mut guest, &mut minted, &name).await {
+        let code = match self.exec(&mut guest, &mut minted, &name, m.volume).await {
             Ok(Some(c)) => c,
             Ok(None) => return Attempt::Done(Outcome::TimedOut),
             Err(e) => return self.lost_or(&name, e).await,
@@ -671,11 +743,15 @@ impl Run<'_> {
         }
     }
 
-    /// A ready lease of `build-<size>` with a workspace from the pool.
+    /// A ready lease of `build-<size>` with a workspace from the pool, or,
+    /// where the region offers no Volumes, on the machine's own disk.
     async fn acquire(&mut self) -> Result<Machine, Attempt> {
-        let deadline = Instant::now() + ADMISSION;
+        let deadline = Instant::now() + self.o.queue_timeout;
         let mut queued = false;
         loop {
+            if self.no_volumes {
+                return self.acquire_without_volume(deadline).await;
+            }
             let pool = self.pool().await.map_err(Attempt::Done)?;
             let live = pool
                 .iter()
@@ -693,7 +769,7 @@ impl Run<'_> {
             free.sort_by(|a, b| a.name.cmp(&b.name));
             let mut leased = None;
             for v in free {
-                match self.lease(&v.name).await {
+                match self.lease(Some(&v.name)).await {
                     Ok(l) => {
                         leased = Some((l, true));
                         break;
@@ -703,8 +779,11 @@ impl Run<'_> {
                 }
             }
             if leased.is_none() && live < MAX_WARM {
-                let vol = self.new_volume().await.map_err(Attempt::Done)?;
-                match self.lease(&vol).await {
+                let Some(vol) = self.new_volume(deadline).await.map_err(Attempt::Done)? else {
+                    self.no_volumes = true;
+                    continue;
+                };
+                match self.lease(Some(&vol)).await {
                     Ok(l) => leased = Some((l, false)),
                     Err(LeaseErr::InUse) => {}
                     Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
@@ -713,7 +792,10 @@ impl Run<'_> {
             let Some((lease, warm_volume)) = leased else {
                 if Instant::now() >= deadline {
                     return Err(Attempt::Done(Outcome::platform(
-                        "every warm workspace stayed busy until the admission deadline",
+                        format!(
+                            "every warm workspace{} stayed busy past --queue-timeout",
+                            self.where_()
+                        ),
                         true,
                     )));
                 }
@@ -725,7 +807,7 @@ impl Run<'_> {
                 continue;
             };
             self.out
-                .event(json!({"type": "queued", "lease": lease.name, "size": self.o.size}));
+                .event(json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": self.region()}));
             // A warm workspace pins the run to its node; fall back to a fresh
             // workspace elsewhere only while the pool has room for one.
             let pin = (warm_volume && live < MAX_WARM).then_some(PIN_WAIT);
@@ -734,13 +816,17 @@ impl Run<'_> {
                     return Ok(Machine {
                         lease: l,
                         warm_volume,
+                        volume: true,
                     })
                 }
                 None => {
                     self.out
                         .progress("the warm workspace's node is busy; using a fresh workspace");
-                    let vol = self.new_volume().await.map_err(Attempt::Done)?;
-                    let l = match self.lease(&vol).await {
+                    let Some(vol) = self.new_volume(deadline).await.map_err(Attempt::Done)? else {
+                        self.no_volumes = true;
+                        continue;
+                    };
+                    let l = match self.lease(Some(&vol)).await {
                         Ok(l) => l,
                         Err(LeaseErr::InUse) => continue,
                         Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
@@ -749,10 +835,46 @@ impl Run<'_> {
                         return Ok(Machine {
                             lease: l,
                             warm_volume: false,
+                            volume: true,
                         });
                     }
                 }
             }
+        }
+    }
+
+    /// A ready lease with no Volume: the region's Cell offers none, so the
+    /// workspace is the machine's own disk, created with it and gone with
+    /// it. Nothing is created that could outlive the run.
+    async fn acquire_without_volume(&mut self, deadline: Instant) -> Result<Machine, Attempt> {
+        let lease = match self.lease(None).await {
+            Ok(l) => l,
+            Err(LeaseErr::InUse) => {
+                return Err(Attempt::Done(Outcome::platform(
+                    "the build machine was refused: in use",
+                    true,
+                )))
+            }
+            Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
+        };
+        self.out.event(
+            json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": self.region(), "volume": false}),
+        );
+        match self.ready(lease, None, deadline).await? {
+            Some(l) => Ok(Machine {
+                lease: l,
+                warm_volume: false,
+                volume: false,
+            }),
+            // Without a pin, `ready` answers a lease or an outcome.
+            None => Err(Attempt::Done(Outcome::platform(
+                format!(
+                    "no build machine{} within --queue-timeout {}s",
+                    self.where_(),
+                    self.o.queue_timeout.as_secs()
+                ),
+                true,
+            ))),
         }
     }
 
@@ -769,21 +891,24 @@ impl Run<'_> {
             .map_err(|e| api("listing workspaces", &e))?;
         Ok(all
             .into_iter()
-            .filter(|v| {
-                let l = v.meta.as_ref().map(|m| &m.labels);
-                l.and_then(|l| l.get("purpose")).map(String::as_str) == Some(POOL_PURPOSE)
-                    && l.and_then(|l| l.get("build-repo")) == Some(&self.repo)
-            })
+            .filter(|v| in_pool(v, &self.repo, self.o.region.as_deref()))
             .collect())
     }
 
-    /// A new pool workspace, once it is available.
-    async fn new_volume(&self) -> Result<String, Outcome> {
-        let body = json!({
+    /// A new pool workspace, once it is available (by `deadline` at the
+    /// latest, the run's wait for a machine). `None` when the region offers
+    /// no Volumes: the API refuses with `SHAPE_NOT_OFFERED` before creating
+    /// anything, so no workspace is left behind.
+    async fn new_volume(&self, deadline: Instant) -> Result<Option<String>, Outcome> {
+        let mut body = json!({
             "meta": {"labels": {"purpose": POOL_PURPOSE, "build-repo": self.repo}},
             "spec": {"sizeGib": VOLUME_GIB, "storageClass": VOLUME_CLASS},
         });
-        let v: sbx::Volume = self
+        if let Some(r) = &self.o.region {
+            body["meta"]["labels"][POOL_REGION] = json!(r);
+            body["spec"]["region"] = json!(r);
+        }
+        let v: sbx::Volume = match self
             .client
             .call(HttpRequest {
                 method: "POST",
@@ -795,12 +920,18 @@ impl Run<'_> {
                 effect_ids: false,
             })
             .await
-            .map_err(|e| api("creating a workspace", &e))?;
-        let deadline = Instant::now() + Duration::from_secs(300);
+        {
+            Ok(v) => v,
+            Err(sylphx::Error::Api { code, .. }) if code.as_str() == "SHAPE_NOT_OFFERED" => {
+                return Ok(None)
+            }
+            Err(e) => return Err(api("creating a workspace", &e)),
+        };
+        let deadline = deadline.min(Instant::now() + VOLUME_WAIT);
         let mut v = v;
         loop {
             match vstate(&v) {
-                sbx::VolumeState::Available => return Ok(v.name),
+                sbx::VolumeState::Available => return Ok(Some(v.name)),
                 sbx::VolumeState::Failed => {
                     return Err(Outcome::platform(
                         format!("the workspace {} failed to provision", v.name),
@@ -811,7 +942,11 @@ impl Run<'_> {
             }
             if Instant::now() >= deadline {
                 return Err(Outcome::platform(
-                    format!("the workspace {} was not ready after 5 minutes", v.name),
+                    format!(
+                        "the workspace {}{} was not ready in time",
+                        v.name,
+                        self.where_()
+                    ),
                     true,
                 ));
             }
@@ -828,10 +963,13 @@ impl Run<'_> {
         }
     }
 
-    async fn lease(&self, volume: &str) -> Result<sbx::Lease, LeaseErr> {
+    /// Creates the build lease, with `volume` at [`WS`] or, without one, on
+    /// the machine's own disk.
+    async fn lease(&self, volume: Option<&str>) -> Result<sbx::Lease, LeaseErr> {
         let mut spec = sbx::LeaseSpec::default();
         spec.shape = format!("build-{}", self.o.size);
         spec.image = TEMPLATE.into();
+        spec.region = self.region().to_string();
         spec.kind = Some(sbx::LeaseKind::General);
         spec.ttl = wire((self.o.timeout + TTL_SLACK).min(Duration::from_secs(24 * 3600)));
         spec.idle_timeout = IDLE_TIMEOUT.into();
@@ -843,10 +981,12 @@ impl Run<'_> {
             .chain(self.o.allow_hosts.iter().cloned())
             .collect();
         spec.network = Some(net);
-        let mut mount = sbx::VolumeMount::default();
-        mount.volume = volume.to_string();
-        mount.mount_path = WS.into();
-        spec.volumes = vec![mount];
+        if let Some(volume) = volume {
+            let mut mount = sbx::VolumeMount::default();
+            mount.volume = volume.to_string();
+            mount.mount_path = WS.into();
+            spec.volumes = vec![mount];
+        }
         let mut meta = sylphx::common::ResourceMeta::default();
         meta.labels.insert("purpose".into(), "build-run".into());
         let mut lease = sbx::Lease::default();
@@ -922,7 +1062,11 @@ impl Run<'_> {
                     return Ok(None);
                 }
                 return Err(Attempt::Done(Outcome::platform(
-                    "no build capacity before the admission deadline",
+                    format!(
+                        "no build machine{} within --queue-timeout {}s",
+                        self.where_(),
+                        self.o.queue_timeout.as_secs()
+                    ),
                     true,
                 )));
             }
@@ -967,7 +1111,7 @@ impl Run<'_> {
 
     /// Brings the workspace's tree to this tree; answers whether it was warm
     /// (a trusted manifest, so only the diff was sent).
-    async fn sync(&self, g: &Guest, warm_volume: bool) -> Result<bool, Fault> {
+    async fn sync(&self, g: &Guest, m: &Machine) -> Result<bool, Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
         let (code, _, err) = g
@@ -1060,7 +1204,8 @@ impl Run<'_> {
             "bytes_up": up,
             "duration_ms": t.elapsed().as_millis() as u64,
             "workspace": if warm { "warm" } else { "cold" },
-            "new_volume": !warm_volume,
+            "new_volume": m.volume && !m.warm_volume,
+            "volume": m.volume,
         }));
         Ok(warm)
     }
@@ -1071,6 +1216,7 @@ impl Run<'_> {
         g: &mut Guest,
         minted: &mut Instant,
         lease: &str,
+        volume: bool,
     ) -> Result<Option<i32>, Fault> {
         let mut args = vec![
             "/bin/sh".to_string(),
@@ -1083,6 +1229,7 @@ impl Run<'_> {
             } else {
                 self.o.rel.clone()
             },
+            if volume { "0" } else { "1" }.into(),
         ];
         args.extend(self.o.command.iter().cloned());
         let mut p = g.start(USER, &args, "", &self.o.env).await?;
@@ -1210,6 +1357,16 @@ fn api(what: &str, e: &sylphx::Error) -> Outcome {
     Outcome::platform(format!("{what}: {}", why(e)), retryable)
 }
 
+/// Whether a Volume is one of this pool's workspaces: this repository's, in
+/// this region (`None`, the home region, is the pool without a region label).
+fn in_pool(v: &sbx::Volume, repo: &str, region: Option<&str>) -> bool {
+    let l = v.meta.as_ref().map(|m| &m.labels);
+    let label = |k: &str| l.and_then(|l| l.get(k)).map(String::as_str);
+    label("purpose") == Some(POOL_PURPOSE)
+        && label("build-repo") == Some(repo)
+        && label(POOL_REGION) == region
+}
+
 fn vstate(v: &sbx::Volume) -> sbx::VolumeState {
     v.status
         .as_ref()
@@ -1296,6 +1453,8 @@ mod tests {
         assert_eq!(o.command, ["cargo", "test", "-p", "x"]);
         assert_eq!(o.size, "large");
         assert_eq!(o.timeout, DEFAULT_TIMEOUT);
+        assert_eq!(o.region, None, "no --region: the home region");
+        assert_eq!(o.queue_timeout, DEFAULT_QUEUE_TIMEOUT);
         assert!(!o.json);
         let o = parse(&[
             "sylphx",
@@ -1326,6 +1485,68 @@ mod tests {
         assert_eq!(o.artifacts, ["a/*"]);
     }
 
+    /// A caller that prefers one region: a region and a short wait for a machine.
+    #[test]
+    fn region_and_queue_timeout_parse() {
+        let o = parse(&[
+            "sylphx",
+            "build",
+            "run",
+            "--size",
+            "standard",
+            "--region",
+            "gra",
+            "--queue-timeout",
+            "120s",
+            "--timeout",
+            "60m",
+            "--",
+            "cargo",
+            "check",
+        ])
+        .unwrap();
+        assert_eq!(o.region.as_deref(), Some("gra"));
+        assert_eq!(o.queue_timeout, Duration::from_secs(120));
+        assert_eq!(o.timeout, Duration::from_secs(3600));
+    }
+
+    /// A Volume lives in one region's Cell: a run uses only its region's
+    /// workspaces, and the home pool is exactly the pool before regions.
+    #[test]
+    fn the_pool_is_per_region() {
+        fn vol(labels: &[(&str, &str)]) -> sbx::Volume {
+            let mut meta = sylphx::common::ResourceMeta::default();
+            for (k, v) in labels {
+                meta.labels.insert(k.to_string(), v.to_string());
+            }
+            let mut v = sbx::Volume::default();
+            v.meta = Some(meta);
+            v
+        }
+        let home = vol(&[("purpose", POOL_PURPOSE), ("build-repo", "r")]);
+        let gra = vol(&[
+            ("purpose", POOL_PURPOSE),
+            ("build-repo", "r"),
+            (POOL_REGION, "gra"),
+        ]);
+        let other = vol(&[("purpose", POOL_PURPOSE), ("build-repo", "s")]);
+        assert!(in_pool(&home, "r", None));
+        assert!(!in_pool(&gra, "r", None));
+        assert!(in_pool(&gra, "r", Some("gra")));
+        assert!(!in_pool(&home, "r", Some("gra")));
+        assert!(!in_pool(&gra, "r", Some("fra")));
+        assert!(!in_pool(&other, "r", None));
+    }
+
+    /// A caller sends --region only when `build run --help` lists both
+    /// flags, so the help text is part of the contract.
+    #[test]
+    fn help_lists_region_and_queue_timeout() {
+        let help = command().render_long_help().to_string();
+        assert!(help.contains("--region"), "{help}");
+        assert!(help.contains("--queue-timeout"), "{help}");
+    }
+
     #[test]
     fn usage_errors_are_caught_before_anything_is_created() {
         assert!(parse(&["sylphx", "build", "run"]).is_err(), "no command");
@@ -1337,6 +1558,13 @@ mod tests {
             &["--timeout", "7h"][..],
             &["--timeout", "0s"],
             &["--timeout", "soon"],
+            &["--queue-timeout", "0s"],
+            &["--queue-timeout", "7h"],
+            &["--queue-timeout", "later"],
+            &["--region", "GRA"],
+            &["--region", "gra west"],
+            &["--region", ""],
+            &["--region", "-gra"],
             &["--size", "huge"],
             &["--env", "NOVALUE"],
             &["--env", "1X=y"],

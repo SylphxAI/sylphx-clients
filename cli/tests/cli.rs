@@ -1046,6 +1046,12 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         "the command is started: {}",
         seen[9].body
     );
+    // On a Volume: the run keeps its local sccache (flag 0), as before.
+    assert!(
+        seen[9].body.contains(r#""/workspace",".","0","cargo""#),
+        "{}",
+        seen[9].body
+    );
     assert!(
         lines[10].contains(":release"),
         "the lease is always released: {lines:?}"
@@ -1105,6 +1111,322 @@ async fn build_run_usage_errors_exit_2_and_dry_run_creates_nothing() {
     let ev: Value = serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
     assert_eq!(ev["type"], "sync");
     assert!(ev["files"].as_u64().unwrap() >= 1, "{ev}");
+}
+
+/// `--region gra`: a new workspace is created in the region and labelled
+/// with it, and the lease names the region and mounts that workspace (the
+/// pool filter itself is unit-tested in `build_run`).
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_region_routes_the_lease_and_its_workspace() {
+    let sb = Sandbox::new("build-run-region");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
+    let mut replies = vec![
+        // An available workspace of another pool.
+        (
+            200,
+            json!({"volumes": [{"name": format!("{ENV}/volumes/home-1"),
+                "meta": {"labels": {"purpose": "build-workspace", "build-repo": "any"}},
+                "status": {"state": "available"}}]}),
+        ),
+        (
+            200,
+            json!({"name": format!("{ENV}/volumes/vol-gra"), "status": {"state": "available"}}),
+        ),
+    ];
+    // NO_CAPACITY is retryable: the SDK retries it itself before the run
+    // gives up, so the stub answers it every time.
+    let no_capacity = json!({"code": "NO_CAPACITY", "status": 503, "detail": "No machine can be granted in region `gra` now; retry.", "retryable": true});
+    replies.extend(std::iter::repeat_n((503, no_capacity), 8));
+    let (url, log) = serve(replies).await;
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--region",
+            "gra",
+            "--queue-timeout",
+            "120s",
+            "--",
+            "true",
+        ],
+    )
+    .await;
+    let seen = log.lock().unwrap();
+    let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
+    assert!(
+        lines[1].starts_with(&format!("POST /v1/{ENV}/volumes")),
+        "{lines:?}"
+    );
+    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
+    assert_eq!(vol["spec"]["region"], "gra");
+    assert_eq!(vol["meta"]["labels"]["build-region"], "gra");
+    let lease: Value = serde_json::from_str(&seen[2].body).unwrap();
+    assert_eq!(lease["spec"]["region"], "gra");
+    let mounted = lease["spec"]["volumes"][0]["volume"].as_str().unwrap();
+    assert!(mounted.ends_with("/volumes/vol-gra"), "{lease}");
+    // No capacity in the region: the platform exit code, retryable, which the
+    // caller can turn into a run in the home region.
+    assert_eq!(out.status.code(), Some(125));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let last: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(last["exit_code"], 125);
+    assert_eq!(last["retryable"], true, "{last}");
+    assert!(last["error"].as_str().unwrap().contains("gra"), "{last}");
+}
+
+/// No --region: the request names no region and the pool is the home pool,
+/// exactly as before regions existed.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_without_region_stays_in_the_home_region() {
+    let sb = Sandbox::new("build-run-home");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
+    let (url, log) = serve(vec![
+        // An available gra workspace of another pool.
+        (
+            200,
+            json!({"volumes": [{"name": format!("{ENV}/volumes/gra-1"),
+                "meta": {"labels": {"purpose": "build-workspace", "build-repo": "any", "build-region": "gra"}},
+                "status": {"state": "available"}}]}),
+        ),
+        (
+            200,
+            json!({"name": format!("{ENV}/volumes/vol-home"), "status": {"state": "available"}}),
+        ),
+        (
+            400,
+            json!({"code": "SHAPE_NOT_OFFERED", "status": 400, "detail": "shape `build-large` is not offered", "retryable": false}),
+        ),
+    ])
+    .await;
+    let out = run(&sb, &url, &["build", "run", "-o", "json", "--", "true"]).await;
+    assert_eq!(out.status.code(), Some(125));
+    let seen = log.lock().unwrap();
+    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
+    assert!(vol["spec"].get("region").is_none(), "{vol}");
+    assert!(vol["meta"]["labels"].get("build-region").is_none(), "{vol}");
+    let lease: Value = serde_json::from_str(&seen[2].body).unwrap();
+    assert!(
+        lease["spec"]
+            .get("region")
+            .is_none_or(|r| r.as_str() == Some("")),
+        "{lease}"
+    );
+    assert!(
+        lease["spec"]["volumes"][0]["volume"]
+            .as_str()
+            .unwrap()
+            .ends_with("/volumes/vol-home"),
+        "{lease}"
+    );
+}
+
+/// A region with no Cell (or not offered yet) refuses the workspace and then
+/// the lease at once: still 125, not retryable, so the wrapper falls back at
+/// once, and nothing was created.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_region_not_offered_exits_125() {
+    let sb = Sandbox::new("build-run-no-region");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
+    let no_cell = json!({"code": "SHAPE_NOT_OFFERED", "status": 422, "detail": "`spec.region`: region `gra` has no Sandboxes Cell", "retryable": false});
+    let (url, log) = serve(vec![
+        (200, json!({"volumes": []})),
+        (422, no_cell.clone()),
+        (
+            422,
+            json!({"code": "SHAPE_NOT_OFFERED", "status": 422, "detail": "region `gra` has no Sandboxes Cell", "retryable": false}),
+        ),
+    ])
+    .await;
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build", "run", "-o", "json", "--region", "gra", "--", "true",
+        ],
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(125));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let last: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(last["retryable"], false, "{last}");
+    assert!(
+        last["error"]
+            .as_str()
+            .unwrap()
+            .contains("no Sandboxes Cell"),
+        "{last}"
+    );
+    let seen = log.lock().unwrap();
+    assert_eq!(seen.len(), 3, "no retry, no wait");
+    assert!(seen[2].line.starts_with(&format!("POST /v1/{ENV}/leases")));
+}
+
+/// A region whose Cell offers no Volumes (gra while its admission binds no
+/// claim): the workspace is refused at once with SHAPE_NOT_OFFERED, so the
+/// run leases the machine in the region with no Volume, syncs the whole tree
+/// to the machine's own disk, runs, and releases. No Volume is created, no
+/// queue-timeout is waited out, and the command's exit code comes back.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
+    let sb = Sandbox::new("build-run-no-volumes");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("main.rs"), "fn main() {}\n").unwrap();
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
+    let lease = format!("{ENV}/leases/l1");
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let no_volumes = json!({"code": "SHAPE_NOT_OFFERED", "status": 422, "detail": "`spec.region`: region `gra` offers no Volumes", "retryable": false});
+    let replies = vec![
+        json_reply(json!({"volumes": []})),
+        (422, "application/json", no_volumes.to_string().into_bytes()),
+        json_reply(
+            json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+        ),
+        json_reply(json!({"token": "h.p.s", "generation": 1})),
+        envd_process("", 0),
+        (404, "text/plain", b"file not found".to_vec()),
+        json_reply(json!({})),
+        json_reply(json!({})),
+        envd_process("", 0),
+        envd_process("built in gra\n", 0),
+        json_reply(json!({"name": lease, "status": {"state": "ending"}})),
+    ];
+    let (url2, log) = serve_bytes_at(&url, replies).await;
+    assert_eq!(url, url2);
+    let t = std::time::Instant::now();
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build", "run", "-o", "json", "--region", "gra", "--", "cargo", "check",
+        ],
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "{err}");
+    assert!(
+        t.elapsed() < std::time::Duration::from_secs(30),
+        "no queue-timeout is waited out: {:?}",
+        t.elapsed()
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let events: Vec<Value> = stdout
+        .lines()
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+    let running = events.iter().find(|e| e["type"] == "running").unwrap();
+    assert_eq!(running["volume"], false, "{running}");
+    assert_eq!(running["region"], "gra", "{running}");
+    assert_eq!(running["workspace"], "cold", "{running}");
+    let sync = events.iter().find(|e| e["type"] == "sync").unwrap();
+    assert_eq!(sync["new_volume"], false, "{sync}");
+    assert_eq!(sync["full"], true, "{sync}");
+    let last = events.last().unwrap();
+    assert_eq!(last["type"], "result");
+    assert_eq!(last["exit_code"], 0, "{last}");
+
+    let seen = log.lock().unwrap();
+    let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
+    // Exactly one workspace request, refused; no second one, no poll of it.
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|l| l.starts_with(&format!("POST /v1/{ENV}/volumes")))
+            .count(),
+        1,
+        "{lines:?}"
+    );
+    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
+    assert_eq!(vol["spec"]["region"], "gra");
+    assert!(
+        lines[2].starts_with(&format!("POST /v1/{ENV}/leases")),
+        "{lines:?}"
+    );
+    let created: Value = serde_json::from_str(&seen[2].body).unwrap();
+    assert_eq!(created["spec"]["region"], "gra", "{created}");
+    assert_eq!(created["spec"]["shape"], "build-large", "{created}");
+    assert!(
+        created["spec"]
+            .get("volumes")
+            .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())),
+        "no Volume is mounted: {created}"
+    );
+    // The command runs with the no-volume flag (no local sccache).
+    let args = &seen[9].body;
+    assert!(args.contains("cargo"), "{args}");
+    assert!(args.contains(r#""/workspace",".","1","cargo""#), "{args}");
+    assert!(
+        lines[10].contains(":release"),
+        "the lease is always released: {lines:?}"
+    );
+}
+
+/// A machine that stays queued past --queue-timeout: the lease is released
+/// and the run answers 125, retryable, in about that long, not 30 minutes.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_queue_timeout_releases_and_exits_125() {
+    let sb = Sandbox::new("build-run-queue-timeout");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
+    let lease = format!("{ENV}/leases/l1");
+    let queued = json!({"name": lease, "status": {"state": "granted"}});
+    let (url, log) = serve(vec![
+        (200, json!({"volumes": []})),
+        (
+            200,
+            json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
+        ),
+        (200, queued.clone()),
+        (200, queued.clone()),
+        (200, queued.clone()),
+        (200, queued.clone()),
+        (200, queued),
+    ])
+    .await;
+    let t = std::time::Instant::now();
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--region",
+            "gra",
+            "--queue-timeout",
+            "3s",
+            "--",
+            "true",
+        ],
+    )
+    .await;
+    assert!(
+        t.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        t.elapsed()
+    );
+    assert_eq!(out.status.code(), Some(125));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let last: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(last["retryable"], true, "{last}");
+    assert!(
+        last["error"].as_str().unwrap().contains("--queue-timeout"),
+        "{last}"
+    );
+    let seen = log.lock().unwrap();
+    assert!(
+        seen.iter().any(|s| s.line.contains(":release")),
+        "the queued lease is released"
+    );
 }
 
 /// [`serve_bytes`] on a known address (the guest's URI must be known before

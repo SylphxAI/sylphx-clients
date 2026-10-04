@@ -15,6 +15,7 @@ sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
+sylphx build run --region gra --queue-timeout 120s -- cargo check   # in region gra, or exit 125 after 2 min
 sylphx mcp                            # the MCP server over stdio
 ```
 
@@ -40,7 +41,13 @@ sylphx mcp                            # the MCP server over stdio
   `target/`, the Cargo registry, sccache and toolchains, so a repeat run sends
   only the changed files. Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
-  event), 130 interrupted. `-o json` writes NDJSON events (`queued`,
+  event), 130 interrupted. `--region REGION` runs in that region's Cell with
+  that region's own warm workspaces (default: the project's home region); a
+  region whose Cell offers no Volumes refuses the workspace at once, and the
+  run builds on the machine's own disk instead (always cold, nothing left
+  behind, no local sccache); `--queue-timeout DURATION` (default 30m) is the longest wait for a machine,
+  after which the run releases its lease and exits 125, retryable, so a caller
+  can try another region. `-o json` writes NDJSON events (`queued`,
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
   prints what a cold run would send. Files: `git ls-files` (tracked and
   untracked, not ignored) minus `.sylphxignore`.
