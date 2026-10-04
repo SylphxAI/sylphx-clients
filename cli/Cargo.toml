@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 sylphx = { path = "../rust", version = "0.3.1" }
-sylphx-mcp = { path = "../mcp", version = "0.26.0" }
+sylphx-mcp = { path = "../mcp", version = "0.27.0" }
 base64 = "0.22"
 clap = { version = "4.5", features = ["string", "wrap_help"] }
 clap_complete = "4.5"

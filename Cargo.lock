@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-mcp"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "serde",
  "serde_json",
