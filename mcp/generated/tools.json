@@ -16441,6 +16441,62 @@
                           "description": "The product key; `^[a-z][a-z0-9_]{0,63}$`.",
                           "type": "string"
                         },
+                        "licence": {
+                          "additionalProperties": false,
+                          "description": "The offline licence a paid one-time purchase carries; refused on a\nconsumable product and on a product with a recurring price.",
+                          "properties": {
+                            "key": {
+                              "description": "The id of the LicenceKey that signs new terms.",
+                              "type": "string",
+                              "x-sylphx-resource-reference": "money.sylphx.com/LicenceKey"
+                            },
+                            "plan": {
+                              "description": "The `plan` the token carries.",
+                              "type": "string"
+                            },
+                            "scheme": {
+                              "description": "The token scheme; `sylphx-offline-ed25519-v1`.",
+                              "type": "string"
+                            },
+                            "term": {
+                              "additionalProperties": false,
+                              "description": "How long one purchase lasts.",
+                              "properties": {
+                                "count": {
+                                  "description": "How many units; at least 1.",
+                                  "format": "int32",
+                                  "type": "integer"
+                                },
+                                "unit": {
+                                  "description": "The unit of `count`.",
+                                  "enum": [
+                                    "calendar_years",
+                                    "calendar_months",
+                                    "days"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "unit",
+                                "count"
+                              ],
+                              "type": "object"
+                            },
+                            "token_product": {
+                              "description": "The `product` the token carries (what the client checks it against).",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "scheme",
+                            "plan",
+                            "token_product",
+                            "key",
+                            "term"
+                          ],
+                          "type": "object"
+                        },
                         "prices": {
                           "description": "The product's prices.",
                           "items": {
@@ -18033,6 +18089,258 @@
       "method_id": "money.portal_sessions.get",
       "permission": "billing:read",
       "tool": "money_portal_sessions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Generates a licence key: Money creates the Ed25519 key, seals it, and never returns the private half. Needs the approval-class scope, which the developer role does not hold."
+      },
+      "description": "Generates a licence key: Money creates the Ed25519 key, seals it, and never\nreturns the private half. Needs the approval-class scope, which the developer\nrole does not hold.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/licence_keys:generate",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GenerateLicenceKey.",
+        "properties": {
+          "licence_key_id": {
+            "description": "The key's id; `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`. Empty: Money assigns\none.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment the key belongs to.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/LicenceKey"
+          },
+          "spec": {
+            "additionalProperties": false,
+            "description": "Shown to operators.",
+            "properties": {
+              "description": {
+                "description": "Shown to operators.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.licence_keys.generate",
+      "permission": "billing:licence_keys.approve",
+      "tool": "money_licence_keys_generate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Imports an existing Ed25519 key (PKCS8), for a key already pinned in shipped clients. Refused unless the expected public key is the imported key's public half."
+      },
+      "description": "Imports an existing Ed25519 key (PKCS8), for a key already pinned in shipped\nclients. Refused unless the expected public key is the imported key's public\nhalf.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/licence_keys:import",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ImportLicenceKey.",
+        "properties": {
+          "expected_public_key": {
+            "description": "The public key shipped clients pin, raw base64url without padding. The\nimport is refused unless it is the public half of the imported key.",
+            "type": "string"
+          },
+          "licence_key_id": {
+            "description": "The key's id; as on GenerateLicenceKeyRequest. Required.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment the key belongs to.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/LicenceKey"
+          },
+          "private_key_pkcs8": {
+            "contentEncoding": "base64",
+            "description": "The Ed25519 private key as PKCS8 DER in standard base64. Write-only:\nsealed on import, never returned.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "spec": {
+            "additionalProperties": false,
+            "description": "Shown to operators.",
+            "properties": {
+              "description": {
+                "description": "Shown to operators.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "licence_key_id",
+          "private_key_pkcs8",
+          "expected_public_key"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.licence_keys.import",
+      "permission": "billing:licence_keys.approve",
+      "tool": "money_licence_keys_import"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Retires a licence key: it stops signing new terms and stays exported for verification."
+      },
+      "description": "Retires a licence key: it stops signing new terms and stays exported for\nverification.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/licence_keys/*}:retire",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RetireLicenceKey.",
+        "properties": {
+          "name": {
+            "description": "The key to retire.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/LicenceKey"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.licence_keys.retire",
+      "permission": "billing:licence_keys.approve",
+      "tool": "money_licence_keys_retire"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a licence key (its public half, never the private)."
+      },
+      "description": "Gets a licence key (its public half, never the private).",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/licence_keys/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetLicenceKey.",
+        "properties": {
+          "name": {
+            "description": "The name of the licence key to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/LicenceKey"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.licence_keys.get",
+      "permission": "billing:read",
+      "tool": "money_licence_keys_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists licence keys, newest first."
+      },
+      "description": "Lists licence keys, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/licence_keys",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListLicenceKeys.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/LicenceKey"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.licence_keys.list",
+      "permission": "billing:read",
+      "tool": "money_licence_keys_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a subject's unexpired offline licence tokens of paid orders, for support. Re-derived from the frozen terms: the same bytes as at purchase."
+      },
+      "description": "Lists a subject's unexpired offline licence tokens of paid orders, for\nsupport. Re-derived from the frozen terms: the same bytes as at purchase.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/licence_tokens",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListLicenceTokens.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter. It must name whose tokens (else `INVALID_FIELD`): `end_user = \"…\"` or\n`customer_organization = \"…\"`; `token_product = \"…\"` (joined with `AND`)\nkeeps only that product, and no `token_product` lists every product.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/LicenceToken"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.licence_tokens.list",
+      "permission": "billing:read",
+      "tool": "money_licence_tokens_list"
     },
     {
       "annotations": {
@@ -32018,7 +32326,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@6379e2ed0c2c839edc65cd078b67e8715a815f5043e4d2072f51960b06a81660. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@9f583d0fafbf9813b0da162eef18cd95767f9a68d1de3edf29cf2143c78b11fb. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
