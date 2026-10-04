@@ -16,6 +16,8 @@
 //! `npx @sylphx/mcp`, and the Resource API front can mount it for the remote
 //! server at `https://api.sylphx.com/mcp`.
 
+use std::sync::{Arc, OnceLock};
+
 use serde_json::{json, Map, Value};
 use sylphx::{Client, Error, HttpRequest, Transport};
 
@@ -23,7 +25,13 @@ use sylphx::{Client, Error, HttpRequest, Transport};
 pub const MANIFEST: &str = include_str!("../generated/tools.json");
 
 /// MCP protocol revisions this server speaks, newest first.
-pub const PROTOCOL_VERSIONS: &[&str] = &["2025-06-18", "2025-03-26", "2024-11-05"];
+pub const PROTOCOL_VERSIONS: &[&str] = &[
+    "2026-07-28",
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05",
+];
 
 const INSTRUCTIONS: &str = "Sylphx is one API for every Sylphx service. Call access_whoami \
 first to learn your org, project, and env. Resource names are full paths such as \
@@ -34,18 +42,55 @@ methods need confirm: true.";
 /// How many search hits `sylphx_search_methods` returns.
 const SEARCH_LIMIT: usize = 20;
 
-/// One MCP server over a Sylphx client. Without a client (no credentials),
-/// search and describe still work and every call explains how to sign in.
-pub struct Server<T> {
-    client: Option<Client<T>>,
-    tools: Vec<Value>,
+/// Who the server answers: a local stdio session (the user's own key, every
+/// served method) or the remote door (a connected app: read-only methods
+/// only until write step-up ships).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mode {
+    Local,
+    RemoteReadOnly,
+}
+
+/// The parsed manifest, shared by every server of the process. The remote
+/// door builds a [`Server`] per request, so the manifest is parsed once.
+#[derive(Debug)]
+pub struct Catalog {
+    /// Core and meta tools of served methods, as `tools/list` returns them
+    /// locally.
+    local_tools: Vec<Value>,
+    /// The same, minus every method that is not read-only, with the meta
+    /// tools described as read-only.
+    remote_tools: Vec<Value>,
     catalog: Vec<Value>,
 }
 
-impl<T: Transport> Server<T> {
-    pub fn new(client: Option<Client<T>>) -> Self {
+/// An entry with no `served` field is served; only `served: false` is not.
+fn is_served(entry: &Value) -> bool {
+    entry["served"] != false
+}
+
+/// Read permissions the remote door never serves, whatever the bearer holds:
+/// a prompt-injected connector must not read a secret (remote-mcp design D8).
+const REMOTE_EXCLUDED_PERMISSIONS: &[&str] = &["secrets:read"];
+
+/// Whether the remote door may show and call `entry`: a read-only method
+/// whose permission is a read scope (or whoami), less the D8 exclusions. An
+/// `effect: read` method guarded by a write or exec permission (a database's
+/// `:connect`, which returns its credentials; a sandbox file read) is not, so
+/// a plain Access key on the door reaches no more than an OAuth grant would.
+fn remote_callable(entry: &Value) -> bool {
+    let permission = entry["permission"].as_str().unwrap_or_default();
+    entry["effect"] == "read"
+        && (permission == "access:whoami" || permission.ends_with(":read"))
+        && !REMOTE_EXCLUDED_PERMISSIONS.contains(&permission)
+}
+
+impl Catalog {
+    fn parse() -> Self {
         let manifest: Value = serde_json::from_str(MANIFEST).expect("generated/tools.json is JSON");
-        let tools = manifest["tools"]
+        let catalog: Vec<Value> = manifest["catalog"].as_array().cloned().unwrap_or_default();
+        let entry_of = |tool: &str| catalog.iter().find(|e| e["tool"] == tool);
+        let local_tools: Vec<Value> = manifest["tools"]
             .as_array()
             .cloned()
             .unwrap_or_default()
@@ -61,18 +106,111 @@ impl<T: Transport> Server<T> {
                 }
                 t
             })
+            .filter(|t| entry_of(t["name"].as_str().unwrap_or_default()).is_none_or(is_served))
             .collect();
-        let catalog = manifest["catalog"].as_array().cloned().unwrap_or_default();
+        let remote_tools = local_tools
+            .iter()
+            .filter_map(|t| {
+                let name = t["name"].as_str().unwrap_or_default();
+                if name == "sylphx_call" {
+                    let mut t = t.clone();
+                    t["description"] = json!(
+                        "Call any served, read-only Sylphx method by id with arguments matching its input schema. Methods that change anything are not available to connected apps yet; use an API key."
+                    );
+                    t["annotations"] = json!({
+                        "title": "Call a read-only Sylphx method",
+                        "readOnlyHint": true, "destructiveHint": false,
+                        "idempotentHint": true, "openWorldHint": false
+                    });
+                    t["title"] = t["annotations"]["title"].clone();
+                    return Some(t);
+                }
+                match entry_of(name) {
+                    Some(e) if !remote_callable(e) => None,
+                    _ => Some(t.clone()),
+                }
+            })
+            .collect();
+        Self {
+            local_tools,
+            remote_tools,
+            catalog,
+        }
+    }
+
+    /// The process-wide catalog, parsed on first use.
+    pub fn shared() -> Arc<Catalog> {
+        static SHARED: OnceLock<Arc<Catalog>> = OnceLock::new();
+        Arc::clone(SHARED.get_or_init(|| Arc::new(Catalog::parse())))
+    }
+}
+
+/// One MCP server over a Sylphx client. Without a client (no credentials),
+/// search and describe still work and every call explains how to sign in.
+pub struct Server<T> {
+    client: Option<Client<T>>,
+    shared: Arc<Catalog>,
+    mode: Mode,
+}
+
+/// Checks the headers Streamable HTTP mirrors from the message (revision
+/// 2026-07-28): `MCP-Protocol-Version` must be a revision this server speaks
+/// and `Mcp-Method` must name the body's method. The error is a JSON-RPC
+/// error body for an HTTP 400 (`-32020 HeaderMismatch`).
+pub fn validate_headers(
+    protocol_version: Option<&str>,
+    mcp_method: Option<&str>,
+    body: &Value,
+) -> Result<(), Value> {
+    let mismatch = |message: String| {
+        Err(json!({
+            "jsonrpc": "2.0", "id": body.get("id").cloned().unwrap_or(Value::Null),
+            "error": { "code": -32020, "message": message }
+        }))
+    };
+    if let Some(v) = protocol_version {
+        if !PROTOCOL_VERSIONS.contains(&v) {
+            return mismatch(format!("unsupported MCP-Protocol-Version {v}"));
+        }
+    }
+    if let (Some(h), Some(m)) = (mcp_method, body.get("method").and_then(Value::as_str)) {
+        if h != m {
+            return mismatch(format!("Mcp-Method {h} does not match the body method {m}"));
+        }
+    }
+    Ok(())
+}
+
+impl<T: Transport> Server<T> {
+    /// A local server: every served method, for the user's own key.
+    pub fn new(client: Option<Client<T>>) -> Self {
+        Self::with_catalog(client, Catalog::shared(), Mode::Local)
+    }
+
+    /// The remote door's server: read-only methods only.
+    pub fn remote(client: Option<Client<T>>) -> Self {
+        Self::with_catalog(client, Catalog::shared(), Mode::RemoteReadOnly)
+    }
+
+    pub fn with_catalog(client: Option<Client<T>>, shared: Arc<Catalog>, mode: Mode) -> Self {
         Self {
             client,
-            tools,
-            catalog,
+            shared,
+            mode,
         }
     }
 
     /// The tools `tools/list` returns.
     pub fn tools(&self) -> &[Value] {
-        &self.tools
+        match self.mode {
+            Mode::Local => &self.shared.local_tools,
+            Mode::RemoteReadOnly => &self.shared.remote_tools,
+        }
+    }
+
+    /// Catalog entries this server may show and call.
+    fn visible(&self, e: &Value) -> bool {
+        is_served(e) && (self.mode == Mode::Local || remote_callable(e))
     }
 
     /// Handles one JSON-RPC message (or a batch). Returns the response, or
@@ -100,7 +238,7 @@ impl<T: Transport> Server<T> {
         let result = match method {
             "initialize" => Ok(self.initialize(&params)),
             "ping" => Ok(json!({})),
-            "tools/list" => Ok(json!({ "tools": self.tools })),
+            "tools/list" => Ok(json!({ "tools": self.tools() })),
             "tools/call" => {
                 let name = params
                     .get("name")
@@ -181,10 +319,10 @@ impl<T: Transport> Server<T> {
                 Ok(self.call_method(&id, call_args, confirm).await)
             }
             tool => {
-                let Some(entry) = self.catalog.iter().find(|e| e["tool"] == tool) else {
+                let Some(entry) = self.shared.catalog.iter().find(|e| e["tool"] == tool) else {
                     return Err((-32602, format!("unknown tool: {tool}")));
                 };
-                if !self.tools.iter().any(|t| t["name"] == tool) {
+                if !self.tools().iter().any(|t| t["name"] == tool) {
                     return Err((-32602, format!("unknown tool: {tool}; use sylphx_call")));
                 }
                 let id = entry["method_id"].as_str().unwrap_or_default().to_string();
@@ -198,7 +336,10 @@ impl<T: Transport> Server<T> {
     }
 
     fn entry(&self, method_id: &str) -> Option<&Value> {
-        self.catalog.iter().find(|e| e["method_id"] == method_id)
+        self.shared
+            .catalog
+            .iter()
+            .find(|e| e["method_id"] == method_id && self.visible(e))
     }
 
     /// Every catalog entry scored by how many query words its id, tool name,
@@ -210,8 +351,10 @@ impl<T: Transport> Server<T> {
             .map(str::to_lowercase)
             .collect();
         let mut hits: Vec<(usize, &Value)> = self
+            .shared
             .catalog
             .iter()
+            .filter(|e| self.visible(e))
             .filter_map(|e| {
                 let hay = format!(
                     "{} {} {}",
@@ -244,6 +387,25 @@ impl<T: Transport> Server<T> {
 
     async fn call_method(&self, method_id: &str, args: Value, confirm: bool) -> Value {
         let Some(entry) = self.entry(method_id) else {
+            // Say why when the method exists but this server may not call it.
+            if let Some(e) = self
+                .shared
+                .catalog
+                .iter()
+                .find(|e| e["method_id"] == method_id)
+            {
+                return tool_error(&if !is_served(e) {
+                    format!("{method_id} is not available yet (its service is not served)")
+                } else if e["effect"] != "read" {
+                    format!(
+                        "{method_id} changes data: not available to connected apps yet; use an API key"
+                    )
+                } else {
+                    format!(
+                        "{method_id} returns credentials or secrets: not available to connected apps; use an API key"
+                    )
+                });
+            }
             return tool_error(&format!(
                 "unknown method_id `{method_id}`; find one with sylphx_search_methods"
             ));
