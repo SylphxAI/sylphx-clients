@@ -14,6 +14,7 @@ sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx
 sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
+sylphx build run -- cargo test        # this work tree's command on a remote build machine
 sylphx mcp                            # the MCP server over stdio
 ```
 
@@ -31,6 +32,18 @@ sylphx mcp                            # the MCP server over stdio
   `result.json`, `junit.xml`, `logcat.txt`, and `crash.txt` into `--out`
   (`device-results/`). Exit 0 passed, 1 failed, 2 infrastructure; the lease is
   released on the way out unless `--keep`.
+- `sylphx build run [PATH] -- <command…>` runs the command on a remote build
+  machine against this git work tree and behaves like the local command: the
+  output streams back, the exit code is the command's own, and `--artifact
+  GLOB` files are copied into `--out` (`.sylphx/out/<run>/`). A warm workspace
+  (a pool of up to 10 Volumes per project and repository) keeps the tree,
+  `target/`, the Cargo registry, sccache and toolchains, so a repeat run sends
+  only the changed files. Exit codes: the command's own, 2 usage, 124
+  `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
+  event), 130 interrupted. `-o json` writes NDJSON events (`queued`,
+  `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
+  prints what a cold run would send. Files: `git ls-files` (tracked and
+  untracked, not ignored) minus `.sylphxignore`.
 
 ## `sylphx ai top`
 

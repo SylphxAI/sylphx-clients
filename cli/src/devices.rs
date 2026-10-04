@@ -602,7 +602,7 @@ impl Run<'_> {
 
 /// The environment the lease is created in: `--env`, else the linked env, else
 /// the key's scope — as a generated command resolves a lease's parent.
-async fn parent_env(client: &Client, arg: Option<&str>) -> Result<String, String> {
+pub(crate) async fn parent_env(client: &Client, arg: Option<&str>) -> Result<String, String> {
     if let Some(v) = arg {
         let full = if v.starts_with("orgs/") {
             v.to_string()
@@ -632,7 +632,7 @@ fn why_failure(f: Failure) -> String {
     }
 }
 
-fn release_request(name: &str) -> sbx::ReleaseLeaseRequest {
+pub(crate) fn release_request(name: &str) -> sbx::ReleaseLeaseRequest {
     let mut req = sbx::ReleaseLeaseRequest::default();
     req.name = name.to_string();
     req
@@ -795,13 +795,13 @@ fn parse_duration(s: &str) -> Option<Duration> {
     any.then(|| Duration::from_millis(ms))
 }
 
-fn duration(s: &str, flag: &str) -> Result<Duration, String> {
+pub(crate) fn duration(s: &str, flag: &str) -> Result<Duration, String> {
     parse_duration(s)
         .ok_or_else(|| format!("`{flag} {s}` is not a duration such as 20s, 5m, 1h30m"))
 }
 
 /// The wire form of a lease duration: `spec.ttl` is `"1800s"`.
-fn wire(d: Duration) -> String {
+pub(crate) fn wire(d: Duration) -> String {
     format!("{}s", d.as_secs())
 }
 
@@ -855,7 +855,7 @@ fn device_of(lease: &sbx::Lease) -> (String, String) {
     (device.model, device.os_version)
 }
 
-fn state(lease: &sbx::Lease) -> sbx::LeaseState {
+pub(crate) fn state(lease: &sbx::Lease) -> sbx::LeaseState {
     lease
         .status
         .as_ref()
@@ -915,7 +915,7 @@ fn tail(o: &Exec) -> String {
     }
 }
 
-fn why(e: &sylphx::Error) -> String {
+pub(crate) fn why(e: &sylphx::Error) -> String {
     match e {
         sylphx::Error::Api {
             code,

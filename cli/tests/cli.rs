@@ -1,7 +1,8 @@
 //! The `sylphx` binary against a local fake API: generated commands build the
 //! wire request (ids, parents from the linked project, flags, update masks,
 //! etags), wait for Operations, refuse unconfirmed destructive calls, and
-//! `sylphx mcp` speaks MCP over stdio.
+//! `sylphx mcp` speaks MCP over stdio, and `sylphx build run` drives a lease
+//! and its guest end to end.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -24,12 +25,29 @@ struct Seen {
 type Log = Arc<Mutex<Vec<Seen>>>;
 
 async fn serve(replies: Vec<(u16, Value)>) -> (String, Log) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    serve_bytes(
+        replies
+            .into_iter()
+            .map(|(s, v)| (s, "application/json", v.to_string().into_bytes()))
+            .collect(),
+    )
+    .await
+}
+
+/// Like [`serve`], with each reply's content type and raw body.
+async fn serve_bytes(replies: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
+    serve_bytes_on(TcpListener::bind("127.0.0.1:0").await.unwrap(), replies).await
+}
+
+async fn serve_bytes_on(
+    listener: TcpListener,
+    replies: Vec<(u16, &'static str, Vec<u8>)>,
+) -> (String, Log) {
     let url = format!("http://{}", listener.local_addr().unwrap());
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let seen = log.clone();
     tokio::spawn(async move {
-        for (status, body) in replies {
+        for (status, content_type, body) in replies {
             let (mut sock, _) = listener.accept().await.unwrap();
             let mut buf = Vec::new();
             let mut chunk = [0u8; 8192];
@@ -63,12 +81,12 @@ async fn serve(replies: Vec<(u16, Value)>) -> (String, Log) {
                 head,
                 body: body_in,
             });
-            let payload = body.to_string();
-            let resp = format!(
-                "HTTP/1.1 {status} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{payload}",
-                payload.len()
+            let head = format!(
+                "HTTP/1.1 {status} X\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                body.len()
             );
-            sock.write_all(resp.as_bytes()).await.unwrap();
+            sock.write_all(head.as_bytes()).await.unwrap();
+            sock.write_all(&body).await.unwrap();
             sock.shutdown().await.ok();
         }
     });
@@ -882,6 +900,218 @@ async fn workflows_schedules_read_the_served_compute_route() {
         "{}",
         seen[1].line
     );
+}
+
+/// One Connect envelope of the envd process stream.
+fn envd_frame(flags: u8, v: Value) -> Vec<u8> {
+    let body = serde_json::to_vec(&v).unwrap();
+    let mut out = vec![flags];
+    out.extend_from_slice(&(body.len() as u32).to_be_bytes());
+    out.extend_from_slice(&body);
+    out
+}
+
+/// A finished process: optional stdout, then its exit code.
+fn envd_process(stdout: &str, code: i64) -> (u16, &'static str, Vec<u8>) {
+    use base64::Engine;
+    let mut b = envd_frame(0, json!({"event": {"start": {"pid": 7}}}));
+    if !stdout.is_empty() {
+        let data = base64::engine::general_purpose::STANDARD.encode(stdout);
+        b.extend(envd_frame(0, json!({"event": {"data": {"stdout": data}}})));
+    }
+    b.extend(envd_frame(
+        0,
+        json!({"event": {"end": {"exitCode": code, "exited": true, "status": format!("exit status {code}")}}}),
+    ));
+    b.extend(envd_frame(2, json!({})));
+    (200, "application/connect+json", b)
+}
+
+fn git_init(dir: &std::path::Path) {
+    let ok = Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["init", "-q"])
+        .status()
+        .unwrap()
+        .success();
+    assert!(ok);
+}
+
+/// The whole run against a stub API and guest: a new workspace from an empty
+/// pool, a `build-large` lease with it at /workspace on the package-host
+/// allow-list, a full sync (cold), the command's output on stdout and its own
+/// exit code, and the lease released at the end.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
+    let sb = Sandbox::new("build-run");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("main.rs"), "fn main() {}\n").unwrap();
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
+    let lease = format!("{ENV}/leases/l1");
+    // The guest is the same stub: its address is the lease's guest_uri.
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let replies = vec![
+        json_reply(json!({"volumes": []})),
+        json_reply(
+            json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
+        ),
+        json_reply(
+            json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+        ),
+        json_reply(json!({"token": "h.p.s", "generation": 1})),
+        envd_process("", 0),
+        (404, "text/plain", b"file not found".to_vec()),
+        json_reply(json!({})),
+        json_reply(json!({})),
+        envd_process("", 0),
+        envd_process("hello from the build machine\n", 3),
+        json_reply(json!({"name": lease, "status": {"state": "ending"}})),
+    ];
+    let (url2, log) = serve_bytes_at(&url, replies).await;
+    assert_eq!(url, url2);
+    let out = run(&sb, &url, &["build", "run", "--", "cargo", "test"]).await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(3), "{err}");
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "hello from the build machine\n"
+    );
+    assert!(
+        err.contains("sylphx: synced 2 files") || err.contains("sylphx: synced 1 files"),
+        "{err}"
+    );
+    assert!(err.contains("cold workspace"), "{err}");
+    assert!(err.contains("sylphx: exit 3 in"), "{err}");
+
+    let seen = log.lock().unwrap();
+    let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
+    assert!(
+        lines[0].starts_with(&format!("GET /v1/{ENV}/volumes")),
+        "{lines:?}"
+    );
+    assert!(
+        lines[1].starts_with(&format!("POST /v1/{ENV}/volumes")),
+        "{lines:?}"
+    );
+    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
+    assert_eq!(vol["meta"]["labels"]["purpose"], "build-workspace");
+    assert_eq!(vol["spec"]["storageClass"], "local");
+    let created: Value = serde_json::from_str(&seen[2].body).unwrap();
+    assert_eq!(created["spec"]["shape"], "build-large");
+    assert_eq!(created["spec"]["image"], "template:build");
+    assert_eq!(
+        created["spec"]["volumes"][0]["mount_path"]
+            .as_str()
+            .or(created["spec"]["volumes"][0]["mountPath"].as_str()),
+        Some("/workspace")
+    );
+    let net = &created["spec"]["network"];
+    assert!(
+        net["egress"]
+            .as_str()
+            .unwrap()
+            .eq_ignore_ascii_case("allowlist"),
+        "{net}"
+    );
+    assert!(net.to_string().contains("static.crates.io"), "{net}");
+    // The guest calls carry the sandbox id and the lease token, never the key.
+    let guest: Vec<&Seen> = seen.iter().skip(4).take(6).collect();
+    for g in &guest {
+        let head = g.head.to_ascii_lowercase();
+        assert!(head.contains("e2b-sandbox-id: abcd1234"), "{}", g.head);
+        assert!(head.contains("x-access-token: h.p.s"), "{}", g.head);
+        assert!(!head.contains("sylphx_sk_test"), "{}", g.head);
+    }
+    assert!(
+        lines[4].starts_with("POST /process.Process/Start"),
+        "{lines:?}"
+    );
+    assert!(
+        lines[5].starts_with("GET /files?path=/workspace/.sylphx/manifest.gz"),
+        "{lines:?}"
+    );
+    assert!(
+        lines[6].starts_with("POST /files?path=/workspace/.sylphx/in-0000.tar.gz"),
+        "{lines:?}"
+    );
+    assert!(
+        lines[7].starts_with("POST /files?path=/workspace/.sylphx/add"),
+        "{lines:?}"
+    );
+    assert!(
+        seen[9].body.contains("cargo"),
+        "the command is started: {}",
+        seen[9].body
+    );
+    assert!(
+        lines[10].contains(":release"),
+        "the lease is always released: {lines:?}"
+    );
+}
+
+/// `-o json` writes NDJSON events, ending with the `result` event.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_json_reports_a_platform_failure_as_125() {
+    let sb = Sandbox::new("build-run-json");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
+    let (url, _log) = serve(vec![(
+        403,
+        json!({"code": "PERMISSION_DENIED", "status": 403, "detail": "missing scope sandboxes:read", "retryable": false}),
+    )])
+    .await;
+    let out = run(&sb, &url, &["build", "run", "-o", "json", "--", "true"]).await;
+    assert_eq!(out.status.code(), Some(125));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let last: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(last["type"], "result");
+    assert_eq!(last["exit_code"], 125);
+    assert_eq!(last["outcome"], "platform_error");
+    assert_eq!(
+        last["retryable"], false,
+        "a refused key is not worth a retry"
+    );
+    assert!(
+        last["error"].as_str().unwrap().contains("sandboxes:read"),
+        "{last}"
+    );
+    assert_eq!(last["workspace"], "cold");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_usage_errors_exit_2_and_dry_run_creates_nothing() {
+    let sb = Sandbox::new("build-run-usage");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("a.txt"), "abc\n").unwrap();
+    // No server: nothing may be called.
+    let url = "http://127.0.0.1:9";
+    let out = run(&sb, url, &["build", "run", "--size", "huge", "--", "true"]).await;
+    assert_eq!(out.status.code(), Some(2));
+    let out = run(
+        &sb,
+        url,
+        &["build", "run", "--dry-run", "-o", "json", "--", "true"],
+    )
+    .await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let ev: Value = serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
+    assert_eq!(ev["type"], "sync");
+    assert!(ev["files"].as_u64().unwrap() >= 1, "{ev}");
+}
+
+/// [`serve_bytes`] on a known address (the guest's URI must be known before
+/// the replies are built).
+async fn serve_bytes_at(url: &str, replies: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
+    let addr = url.trim_start_matches("http://").to_string();
+    serve_bytes_on(TcpListener::bind(addr).await.unwrap(), replies).await
 }
 
 fn seat_fixture() -> Value {
