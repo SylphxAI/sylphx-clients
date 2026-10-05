@@ -17140,6 +17140,10 @@
                     ],
                     "type": "object"
                   },
+                  "client_verify": {
+                    "description": "Let an app with no server verify its own purchases against this\nconnection (`store_purchases:clientVerify`, callable with a publishable\nkey). Off by default, including for every connection created before this\nfield existed; only a secret key holding `billing:write` can turn it on.",
+                    "type": "boolean"
+                  },
                   "google_play": {
                     "additionalProperties": false,
                     "description": "Google Play.",
@@ -17311,6 +17315,10 @@
                       "environment"
                     ],
                     "type": "object"
+                  },
+                  "client_verify": {
+                    "description": "Let an app with no server verify its own purchases against this\nconnection (`store_purchases:clientVerify`, callable with a publishable\nkey). Off by default, including for every connection created before this\nfield existed; only a secret key holding `billing:write` can turn it on.",
+                    "type": "boolean"
                   },
                   "google_play": {
                     "additionalProperties": false,
@@ -17495,6 +17503,78 @@
       "method_id": "money.store_purchases.verify",
       "permission": "billing:write",
       "tool": "money_store_purchases_verify"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Verifies a store purchase for an app with no server: called with the environment's publishable key (`billing:client`), the subject is an install id (`inst_` and a UUID), and Money completes the purchase with the store (acknowledges or consumes it) so the app never calls the store's server API. Works only on store connections that set `client_verify`. Re-calling returns the same record and grant."
+      },
+      "description": "Verifies a store purchase for an app with no server: called with the\nenvironment's publishable key (`billing:client`), the subject is an\ninstall id (`inst_` and a UUID), and Money completes the purchase with the\nstore (acknowledges or consumes it) so the app never calls the store's\nserver API. Works only on store connections that set `client_verify`.\nRe-calling returns the same record and grant.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/store_purchases:clientVerify",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ClientVerifyStorePurchase.",
+        "properties": {
+          "account_token": {
+            "description": "The account token the app set at purchase (Play `obfuscatedAccountId`,\nApp Store `appAccountToken`). A consistency check only: it must match\nthe subject's derivation and the store's copy.",
+            "type": "string"
+          },
+          "package_name": {
+            "description": "Google Play: the package name, when the connection covers several.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment the purchase is verified in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StorePurchase"
+          },
+          "product_id": {
+            "description": "Google Play: the store product id (for a subscription, its id).",
+            "type": "string"
+          },
+          "purchase_token": {
+            "description": "Google Play: the purchase token.",
+            "type": "string"
+          },
+          "signed_transaction": {
+            "description": "App Store: the StoreKit 2 signed transaction (`jwsRepresentation`).",
+            "type": "string"
+          },
+          "store": {
+            "description": "`app_store` or `google_play`.",
+            "type": "string"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "description": "Who bought it: `end_user` of `inst_` and a lower-case UUID.",
+            "properties": {
+              "customer_organization": {
+                "description": "A customer organization's id.",
+                "type": "string"
+              },
+              "end_user": {
+                "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "subject",
+          "store"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_purchases.client_verify",
+      "permission": "billing:client",
+      "tool": "money_store_purchases_client_verify"
     },
     {
       "annotations": {
@@ -32742,7 +32822,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@38a70772271df04259c37f94a6d77976cc7e9603ac54cdb1a74ced64e1ce7a5c. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@289d0d0f6d290b722eb5fe3dac708821bda0344dae9bab19a8c805c9ee94b232. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
