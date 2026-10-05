@@ -27,7 +27,7 @@
 mod guest;
 mod sync;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -975,6 +975,10 @@ impl Run<'_> {
     async fn acquire(&mut self) -> Result<Machine, Attempt> {
         let deadline = Instant::now() + self.o.queue_timeout;
         let mut queued = false;
+        // Warm workspaces whose node had no room for this run within
+        // PIN_WAIT: the run tries the other free warm ones before it takes
+        // a fresh, cold workspace.
+        let mut full: HashSet<String> = HashSet::new();
         loop {
             if self.no_volumes {
                 return self.acquire_without_volume(deadline).await;
@@ -989,16 +993,14 @@ impl Run<'_> {
                     )
                 })
                 .count();
-            let mut free: Vec<&sbx::Volume> = pool
-                .iter()
-                .filter(|v| vstate(v) == sbx::VolumeState::Available)
-                .collect();
-            free.sort_by(|a, b| a.name.cmp(&b.name));
+            let free = free_warm(&pool, &mut full, live < MAX_WARM);
             let mut leased = None;
+            let mut warm_name = None;
             for v in free {
                 match self.lease(Some(&v.name)).await {
                     Ok(l) => {
                         leased = Some((l, true));
+                        warm_name = Some(v.name.clone());
                         break;
                     }
                     Err(LeaseErr::InUse) => continue,
@@ -1046,24 +1048,14 @@ impl Run<'_> {
                         volume: true,
                     })
                 }
+                // The warm workspace's node has no room: the next pass
+                // tries another free warm workspace, and takes a fresh one
+                // only when none is left.
                 None => {
                     self.out
-                        .progress("the warm workspace's node is busy; using a fresh workspace");
-                    let Some(vol) = self.new_volume(deadline).await.map_err(Attempt::Done)? else {
-                        self.no_volumes = true;
-                        continue;
-                    };
-                    let l = match self.lease(Some(&vol)).await {
-                        Ok(l) => l,
-                        Err(LeaseErr::InUse) => continue,
-                        Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
-                    };
-                    if let Some(l) = self.ready(l, None, deadline).await? {
-                        return Ok(Machine {
-                            lease: l,
-                            warm_volume: false,
-                            volume: true,
-                        });
+                        .progress("the warm workspace's node is busy; trying another workspace");
+                    if let Some(v) = &warm_name {
+                        full.insert(v.clone());
                     }
                 }
             }
@@ -1645,6 +1637,27 @@ fn scrub(outcome: Outcome, secrets: &[String]) -> Outcome {
     }
 }
 
+/// The free warm workspaces a run may take, in a stable order, without those
+/// whose node had no room for it (`full`). When the pool has no room for a
+/// fresh workspace (`room` false) and every free one was full, `full` is
+/// cleared: waiting on a warm node is then the only way to run.
+fn free_warm<'a>(
+    pool: &'a [sbx::Volume],
+    full: &mut HashSet<String>,
+    room: bool,
+) -> Vec<&'a sbx::Volume> {
+    let mut free: Vec<&sbx::Volume> = pool
+        .iter()
+        .filter(|v| vstate(v) == sbx::VolumeState::Available)
+        .collect();
+    free.sort_by(|a, b| a.name.cmp(&b.name));
+    if !room && free.iter().all(|v| full.contains(&v.name)) {
+        full.clear();
+    }
+    free.retain(|v| !full.contains(&v.name));
+    free
+}
+
 /// Whether a Volume is one of this pool's workspaces: this repository's, in
 /// this region (`None`, the home region, is the pool without a region label).
 fn in_pool(v: &sbx::Volume, repo: &str, region: Option<&str>) -> bool {
@@ -2144,6 +2157,42 @@ mod tests {
         assert!(!in_pool(&home, "r", Some("gra")));
         assert!(!in_pool(&gra, "r", Some("fra")));
         assert!(!in_pool(&other, "r", None));
+    }
+
+    /// A run takes a free warm workspace whose node has room: one whose
+    /// node had none is skipped while another free warm workspace or room
+    /// for a fresh one remains, and is waited on again only when neither
+    /// does.
+    #[test]
+    fn a_run_skips_a_warm_workspace_whose_node_is_full() {
+        fn vol(name: &str, state: sbx::VolumeState) -> sbx::Volume {
+            let mut v = sbx::Volume::default();
+            v.name = name.into();
+            let mut st = sbx::VolumeStatus::default();
+            st.state = Some(state);
+            v.status = Some(st);
+            v
+        }
+        let pool = vec![
+            vol("v-b", sbx::VolumeState::Available),
+            vol("v-a", sbx::VolumeState::Available),
+            vol("v-c", sbx::VolumeState::Attached),
+        ];
+        let names = |f: Vec<&sbx::Volume>| f.iter().map(|v| v.name.clone()).collect::<Vec<_>>();
+        let mut full = HashSet::new();
+        // Free ones only, in a stable order.
+        assert_eq!(names(free_warm(&pool, &mut full, true)), ["v-a", "v-b"]);
+        // v-a's node had no room: v-b is next.
+        full.insert("v-a".to_string());
+        assert_eq!(names(free_warm(&pool, &mut full, true)), ["v-b"]);
+        // Both full, room for a fresh workspace: none of them; the run
+        // takes a fresh one.
+        full.insert("v-b".to_string());
+        assert!(free_warm(&pool, &mut full, true).is_empty());
+        assert_eq!(full.len(), 2);
+        // Both full and no room for a fresh one: wait on the warm ones again.
+        assert_eq!(names(free_warm(&pool, &mut full, false)), ["v-a", "v-b"]);
+        assert!(full.is_empty());
     }
 
     /// A caller sends --region only when `build run --help` lists both
