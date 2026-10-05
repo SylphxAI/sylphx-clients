@@ -16837,6 +16837,132 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets the environment's checkout policy: which buyer countries consumer checkout refuses. An environment that never wrote one refuses none."
+      },
+      "description": "Gets the environment's checkout policy: which buyer countries consumer\ncheckout refuses. An environment that never wrote one refuses none.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/checkout_policies/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCheckoutPolicy.",
+        "properties": {
+          "name": {
+            "description": "The name of the checkout policy to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutPolicy"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.checkout_policies.get",
+      "permission": "billing:read",
+      "tool": "money_checkout_policies_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the environment's checkout policy, whole."
+      },
+      "description": "Updates the environment's checkout policy, whole.",
+      "effect": "write",
+      "http": "PATCH /v1/{checkout_policy.name=orgs/*/projects/*/envs/*/checkout_policies/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateCheckoutPolicy.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the policy when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "checkout_policy": {
+            "additionalProperties": false,
+            "description": "The checkout policy to write; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/checkout_policies/default`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "allow_tax_id_buyers": {
+                    "description": "Whether a buyer from a denied country who gives a tax id (a business)\nmay still buy. Checkout then asks for the tax id; default false.",
+                    "type": "boolean"
+                  },
+                  "denied_country_codes": {
+                    "description": "Buyer countries consumer checkout refuses: ISO 3166-1 alpha-2 codes\n(`DE`), or the group `EU` (the 27 member states). At most 300 entries.\nEmpty refuses nobody.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkout_policy"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.checkout_policies.update",
+      "permission": "billing:write",
+      "tool": "money_checkout_policies_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a store connection."
       },
       "description": "Gets a store connection.",
@@ -18030,6 +18156,11 @@
                 "type": "boolean",
                 "x-sylphx-immutable": true
               },
+              "buyer_country_code": {
+                "description": "Where the buyer is, upper-case ISO 3166-1 alpha-2, when the caller knows\nit (for example from the request's IP address). A country the\nenvironment's checkout policy denies is refused here, before any page is\nmade, unless the policy lets a business buy. Not trusted for anything\nelse: the billing address the buyer gives is checked again when the\npayment completes.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
               "cancel_url": {
                 "description": "Where the buyer lands on cancel. HTTPS only.",
                 "type": "string",
@@ -18186,6 +18317,46 @@
       "method_id": "money.checkout_sessions.get",
       "permission": "billing:read",
       "tool": "money_checkout_sessions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists where the environment's consumer sales stand against each jurisdiction's digital-services tax registration threshold, per its own window. EU and UK have no threshold and are not tracked."
+      },
+      "description": "Lists where the environment's consumer sales stand against each\njurisdiction's digital-services tax registration threshold, per its own\nwindow. EU and UK have no threshold and are not tracked.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/tax_threshold_statuses",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListTaxThresholdStatuses.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TaxThresholdStatus"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.tax_threshold_statuses.list",
+      "permission": "billing:read",
+      "tool": "money_tax_threshold_statuses_list"
     },
     {
       "annotations": {
@@ -32571,7 +32742,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@db77c01dc3dd32578f4e386c44b8c3f9f418208901e9dcbc8ef05daadb98f051. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@38a70772271df04259c37f94a6d77976cc7e9603ac54cdb1a74ced64e1ce7a5c. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
