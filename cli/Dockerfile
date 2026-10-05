@@ -11,7 +11,7 @@
 # no shell, CA certificates, a writable /tmp, uid 65532. The Job runs argv
 # directly; /dev/termination-log is writable by that uid through the mount.
 
-FROM docker.io/library/rust:1.92.0-bookworm@sha256:e90e846de4124376164ddfbaab4b0774c7bdeef5e738866295e5a90a34a307a2 AS builder
+FROM docker.io/library/rust:1.99.0-bookworm@sha256:59037199c44290f2befcdd58dcc540164763fc296950255aaefeef096a1866b0 AS builder
 
 RUN apt-get update -qq \
  && apt-get install -y --no-install-recommends ca-certificates pkg-config binutils \

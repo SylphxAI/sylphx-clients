@@ -932,6 +932,8 @@ impl<'a, W: Wire> Applier<'a, W> {
 
     /// Writes one step and waits until it settles. The error carries the
     /// result row of the failed write.
+    // The error is the finished response/outcome the caller returns as-is; boxing it would only move the allocation.
+    #[allow(clippy::result_large_err)]
     async fn execute(
         &self,
         env: &str,

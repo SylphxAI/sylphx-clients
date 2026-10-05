@@ -83,7 +83,7 @@ jobs:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.92.0
+          toolchain: 1.99.0
           targets: ${{ matrix.target }}
       - name: Build
         run: |
@@ -129,7 +129,7 @@ jobs:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.92.0
+          toolchain: 1.99.0
           targets: ${{ matrix.target }}
       - name: Build
         run: |
@@ -281,7 +281,7 @@ jobs:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.92.0
+          toolchain: 1.99.0
       - name: Publish sylphx, sylphx-mcp, sylphx-cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
