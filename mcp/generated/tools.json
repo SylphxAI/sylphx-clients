@@ -16964,7 +16964,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "allow_sandbox": {
-                    "description": "Accept purchases the store marks as sandbox or license-test. Off in\nproduction: a sandbox purchase is then refused.",
+                    "description": "Accept purchases the store marks as sandbox or license-test. Off: a\nsandbox purchase is refused. On a `production` App Store connection it\nalso takes App Review and TestFlight purchases, read back from the\nsandbox and recorded and granted as `sandbox`, never as production.",
                     "type": "boolean"
                   },
                   "app_store": {
@@ -16976,7 +16976,7 @@
                         "type": "string"
                       },
                       "app_apple_id": {
-                        "description": "The app's Apple id, needed to verify production notifications.",
+                        "description": "The app's Apple id: when set, production notifications must carry it.",
                         "format": "int64",
                         "type": "string"
                       },
@@ -16986,6 +16986,10 @@
                           "type": "string"
                         },
                         "type": "array"
+                      },
+                      "environment": {
+                        "description": "The store environment this connection serves: `production` or `sandbox`.\nOnly purchases signed for that environment are accepted (plus sandbox\nones on a production connection with `allow_sandbox`), and each is read\nback from its own environment's App Store Server API. Xcode and\nlocal-testing signatures are refused either way. A connection created\nbefore this field existed serves `production`.",
+                        "type": "string"
                       },
                       "issuer_id": {
                         "description": "The App Store Connect issuer id.",
@@ -17005,7 +17009,8 @@
                     "required": [
                       "bundle_ids",
                       "issuer_id",
-                      "key_id"
+                      "key_id",
+                      "environment"
                     ],
                     "type": "object"
                   },
@@ -17131,7 +17136,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "allow_sandbox": {
-                    "description": "Accept purchases the store marks as sandbox or license-test. Off in\nproduction: a sandbox purchase is then refused.",
+                    "description": "Accept purchases the store marks as sandbox or license-test. Off: a\nsandbox purchase is refused. On a `production` App Store connection it\nalso takes App Review and TestFlight purchases, read back from the\nsandbox and recorded and granted as `sandbox`, never as production.",
                     "type": "boolean"
                   },
                   "app_store": {
@@ -17143,7 +17148,7 @@
                         "type": "string"
                       },
                       "app_apple_id": {
-                        "description": "The app's Apple id, needed to verify production notifications.",
+                        "description": "The app's Apple id: when set, production notifications must carry it.",
                         "format": "int64",
                         "type": "string"
                       },
@@ -17153,6 +17158,10 @@
                           "type": "string"
                         },
                         "type": "array"
+                      },
+                      "environment": {
+                        "description": "The store environment this connection serves: `production` or `sandbox`.\nOnly purchases signed for that environment are accepted (plus sandbox\nones on a production connection with `allow_sandbox`), and each is read\nback from its own environment's App Store Server API. Xcode and\nlocal-testing signatures are refused either way. A connection created\nbefore this field existed serves `production`.",
+                        "type": "string"
                       },
                       "issuer_id": {
                         "description": "The App Store Connect issuer id.",
@@ -17172,7 +17181,8 @@
                     "required": [
                       "bundle_ids",
                       "issuer_id",
-                      "key_id"
+                      "key_id",
+                      "environment"
                     ],
                     "type": "object"
                   },
@@ -17342,6 +17352,10 @@
           "transaction_id": {
             "description": "App Store, instead of `signed_transaction`: the transaction id, for apps\non original StoreKit whose receipts carry no signed transaction. Money\nreads the transaction from Apple with the connection's key; Apple's\nsigned answer is the proof.",
             "type": "string"
+          },
+          "validate_only": {
+            "description": "Verify fully and return the verdict Money would give, without writing\nanything: no record, no subject binding, no Google Play acknowledge or\nconsume, no entitlement, no ledger posting, no event, and no signed\n`grant_token`. Refusals are exactly the ones a real call gives. For\nmoving existing store sales onto Money, by comparing verdicts with the\nseller's own path before switching.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -32557,7 +32571,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@c8aac0afaf7591d0d5efa1ba6a8540d723d41a97ce7ad5d68601380ef3ab4783. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@db77c01dc3dd32578f4e386c44b8c3f9f418208901e9dcbc8ef05daadb98f051. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
