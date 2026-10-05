@@ -6361,9 +6361,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Creates a build. The Operation is done when the controller settles it."
+        "title": "Creates a build: one command or one image over a commit or a tree. The Operation is done when the build reaches a final state. `run` and `image` are the short forms."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a build. The Operation is done when the controller settles\nit.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a build: one command or one image over a commit or a tree. The\nOperation is done when the build reaches a final state. `run` and\n`image` are the short forms.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/builds",
       "input_schema": {
@@ -6407,17 +6407,12 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
-                  "build_args": {
-                    "additionalProperties": {
+                  "allow_hosts": {
+                    "description": "Internet hosts the build may reach. Empty means in-cell only: the\nmirrors and the store. Default `[build] allow_hosts`.",
+                    "items": {
                       "type": "string"
                     },
-                    "description": "Build arguments. Secret values bind through Sylphx Secrets, never here.",
-                    "type": "object",
-                    "x-sylphx-immutable": true
-                  },
-                  "build_class": {
-                    "description": "The class, `sylphx-<os>-<size>`; default `sylphx-linux-standard`.",
-                    "type": "string",
+                    "type": "array",
                     "x-sylphx-immutable": true
                   },
                   "cache": {
@@ -6426,14 +6421,77 @@
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "build.sylphx.com/BuildCache"
                   },
-                  "dockerfile": {
-                    "description": "A Dockerfile path relative to the root directory; unset lets the zero-\nconfig frontend detect the stack.",
+                  "command": {
+                    "additionalProperties": false,
+                    "description": "One command's exit code and the artifacts it names.",
+                    "properties": {
+                      "argv": {
+                        "description": "The program and its arguments. Use `[\"bash\", \"-lc\", \"…\"]` for a shell.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "x-sylphx-immutable": true
+                      },
+                      "artifacts": {
+                        "description": "Globs, relative to the input root, of files kept after the command ends,\nwhatever its exit code (test reports, coverage).",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "x-sylphx-immutable": true
+                      }
+                    },
+                    "required": [
+                      "argv"
+                    ],
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
+                  "image": {
+                    "additionalProperties": false,
+                    "description": "An OCI image with an SBOM and signed provenance.",
+                    "properties": {
+                      "build_args": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Build arguments. Secret values bind through `[build.secrets]`, never here.",
+                        "type": "object",
+                        "x-sylphx-immutable": true
+                      },
+                      "dockerfile": {
+                        "description": "A Dockerfile path relative to the input root; unset lets the zero-config\nfrontend detect the stack.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "service": {
+                        "description": "The `sylphx.toml` service whose `dockerfile` and `context` apply; unset\nreads the fields below or lets the zero-config frontend detect the stack.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "target": {
+                        "description": "The Dockerfile stage to build.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      }
+                    },
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
+                  "size": {
+                    "description": "The machine size; default `[build] size`, else STANDARD.",
+                    "enum": [
+                      "standard",
+                      "large",
+                      "xlarge"
+                    ],
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
                   "source": {
                     "additionalProperties": false,
-                    "description": "The exact source.",
+                    "description": "A commit, read through the Broker at that exact commit.",
                     "properties": {
                       "commit": {
                         "description": "The full commit SHA to build.",
@@ -6459,15 +6517,29 @@
                     "type": "object",
                     "x-sylphx-immutable": true
                   },
-                  "target": {
-                    "description": "The Dockerfile stage to build.",
+                  "timeout": {
+                    "description": "The time limit; default 1 hour, at most 6 hours. A command that reaches\nit is killed and the Build ends with BUILD_FAILURE_TIMEOUT.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "tree": {
+                    "additionalProperties": false,
+                    "description": "A tree uploaded to the org's store, by its root digest.",
+                    "properties": {
+                      "root_digest": {
+                        "description": "The root `Directory` digest, `<sha256 hex>/<size in bytes>`.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      }
+                    },
+                    "required": [
+                      "root_digest"
+                    ],
+                    "type": "object",
                     "x-sylphx-immutable": true
                   }
                 },
-                "required": [
-                  "source"
-                ],
                 "type": "object"
               }
             },
@@ -6498,7 +6570,7 @@
       },
       "long_running": true,
       "method_id": "build.builds.create",
-      "permission": "build:write",
+      "permission": "build:run",
       "served": false,
       "tool": "build_builds_create"
     },
@@ -6544,9 +6616,290 @@
       },
       "long_running": true,
       "method_id": "build.builds.cancel",
-      "permission": "build:write",
+      "permission": "build:run",
       "served": false,
       "tool": "build_builds_cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Runs one command over an uploaded tree and settles with its exit code, like the local command. A caller that gets a failure before the command started (BUILD_FAILURE_SETUP_FAILED, NO_CAPACITY) may build locally."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Runs one command over an uploaded tree and settles with its exit code,\nlike the local command. A caller that gets a failure before the command\nstarted (BUILD_FAILURE_SETUP_FAILED, NO_CAPACITY) may build locally.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*}/builds:run",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RunBuild. Its options are the BuildSpec's, by the same\nnames.",
+        "properties": {
+          "allow_hosts": {
+            "description": "Internet hosts the command may reach; empty means in-cell only.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "artifacts": {
+            "description": "Globs of files kept after the command ends, whatever its exit code.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "build_id": {
+            "description": "The id segment of the Build's name; the server assigns one when unset.",
+            "type": "string"
+          },
+          "cache": {
+            "description": "The BuildCache to use; default the project's `default` cache.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/BuildCache"
+          },
+          "command": {
+            "description": "The program and its arguments.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "description": "The project to run in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/Build"
+          },
+          "size": {
+            "description": "The machine size; default `[build] size`, else STANDARD.",
+            "enum": [
+              "standard",
+              "large",
+              "xlarge"
+            ],
+            "type": "string"
+          },
+          "timeout": {
+            "description": "The time limit; default 1 hour.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "tree": {
+            "additionalProperties": false,
+            "description": "The uploaded tree to run over.",
+            "properties": {
+              "root_digest": {
+                "description": "The root `Directory` digest, `<sha256 hex>/<size in bytes>`.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              }
+            },
+            "required": [
+              "root_digest"
+            ],
+            "type": "object"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "tree",
+          "command"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "build.builds.run",
+      "permission": "build:run",
+      "served": false,
+      "tool": "build_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Builds an image, with an SBOM and signed provenance, from a commit or an uploaded tree."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Builds an image, with an SBOM and signed provenance, from a commit or an\nuploaded tree.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*}/builds:buildImage",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of BuildImage. Its options are the BuildSpec's, by the same\nnames.",
+        "properties": {
+          "allow_hosts": {
+            "description": "Internet hosts the build may reach; empty means in-cell only.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "build_id": {
+            "description": "The id segment of the Build's name; the server assigns one when unset.",
+            "type": "string"
+          },
+          "cache": {
+            "description": "The BuildCache to use; default the project's `default` cache.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/BuildCache"
+          },
+          "image": {
+            "additionalProperties": false,
+            "description": "The image to build.",
+            "properties": {
+              "build_args": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Build arguments. Secret values bind through `[build.secrets]`, never here.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "dockerfile": {
+                "description": "A Dockerfile path relative to the input root; unset lets the zero-config\nfrontend detect the stack.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "service": {
+                "description": "The `sylphx.toml` service whose `dockerfile` and `context` apply; unset\nreads the fields below or lets the zero-config frontend detect the stack.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "target": {
+                "description": "The Dockerfile stage to build.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              }
+            },
+            "type": "object"
+          },
+          "parent": {
+            "description": "The project to build in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/Build"
+          },
+          "size": {
+            "description": "The machine size; default `[build] size`, else STANDARD.",
+            "enum": [
+              "standard",
+              "large",
+              "xlarge"
+            ],
+            "type": "string"
+          },
+          "source": {
+            "additionalProperties": false,
+            "description": "A commit, read through the Broker at that exact commit.",
+            "properties": {
+              "commit": {
+                "description": "The full commit SHA to build.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "root_directory": {
+                "description": "The directory inside the repository to build; default the root.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "source_link": {
+                "description": "The Hosting SourceLink naming the repository and its Connection.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "hosting.sylphx.com/SourceLink"
+              }
+            },
+            "required": [
+              "source_link",
+              "commit"
+            ],
+            "type": "object"
+          },
+          "timeout": {
+            "description": "The time limit; default 1 hour.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "tree": {
+            "additionalProperties": false,
+            "description": "An uploaded tree.",
+            "properties": {
+              "root_digest": {
+                "description": "The root `Directory` digest, `<sha256 hex>/<size in bytes>`.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              }
+            },
+            "required": [
+              "root_digest"
+            ],
+            "type": "object"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "build.builds.build_image",
+      "permission": "build:run",
+      "served": false,
+      "tool": "build_image"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a page of a build's log lines, oldest first. With `wait`, an empty page on a running build waits up to that long for new lines, so a client follows the log by passing each `next_page_token` back."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Reads a page of a build's log lines, oldest first. With `wait`, an empty\npage on a running build waits up to that long for new lines, so a client\nfollows the log by passing each `next_page_token` back.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/builds/*}:readLogs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReadBuildLogs.",
+        "properties": {
+          "name": {
+            "description": "The name of the build.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/Build"
+          },
+          "page_size": {
+            "description": "At most this many lines; default 500, clamped to 5000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "wait": {
+            "description": "On a running build, wait up to this long (at most 30s) for new lines\nbefore returning an empty page.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "build.builds.read_logs",
+      "permission": "build:read",
+      "served": false,
+      "tool": "build_logs_read"
     },
     {
       "annotations": {
@@ -6768,6 +7121,92 @@
       "permission": "build:write",
       "served": false,
       "tool": "build_build_caches_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Mints the settings a build that runs elsewhere (a laptop, a CI runner) uses to reach the cache: the sccache, Turbo and crates mirror doors and a short-lived token, as environment variables."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Mints the settings a build that runs elsewhere (a laptop, a CI runner)\nuses to reach the cache: the sccache, Turbo and crates mirror doors and a\nshort-lived token, as environment variables.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/build_caches/*}:mintEnv",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of MintBuildCacheEnv.",
+        "properties": {
+          "access": {
+            "description": "What the token may do; default READ.",
+            "enum": [
+              "read",
+              "read_write"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the build cache.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/BuildCache"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "build.build_caches.mint_env",
+      "permission": "build:run",
+      "served": false,
+      "tool": "build_cache_env"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Empties a build cache and keeps the cache. The undo is that the next build refills it."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Empties a build cache and keeps the cache. The undo is that the next\nbuild refills it.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/build_caches/*}:purge",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of PurgeBuildCache.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Purge only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the build cache to empty.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/BuildCache"
+          },
+          "validate_only": {
+            "description": "Validate without purging anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "build.build_caches.purge",
+      "permission": "build:write",
+      "served": false,
+      "tool": "build_caches_purge"
     },
     {
       "annotations": {
@@ -34552,7 +34991,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@190f1b33b937c1aef79697684018db853389b521c75e19ff69ac6af609e96f45. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@a2fae12c0c5145b79e95827e3e70b57caffc9b10e04ab643baf17ab8dff51931. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
