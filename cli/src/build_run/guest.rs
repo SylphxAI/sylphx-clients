@@ -17,6 +17,9 @@ use serde_json::{json, Value};
 pub enum Fault {
     /// The machine is gone or not running: look at the lease to learn why.
     Gone(String),
+    /// A process stream broke or closed before its end event. The machine may
+    /// be fine, so the run is worth one more try (it is `retryable`).
+    Stream(String),
     /// Anything else; the text is the reason.
     Other(String),
 }
@@ -24,7 +27,7 @@ pub enum Fault {
 impl Fault {
     pub fn text(&self) -> &str {
         match self {
-            Fault::Gone(s) | Fault::Other(s) => s,
+            Fault::Gone(s) | Fault::Stream(s) | Fault::Other(s) => s,
         }
     }
 }
@@ -223,7 +226,7 @@ impl Proc {
                     self.pending.extend(self.frames.push(&c));
                 }
                 Ok(None) => return Ok(None),
-                Err(e) => return Err(Fault::Gone(format!("the process stream broke: {e}"))),
+                Err(e) => return Err(Fault::Stream(format!("the process stream broke: {e}"))),
             }
         }
     }
@@ -359,7 +362,7 @@ impl Guest {
                 Some(Event::End(c)) => return Ok((c, out, err)),
                 Some(Event::Error(m)) => return Err(Fault::Other(m)),
                 Some(Event::Start(_)) => {}
-                None => return Err(Fault::Gone("the guest closed the stream".into())),
+                None => return Err(Fault::Stream("the guest closed the stream".into())),
             }
         }
     }
@@ -502,6 +505,33 @@ mod tests {
         assert_eq!(
             q("/workspace/.sylphx/in 1&x"),
             "/workspace/.sylphx/in%201%26x"
+        );
+    }
+    /// A server that sends part of a chunked body and hangs up, as a gateway
+    /// that drops a long stream does (`error decoding response body`).
+    #[tokio::test]
+    async fn a_dropped_process_stream_is_a_stream_fault() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = l.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut c, _) = l.accept().await.unwrap();
+            let mut buf = [0u8; 4096];
+            let _ = c.read(&mut buf).await;
+            let _ = c
+                .write_all(b"HTTP/1.1 200 OK\r\ncontent-type: application/connect+json\r\ntransfer-encoding: chunked\r\n\r\n10\r\nonly-part")
+                .await;
+            // Closes in the middle of a chunk.
+        });
+        let g = Guest::new(&format!("http://{addr}"), "sbx", "tok").unwrap();
+        let mut p = g
+            .start("user", &["true".to_string()], "", &BTreeMap::new())
+            .await
+            .unwrap();
+        let got = p.next().await;
+        assert!(
+            matches!(got, Err(Fault::Stream(ref m)) if m.contains("stream broke")),
+            "{got:?}"
         );
     }
 }

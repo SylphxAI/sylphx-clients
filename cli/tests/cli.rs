@@ -928,6 +928,27 @@ fn envd_process(stdout: &str, code: i64) -> (u16, &'static str, Vec<u8>) {
     (200, "application/connect+json", b)
 }
 
+/// A process that wrote `stderr` and ended with `code`.
+fn envd_process_err(stderr: &str, code: i64) -> (u16, &'static str, Vec<u8>) {
+    use base64::Engine;
+    let data = base64::engine::general_purpose::STANDARD.encode(stderr);
+    let mut b = envd_frame(0, json!({"event": {"start": {"pid": 7}}}));
+    b.extend(envd_frame(0, json!({"event": {"data": {"stderr": data}}})));
+    b.extend(envd_frame(
+        0,
+        json!({"event": {"end": {"exitCode": code, "exited": true, "status": format!("exit status {code}")}}}),
+    ));
+    b.extend(envd_frame(2, json!({})));
+    (200, "application/connect+json", b)
+}
+
+/// A process stream that stops before its end event, as a dropped gateway
+/// connection looks to the client.
+fn envd_broken() -> (u16, &'static str, Vec<u8>) {
+    let b = envd_frame(0, json!({"event": {"start": {"pid": 7}}}));
+    (200, "application/connect+json", b)
+}
+
 fn git_init(dir: &std::path::Path) {
     let ok = Command::new("git")
         .arg("-C")
@@ -967,6 +988,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         (404, "text/plain", b"file not found".to_vec()),
         json_reply(json!({})),
         json_reply(json!({})),
+        envd_process("", 0),
         envd_process("", 0),
         envd_process("hello from the build machine\n", 3),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
@@ -1024,7 +1046,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     );
     assert!(net.to_string().contains("static.crates.io"), "{net}");
     // The guest calls carry the sandbox id and the lease token, never the key.
-    let guest: Vec<&Seen> = seen.iter().skip(4).take(6).collect();
+    let guest: Vec<&Seen> = seen.iter().skip(4).take(7).collect();
     for g in &guest {
         let head = g.head.to_ascii_lowercase();
         assert!(head.contains("e2b-sandbox-id: abcd1234"), "{}", g.head);
@@ -1048,18 +1070,18 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         "{lines:?}"
     );
     assert!(
-        seen[9].body.contains("cargo"),
+        seen[10].body.contains("cargo"),
         "the command is started: {}",
-        seen[9].body
+        seen[10].body
     );
     // On a Volume: the run keeps its local sccache (flag 0), as before.
     assert!(
-        seen[9].body.contains(r#""/workspace",".","0","cargo""#),
+        seen[10].body.contains(r#""/workspace",".","0","cargo""#),
         "{}",
-        seen[9].body
+        seen[10].body
     );
     assert!(
-        lines[10].contains(":release"),
+        lines[11].contains(":release"),
         "the lease is always released: {lines:?}"
     );
 }
@@ -1302,6 +1324,7 @@ async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
+        envd_process("", 0),
         envd_process("built in gra\n", 0),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
     ];
@@ -1366,12 +1389,134 @@ async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
         "no Volume is mounted: {created}"
     );
     // The command runs with the no-volume flag (no local sccache).
-    let args = &seen[9].body;
+    let args = &seen[10].body;
     assert!(args.contains("cargo"), "{args}");
     assert!(args.contains(r#""/workspace",".","1","cargo""#), "{args}");
     assert!(
-        lines[10].contains(":release"),
+        lines[11].contains(":release"),
         "the lease is always released: {lines:?}"
+    );
+}
+
+/// The toolchain cannot be installed: nothing the user asked for has started,
+/// so the run is a platform failure (125), never the status of a command that
+/// did not run, and the machine is released.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_exits_125_when_the_toolchain_cannot_be_installed() {
+    let sb = Sandbox::new("provision-fails");
+    project(&sb.dir);
+    let (url, log) = build_stub_with(
+        envd_process_err(
+            "the Rust toolchain could not be installed:\nerror: could not download channel-rust-1.99.0.toml.sha256 (Connection timed out)\n",
+            4,
+        ),
+        vec![ended()],
+    )
+    .await;
+    let out = run(
+        &sb,
+        &url,
+        &["build", "run", "--no-cache", "--", "cargo", "build"],
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(125), "{err}");
+    assert!(err.contains("Connection timed out"), "{err}");
+    assert!(err.contains("[retryable]"), "{err}");
+    let seen = log.lock().unwrap();
+    let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
+    assert_eq!(lines.len(), 11, "the command is never started: {lines:?}");
+    assert!(lines[10].contains(":release"), "{lines:?}");
+}
+
+/// A broken output stream is retried once, on a new machine after a backoff;
+/// when the retry runs, its own exit code is the run's.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_retries_a_broken_stream_once_and_keeps_the_commands_exit_code() {
+    let sb = Sandbox::new("stream-retry");
+    project(&sb.dir);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let lease_state = |state: &str| {
+        (
+            200u16,
+            "application/json",
+            json!({"name": format!("{ENV}/leases/l1"), "status": {"state": state}})
+                .to_string()
+                .into_bytes(),
+        )
+    };
+    let mut replies = attempt_replies(&url, envd_process("", 0));
+    replies.push(envd_broken());
+    replies.push(lease_state("ready")); // the lease is looked at: still running
+    replies.push(ended()); // released before the retry
+    replies.extend(attempt_replies(&url, envd_process("", 0)));
+    replies.push(envd_process("second try\n", 101));
+    replies.push(ended());
+    let (_, log) = serve_bytes_on(listener, replies).await;
+    let t = std::time::Instant::now();
+    let out = run(
+        &sb,
+        &url,
+        &["build", "run", "--no-cache", "--", "cargo", "test"],
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(101), "{err}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "second try\n");
+    assert!(err.contains("retrying once"), "{err}");
+    assert!(
+        t.elapsed() >= std::time::Duration::from_secs(4),
+        "a backoff: {:?}",
+        t.elapsed()
+    );
+    let seen = log.lock().unwrap();
+    let releases = seen.iter().filter(|s| s.line.contains(":release")).count();
+    assert_eq!(
+        releases, 2,
+        "the first machine is released before the retry"
+    );
+}
+
+/// A stream that breaks twice ends as 125, retryable.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_exits_125_when_the_stream_breaks_twice() {
+    let sb = Sandbox::new("stream-twice");
+    project(&sb.dir);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let running = || {
+        (
+            200u16,
+            "application/json",
+            json!({"name": format!("{ENV}/leases/l1"), "status": {"state": "ready"}})
+                .to_string()
+                .into_bytes(),
+        )
+    };
+    let mut replies = Vec::new();
+    for _ in 0..2 {
+        replies.extend(attempt_replies(&url, envd_process("", 0)));
+        replies.push(envd_broken());
+        replies.push(running());
+        replies.push(ended());
+    }
+    let (_, log) = serve_bytes_on(listener, replies).await;
+    let out = run(
+        &sb,
+        &url,
+        &["build", "run", "--no-cache", "--", "cargo", "test"],
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(125), "{err}");
+    assert!(err.contains("twice"), "{err}");
+    assert!(err.contains("[retryable]"), "{err}");
+    let seen = log.lock().unwrap();
+    let starts = seen.iter().filter(|s| s.body.contains("\"cargo\"")).count();
+    assert_eq!(
+        starts, 2,
+        "the command is started once per attempt, no more"
     );
 }
 
@@ -1581,11 +1726,18 @@ async fn hanging_server() -> String {
 /// empty pool, a new workspace, a ready lease, its token, and the sync.
 /// `tail` is what happens from the command on.
 async fn build_stub(tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
+    build_stub_with(envd_process("", 0), tail).await
+}
+
+/// The replies of one attempt up to the start of the command: an empty pool,
+/// a new workspace, a ready lease, its token, the sync, then `provision`.
+fn attempt_replies(
+    url: &str,
+    provision: (u16, &'static str, Vec<u8>),
+) -> Vec<(u16, &'static str, Vec<u8>)> {
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
     let lease = format!("{ENV}/leases/l1");
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let url = format!("http://{}", listener.local_addr().unwrap());
-    let mut replies = vec![
+    vec![
         json_reply(json!({"volumes": []})),
         json_reply(
             json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
@@ -1599,7 +1751,19 @@ async fn build_stub(tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
-    ];
+        provision,
+    ]
+}
+
+/// [`build_stub`] with the preparation step (the toolchain install) answering
+/// `provision`.
+async fn build_stub_with(
+    provision: (u16, &'static str, Vec<u8>),
+    tail: Vec<(u16, &'static str, Vec<u8>)>,
+) -> (String, Log) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut replies = attempt_replies(&url, provision);
     replies.extend(tail);
     serve_bytes_on(listener, replies).await
 }
@@ -1614,10 +1778,10 @@ fn ended() -> (u16, &'static str, Vec<u8>) {
     )
 }
 
-/// The environment the command was started with (the 10th call).
+/// The environment the command was started with (the 11th call).
 fn started_env(log: &Log) -> Value {
     let seen = log.lock().unwrap();
-    let start = &seen[9];
+    let start = &seen[10];
     assert!(start.line.starts_with("POST /process.Process/Start"));
     let text = &start.body;
     let from = text.find("{\"process\"").expect("a JSON message");

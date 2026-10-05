@@ -7,7 +7,10 @@
 //! and repository), leases a `build-<size>` machine with it mounted at
 //! [`WS`], sends only the files that differ from the workspace's manifest
 //! ([`sync`]), runs the command next to the warm `target/`, and always
-//! releases the lease. A preempted run is retried once.
+//! releases the lease. A preempted or lost run, or one whose output stream
+//! broke, is retried once after a short backoff. Anything that fails before
+//! the command starts (the machine, the sync, the toolchain install) is a
+//! platform failure, 125; once it has started, its own status is the exit code.
 //!
 //! `--region` runs in that region's Cell, with that region's warm workspaces
 //! (a Volume lives in one Cell); no `--region` is the project's home region.
@@ -114,28 +117,67 @@ if [ -f "$W/.sylphx/manifest" ]; then
 fi
 "#;
 
+/// The directories both guest scripts share: the build caches live on the
+/// workspace (`$W`) so a warm machine reuses them.
+macro_rules! guest_dirs {
+    () => {
+        r#"export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache" RUSTUP_HOME="$W/rustup"
+export PATH="$W/cargo/bin:$PATH"
+"#
+    };
+}
+
+/// Everything that must be ready before the user's command starts: the tree
+/// directory and, for a Rust tree, the toolchain named by its
+/// `rust-toolchain.toml` (installed on first use onto the workspace). It runs
+/// as its own process so a failure here is told apart from the command's own
+/// exit status: any non-zero status is a platform failure (125), never the
+/// command's. The install's log goes to `$W/.sylphx/toolchain.log` and its
+/// tail to stderr on failure. A tree without Rust files (looked for up to the tree root) does not need the
+/// toolchain, so a failed install does not stop its command.
+const PROVISION: &str = concat!(
+    r#"W=$1 R=$2
+"#,
+    guest_dirs!(),
+    r#"cd "$W/tree/$R" || { echo "the work tree is missing on the machine" >&2; exit 3; }
+if command -v rustup >/dev/null 2>&1 && ! rustup which rustc >/dev/null 2>&1; then
+  { rustup toolchain install || rustup default stable; } > "$W/.sylphx/toolchain.log" 2>&1 || true
+  if ! rustup which rustc >> "$W/.sylphx/toolchain.log" 2>&1; then
+    d=$PWD
+    while :; do
+      if [ -e "$d/rust-toolchain.toml" ] || [ -e "$d/rust-toolchain" ] || [ -e "$d/Cargo.toml" ]; then
+        echo "the Rust toolchain could not be installed:" >&2
+        tail -n 6 "$W/.sylphx/toolchain.log" >&2
+        exit 4
+      fi
+      [ "$d" = "$W/tree" ] && break
+      d=$(dirname "$d")
+    done
+  fi
+fi
+exit 0
+"#
+);
+
 /// Runs the command (`$4…`) in `$W/tree/$R` with the build caches on the
 /// workspace: `target/`, the Cargo home, sccache, and rustup's toolchains
-/// (installed from the tree's `rust-toolchain.toml` on first use). `$3` is 1
-/// on a machine without a Volume: its disk ends with the lease, so sccache
-/// runs only against a remote cache the machine is given, never a local
-/// directory that would double `target/` on the same disk.
-const RUN: &str = r#"W=$1 R=$2 E=$3
+/// ([`PROVISION`] has installed them). `$3` is 1 on a machine without a
+/// Volume: its disk ends with the lease, so sccache runs only against a remote
+/// cache the machine is given, never a local directory that would double
+/// `target/` on the same disk. The command's exit status is the script's.
+const RUN: &str = concat!(
+    r#"W=$1 R=$2 E=$3
 shift 3
-export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache"
-export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}" PATH="$W/cargo/bin:$PATH"
+"#,
+    guest_dirs!(),
+    r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
 if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
   if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
 fi
 cd "$W/tree/$R" || exit 125
-if command -v rustup >/dev/null 2>&1; then
-  export RUSTUP_HOME="$W/rustup"
-  if ! rustup which rustc >/dev/null 2>&1; then
-    { rustup toolchain install || rustup default stable; } > "$W/.sylphx/toolchain.log" 2>&1 || true
-  fi
-fi
 exec "$@"
-"#;
+"#
+);
 
 /// Lists the files matching the globs (`$3…`, relative to `$W/tree/$R`) with
 /// their SHA-256, for the copy-back.
@@ -154,7 +196,7 @@ exit 0
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, machine lost); 130 interrupted.\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted.\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -632,17 +674,48 @@ async fn execute(
         cache_warned: AtomicBool::new(false),
         no_volumes: false,
     };
-    let mut preempted = false;
+    let mut retries = Retries::default();
     loop {
-        match run.attempt().await {
-            Attempt::Done(outcome) => return outcome,
-            Attempt::Lost(reason) if !preempted => {
-                preempted = true;
+        match retries.next(run.attempt().await) {
+            Step::Done(outcome) => return outcome,
+            Step::Again { reason, backoff } => {
                 out.progress(&format!("{reason}; retrying once"));
                 out.event(json!({"type": "queued", "retry": true, "reason": reason}));
+                tokio::time::sleep(backoff).await;
+            }
+        }
+    }
+}
+
+/// Waited before the one retry, so a gateway that dropped a stream is not hit
+/// again in the same instant.
+const RETRY_BACKOFF: Duration = Duration::from_secs(5);
+
+/// The one retry a run gets, whatever lost it: a machine preempted or lost,
+/// or a process stream that broke.
+#[derive(Default)]
+struct Retries {
+    used: bool,
+}
+
+enum Step {
+    Done(Outcome),
+    Again { reason: String, backoff: Duration },
+}
+
+impl Retries {
+    fn next(&mut self, a: Attempt) -> Step {
+        match a {
+            Attempt::Done(o) => Step::Done(o),
+            Attempt::Lost(reason) if !self.used => {
+                self.used = true;
+                Step::Again {
+                    reason,
+                    backoff: RETRY_BACKOFF,
+                }
             }
             Attempt::Lost(reason) => {
-                return Outcome::platform(format!("{reason}, twice"), true);
+                Step::Done(Outcome::platform(format!("{reason}, twice"), true))
             }
         }
     }
@@ -714,6 +787,9 @@ impl Run<'_> {
             Ok(w) => w,
             Err(e) => return self.lost_or(&name, e).await,
         };
+        if let Err(a) = self.provision(&guest, &name).await {
+            return a;
+        }
         let shape = format!("build-{}", self.o.size);
         let (cache, warned) = self.cache().await;
         // At most three `sylphx:` lines: a warning takes the place of this one.
@@ -786,9 +862,48 @@ impl Run<'_> {
         }
     }
 
+    /// Installs what the command needs before it starts. Any failure here is
+    /// a platform failure (125, retryable), never the command's own status.
+    async fn provision(&self, g: &Guest, name: &str) -> Result<(), Attempt> {
+        let args = argv(&[
+            "/bin/sh",
+            "-c",
+            PROVISION,
+            "sylphx-provision",
+            WS,
+            self.rel(),
+        ]);
+        let ran =
+            tokio::time::timeout(PROVISION_TIMEOUT, g.run(USER, &args, &BTreeMap::new())).await;
+        match ran {
+            Err(_) => Err(Attempt::Done(Outcome::platform(
+                format!(
+                    "preparing the build machine took longer than {}s",
+                    PROVISION_TIMEOUT.as_secs()
+                ),
+                true,
+            ))),
+            Ok(Ok((0, _, _))) => Ok(()),
+            Ok(Ok((code, _, err))) => Err(Attempt::Done(Outcome::platform(
+                provision_failure(code, &err),
+                true,
+            ))),
+            Ok(Err(f)) => Err(self.lost_or(name, f).await),
+        }
+    }
+
+    /// The tree directory the command runs in, relative to the tree root.
+    fn rel(&self) -> &str {
+        if self.o.rel.is_empty() {
+            "."
+        } else {
+            &self.o.rel
+        }
+    }
+
     /// A guest fault means the machine may be gone: if the lease ended
-    /// preempted or lost, the run is worth one retry; otherwise it is a
-    /// platform failure.
+    /// preempted or lost, or the process stream broke, the run is worth one
+    /// retry; otherwise it is a platform failure.
     async fn lost_or(&self, name: &str, f: Fault) -> Attempt {
         let mut get = sbx::GetLeaseRequest::default();
         get.name = name.to_string();
@@ -802,21 +917,23 @@ impl Run<'_> {
             .as_ref()
             .map(|l| matches!(state(l), sbx::LeaseState::Ending | sbx::LeaseState::Ended))
             .unwrap_or(false);
+        let verdict = judge(reason.as_deref(), &f);
+        // A retry takes a new machine: end this one first, or it idles on.
+        let release_now = !ended && matches!(verdict, Verdict::Retry(_));
         self.held.with(|h| {
             h.proc = None;
-            if ended {
+            if ended || release_now {
                 h.lease = None;
             }
         });
-        match reason.as_deref() {
-            Some(r @ ("preempted" | "machine_lost")) => {
-                Attempt::Lost(format!("the build machine was {}", r.replace('_', " ")))
+        if release_now {
+            release(self.client, name).await;
+        }
+        match verdict {
+            Verdict::Retry(why) => Attempt::Lost(why),
+            Verdict::Fail { reason, retryable } => {
+                Attempt::Done(Outcome::platform(reason, retryable))
             }
-            Some(r) => Attempt::Done(Outcome::platform(
-                format!("the build machine ended: {r}"),
-                false,
-            )),
-            None => Attempt::Done(Outcome::platform(f.text().to_string(), true)),
         }
     }
 
@@ -1298,11 +1415,7 @@ impl Run<'_> {
             RUN.into(),
             "sylphx-run".into(),
             WS.into(),
-            if self.o.rel.is_empty() {
-                ".".into()
-            } else {
-                self.o.rel.clone()
-            },
+            self.rel().to_string(),
             if volume { "0" } else { "1" }.into(),
         ];
         args.extend(self.o.command.iter().cloned());
@@ -1324,7 +1437,7 @@ impl Run<'_> {
                     Some(Event::Stderr(b)) => self.out.stderr(&b),
                     Some(Event::End(c)) => break Some(c),
                     Some(Event::Error(m)) => return Err(Fault::Other(format!("the command could not run: {m}"))),
-                    None => return Err(Fault::Gone("the output stream closed before the command ended".into())),
+                    None => return Err(Fault::Stream("the output stream closed before the command ended".into())),
                 },
                 _ = tick.tick() => {
                     if minted.elapsed() >= TOKEN_RENEW {
@@ -1421,6 +1534,60 @@ enum LeaseErr {
     /// The workspace is attached to another lease.
     InUse,
     Fatal(Outcome),
+}
+
+/// How long preparing the machine (the toolchain install) may take.
+const PROVISION_TIMEOUT: Duration = Duration::from_secs(15 * 60);
+
+/// What a guest fault means for the run.
+#[derive(Debug, PartialEq, Eq)]
+enum Verdict {
+    /// Worth one more try on a new machine.
+    Retry(String),
+    Fail {
+        reason: String,
+        retryable: bool,
+    },
+}
+
+/// `end_reason` is why the lease ended, when it has.
+fn judge(end_reason: Option<&str>, f: &Fault) -> Verdict {
+    match end_reason {
+        Some(r @ ("preempted" | "machine_lost")) => {
+            Verdict::Retry(format!("the build machine was {}", r.replace('_', " ")))
+        }
+        Some(r) => Verdict::Fail {
+            reason: format!("the build machine ended: {r}"),
+            retryable: false,
+        },
+        None => match f {
+            Fault::Stream(t) => Verdict::Retry(t.clone()),
+            other => Verdict::Fail {
+                reason: other.text().to_string(),
+                retryable: true,
+            },
+        },
+    }
+}
+
+/// The reason for a non-zero [`PROVISION`] status, with the last lines it
+/// wrote to stderr.
+fn provision_failure(code: i32, stderr: &[u8]) -> String {
+    let text = String::from_utf8_lossy(stderr);
+    let tail: String = text
+        .trim()
+        .chars()
+        .rev()
+        .take(400)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    if tail.is_empty() {
+        format!("preparing the build machine failed (status {code})")
+    } else {
+        format!("preparing the build machine failed (status {code}): {tail}")
+    }
 }
 
 /// A refused API call as a platform failure; retryable as the API says, and
@@ -1525,6 +1692,222 @@ mod tests {
         assert!(d.contains(&"index.crates.io".to_string()));
         assert_eq!(d.last().map(String::as_str), Some("proxy.golang.org"));
         assert_eq!(allowed_domains(&[]).len(), BUILD_PACKAGES.len());
+    }
+
+    // The guest scripts run for real under /bin/sh in a scratch workspace;
+    // rustup is a fake placed where the script puts the workspace's cargo/bin.
+    struct Ws(PathBuf);
+
+    impl Ws {
+        fn new(tag: &str) -> Ws {
+            let d = std::env::temp_dir().join(format!(
+                "sylphx-build-run-{tag}-{}-{}",
+                std::process::id(),
+                guest::rand_u64()
+            ));
+            std::fs::create_dir_all(d.join("tree")).unwrap();
+            std::fs::create_dir_all(d.join(".sylphx")).unwrap();
+            std::fs::create_dir_all(d.join("cargo/bin")).unwrap();
+            Ws(d)
+        }
+
+        fn file(&self, rel: &str, body: &str) {
+            let p = self.0.join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, body).unwrap();
+        }
+
+        /// A fake rustup: `which rustc` succeeds once `installed` exists;
+        /// `toolchain install` creates it unless `fail_install`.
+        fn rustup(&self, fail_install: bool) {
+            let w = self.0.display();
+            let install = if fail_install {
+                "exit 1".to_string()
+            } else {
+                format!("touch '{w}/installed'")
+            };
+            let body = format!(
+                "#!/bin/sh\ncase \"$1\" in\n which) [ -e '{w}/installed' ] ;;\n toolchain) echo 'error: could not download channel-rust-1.99.0.toml.sha256 (Connection timed out)' >&2; {install} ;;\n default) echo 'error: no network' >&2; exit 1 ;;\nesac\n"
+            );
+            self.file("cargo/bin/rustup", &body);
+            use std::os::unix::fs::PermissionsExt;
+            let p = self.0.join("cargo/bin/rustup");
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+
+        fn sh(&self, script: &str, rel: &str, extra: &[&str]) -> (i32, String) {
+            let out = std::process::Command::new("/bin/sh")
+                .arg("-c")
+                .arg(script)
+                .arg("sylphx-test")
+                .arg(&self.0)
+                .arg(rel)
+                .args(extra)
+                .env_clear()
+                .env("PATH", "/usr/bin:/bin")
+                .output()
+                .unwrap();
+            (
+                out.status.code().unwrap_or(-1),
+                String::from_utf8_lossy(&out.stderr).into_owned(),
+            )
+        }
+    }
+
+    impl Drop for Ws {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn a_failed_toolchain_install_stops_a_rust_tree_before_its_command() {
+        let w = Ws::new("tc-fail");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(true);
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 4, "{err}");
+        assert!(err.contains("could not be installed"), "{err}");
+        assert!(
+            err.contains("Connection timed out"),
+            "the log's tail is shown: {err}"
+        );
+        // Whatever the status, a failed preparation is a platform failure.
+        let o = Outcome::platform(provision_failure(code, err.as_bytes()), true);
+        assert_eq!(o.code(), 125);
+        assert!(
+            matches!(&o, Outcome::Platform { reason, .. } if reason.contains("Connection timed out"))
+        );
+    }
+
+    #[test]
+    fn a_toolchain_file_above_the_run_directory_counts_as_a_rust_tree() {
+        let w = Ws::new("tc-sub");
+        w.file(
+            "tree/rust-toolchain.toml",
+            "[toolchain]\nchannel = \"1.99.0\"\n",
+        );
+        w.file("tree/sub/dir/x.txt", "x");
+        w.rustup(true);
+        assert_eq!(w.sh(PROVISION, "sub/dir", &[]).0, 4);
+    }
+
+    #[test]
+    fn a_failed_install_does_not_stop_a_tree_without_rust() {
+        let w = Ws::new("tc-none");
+        w.file("tree/package.json", "{}");
+        w.rustup(true);
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+    }
+
+    #[test]
+    fn a_successful_install_provisions() {
+        let w = Ws::new("tc-ok");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 0, "{err}");
+        assert!(w.0.join("installed").exists());
+        // Already installed: nothing to do.
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+    }
+
+    #[test]
+    fn a_missing_tree_fails_provisioning() {
+        let w = Ws::new("no-tree");
+        let (code, err) = w.sh(PROVISION, "gone", &[]);
+        assert_eq!(code, 3, "{err}");
+    }
+
+    #[test]
+    fn the_commands_own_failure_keeps_its_exit_code() {
+        let w = Ws::new("run");
+        w.file("tree/x", "");
+        for want in [0, 1, 2, 7, 101] {
+            let (code, _) = w.sh(RUN, ".", &["0", "/bin/sh", "-c", &format!("exit {want}")]);
+            assert_eq!(code, want);
+            assert_eq!(Outcome::Ran(code).code() as i32, want);
+        }
+        // Not a platform failure: the code is the command's, not 125.
+        assert_ne!(Outcome::Ran(101).code(), EXIT_PLATFORM);
+        // The tree missing is a failure before the command starts.
+        assert_eq!(w.sh(RUN, "gone", &["0", "/bin/sh", "-c", "exit 0"]).0, 125);
+    }
+
+    #[test]
+    fn a_stream_error_is_retried_once_with_a_backoff_then_is_125() {
+        let mut r = Retries::default();
+        let stream =
+            || Attempt::Lost("the process stream broke: error decoding response body".into());
+        match r.next(stream()) {
+            Step::Again { reason, backoff } => {
+                assert!(reason.contains("process stream broke"));
+                assert!(backoff >= Duration::from_secs(1), "{backoff:?}");
+            }
+            Step::Done(o) => panic!("the first loss is retried: {o:?}"),
+        }
+        match r.next(stream()) {
+            Step::Done(o) => {
+                assert_eq!(o.code(), 125);
+                assert!(
+                    matches!(&o, Outcome::Platform { reason, retryable: true } if reason.ends_with(", twice"))
+                );
+            }
+            Step::Again { .. } => panic!("only one retry"),
+        }
+    }
+
+    #[test]
+    fn a_retry_that_succeeds_keeps_the_commands_exit_code() {
+        let mut r = Retries::default();
+        assert!(matches!(
+            r.next(Attempt::Lost("x".into())),
+            Step::Again { .. }
+        ));
+        match r.next(Attempt::Done(Outcome::Ran(101))) {
+            Step::Done(o) => assert_eq!((o.code(), o), (101, Outcome::Ran(101))),
+            Step::Again { .. } => panic!("done is done"),
+        }
+        // A command that failed on its own is never retried.
+        match Retries::default().next(Attempt::Done(Outcome::Ran(1))) {
+            Step::Done(Outcome::Ran(1)) => {}
+            _ => panic!("a command's own failure is not retried"),
+        }
+    }
+
+    #[test]
+    fn faults_are_judged_retry_or_fail() {
+        let stream = Fault::Stream("the process stream broke".into());
+        assert_eq!(
+            judge(None, &stream),
+            Verdict::Retry("the process stream broke".into())
+        );
+        for r in ["preempted", "machine_lost"] {
+            assert!(matches!(
+                judge(Some(r), &Fault::Gone("x".into())),
+                Verdict::Retry(_)
+            ));
+        }
+        // The machine ended for another reason: no retry, even on a broken stream.
+        assert!(matches!(
+            judge(Some("idle"), &stream),
+            Verdict::Fail {
+                retryable: false,
+                ..
+            }
+        ));
+        for f in [
+            Fault::Gone("guest unreachable".into()),
+            Fault::Other("denied".into()),
+        ] {
+            assert!(matches!(
+                judge(None, &f),
+                Verdict::Fail {
+                    retryable: true,
+                    ..
+                }
+            ));
+        }
     }
 
     #[test]
