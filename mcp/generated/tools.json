@@ -2342,7 +2342,8 @@
                         "passkey",
                         "totp",
                         "oidc",
-                        "saml"
+                        "saml",
+                        "device"
                       ],
                       "type": "string"
                     },
@@ -2595,6 +2596,13 @@
                 "description": "The primary email address.",
                 "type": "string"
               },
+              "external_ids": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "The customer's own ids for this end user, one per namespace\n(`game_user`, `steam_id`): how an app that signs users in by its own id\nfinds them again. Read on create; never changed through here, because a\nset namespace's value is never rewritten — `AttachEndUserExternalId` sets\nan unset one. At most four namespaces. Never an authorization input:\nscope checks use grant ids.",
+                "type": "object"
+              },
               "meta": {
                 "additionalProperties": false,
                 "description": "Resource metadata.",
@@ -2695,6 +2703,13 @@
               "email": {
                 "description": "The primary email address.",
                 "type": "string"
+              },
+              "external_ids": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "The customer's own ids for this end user, one per namespace\n(`game_user`, `steam_id`): how an app that signs users in by its own id\nfinds them again. Read on create; never changed through here, because a\nset namespace's value is never rewritten — `AttachEndUserExternalId` sets\nan unset one. At most four namespaces. Never an authorization input:\nscope checks use grant ids.",
+                "type": "object"
               },
               "meta": {
                 "additionalProperties": false,
@@ -2972,6 +2987,88 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Sets the customer's own id for an end user, once: an unset namespace is written, a set one is never rewritten, and a different value for a set namespace is refused. A namespace holds one id for the life of the user. Erasure removes the ids and remembers their hashes, so a value that belonged to an erased user is never handed to another one."
+      },
+      "description": "Sets the customer's own id for an end user, once: an unset namespace is\nwritten, a set one is never rewritten, and a different value for a set\nnamespace is refused. A namespace holds one id for the life of the user.\nErasure removes the ids and remembers their hashes, so a value that\nbelonged to an erased user is never handed to another one.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/end_users/*}:attachExternalId",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AttachEndUserExternalId.",
+        "properties": {
+          "external_id": {
+            "description": "The id itself, 1 to 128 printable characters, unique in its namespace\nacross the environment's live users.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the end user.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          },
+          "namespace": {
+            "description": "The customer's namespace for this id: `^[a-z][a-z0-9_]{0,31}$`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "namespace",
+          "external_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.end_users.attach_external_id",
+      "permission": "auth:write",
+      "tool": "auth_end_users_attach_external_id"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Finds the one end user of one of the customer's own ids. An id that belongs to no live user of this environment is `RESOURCE_NOT_FOUND`, the same answer a value erased with its user gives."
+      },
+      "description": "Finds the one end user of one of the customer's own ids. An id that\nbelongs to no live user of this environment is `RESOURCE_NOT_FOUND`,\nthe same answer a value erased with its user gives.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/end_users:find",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of FindEndUser.",
+        "properties": {
+          "external_id": {
+            "description": "The id to find.",
+            "type": "string"
+          },
+          "namespace": {
+            "description": "The customer's namespace of the id.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to look in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          }
+        },
+        "required": [
+          "parent",
+          "namespace",
+          "external_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.end_users.find",
+      "permission": "auth:read",
+      "tool": "auth_end_users_find"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -3084,6 +3181,133 @@
       "method_id": "auth.sessions.revoke",
       "permission": "auth:write",
       "tool": "auth_sessions_revoke"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an identity of an end user."
+      },
+      "description": "Gets an identity of an end user.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/end_users/*/identities/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetIdentity.",
+        "properties": {
+          "name": {
+            "description": "The name of the identity to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Identity"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.identities.get",
+      "permission": "auth:read",
+      "tool": "auth_identities_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the identities an end user signs in with."
+      },
+      "description": "Lists the identities an end user signs in with.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/end_users/*}/identities",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListIdentities.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The end user whose identities to list.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Identity"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.identities.list",
+      "permission": "auth:read",
+      "tool": "auth_identities_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Moves a federated or device identity from one end user to another, to fix a wrongly linked player. One transaction: the identity changes owner, the sessions of both end users are revoked, and nothing else about either moves (profile, memberships, data). Refused when it would leave the source with no sign-in, unless the source is suspended, and when the target already has an identity of the same provider. The reason is audited with the operator, both end users and the identity's fingerprint. An operator action: an end user's own session cannot call it."
+      },
+      "description": "Moves a federated or device identity from one end user to another, to\nfix a wrongly linked player. One transaction: the identity changes owner,\nthe sessions of both end users are revoked, and nothing else about\neither moves (profile, memberships, data). Refused when it would leave\nthe source with no sign-in, unless the source is suspended, and when the\ntarget already has an identity of the same provider. The reason is\naudited with the operator, both end users and the identity's fingerprint.\nAn operator action: an end user's own session cannot call it.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/end_users/*/identities/*}:move",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of MoveIdentity.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the identity to move.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/Identity"
+          },
+          "reason": {
+            "description": "Why the identity moves (1 to 512 characters); recorded in the audit trail.",
+            "type": "string"
+          },
+          "target_end_user": {
+            "description": "The end user that receives the identity.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          }
+        },
+        "required": [
+          "name",
+          "target_end_user",
+          "reason",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.identities.move",
+      "permission": "auth:write",
+      "tool": "auth_identities_move"
     },
     {
       "annotations": {
@@ -3227,6 +3451,11 @@
           "customer_organization_id": {
             "description": "The customer organization id, the final name segment; the server assigns\none when empty.",
             "type": "string"
+          },
+          "owner_end_user": {
+            "description": "The organization's first owner, an active end user of the same\nenvironment. The organization and its `owner` membership are created in\none transaction, and the call honours `Idempotency-Key`: a retry returns\nthe organization the first call created. Naming a person is explicit app\nauthority: the app vouches for its own tenant. Empty creates an\norganization without members; creating then calling `CreateMembership` is\nnot atomic.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
           },
           "parent": {
             "description": "The parent to create in.",
@@ -3449,7 +3678,7 @@
             "type": "string"
           },
           "parent": {
-            "description": "The parent to list in.",
+            "description": "The parent to list in. `…/customer_organizations/-` (AIP-159) lists one end\nuser's memberships across the environment's organizations and requires\n`filter = end_user=\"…\"`; each result carries its own organization's name.",
             "type": "string",
             "x-sylphx-resource-reference": "auth.sylphx.com/Membership"
           }
@@ -18031,6 +18260,115 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a manual entitlement grant (support, comp, grace). Append-only; needs the approval-class scope. The approver recorded is the key's principal."
+      },
+      "description": "Creates a manual entitlement grant (support, comp, grace). Append-only;\nneeds the approval-class scope. The approver recorded is the key's principal.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateEntitlementGrant.",
+        "properties": {
+          "entitlement_grant": {
+            "additionalProperties": false,
+            "description": "The grant: `subject`, `feature`, `expire_time` (future, at most 400 days\nout), `campaign`, `reason` and `approval_ref` are required.",
+            "properties": {
+              "approval_ref": {
+                "description": "A free-text reference to the approval, for example `CEO 2026-10-02`\n(input on create, up to 200 characters).",
+                "type": "string"
+              },
+              "campaign": {
+                "description": "A manual grant's campaign (input on create, up to 64 characters).",
+                "type": "string"
+              },
+              "expire_time": {
+                "description": "When it ends; unset for no end.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "feature": {
+                "description": "The feature key.",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/entitlement_grants/{entitlement_grant}`.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "A manual grant's reason (input on create, up to 500 characters).",
+                "type": "string"
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "Who holds it.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "entitlement_grant_id": {
+            "description": "The grant's id, also its idempotency: `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`.\nThe same id with the same grant returns the stored one; the same id with\nanother grant is RESOURCE_ALREADY_EXISTS.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment the grant is in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/EntitlementGrant"
+          }
+        },
+        "required": [
+          "parent",
+          "entitlement_grant_id",
+          "entitlement_grant"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.entitlement_grants.create",
+      "permission": "billing:credits.approve",
+      "tool": "money_entitlement_grants_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -18211,6 +18549,76 @@
       "method_id": "money.merchant_accounts.disconnect",
       "permission": "billing:write",
       "tool": "money_merchant_accounts_disconnect"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the merchant account's own settings: the fields named in `update_mask`."
+      },
+      "description": "Updates the merchant account's own settings: the fields named in `update_mask`.",
+      "effect": "write",
+      "http": "PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateMerchantAccount.",
+        "properties": {
+          "merchant_account": {
+            "additionalProperties": false,
+            "description": "The merchant account with its new values; `name` selects it.",
+            "properties": {
+              "automatic_tax": {
+                "description": "Whether Stripe computes tax on this merchant's checkouts and usage\ninvoices (its own cost decision: Stripe Tax charges per transaction).\nOff by default. Writable through `UpdateMerchantAccount`\n(`update_mask = \"automatic_tax\"`). Turning it on is refused while a live\n`post_tax_settlement` credit grant exists.",
+                "type": "boolean"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}`;\nthe environment's seller is `default`.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to change.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "merchant_account"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.update",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_update"
     },
     {
       "annotations": {
@@ -18817,6 +19225,1328 @@
       "method_id": "money.licence_tokens.list",
       "permission": "billing:read",
       "tool": "money_licence_tokens_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets the environment's usage settings."
+      },
+      "description": "Gets the environment's usage settings.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/usage_settings/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetUsageSettings.",
+        "properties": {
+          "name": {
+            "description": "The name of the usage settings to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageSettings"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_settings.get",
+      "permission": "billing:read",
+      "tool": "money_usage_settings_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the usage settings, the enforcement switch included. A change is recorded with who made it."
+      },
+      "description": "Updates the usage settings, the enforcement switch included. A change is recorded with who made it.",
+      "effect": "write",
+      "http": "PATCH /v1/{usage_settings.name=orgs/*/projects/*/envs/*/usage_settings/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateUsageSettings.",
+        "properties": {
+          "update_mask": {
+            "description": "The fields to change.",
+            "type": "string"
+          },
+          "usage_settings": {
+            "additionalProperties": false,
+            "description": "The usage settings with its new values; `name` selects it.",
+            "properties": {
+              "currency_code": {
+                "description": "The currency usage is rated and invoiced in (ISO 4217, upper case).",
+                "type": "string"
+              },
+              "enforcement_enabled": {
+                "description": "While false a reservation is always granted and a would-be refusal is\nonly recorded. Off until the merchant's admin turns it on.",
+                "type": "boolean"
+              },
+              "extra_issuer": {
+                "description": "A further token issuer (the merchant's own OIDC provider) besides Sylphx\nAuth; empty for Sylphx Auth only. It needs `extra_issuer_jwks_url`.",
+                "type": "string"
+              },
+              "extra_issuer_audience": {
+                "description": "The audience that issuer's tokens must carry; required with `extra_issuer`.",
+                "type": "string"
+              },
+              "extra_issuer_jwks_url": {
+                "description": "The issuer's HTTPS JWKS URL.",
+                "type": "string"
+              },
+              "extra_issuer_org_claim": {
+                "description": "The claim that names a customer organization in that issuer's tokens;\nempty means the issuer proves no organization subject.",
+                "type": "string"
+              },
+              "free_allowance_nano": {
+                "description": "What a subject with no payment method may use each month, nano-minor,\nas a decimal string.",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/usage_settings/default`.",
+                "type": "string"
+              },
+              "past_due_grace_days": {
+                "description": "Days after an invoice's due time before the subject is past due.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "suspend_grace_days": {
+                "description": "Days after an invoice's due time before the subject is suspended.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "currency_code"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "usage_settings"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_settings.update",
+      "permission": "billing:write",
+      "tool": "money_usage_settings_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists usage tiers."
+      },
+      "description": "Lists usage tiers.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/usage_tiers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListUsageTiers.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, for example `subject = \"…\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageTier"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_tiers.list",
+      "permission": "billing:read",
+      "tool": "money_usage_tiers_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates or updates a usage tier."
+      },
+      "description": "Creates or updates a usage tier.",
+      "effect": "write",
+      "http": "PATCH /v1/{usage_tier.name=orgs/*/projects/*/envs/*/usage_tiers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateUsageTier.",
+        "properties": {
+          "update_mask": {
+            "description": "The fields to change.",
+            "type": "string"
+          },
+          "usage_tier": {
+            "additionalProperties": false,
+            "description": "The usage tier with its new values; `name` selects it.",
+            "properties": {
+              "daily_limit_minor": {
+                "description": "Daily exposure limit in minor units, a decimal string; empty for none.",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "monthly_limit_minor": {
+                "description": "Monthly exposure limit in minor units, a decimal string; empty for none.",
+                "type": "string"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/usage_tiers/{usage_tier}`; the id is the tier key.",
+                "type": "string"
+              },
+              "rank": {
+                "description": "Order of tiers; 0 is the base tier.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "requires_paid_invoices": {
+                "description": "Paid invoices needed to reach this tier.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "requires_paid_minor": {
+                "description": "Paid total, minor units, needed to reach this tier.",
+                "type": "string"
+              },
+              "threshold_minor": {
+                "description": "The amount an invoice would make due at which a threshold invoice is cut.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "rank",
+              "threshold_minor"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "usage_tier"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_tiers.update",
+      "permission": "billing:write",
+      "tool": "money_usage_tiers_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Reserves usage before the work starts. Refused with PLAN_LIMIT_REACHED (spend limit, no payment method) or INVALID_STATE (suspended) only while enforcement is on; while it is dark the reservation is granted and the refusal is recorded."
+      },
+      "description": "Reserves usage before the work starts. Refused with PLAN_LIMIT_REACHED (spend limit, no payment method) or INVALID_STATE (suspended) only while enforcement is on; while it is dark the reservation is granted and the refusal is recorded.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/usage_reservations",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateUsageReservation.",
+        "properties": {
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageReservation"
+          },
+          "usage_reservation": {
+            "additionalProperties": false,
+            "description": "The reservation.",
+            "properties": {
+              "actor_proof": {
+                "description": "For a customer organization: the token of the acting user, whose\nmembership of the organization is checked fresh. The subject is Sylphx\nAuth's bare organization id (`acme`), never a resource name. Never stored.",
+                "type": "string",
+                "writeOnly": true
+              },
+              "max_quantity": {
+                "description": "The most the work may use, in the meter's base unit.",
+                "format": "int64",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "meter": {
+                "description": "The meter's lookup key.",
+                "type": "string"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/usage_reservations/{usage_reservation}`.",
+                "type": "string"
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "Who uses it.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "subject_proof": {
+                "description": "The acting end user's access token, required on every reserve: Money\nproves the subject itself, fresh, with the caller's own key\n(`auth:sessions:verify`) or the merchant's configured issuer. Never\nstored. A raw id is refused with PERMISSION_DENIED (reason `subject_unverified`).",
+                "type": "string",
+                "writeOnly": true
+              },
+              "ttl": {
+                "description": "How long the hold lasts, at most `600s`; default `600s`.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "required": [
+              "subject",
+              "subject_proof",
+              "meter",
+              "max_quantity"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "usage_reservation"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_reservations.create",
+      "permission": "billing:metering:write",
+      "tool": "money_usage_reservations_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a usage reservation."
+      },
+      "description": "Gets a usage reservation.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/usage_reservations/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetUsageReservation.",
+        "properties": {
+          "name": {
+            "description": "The name of the usage reservation to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageReservation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_reservations.get",
+      "permission": "billing:read",
+      "tool": "money_usage_reservations_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Settles a reservation with what was used; the unused part returns to headroom. A settle after expiry still records the usage."
+      },
+      "description": "Settles a reservation with what was used; the unused part returns to headroom. A settle after expiry still records the usage.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/usage_reservations/*}:settle",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SettleUsageReservation.",
+        "properties": {
+          "name": {
+            "description": "The reservation to settle.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageReservation"
+          },
+          "occurred_time": {
+            "description": "When the work happened; now when absent.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "quantity_used": {
+            "description": "What was used, in the meter's base unit; 0 to the granted quantity, or\nmore after expiry (the work happened).",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "quantity_used"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_reservations.settle",
+      "permission": "billing:metering:write",
+      "tool": "money_usage_reservations_settle"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Releases a reservation that used nothing."
+      },
+      "description": "Releases a reservation that used nothing.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/usage_reservations/*}:release",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReleaseUsageReservation.",
+        "properties": {
+          "name": {
+            "description": "The reservation to release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageReservation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_reservations.release",
+      "permission": "billing:metering:write",
+      "tool": "money_usage_reservations_release"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records usage directly, only for a meter the merchant marked reservation-optional."
+      },
+      "description": "Records usage directly, only for a meter the merchant marked reservation-optional.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/usage_events",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateUsageEvent.",
+        "properties": {
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageEvent"
+          },
+          "usage_event": {
+            "additionalProperties": false,
+            "description": "The usage event.",
+            "properties": {
+              "actor_proof": {
+                "description": "As on UsageReservation.",
+                "type": "string",
+                "writeOnly": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "meter": {
+                "description": "The meter's lookup key.",
+                "type": "string"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/usage_events/{usage_event}`.",
+                "type": "string"
+              },
+              "occurred_time": {
+                "description": "When the work happened.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "quantity": {
+                "description": "How much, in the meter's base unit.",
+                "format": "int64",
+                "type": "string"
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "Who used it.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "subject_proof": {
+                "description": "As on UsageReservation.",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "required": [
+              "subject",
+              "subject_proof",
+              "meter",
+              "quantity",
+              "occurred_time"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "usage_event"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_events.create",
+      "permission": "billing:metering:write",
+      "tool": "money_usage_events_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists usage events, newest first."
+      },
+      "description": "Lists usage events, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/usage_events",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListUsageEvents.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, for example `subject = \"…\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageEvent"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_events.list",
+      "permission": "billing:read",
+      "tool": "money_usage_events_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a subject's standing: active, past due or suspended, whether a payment method is on file, headroom and the threshold."
+      },
+      "description": "Reads a subject's standing: active, past due or suspended, whether a payment method is on file, headroom and the threshold.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/usage_events:checkStanding",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CheckUsageStanding.",
+        "properties": {
+          "actor_proof": {
+            "description": "For a customer organization: the acting user's token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageEvent"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "description": "Whose standing.",
+            "properties": {
+              "customer_organization": {
+                "description": "A customer organization's id.",
+                "type": "string"
+              },
+              "end_user": {
+                "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "subject_proof": {
+            "description": "As on UsageReservation: a verified token for the subject.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "subject",
+          "subject_proof"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_events.check_standing",
+      "permission": "billing:read",
+      "tool": "money_usage_events_check_standing"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Gives a subject credit. Append-only: a change is a new grant that supersedes the old. Refused with INVALID_STATE (`tax_treatment_unsupported`) for `post_tax_settlement` while the merchant has automatic tax on."
+      },
+      "description": "Gives a subject credit. Append-only: a change is a new grant that supersedes the old. Refused with INVALID_STATE (`tax_treatment_unsupported`) for `post_tax_settlement` while the merchant has automatic tax on.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/credit_grants",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateCreditGrant.",
+        "properties": {
+          "credit_grant": {
+            "additionalProperties": false,
+            "description": "The credit grant.",
+            "properties": {
+              "amount_minor": {
+                "description": "Minor units, a decimal string.",
+                "type": "string"
+              },
+              "approver": {
+                "description": "Who approved it.",
+                "type": "string"
+              },
+              "collection_mode": {
+                "description": "`standard` or `hold`; no default. Over the credit, a held invoice stays\ndue but is not collected until an explicit audited release.",
+                "type": "string"
+              },
+              "expire_time": {
+                "description": "When it stops applying; required. Not renewing is how charging starts.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "description": "`amount` (a total) or `monthly_cap` (up to the amount in each month).",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/credit_grants/{credit_grant}`.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Why.",
+                "type": "string"
+              },
+              "start_time": {
+                "description": "When it starts applying.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "Who receives it.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "supersedes": {
+                "description": "The grant this one replaces.",
+                "type": "string"
+              },
+              "tax_treatment": {
+                "description": "`undecided`, `price_reduction`, or `post_tax_settlement`; no default.\n`post_tax_settlement` is refused while the merchant has automatic tax on.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "subject",
+              "kind",
+              "amount_minor",
+              "start_time",
+              "expire_time",
+              "approver",
+              "reason",
+              "tax_treatment",
+              "collection_mode"
+            ],
+            "type": "object"
+          },
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CreditGrant"
+          }
+        },
+        "required": [
+          "parent",
+          "credit_grant"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.credit_grants.create",
+      "permission": "billing:credits.approve",
+      "tool": "money_credit_grants_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a credit grant."
+      },
+      "description": "Gets a credit grant.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/credit_grants/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetCreditGrant.",
+        "properties": {
+          "name": {
+            "description": "The name of the credit grant to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CreditGrant"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.credit_grants.get",
+      "permission": "billing:read",
+      "tool": "money_credit_grants_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists credit grants."
+      },
+      "description": "Lists credit grants.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/credit_grants",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListCreditGrants.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, for example `subject = \"…\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CreditGrant"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.credit_grants.list",
+      "permission": "billing:read",
+      "tool": "money_credit_grants_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a usage invoice."
+      },
+      "description": "Gets a usage invoice.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/usage_invoices/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetUsageInvoice.",
+        "properties": {
+          "name": {
+            "description": "The name of the usage invoice to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageInvoice"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_invoices.get",
+      "permission": "billing:read",
+      "tool": "money_usage_invoices_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists usage invoices, newest first."
+      },
+      "description": "Lists usage invoices, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/usage_invoices",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListUsageInvoices.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, for example `subject = \"…\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageInvoice"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_invoices.list",
+      "permission": "billing:read",
+      "tool": "money_usage_invoices_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Releases a held invoice for collection, audited with who and why. Grant expiry or replacement never does."
+      },
+      "description": "Releases a held invoice for collection, audited with who and why. Grant expiry or replacement never does.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/usage_invoices/*}:releaseCollection",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReleaseUsageInvoiceCollection.",
+        "properties": {
+          "name": {
+            "description": "The held invoice to release for collection.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageInvoice"
+          },
+          "reason": {
+            "description": "Who releases it, and why: both are kept.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_invoices.release_collection",
+      "permission": "billing:credits.approve",
+      "tool": "money_usage_invoices_release_collection"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a usage meter."
+      },
+      "description": "Gets a usage meter.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/usage_meters/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetUsageMeter.",
+        "properties": {
+          "name": {
+            "description": "The name of the usage meter to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageMeter"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_meters.get",
+      "permission": "billing:read",
+      "tool": "money_usage_meters_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists usage meters."
+      },
+      "description": "Lists usage meters.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/usage_meters",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListUsageMeters.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageMeter"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_meters.list",
+      "permission": "billing:read",
+      "tool": "money_usage_meters_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates or updates a usage meter. The unit cannot change once it has recorded usage."
+      },
+      "description": "Creates or updates a usage meter. The unit cannot change once it has recorded usage.",
+      "effect": "write",
+      "http": "PATCH /v1/{usage_meter.name=orgs/*/projects/*/envs/*/usage_meters/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateUsageMeter.",
+        "properties": {
+          "update_mask": {
+            "description": "The fields to change.",
+            "type": "string"
+          },
+          "usage_meter": {
+            "additionalProperties": false,
+            "description": "The usage meter with its new values; `name` selects it.",
+            "properties": {
+              "active": {
+                "description": "A retired meter (false) refuses new usage; its history stays.",
+                "type": "boolean"
+              },
+              "display_name": {
+                "description": "A name for people.",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/usage_meters/{usage_meter}`; the id is the meter key.",
+                "type": "string"
+              },
+              "reservation_optional": {
+                "description": "Whether usage may be recorded without a reservation.",
+                "type": "boolean"
+              },
+              "unit": {
+                "description": "The unit of one quantity, for example `token`. It cannot change once the\nmeter has recorded usage.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "unit"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "usage_meter"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_meters.update",
+      "permission": "billing:write",
+      "tool": "money_usage_meters_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Appends a price to a meter's history. It applies from its effective time on and never rewrites usage already rated."
+      },
+      "description": "Appends a price to a meter's history. It applies from its effective time on and never rewrites usage already rated.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/usage_meter_prices",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateUsageMeterPrice.",
+        "properties": {
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageMeterPrice"
+          },
+          "usage_meter_price": {
+            "additionalProperties": false,
+            "description": "The price.",
+            "properties": {
+              "currency_code": {
+                "description": "ISO 4217; it must be the environment's currency.",
+                "type": "string"
+              },
+              "effective_time": {
+                "description": "When it starts applying; now when absent. Not in the past, and after the\nmeter's latest price.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "meter": {
+                "description": "The meter's key.",
+                "type": "string"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/usage_meter_prices/{usage_meter_price}`.",
+                "type": "string"
+              },
+              "tax_code": {
+                "description": "The processor's tax code for the usage line; empty for the merchant's default.",
+                "type": "string"
+              },
+              "unit_price_nano": {
+                "description": "List price of one unit, nano-minor (a billionth of a minor unit), a decimal string.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "meter",
+              "currency_code",
+              "unit_price_nano"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "parent",
+          "usage_meter_price"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_meter_prices.create",
+      "permission": "billing:write",
+      "tool": "money_usage_meter_prices_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists meter prices, newest first; filter by `meter`."
+      },
+      "description": "Lists meter prices, newest first; filter by `meter`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/usage_meter_prices",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListUsageMeterPrices.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, for example `meter = \"tokens\"`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/UsageMeterPrice"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.usage_meter_prices.list",
+      "permission": "billing:read",
+      "tool": "money_usage_meter_prices_list"
     },
     {
       "annotations": {
@@ -32822,7 +34552,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@289d0d0f6d290b722eb5fe3dac708821bda0344dae9bab19a8c805c9ee94b232. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@190f1b33b937c1aef79697684018db853389b521c75e19ff69ac6af609e96f45. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
