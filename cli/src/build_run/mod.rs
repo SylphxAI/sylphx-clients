@@ -121,8 +121,23 @@ fi
 /// workspace (`$W`) so a warm machine reuses them.
 macro_rules! guest_dirs {
     () => {
-        r#"export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache" RUSTUP_HOME="$W/rustup"
+        r#"export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache"
 export PATH="$W/cargo/bin:$PATH"
+"#
+    };
+}
+
+/// The rustup home both guest scripts use, chosen in the tree: the
+/// template's own (its `RUSTUP_HOME`, baked with the platform's pinned
+/// toolchain) when it already holds the toolchain the tree names, so no
+/// download is needed; otherwise the workspace's, where rustup installs the
+/// tree's choice on first use. Both scripts choose alike, so the command runs
+/// the toolchain [`PROVISION`] checked.
+macro_rules! guest_toolchain {
+    () => {
+        r#"if command -v rustup >/dev/null 2>&1 && ! RUSTUP_AUTO_INSTALL=0 rustup which rustc >/dev/null 2>&1; then
+  export RUSTUP_HOME="$W/rustup"
+fi
 "#
     };
 }
@@ -140,7 +155,9 @@ const PROVISION: &str = concat!(
 "#,
     guest_dirs!(),
     r#"cd "$W/tree/$R" || { echo "the work tree is missing on the machine" >&2; exit 3; }
-if command -v rustup >/dev/null 2>&1 && ! rustup which rustc >/dev/null 2>&1; then
+"#,
+    guest_toolchain!(),
+    r#"if command -v rustup >/dev/null 2>&1 && ! rustup which rustc >/dev/null 2>&1; then
   { rustup toolchain install || rustup default stable; } > "$W/.sylphx/toolchain.log" 2>&1 || true
   if ! rustup which rustc >> "$W/.sylphx/toolchain.log" 2>&1; then
     d=$PWD
@@ -161,10 +178,17 @@ exit 0
 
 /// Runs the command (`$4…`) in `$W/tree/$R` with the build caches on the
 /// workspace: `target/`, the Cargo home, sccache, and rustup's toolchains
-/// ([`PROVISION`] has installed them). `$3` is 1 on a machine without a
-/// Volume: its disk ends with the lease, so sccache runs only against a remote
-/// cache the machine is given, never a local directory that would double
-/// `target/` on the same disk. The command's exit status is the script's.
+/// ([`PROVISION`] has installed them; [`guest_toolchain`] picks the same
+/// rustup home). `$3` is 1 on a machine without a Volume: its disk ends with
+/// the lease, so sccache runs only against a remote cache the machine is
+/// given, never a local directory that would double `target/` on the same
+/// disk. The command's exit status is the script's.
+///
+/// Crates come through the build cache's registry mirror
+/// (`SYLPHX_CRATES_MIRROR`, from the cache token) when it answers: Cargo reads
+/// `$W/.cargo/config.toml` as an ancestor of the tree, and the file is removed
+/// when the mirror is absent, so Cargo then reaches crates.io directly
+/// (fail-open, like the cache itself).
 const RUN: &str = concat!(
     r#"W=$1 R=$2 E=$3
 shift 3
@@ -174,8 +198,17 @@ shift 3
 if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
   if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
 fi
+mkdir -p "$W/.cargo"
+M=${SYLPHX_CRATES_MIRROR:-}
+if [ -n "$M" ] && curl -fsS -m 10 -o /dev/null "${M#sparse+}config.json" 2>/dev/null; then
+  printf '[source.crates-io]\nreplace-with = "sylphx-mirror"\n\n[source.sylphx-mirror]\nregistry = "%s"\n' "$M" > "$W/.cargo/config.toml"
+else
+  rm -f "$W/.cargo/config.toml"
+fi
 cd "$W/tree/$R" || exit 125
-exec "$@"
+"#,
+    guest_toolchain!(),
+    r#"exec "$@"
 "#
 );
 
@@ -1682,6 +1715,100 @@ mod tests {
         let (_, b) = m.subcommand().unwrap();
         let (_, r) = b.subcommand().unwrap();
         Opts::parse(r)
+    }
+
+    /// Runs [`RUN`] the way the guest does (`sh -c RUN … -- <command>`) in a
+    /// scratch workspace, with `rustup` and `curl` replaced by stubs: the stub
+    /// rustup answers `which` only under `ok_home`, the stub curl succeeds
+    /// when `mirror_up`. The workspace starts with a stale Cargo config from
+    /// an earlier run. Returns the command's stdout.
+    fn run_prelude(ok_home: &str, mirror: Option<&str>, mirror_up: bool, cmd: &str) -> String {
+        let base = std::env::temp_dir().join(format!(
+            "sylphx-build-run-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let (ws, bin) = (base.join("ws"), base.join("bin"));
+        std::fs::create_dir_all(ws.join("tree/crate")).unwrap();
+        std::fs::create_dir_all(ws.join(".sylphx")).unwrap();
+        // A replacement left by an earlier run on this workspace.
+        std::fs::create_dir_all(ws.join(".cargo")).unwrap();
+        std::fs::write(ws.join(".cargo/config.toml"), "stale\n").unwrap();
+        std::fs::create_dir_all(&bin).unwrap();
+        let ok_home = ok_home.replace("$W", ws.to_str().unwrap());
+        let stubs = [
+            (
+                "rustup",
+                format!(
+                    "#!/bin/sh\n[ \"$1\" = which ] && [ \"$RUSTUP_HOME\" = \"{ok_home}\" ] && exit 0\n[ \"$1\" = which ] && exit 1\nexit 0\n"
+                ),
+            ),
+            (
+                "curl",
+                format!("#!/bin/sh\nexit {}\n", if mirror_up { 0 } else { 7 }),
+            ),
+        ];
+        for (name, body) in stubs {
+            let f = bin.join(name);
+            std::fs::write(&f, body).unwrap();
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&f, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let mut c = std::process::Command::new("sh");
+        c.args(["-c", RUN, "sylphx-run"])
+            .arg(&ws)
+            .args(["crate", "0", "sh", "-c", cmd])
+            .env_clear()
+            .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
+            .env("RUSTUP_HOME", "/opt/rustup");
+        if let Some(m) = mirror {
+            c.env("SYLPHX_CRATES_MIRROR", m);
+        }
+        let out = c.output().unwrap();
+        let _ = std::fs::remove_dir_all(&base);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap()
+    }
+
+    #[test]
+    fn the_template_toolchain_is_used_when_it_serves_the_tree() {
+        // The image's RUSTUP_HOME holds the tree's toolchain: kept.
+        assert_eq!(
+            run_prelude("/opt/rustup", None, false, "echo $RUSTUP_HOME"),
+            "/opt/rustup\n"
+        );
+        // It does not: the workspace's rustup home, installed there.
+        let home = run_prelude("$W/rustup", None, false, "echo $RUSTUP_HOME");
+        assert!(home.trim_end().ends_with("/ws/rustup"), "{home}");
+    }
+
+    #[test]
+    fn crates_come_through_the_mirror_only_while_it_answers() {
+        let m = "sparse+http://build-cache.env-1.svc.cluster.local/crates/index/";
+        let cfg = run_prelude("/opt/rustup", Some(m), true, "cat ../../.cargo/config.toml");
+        assert_eq!(
+            cfg,
+            format!(
+                "[source.crates-io]\nreplace-with = \"sylphx-mirror\"\n\n[source.sylphx-mirror]\nregistry = \"{m}\"\n"
+            )
+        );
+        // Unreachable or not offered: no replacement, Cargo goes direct.
+        for (mirror, up) in [(Some(m), false), (None, true)] {
+            let out = run_prelude(
+                "/opt/rustup",
+                mirror,
+                up,
+                "test -e ../../.cargo/config.toml && echo present || echo absent",
+            );
+            assert_eq!(out, "absent\n");
+        }
     }
 
     #[test]
