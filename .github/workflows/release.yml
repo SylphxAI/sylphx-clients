@@ -1,10 +1,12 @@
 # Release of the generated Sylphx clients. Runs in the public mirror
 # SylphxAI/sylphx-clients, which SylphxAI/cloud's release-clients.yml
-# fast-forwards from `clients/` and tags `v{cli version}`. Builds run on Sylphx
-# runners (Linux: `sylphx-linux-standard`, macOS: our macOS pool) and the
-# binaries carry signed build provenance (Sigstore, `gh attestation verify`).
-# npm publish runs on GitHub's free standard runner (public repository) because
-# npm provenance is generated only there.
+# fast-forwards from `clients/` and tags `v{cli version}`. Linux builds run on
+# Sylphx runners (`sylphx-linux-standard`); the macOS build runs on GitHub's
+# free standard hosted macOS runner, because the Sylphx macOS pool does not
+# serve public repositories (cloud#9512). The binaries carry signed build
+# provenance (Sigstore, `gh attestation verify`). npm publish runs on GitHub's
+# free standard runner (public repository) because npm provenance is generated
+# only there.
 #
 # Every publish is idempotent (skipped when that version is on the registry)
 # and read back. npm packages go to their publishConfig dist-tag (`next`);
@@ -110,17 +112,21 @@ jobs:
           path: dist/${{ matrix.asset }}
           if-no-files-found: error
 
-  # macOS binaries: our macOS runners (Intel x86_64); arm64 is cross-compiled
-  # and has no smoke run.
+  # macOS binaries: GitHub's standard hosted macOS runner (Intel x86_64), free
+  # on public repositories; arm64 is cross-compiled and has no smoke run. Only
+  # the public mirror runs this job (if:), so a repository turned private, or a
+  # copy of this workflow elsewhere, can never bill hosted minutes. Never use a
+  # larger or paid macOS label here.
   build-macos:
     needs: check
+    if: github.repository == 'SylphxAI/sylphx-clients' && github.event.repository.private == false
     strategy:
       fail-fast: false
       matrix:
         include:
           - { target: x86_64-apple-darwin, asset: sylphx-cli-darwin-x64, run: true }
           - { target: aarch64-apple-darwin, asset: sylphx-cli-darwin-arm64, run: false }
-    runs-on: [self-hosted, sylphx, macos, standard]
+    runs-on: macos-15-intel
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
