@@ -32138,14 +32138,47 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "callers": {
+                    "description": "Who may start, signal, wait on and cancel its Runs (`callable_by` in\n`sylphx.toml`); unset is `SERVER`.\nNot served yet: the server refuses the field, set to any value, until\nend-user sessions are admitted.",
+                    "enum": [
+                      "server",
+                      "users"
+                    ],
+                    "type": "string"
+                  },
                   "handler_uri": {
                     "description": "An HTTPS URI on port 443 whose host is a verified Network Domain of this\nproject or a Hosting route the project owns.",
                     "type": "string"
+                  },
+                  "job_handler": {
+                    "additionalProperties": false,
+                    "description": "A container that runs once per invocation. Not served yet: the server\nrefuses it until the engine runs container handlers.",
+                    "properties": {
+                      "command": {
+                        "description": "The entrypoint; empty keeps the image's.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "image": {
+                        "description": "The image reference.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "image"
+                    ],
+                    "type": "object"
                   },
                   "max_concurrent_runs": {
                     "description": "At most this many running Runs of this Workflow; 0 is unlimited within the\nplan.",
                     "format": "int32",
                     "type": "integer"
+                  },
+                  "permission": {
+                    "description": "The app permission an end user's session must hold to call the Run\nmethods of this Workflow; required when `callers` is `USERS`. Not\nserved yet, like `callers`.",
+                    "type": "string"
                   },
                   "retry_policy": {
                     "additionalProperties": false,
@@ -32298,14 +32331,47 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "callers": {
+                    "description": "Who may start, signal, wait on and cancel its Runs (`callable_by` in\n`sylphx.toml`); unset is `SERVER`.\nNot served yet: the server refuses the field, set to any value, until\nend-user sessions are admitted.",
+                    "enum": [
+                      "server",
+                      "users"
+                    ],
+                    "type": "string"
+                  },
                   "handler_uri": {
                     "description": "An HTTPS URI on port 443 whose host is a verified Network Domain of this\nproject or a Hosting route the project owns.",
                     "type": "string"
+                  },
+                  "job_handler": {
+                    "additionalProperties": false,
+                    "description": "A container that runs once per invocation. Not served yet: the server\nrefuses it until the engine runs container handlers.",
+                    "properties": {
+                      "command": {
+                        "description": "The entrypoint; empty keeps the image's.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "image": {
+                        "description": "The image reference.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "image"
+                    ],
+                    "type": "object"
                   },
                   "max_concurrent_runs": {
                     "description": "At most this many running Runs of this Workflow; 0 is unlimited within the\nplan.",
                     "format": "int32",
                     "type": "integer"
+                  },
+                  "permission": {
+                    "description": "The app permission an end user's session must hold to call the Run\nmethods of this Workflow; required when `callers` is `USERS`. Not\nserved yet, like `callers`.",
+                    "type": "string"
                   },
                   "retry_policy": {
                     "additionalProperties": false,
@@ -32693,9 +32759,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Updates a schedule."
+        "title": "Updates a schedule; with `allow_missing` it creates the schedule when it does not exist, so its short name `schedule` is an upsert by name."
       },
-      "description": "Updates a schedule.",
+      "description": "Updates a schedule; with `allow_missing` it creates the schedule when it\ndoes not exist, so its short name `schedule` is an upsert by name.",
       "effect": "write",
       "http": "PATCH /v1/{schedule.name=orgs/*/projects/*/envs/*/schedules/*}",
       "input_schema": {
@@ -32849,7 +32915,7 @@
       "long_running": true,
       "method_id": "workflows.schedules.update",
       "permission": "workflows:write",
-      "tool": "workflows_schedules_update"
+      "tool": "workflows_schedule"
     },
     {
       "annotations": {
@@ -33067,9 +33133,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Starts a Run of a Workflow."
+        "title": "Starts a Run of a Workflow, now or after `start_delay` or at `schedule_time`. `run_id` is the caller's key: the same key and intent return the same Run, a changed intent is refused. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
       },
-      "description": "Starts a Run of a Workflow.",
+      "description": "Starts a Run of a Workflow, now or after `start_delay` or at\n`schedule_time`. `run_id` is the caller's key: the same key and intent\nreturn the same Run, a changed intent is refused.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/workflows/*}/runs",
       "input_schema": {
@@ -33152,7 +33218,7 @@
       "long_running": false,
       "method_id": "workflows.runs.create",
       "permission": "workflows:run",
-      "tool": "workflows_runs_create"
+      "tool": "workflows_start"
     },
     {
       "annotations": {
@@ -33205,9 +33271,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Sends a named signal to a running Run; a `wait` op for that name resumes with its payload. A signal to a closed Run fails with INVALID_STATE."
+        "title": "Sends a named signal to a running Run; a `wait` op for that name resumes with its payload. A signal to a closed Run fails with INVALID_STATE. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
       },
-      "description": "Sends a named signal to a running Run; a `wait` op for that name resumes\nwith its payload. A signal to a closed Run fails with INVALID_STATE.",
+      "description": "Sends a named signal to a running Run; a `wait` op for that name resumes\nwith its payload. A signal to a closed Run fails with INVALID_STATE.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/workflows/*/runs/*}:signal",
       "input_schema": {
@@ -33238,7 +33304,7 @@
       "long_running": false,
       "method_id": "workflows.runs.signal",
       "permission": "workflows:run",
-      "tool": "workflows_runs_signal"
+      "tool": "workflows_signal"
     },
     {
       "annotations": {
@@ -33246,9 +33312,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Requests cancellation. Timers and waits stop; a running invocation is not interrupted: the handler receives one final invocation with `cancel: true`, and the Run ends `cancelled` when it answers."
+        "title": "Requests cancellation. Timers and waits stop; a running invocation is not interrupted: the handler receives one final invocation with `cancel: true`, and the Run ends `cancelled` when it answers. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
       },
-      "description": "Requests cancellation. Timers and waits stop; a running invocation is not\ninterrupted: the handler receives one final invocation with `cancel:\ntrue`, and the Run ends `cancelled` when it answers.",
+      "description": "Requests cancellation. Timers and waits stop; a running invocation is not\ninterrupted: the handler receives one final invocation with `cancel:\ntrue`, and the Run ends `cancelled` when it answers.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
       "effect": "destructive",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/workflows/*/runs/*}:cancel",
       "input_schema": {
@@ -33279,7 +33345,7 @@
       "long_running": false,
       "method_id": "workflows.runs.cancel",
       "permission": "workflows:run",
-      "tool": "workflows_runs_cancel"
+      "tool": "workflows_cancel"
     },
     {
       "annotations": {
@@ -33287,9 +33353,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it, closed or not."
+        "title": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it, closed or not. Its short name is `result`: the closed Run carries the handler's output or error. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
       },
-      "description": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it,\nclosed or not.",
+      "description": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it,\nclosed or not. Its short name is `result`: the closed Run carries the\nhandler's output or error.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/workflows/*/runs/*}:wait",
       "input_schema": {
@@ -33315,7 +33381,7 @@
       "long_running": false,
       "method_id": "workflows.runs.wait",
       "permission": "workflows:read",
-      "tool": "workflows_runs_wait"
+      "tool": "workflows_result"
     },
     {
       "annotations": {
@@ -34991,7 +35057,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@a2fae12c0c5145b79e95827e3e70b57caffc9b10e04ab643baf17ab8dff51931. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@f809af806e05f6fc5420172e9c71343260ac365c39cd5b9ff1465d417a743773. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
@@ -35308,6 +35374,361 @@
       },
       "name": "observability_traces_query",
       "x-sylphx-method": "observability.traces.query"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a schedule; with `allow_missing` it creates the schedule when it does not exist, so its short name `schedule` is an upsert by name."
+      },
+      "description": "Updates a schedule; with `allow_missing` it creates the schedule when it\ndoes not exist, so its short name `schedule` is an upsert by name.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateSchedule.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the schedule when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "schedule": {
+            "additionalProperties": false,
+            "description": "The schedule to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/schedules/{schedule}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "calendar": {
+                    "additionalProperties": false,
+                    "description": "A calendar: cron expression and time zone.",
+                    "properties": {
+                      "cron": {
+                        "description": "A 5-field cron expression, for example `0 3 * * *`.",
+                        "type": "string"
+                      },
+                      "time_zone": {
+                        "description": "IANA time zone; default `UTC`.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "cron"
+                    ],
+                    "type": "object"
+                  },
+                  "catchup_window": {
+                    "description": "Missed fires older than this are skipped; 10s to 365d.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "additionalProperties": true,
+                    "description": "The input of every Run, at most 64 KiB of JSON.",
+                    "type": "object"
+                  },
+                  "interval": {
+                    "additionalProperties": false,
+                    "description": "A fixed interval.",
+                    "properties": {
+                      "every": {
+                        "description": "The period, 1s to 365d.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "offset": {
+                        "description": "Phase offset within each period.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "every"
+                    ],
+                    "type": "object"
+                  },
+                  "jitter": {
+                    "description": "Random delay added to each fire, at most min(interval, 1h).",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "overlap_policy": {
+                    "description": "What a fire does while a previous Run is still running.",
+                    "enum": [
+                      "skip",
+                      "buffer_one",
+                      "buffer_all",
+                      "cancel_other",
+                      "allow"
+                    ],
+                    "type": "string"
+                  },
+                  "pause_note": {
+                    "description": "Why the Schedule is paused; shown in status.",
+                    "type": "string"
+                  },
+                  "paused": {
+                    "description": "Whether fires are paused.",
+                    "type": "boolean"
+                  },
+                  "workflow": {
+                    "description": "The Workflow the Schedule starts, in the same environment.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "workflows.sylphx.com/Workflow"
+                  }
+                },
+                "required": [
+                  "workflow"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schedule"
+        ],
+        "type": "object"
+      },
+      "name": "workflows_schedule",
+      "x-sylphx-method": "workflows.schedules.update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts a Run of a Workflow, now or after `start_delay` or at `schedule_time`. `run_id` is the caller's key: the same key and intent return the same Run, a changed intent is refused. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
+      },
+      "description": "Starts a Run of a Workflow, now or after `start_delay` or at\n`schedule_time`. `run_id` is the caller's key: the same key and intent\nreturn the same Run, a changed intent is refused.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of CreateRun.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Run"
+          },
+          "run": {
+            "additionalProperties": false,
+            "description": "The run to create; only caller-writable fields are read.",
+            "properties": {
+              "input": {
+                "additionalProperties": true,
+                "description": "The Run input, at most 256 KiB of JSON.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}/runs/{run}`.",
+                "type": "string"
+              },
+              "schedule_time": {
+                "description": "When the first invocation is due: set it directly, or through\n`start_delay`; at most 365 days ahead. A Run cancelled before then closes\n`cancelled` with no invocation.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "start_delay": {
+                "description": "Delay the first invocation by this much.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "type": "object"
+          },
+          "run_id": {
+            "description": "The run id, the final name segment; the server assigns one when empty.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "run"
+        ],
+        "type": "object"
+      },
+      "name": "workflows_start",
+      "x-sylphx-method": "workflows.runs.create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Sends a named signal to a running Run; a `wait` op for that name resumes with its payload. A signal to a closed Run fails with INVALID_STATE. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
+      },
+      "description": "Sends a named signal to a running Run; a `wait` op for that name resumes\nwith its payload. A signal to a closed Run fails with INVALID_STATE.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of SignalRun.",
+        "properties": {
+          "name": {
+            "description": "The name of the run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Run"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "description": "The signal payload, at most 64 KiB of JSON.",
+            "type": "object"
+          },
+          "signal": {
+            "description": "The signal name the handler waits on.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "signal"
+        ],
+        "type": "object"
+      },
+      "name": "workflows_signal",
+      "x-sylphx-method": "workflows.runs.signal"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Requests cancellation. Timers and waits stop; a running invocation is not interrupted: the handler receives one final invocation with `cancel: true`, and the Run ends `cancelled` when it answers. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
+      },
+      "description": "Requests cancellation. Timers and waits stop; a running invocation is not\ninterrupted: the handler receives one final invocation with `cancel:\ntrue`, and the Run ends `cancelled` when it answers.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of CancelRun.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Run"
+          },
+          "reason": {
+            "description": "Why the Run is cancelled.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "name": "workflows_cancel",
+      "x-sylphx-method": "workflows.runs.cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it, closed or not. Its short name is `result`: the closed Run carries the handler's output or error. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`."
+      },
+      "description": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it,\nclosed or not. Its short name is `result`: the closed Run carries the\nhandler's output or error.\nAn end user's session may call it on a Workflow whose `callers` is\n`USERS` when the session holds the Workflow's `permission`.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of WaitRun.",
+        "properties": {
+          "name": {
+            "description": "The name of the run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Run"
+          },
+          "timeout": {
+            "description": "How long to wait; default 30s, at most 60s.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "name": "workflows_result",
+      "x-sylphx-method": "workflows.runs.wait"
     },
     {
       "annotations": {
