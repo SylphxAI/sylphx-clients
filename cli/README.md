@@ -76,6 +76,15 @@ sylphx mcp                            # the MCP server over stdio
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
   prints what a cold run would send. Files: `git ls-files` (tracked and
   untracked, not ignored) minus `.sylphxignore`.
+- Cargo git dependencies come with the run: every git commit a `Cargo.lock`
+  of the tree locks is fetched here with your git credentials (depth 1, kept
+  under the repository's git directory), sent to a mirror on the workspace
+  only when it lacks it (`git_deps` event), and Cargo's fetch reads that
+  mirror, so a private dependency builds with no egress and no token on the
+  machine. One that cannot be fetched here stops the run with 125 before a
+  machine is leased. Git prints `warning: rejected refs/commit/… because
+  shallow roots are not allowed to be updated` once per new commit; the
+  build is unaffected.
 - The run also gets the project's shared build cache (sccache, Turbo): the
   CLI mints a cache token with your key before the command starts and merges
   the cache's environment into the command's (your `--env` wins). If the

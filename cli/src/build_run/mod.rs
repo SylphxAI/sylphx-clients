@@ -29,6 +29,7 @@
 //! event); 130 interrupted; 137 the machine was lost after the command
 //! started.
 
+mod git_deps;
 mod image;
 mod remote;
 mod store;
@@ -748,6 +749,16 @@ async fn execute(
         Err(e) => return Outcome::platform(format!("hashing the work tree: {e}"), false),
     };
     cache.save();
+    // Git dependencies are fetched here, where the credentials are, before
+    // any machine is leased: one that cannot be fetched fails in seconds.
+    let git_deps = if o.image.is_some() {
+        Vec::new()
+    } else {
+        match prepare_git_deps(&o.root, &tree, &o.rel) {
+            Ok(d) => d,
+            Err(e) => return Outcome::platform(e, false),
+        }
+    };
     let repo = sync::repo_key(&o.root);
     let mut run = Run {
         client,
@@ -758,6 +769,7 @@ async fn execute(
         parent,
         repo,
         tree,
+        git_deps,
         key,
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
@@ -842,6 +854,8 @@ struct Run<'a> {
     parent: String,
     repo: String,
     tree: sync::Tree,
+    /// The tree's locked git dependencies and their tarballs on this machine.
+    git_deps: Vec<(git_deps::Dep, PathBuf)>,
     /// The caller's key, for minting the cache token.
     key: Option<&'a str>,
     cache_url: String,
@@ -901,6 +915,10 @@ impl Run<'_> {
             Err(e) if out_of_space(e.text()) => return self.out_of_space(&name).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
+        let git_env = match self.send_git_deps(&guest).await {
+            Ok(e) => e,
+            Err(e) => return self.lost_or(&name, e).await,
+        };
         // An image build needs no Rust toolchain.
         if self.o.image.is_none() {
             if let Err(a) = self.provision(&guest, &name, &cache).await {
@@ -932,7 +950,7 @@ impl Run<'_> {
             return self.lost_or(&name, e).await;
         }
         let ran = self
-            .exec(&mut guest, &mut minted, &name, m.volume, cache)
+            .exec(&mut guest, &mut minted, &name, m.volume, cache, git_env)
             .await;
         // The credentials are gone before anything else is asked of the
         // machine, whatever the build's end.
@@ -1655,6 +1673,68 @@ impl Run<'_> {
         Ok(warm)
     }
 
+    /// Puts the git dependencies the workspace lacks into its mirrors
+    /// ([`git_deps`]) and answers the command's environment for them. A
+    /// machine without git gets none and one warning: the build then fails
+    /// where it would have.
+    async fn send_git_deps(&self, g: &Guest) -> Result<BTreeMap<String, String>, Fault> {
+        if self.git_deps.is_empty() {
+            return Ok(BTreeMap::new());
+        }
+        let none = BTreeMap::new();
+        let names: Vec<String> = self.git_deps.iter().map(|(d, _)| d.name()).collect();
+        let mut args = argv(&["/bin/sh", "-c", git_deps::HAVE, "git-deps-have", WS]);
+        args.extend(names.iter().cloned());
+        let (code, out, err) = g.run(USER, &args, &none).await?;
+        if code == 3 {
+            eprintln!("sylphx: warning: the build machine has no git; git dependencies not sent");
+            return Ok(BTreeMap::new());
+        }
+        if code != 0 {
+            return Err(Fault::Other(format!(
+                "preparing the git dependencies failed: {}",
+                String::from_utf8_lossy(&err).trim()
+            )));
+        }
+        let missing: Vec<String> = String::from_utf8_lossy(&out)
+            .lines()
+            .filter(|l| names.iter().any(|n| n == l))
+            .map(str::to_string)
+            .collect();
+        let mut up = 0u64;
+        for (d, tgz) in &self.git_deps {
+            let n = d.name();
+            if !missing.contains(&n) {
+                continue;
+            }
+            let bytes = std::fs::read(tgz)
+                .map_err(|e| Fault::Other(format!("reading {}: {e}", tgz.display())))?;
+            g.upload(&format!("{WS}/{}/in/{n}.tgz", git_deps::DIR), USER, &bytes)
+                .await?;
+            up += bytes.len() as u64;
+        }
+        if !missing.is_empty() {
+            let mut args = argv(&["/bin/sh", "-c", git_deps::APPLY, "git-deps-apply", WS]);
+            args.extend(missing.iter().cloned());
+            let (code, _, err) = g.run(USER, &args, &none).await?;
+            if code != 0 {
+                return Err(Fault::Other(format!(
+                    "adding the git dependencies failed: {}",
+                    String::from_utf8_lossy(&err).trim()
+                )));
+            }
+        }
+        self.add(|s| s.bytes_up += up);
+        self.out.event(json!({
+            "type": "git_deps",
+            "deps": names.len(),
+            "sent": missing.len(),
+            "bytes_up": up,
+        }));
+        let deps: Vec<git_deps::Dep> = self.git_deps.iter().map(|(d, _)| d.clone()).collect();
+        Ok(git_deps::env(&deps, WS))
+    }
+
     /// Runs the command, streaming its output; `None` when `--timeout` hit.
     /// A broken stream is reattached to the running command; the error says
     /// whether the command had started when the run lost it.
@@ -1665,6 +1745,7 @@ impl Run<'_> {
         lease: &str,
         volume: bool,
         cache: BTreeMap<String, String>,
+        git_env: BTreeMap<String, String>,
     ) -> Result<Option<i32>, ExecFault> {
         let mut args = vec![
             "/bin/sh".to_string(),
@@ -1689,6 +1770,7 @@ impl Run<'_> {
         if let Some(sha) = sync::head(&self.o.root) {
             env.insert("SYLPHX_BUILD_GIT_HEAD".into(), sha);
         }
+        env.extend(git_env);
         env.extend(self.o.env.clone());
         let mut p = g
             .start(USER, &args, "", &env)
@@ -1957,6 +2039,27 @@ enum LeaseErr {
     /// The workspace is attached to another lease.
     InUse,
     Fatal(Outcome),
+}
+
+/// The locked git dependencies a command run in `rel` can use, each packed
+/// on this machine ([`git_deps::pack`]); the first that cannot be fetched is
+/// the error.
+fn prepare_git_deps(
+    root: &Path,
+    tree: &sync::Tree,
+    rel: &str,
+) -> Result<Vec<(git_deps::Dep, PathBuf)>, String> {
+    let deps =
+        git_deps::locked(root, tree, rel).map_err(|e| format!("reading the lock files: {e}"))?;
+    if deps.is_empty() {
+        return Ok(Vec::new());
+    }
+    let cache = sync::git_path(root, "sylphx/git-deps")
+        .unwrap_or_else(|| std::env::temp_dir().join("sylphx-git-deps"));
+    std::fs::create_dir_all(&cache).map_err(|e| format!("preparing {}: {e}", cache.display()))?;
+    deps.into_iter()
+        .map(|d| git_deps::pack(&cache, &d).map(|p| (d, p)))
+        .collect()
 }
 
 /// How long preparing the machine (the toolchain install) may take.
