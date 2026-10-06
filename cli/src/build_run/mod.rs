@@ -147,18 +147,40 @@ export PATH="$W/cargo/bin:$PATH"
     };
 }
 
+/// The template's rustup home: the `build` image bakes the platform's pinned
+/// toolchain there (services/sandboxes/templates/build/Dockerfile). Named
+/// here because the image's `ENV RUSTUP_HOME` never reaches a guest command:
+/// envd starts each process with only `PATH`, `HOME`, `USER` and `LOGNAME`
+/// from its own environment, so rustup would look in `~/.rustup` instead.
+macro_rules! template_rustup_home {
+    () => {
+        "/opt/rustup"
+    };
+}
+
 /// The rustup home both guest scripts use, chosen in the tree: the
-/// template's own (its `RUSTUP_HOME`, baked with the platform's pinned
-/// toolchain) when it already holds the toolchain the tree names, so no
-/// download is needed; otherwise the workspace's, where rustup installs the
-/// tree's choice on first use. Both scripts choose alike, so the command runs
-/// the toolchain [`PROVISION`] checked.
+/// template's ([`template_rustup_home`]), on the lease's own disk and fresh
+/// from the image each lease, whenever it holds the toolchain the tree names,
+/// so no download is needed and nothing a past lease left on the Volume is
+/// run; otherwise the workspace's, where rustup installs the tree's choice
+/// on first use. Both scripts choose alike, so the command runs the
+/// toolchain [`PROVISION`] checked.
 macro_rules! guest_toolchain {
     () => {
-        r#"if command -v rustup >/dev/null 2>&1 && ! RUSTUP_AUTO_INSTALL=0 rustup which rustc >/dev/null 2>&1; then
-  export RUSTUP_HOME="$W/rustup"
+        concat!(
+            r#"if command -v rustup >/dev/null 2>&1; then
+  if RUSTUP_HOME=""#,
+            template_rustup_home!(),
+            r#"" RUSTUP_AUTO_INSTALL=0 rustup which rustc >/dev/null 2>&1; then
+    export RUSTUP_HOME=""#,
+            template_rustup_home!(),
+            r#""
+  else
+    export RUSTUP_HOME="$W/rustup"
+  fi
 fi
 "#
+        )
     };
 }
 
@@ -195,13 +217,25 @@ fi
 }
 
 /// Everything that must be ready before the user's command starts: the tree
-/// directory and, for a Rust tree, the toolchain named by its
-/// `rust-toolchain.toml` (installed on first use onto the workspace). It runs
-/// as its own process so a failure here is told apart from the command's own
-/// exit status: any non-zero status is a platform failure (125), never the
-/// command's. The install's log goes to `$W/.sylphx/toolchain.log` and its
-/// tail to stderr on failure. A tree without Rust files (looked for up to the tree root) does not need the
-/// toolchain, so a failed install does not stop its command.
+/// directory and, for a Rust tree, a toolchain that runs. It runs as its own
+/// process so a failure here is told apart from the command's own exit
+/// status: any non-zero status is a platform failure (125), never the
+/// command's. A tree without Rust files (looked for up to the tree root) does
+/// not need the toolchain, so a failed install does not stop its command.
+///
+/// The toolchain is checked before use: its `rustc -vV` and `cargo -V` must
+/// run. One on the workspace (a toolchain the template does not bake) outlives
+/// the lease that installed it, so it must also match the checksums written
+/// when it was installed and checked (`.sylphx-sha256` in its directory); a
+/// copy that a lost lease left half-written or that a disk error made
+/// unreadable fails, is removed and installed again. rustup's own component
+/// list is left out, so a `rustup component add` in a command does not count
+/// as damage (the files it adds are not listed, so they are not checked). One with no checksums
+/// (installed by an older client) is installed again once. Installs go
+/// through the build cache's toolchain tier (`RUSTUP_DIST_SERVER`, from
+/// [`provision_env`]) and directly from static.rust-lang.org when the tier
+/// fails. The log is `$W/.sylphx/toolchain.log`; its tail goes to stderr on
+/// failure.
 const PROVISION: &str = concat!(
     r#"W=$1 R=$2
 "#,
@@ -209,19 +243,48 @@ const PROVISION: &str = concat!(
     r#"cd "$W/tree/$R" || { echo "the work tree is missing on the machine" >&2; exit 3; }
 "#,
     guest_toolchain!(),
-    r#"if command -v rustup >/dev/null 2>&1 && ! rustup which rustc >/dev/null 2>&1; then
-  { rustup toolchain install || rustup default stable; } > "$W/.sylphx/toolchain.log" 2>&1 || true
-  if ! rustup which rustc >> "$W/.sylphx/toolchain.log" 2>&1; then
-    d=$PWD
-    while :; do
-      if [ -e "$d/rust-toolchain.toml" ] || [ -e "$d/rust-toolchain" ] || [ -e "$d/Cargo.toml" ]; then
-        echo "the Rust toolchain could not be installed:" >&2
-        tail -n 6 "$W/.sylphx/toolchain.log" >&2
-        exit 4
-      fi
-      [ "$d" = "$W/tree" ] && break
-      d=$(dirname "$d")
-    done
+    r#"L="$W/.sylphx/toolchain.log"
+: > "$L"
+rust_tree() {
+  d=$PWD
+  while :; do
+    if [ -e "$d/rust-toolchain.toml" ] || [ -e "$d/rust-toolchain" ] || [ -e "$d/Cargo.toml" ]; then return 0; fi
+    [ "$d" = "$W/tree" ] && return 1
+    d=$(dirname "$d")
+  done
+}
+tc_dir() { t=$(RUSTUP_AUTO_INSTALL=0 rustup which rustc 2>/dev/null) && [ -n "$t" ] && echo "${t%/bin/rustc}"; }
+works() { T=$(tc_dir) && "$T/bin/rustc" -vV >> "$L" 2>&1 && "$T/bin/cargo" -V >> "$L" 2>&1; }
+sealed() { [ "$RUSTUP_HOME" != "$W/rustup" ] || ( cd "$T" && sha256sum -c --quiet --status .sylphx-sha256 ) >> "$L" 2>&1; }
+fetch() { { rustup toolchain install || rustup default stable; } >> "$L" 2>&1; }
+install() {
+  fetch && return 0
+  [ -n "${RUSTUP_DIST_SERVER:-}" ] || return 1
+  echo "the build cache's toolchain tier failed; fetching from static.rust-lang.org" >> "$L"
+  ( unset RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT; fetch )
+}
+if command -v rustup >/dev/null 2>&1 && ! { works && sealed; }; then
+  if [ "$RUSTUP_HOME" = "$W/rustup" ]; then
+    if T=$(tc_dir); then
+      N=${T##*/}
+      echo "the workspace's toolchain $N failed its check; installing it again" >> "$L"
+      rustup toolchain uninstall "$N" >> "$L" 2>&1
+      rm -rf "$T" "$RUSTUP_HOME/update-hashes/$N"
+    fi
+    install
+    if ! works && rust_tree; then
+      echo "the toolchain still does not run; starting the workspace's rustup home over" >> "$L"
+      rm -rf "$W/rustup"
+      install
+    fi
+    if works; then
+      ( cd "$T" && find . -type f ! -name '.sylphx-sha256*' ! -path ./lib/rustlib/components ! -path './lib/rustlib/manifest-*' -exec sha256sum {} + > .sylphx-sha256.new && mv .sylphx-sha256.new .sylphx-sha256 ) >> "$L" 2>&1
+    fi
+  fi
+  if ! { works && sealed; } && rust_tree; then
+    echo "the Rust toolchain could not be installed or does not run:" >&2
+    tail -n 6 "$L" >&2
+    exit 4
   fi
 fi
 exit 0
@@ -972,7 +1035,7 @@ impl Run<'_> {
         };
         // An image build needs no Rust toolchain.
         if self.o.image.is_none() {
-            if let Err(a) = self.provision(&guest, &name).await {
+            if let Err(a) = self.provision(&guest, &name, &cache).await {
                 return a;
             }
         }
@@ -1072,7 +1135,12 @@ impl Run<'_> {
 
     /// Installs what the command needs before it starts. Any failure here is
     /// a platform failure (125, retryable), never the command's own status.
-    async fn provision(&self, g: &Guest, name: &str) -> Result<(), Attempt> {
+    async fn provision(
+        &self,
+        g: &Guest,
+        name: &str,
+        cache: &BTreeMap<String, String>,
+    ) -> Result<(), Attempt> {
         let args = argv(&[
             "/bin/sh",
             "-c",
@@ -1081,8 +1149,8 @@ impl Run<'_> {
             WS,
             self.rel(),
         ]);
-        let ran =
-            tokio::time::timeout(PROVISION_TIMEOUT, g.run(USER, &args, &BTreeMap::new())).await;
+        let env = provision_env(cache);
+        let ran = tokio::time::timeout(PROVISION_TIMEOUT, g.run(USER, &args, &env)).await;
         match ran {
             Err(_) => Err(Attempt::Done(Outcome::platform(
                 format!(
@@ -2011,6 +2079,19 @@ fn judge(end_reason: Option<&str>, f: &Fault) -> Verdict {
     }
 }
 
+/// [`PROVISION`]'s environment: only the cache environment's toolchain tier
+/// (`RUSTUP_DIST_SERVER`, `RUSTUP_UPDATE_ROOT`: the build cache's
+/// `/upstream/static.rust-lang.org`, public content checked there against
+/// upstream's checksums and shared by every lease), never its tokens. Empty
+/// with `--no-cache` or no cache: rustup fetches directly.
+fn provision_env(cache: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    cache
+        .iter()
+        .filter(|(k, _)| matches!(k.as_str(), "RUSTUP_DIST_SERVER" | "RUSTUP_UPDATE_ROOT"))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect()
+}
+
 /// The reason for a non-zero [`PROVISION`] status, with the last lines it
 /// wrote to stderr.
 fn provision_failure(code: i32, stderr: &[u8]) -> String {
@@ -2213,8 +2294,7 @@ mod tests {
             .arg(&ws)
             .args(["crate", "0", "sh", "-c", cmd])
             .env_clear()
-            .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
-            .env("RUSTUP_HOME", "/opt/rustup");
+            .env("PATH", format!("{}:/usr/bin:/bin", bin.display()));
         if let Some(m) = mirror {
             c.env("SYLPHX_CRATES_MIRROR", m);
         }
@@ -2230,7 +2310,9 @@ mod tests {
 
     #[test]
     fn the_template_toolchain_is_used_when_it_serves_the_tree() {
-        // The image's RUSTUP_HOME holds the tree's toolchain: kept.
+        // The guest inherits no RUSTUP_HOME (envd passes only PATH, HOME,
+        // USER and LOGNAME): the template's home is still chosen when it
+        // holds the tree's toolchain.
         assert_eq!(
             run_prelude("/opt/rustup", None, false, "echo $RUSTUP_HOME"),
             "/opt/rustup\n"
@@ -2330,6 +2412,9 @@ mod tests {
     // rustup is a fake placed where the script puts the workspace's cargo/bin.
     struct Ws(PathBuf);
 
+    /// The toolchain the fake rustup installs.
+    const TC: &str = "1.99.0-x86_64-unknown-linux-gnu";
+
     impl Ws {
         fn new(tag: &str) -> Ws {
             let d = std::env::temp_dir().join(format!(
@@ -2349,17 +2434,41 @@ mod tests {
             std::fs::write(&p, body).unwrap();
         }
 
-        /// A fake rustup: `which rustc` succeeds once `installed` exists;
-        /// `toolchain install` creates it unless `fail_install`.
+        /// A fake rustup over real toolchain directories: `which rustc`
+        /// answers `<home>/toolchains/<TC>/bin/rustc` when it is there, with
+        /// the template's home (`/opt/rustup`) kept in `image-rustup` of the
+        /// workspace; `toolchain install` writes the toolchain (whose rustc
+        /// runs only while its driver library is intact) unless `offline`
+        /// exists, and fails through the cache tier while `tier-down` exists.
+        /// Like rustup, it leaves a toolchain directory that is already there
+        /// alone. Each download adds a line to `fetches`.
         fn rustup(&self, fail_install: bool) {
             let w = self.0.display();
-            let install = if fail_install {
-                "exit 1".to_string()
-            } else {
-                format!("touch '{w}/installed'")
-            };
+            if fail_install {
+                self.file("offline", "");
+            }
             let body = format!(
-                "#!/bin/sh\ncase \"$1\" in\n which) [ -e '{w}/installed' ] ;;\n toolchain) echo 'error: could not download channel-rust-1.99.0.toml.sha256 (Connection timed out)' >&2; {install} ;;\n default) echo 'error: no network' >&2; exit 1 ;;\nesac\n"
+                r#"#!/bin/sh
+H=${{RUSTUP_HOME:-$HOME/.rustup}}
+[ "$H" = /opt/rustup ] && H='{w}/image-rustup'
+T="$H/toolchains/{TC}"
+case "$1 $2" in
+ which*) [ -x "$T/bin/rustc" ] && echo "$T/bin/rustc" ;;
+ "toolchain install")
+  [ -e '{w}/offline' ] && {{ echo 'error: could not download channel-rust-1.99.0.toml.sha256 (Connection timed out)' >&2; exit 1; }}
+  [ -n "$RUSTUP_DIST_SERVER" ] && [ -e '{w}/tier-down' ] && {{ echo 'error: 502 from the tier' >&2; exit 1; }}
+  [ -d "$T" ] && exit 0
+  mkdir -p "$T/bin" "$T/lib/rustlib"
+  printf 'rustc\n' > "$T/lib/rustlib/components"
+  printf 'driver\n' > "$T/lib/librustc_driver.so"
+  printf '#!/bin/sh\n[ "$(cat "$(dirname "$0")/../lib/librustc_driver.so")" = driver ] || {{ echo "error while loading shared libraries: librustc_driver.so: cannot read file data" >&2; exit 127; }}\necho "rustc 1.99.0"\n' > "$T/bin/rustc"
+  printf '#!/bin/sh\necho "cargo 1.99.0"\n' > "$T/bin/cargo"
+  chmod +x "$T/bin/rustc" "$T/bin/cargo"
+  echo "${{RUSTUP_DIST_SERVER:-direct}}" >> '{w}/fetches' ;;
+ "toolchain uninstall") rm -rf "$H/toolchains/$3" ;;
+ default*) echo 'error: no network' >&2; exit 1 ;;
+esac
+"#
             );
             self.file("cargo/bin/rustup", &body);
             use std::os::unix::fs::PermissionsExt;
@@ -2367,7 +2476,45 @@ mod tests {
             std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
         }
 
+        /// Bakes the toolchain into the template's home, as the image does.
+        fn bake_image(&self) {
+            // Through sh, not exec'd: a test thread forking while another
+            // just wrote its fake would make the exec fail with ETXTBSY.
+            let out = std::process::Command::new("/bin/sh")
+                .arg(self.0.join("cargo/bin/rustup"))
+                .args(["toolchain", "install"])
+                .env_clear()
+                .env("PATH", SYS_PATH)
+                .env("RUSTUP_HOME", "/opt/rustup")
+                .output()
+                .unwrap();
+            assert!(out.status.success());
+            let _ = std::fs::remove_file(self.0.join("fetches"));
+        }
+
+        /// The toolchain directory under a rustup home of the workspace.
+        fn tc(&self, home: &str) -> PathBuf {
+            self.0.join(home).join("toolchains").join(TC)
+        }
+
+        /// How many downloads the fake rustup made.
+        fn fetches(&self) -> usize {
+            std::fs::read_to_string(self.0.join("fetches"))
+                .map(|s| s.lines().count())
+                .unwrap_or(0)
+        }
+
         fn sh(&self, script: &str, rel: &str, extra: &[&str]) -> (i32, String) {
+            self.sh_env(script, rel, extra, &[])
+        }
+
+        fn sh_env(
+            &self,
+            script: &str,
+            rel: &str,
+            extra: &[&str],
+            env: &[(&str, &str)],
+        ) -> (i32, String) {
             let out = std::process::Command::new("/bin/sh")
                 .arg("-c")
                 .arg(script)
@@ -2377,6 +2524,7 @@ mod tests {
                 .args(extra)
                 .env_clear()
                 .env("PATH", "/usr/bin:/bin")
+                .envs(env.iter().copied())
                 .output()
                 .unwrap();
             (
@@ -2557,9 +2705,162 @@ mod tests {
         w.rustup(false);
         let (code, err) = w.sh(PROVISION, ".", &[]);
         assert_eq!(code, 0, "{err}");
-        assert!(w.0.join("installed").exists());
-        // Already installed: nothing to do.
+        assert!(w.tc("rustup").join(".sylphx-sha256").exists());
+        // Already installed and intact: nothing to do.
         assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        assert_eq!(w.fetches(), 1);
+    }
+
+    #[test]
+    fn the_template_toolchain_serves_a_tree_it_holds_with_no_workspace_copy() {
+        let w = Ws::new("tc-image");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        w.bake_image();
+        // A lease's guest inherits no RUSTUP_HOME: the template's is chosen,
+        // nothing is fetched and nothing is read from the workspace.
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 0, "{err}");
+        assert_eq!(w.fetches(), 0);
+        assert!(!w.0.join("rustup").exists());
+        // A stale workspace copy of the same version is never run.
+        std::fs::create_dir_all(w.tc("rustup").join("lib")).unwrap();
+        std::fs::write(w.tc("rustup").join("lib/librustc_driver.so"), "torn").unwrap();
+        let (code, out, err) = w.run(".", SYS_PATH, &[], "echo $RUSTUP_HOME");
+        assert_eq!((code, out.as_str()), (0, "/opt/rustup\n"), "{err}");
+    }
+
+    #[test]
+    fn a_broken_template_toolchain_is_a_platform_failure() {
+        let w = Ws::new("tc-image-bad");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        w.bake_image();
+        std::fs::write(w.tc("image-rustup").join("lib/librustc_driver.so"), "").unwrap();
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 4, "{err}");
+        assert!(err.contains("cannot read file data"), "{err}");
+        assert_eq!(
+            Outcome::platform(provision_failure(code, err.as_bytes()), true).code(),
+            125
+        );
+    }
+
+    #[test]
+    fn a_corrupted_workspace_toolchain_is_fetched_again_never_run() {
+        let w = Ws::new("tc-corrupt");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        assert_eq!(w.fetches(), 1);
+        // One file torn on the Volume, the way fb 3718's driver was, and one
+        // left readable but altered: each is caught before the command.
+        for torn in ["", "driver\nextra\n"] {
+            std::fs::write(w.tc("rustup").join("lib/librustc_driver.so"), torn).unwrap();
+            let before = w.fetches();
+            let (code, err) = w.sh(PROVISION, ".", &[]);
+            assert_eq!(code, 0, "{err}");
+            assert_eq!(w.fetches(), before + 1);
+            let log = std::fs::read_to_string(w.0.join(".sylphx/toolchain.log")).unwrap();
+            assert!(log.contains("failed its check"), "{log}");
+            // The command runs the fresh copy.
+            let (code, out, err) = w.run(
+                ".",
+                SYS_PATH,
+                &[("TC", TC)],
+                "\"$RUSTUP_HOME/toolchains/$TC/bin/rustc\" -vV",
+            );
+            assert_eq!((code, out.as_str()), (0, "rustc 1.99.0\n"), "{err}");
+        }
+    }
+
+    #[test]
+    fn a_component_added_by_a_command_keeps_the_workspace_toolchain() {
+        let w = Ws::new("tc-component");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        // What `rustup component add rust-src` changes and adds.
+        let lib = w.tc("rustup").join("lib/rustlib");
+        std::fs::write(lib.join("components"), "rustc\nrust-src\n").unwrap();
+        std::fs::write(lib.join("manifest-rust-src"), "file:lib/rustlib/src\n").unwrap();
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 0, "{err}");
+        assert_eq!(w.fetches(), 1);
+    }
+
+    #[test]
+    fn a_corrupted_workspace_toolchain_that_cannot_be_fetched_is_125() {
+        let w = Ws::new("tc-corrupt-offline");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        std::fs::write(w.tc("rustup").join("lib/librustc_driver.so"), "").unwrap();
+        w.file("offline", "");
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 4, "{err}");
+        assert_eq!(
+            Outcome::platform(provision_failure(code, err.as_bytes()), true).code(),
+            125
+        );
+    }
+
+    #[test]
+    fn a_half_written_or_unsealed_workspace_toolchain_is_installed_again() {
+        // Left by a lease that was lost mid-install: the directory is there,
+        // its rustc is not, so rustup alone would call it installed.
+        let w = Ws::new("tc-half");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        std::fs::create_dir_all(w.tc("rustup").join("lib")).unwrap();
+        let (code, err) = w.sh(PROVISION, ".", &[]);
+        assert_eq!(code, 0, "{err}");
+        assert!(w.tc("rustup").join("bin/rustc").exists());
+        // Installed by an older client, which wrote no checksums: once again.
+        std::fs::remove_file(w.tc("rustup").join(".sylphx-sha256")).unwrap();
+        let before = w.fetches();
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        assert_eq!(w.fetches(), before + 1);
+    }
+
+    #[test]
+    fn toolchains_come_through_the_cache_tier_and_directly_when_it_fails() {
+        let dist = "http://build-cache.env-1.svc.cluster.local/upstream/static.rust-lang.org";
+        let cache: BTreeMap<String, String> = [
+            ("RUSTUP_DIST_SERVER", dist.to_string()),
+            ("RUSTUP_UPDATE_ROOT", format!("{dist}/rustup")),
+            ("SCCACHE_WEBDAV_TOKEN", "a-run-token".to_string()),
+            (
+                "SYLPHX_CRATES_MIRROR",
+                "sparse+http://x/crates/index/".to_string(),
+            ),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+        // Only the toolchain tier's addresses; the run token stays out.
+        let env = provision_env(&cache);
+        assert_eq!(
+            env.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["RUSTUP_DIST_SERVER", "RUSTUP_UPDATE_ROOT"]
+        );
+        assert!(provision_env(&BTreeMap::new()).is_empty());
+        let pairs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        for (down, want) in [(false, dist), (true, "direct")] {
+            let w = Ws::new("tc-tier");
+            w.file("tree/Cargo.toml", "[workspace]\n");
+            w.rustup(false);
+            if down {
+                w.file("tier-down", "");
+            }
+            let (code, err) = w.sh_env(PROVISION, ".", &[], &pairs);
+            assert_eq!(code, 0, "{err}");
+            assert_eq!(
+                std::fs::read_to_string(w.0.join("fetches")).unwrap(),
+                format!("{want}\n")
+            );
+        }
     }
 
     #[test]

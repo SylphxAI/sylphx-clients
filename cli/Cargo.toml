@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-cli"
-version = "0.29.2"
+version = "0.29.3"
 description = "The Sylphx CLI: every Sylphx API method as a command, generated from the Sylphx schema registry."
 keywords = ["sylphx", "cli", "cloud", "deploy"]
 categories = ["command-line-utilities"]
@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 sylphx = { path = "../rust", version = "0.3.1" }
-sylphx-mcp = { path = "../mcp", version = "0.29.2" }
+sylphx-mcp = { path = "../mcp", version = "0.29.3" }
 base64 = "0.22"
 clap = { version = "4.5", features = ["string", "wrap_help"] }
 clap_complete = "4.5"

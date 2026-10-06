@@ -58,7 +58,7 @@ sylphx mcp                            # the MCP server over stdio
   free workspace of any repository once and tries again. Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
   event; anything that fails before the command starts, such as the sync or the
-  toolchain install, is 125, and a broken output stream is retried once after
+  toolchain install or a toolchain that fails its check, is 125, and a broken output stream is retried once after
   a short backoff first), 130 interrupted. `--region REGION` runs in that region's Cell with
   that region's own warm workspaces (default: the project's home region); a
   region whose Cell offers no Volumes refuses the workspace at once, and the
