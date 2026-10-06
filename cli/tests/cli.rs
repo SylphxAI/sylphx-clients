@@ -339,6 +339,38 @@ async fn list_defaults_to_the_linked_env_and_prints_a_table() {
         .starts_with(&format!("GET /v1/{ENV}/databases?page_size=10 ")));
 }
 
+/// `sylphx money revenue summary` reads the linked org's revenue summary
+/// (the org-level singleton `orgs/{org}/revenue`): `--by` is the split.
+#[tokio::test(flavor = "multi_thread")]
+async fn revenue_summary_reads_the_linked_orgs_revenue() {
+    let (url, log) = serve(vec![(
+        200,
+        json!({"name": "orgs/org_a/revenue", "currency_code": "USD", "total": "1500", "split": "source"}),
+    )])
+    .await;
+    let sb = Sandbox::new("revenue");
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "money", "revenue", "summary", "--period", "mtd", "--by", "source", "--output", "json",
+        ],
+    )
+    .await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stdout).contains("1500"));
+    let line = log.lock().unwrap()[0].line.clone();
+    assert!(line.starts_with("GET /v1/orgs/org_a/revenue?"), "{line}");
+    assert!(
+        line.contains("period=mtd") && line.contains("split=source"),
+        "{line}"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn login_with_an_empty_stdin_starts_the_device_flow() {
     let (url, log) = serve(vec![

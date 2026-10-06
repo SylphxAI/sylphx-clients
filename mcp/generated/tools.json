@@ -20984,6 +20984,528 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a revenue source, with its freshness. Revenue reporting (docs/adr/ADR-01M40HRQT0VSXZ1WANP8M318F2) is org-wide: `revenue:read` or `revenue:write`, held by an org-wide key or an org owner's or admin's session only; a project or environment key is refused."
+      },
+      "description": "Gets a revenue source, with its freshness. Revenue reporting\n(docs/adr/ADR-01M40HRQT0VSXZ1WANP8M318F2) is org-wide: `revenue:read` or\n`revenue:write`, held by an org-wide key or an org owner's or admin's\nsession only; a project or environment key is refused.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/revenue_sources/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetRevenueSource.",
+        "properties": {
+          "name": {
+            "description": "The name of the source to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueSource"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_sources.get",
+      "permission": "revenue:read",
+      "tool": "money_revenue_sources_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the org's revenue sources, with their freshness."
+      },
+      "description": "Lists the org's revenue sources, with their freshness.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*}/revenue_sources",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListRevenueSources.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The org to list in: `orgs/{org}`.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueSource"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_sources.list",
+      "permission": "revenue:read",
+      "tool": "money_revenue_sources_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Registers a revenue source. The `money` source is implicit and never created here."
+      },
+      "description": "Registers a revenue source. The `money` source is implicit and never\ncreated here.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*}/revenue_sources",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateRevenueSource.",
+        "properties": {
+          "parent": {
+            "description": "The org to create in: `orgs/{org}`.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueSource"
+          },
+          "revenue_source": {
+            "additionalProperties": false,
+            "description": "The source to create.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/revenue_sources/{revenue_source}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "config": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "The connector's settings (an account id, a bucket, a column mapping),\nnever a credential. At most 32 entries.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Shown on summaries and in the console.",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "description": "`money`, `stripe`, `google_play`, `app_store`, `ad_network`, `file` or\n`manual`. Set on create and never changed; `money` is never created.",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "paused": {
+                    "description": "A paused source is not synced and cannot be run; its facts still count.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "revenue_source_id": {
+            "description": "The source's id; `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`. Empty: Money\nassigns one.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate only; write nothing.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "revenue_source"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_sources.create",
+      "permission": "revenue:write",
+      "tool": "money_revenue_sources_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Renames, pauses or resumes a revenue source, or changes its settings."
+      },
+      "description": "Renames, pauses or resumes a revenue source, or changes its settings.",
+      "effect": "write",
+      "http": "PATCH /v1/{revenue_source.name=orgs/*/revenue_sources/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateRevenueSource.",
+        "properties": {
+          "revenue_source": {
+            "additionalProperties": false,
+            "description": "The source with its new values; `name` addresses it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/revenue_sources/{revenue_source}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "config": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "The connector's settings (an account id, a bucket, a column mapping),\nnever a credential. At most 32 entries.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Shown on summaries and in the console.",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "description": "`money`, `stripe`, `google_play`, `app_store`, `ad_network`, `file` or\n`manual`. Set on create and never changed; `money` is never created.",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "paused": {
+                    "description": "A paused source is not synced and cannot be run; its facts still count.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to change: `spec.display_name`, `spec.paused`,\n`spec.config`. Empty changes every one the body sets.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate only; write nothing.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "revenue_source"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_sources.update",
+      "permission": "revenue:write",
+      "tool": "money_revenue_sources_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a revenue source and the facts it reported. The `money` source cannot be deleted; pause it instead."
+      },
+      "description": "Deletes a revenue source and the facts it reported. The `money` source\ncannot be deleted; pause it instead.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/revenue_sources/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteRevenueSource.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "The current etag; when set, the delete happens only if it matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The source to delete, with the facts it reported. The `money` source\ncannot be deleted (pause it instead).",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueSource"
+          },
+          "validate_only": {
+            "description": "Validate only; delete nothing.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_sources.delete",
+      "permission": "revenue:write",
+      "tool": "money_revenue_sources_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Syncs a revenue source now, or backfills a period. A `money` source fills any booked fact its environment's ledger holds and the facts lack; a paused source, or one whose connector has not shipped yet, is refused (`INVALID_STATE`)."
+      },
+      "description": "Syncs a revenue source now, or backfills a period. A `money` source\nfills any booked fact its environment's ledger holds and the facts lack;\na paused source, or one whose connector has not shipped yet, is refused\n(`INVALID_STATE`).",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/revenue_sources/*}:run",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RunRevenueSource.",
+        "properties": {
+          "end_day": {
+            "description": "The last day of a backfill, `YYYY-MM-DD`, inclusive.",
+            "type": "string"
+          },
+          "mode": {
+            "description": "`sync` (default) reads what is new; `backfill` re-reads the period\n`start_day` to `end_day`.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The source to run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueSource"
+          },
+          "start_day": {
+            "description": "The first day of a backfill, `YYYY-MM-DD`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_sources.run",
+      "permission": "revenue:write",
+      "tool": "money_revenue_sources_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets the org's revenue over a period: totals by day or month, split by source or product, gross or net, in one reporting currency, with the basis of each bucket, the sources that report late, and what has no rate yet. Reads only the daily roll-up, bounded by a 5 second statement timeout. For example `sylphx money revenue summary --period mtd --split source`."
+      },
+      "description": "Gets the org's revenue over a period: totals by day or month, split by\nsource or product, gross or net, in one reporting currency, with the\nbasis of each bucket, the sources that report late, and what has no\nrate yet. Reads only the daily roll-up, bounded by a 5 second statement\ntimeout. For example `sylphx money revenue summary --period mtd\n--split source`.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/revenue}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetRevenueSummary.",
+        "properties": {
+          "amount": {
+            "description": "`net` (the default) or `gross`.",
+            "type": "string"
+          },
+          "currency_code": {
+            "description": "The reporting currency, ISO 4217; default `USD`.",
+            "type": "string"
+          },
+          "end_day": {
+            "description": "The last day of a `range`, inclusive; at most 400 days after the first.",
+            "type": "string"
+          },
+          "group_by": {
+            "description": "`day` (the default) or `month`.",
+            "type": "string"
+          },
+          "month": {
+            "description": "The month of a `month` period, `YYYY-MM`.",
+            "type": "string"
+          },
+          "name": {
+            "description": "`orgs/{org}/revenue`.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueSummary"
+          },
+          "period": {
+            "description": "`today`, `mtd` (month to date, the default), `month` (with `month`), or\n`range` (with `start_day` and `end_day`). Days are UTC.",
+            "type": "string"
+          },
+          "split": {
+            "description": "`none` (the default), `source` or `product`.",
+            "type": "string"
+          },
+          "start_day": {
+            "description": "The first day of a `range`, `YYYY-MM-DD`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue.get",
+      "permission": "revenue:read",
+      "tool": "money_revenue_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the org's revenue facts, newest day first, for audit and export."
+      },
+      "description": "Lists the org's revenue facts, newest day first, for audit and export.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*}/revenue_facts",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListRevenueFacts.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, comparisons joined with `AND`: `source = \"…\"` (a source\nid or name), `basis`, `store_kind`, `product_ref` (each `=`), and\n`day >= \"YYYY-MM-DD\"`, `day <= \"YYYY-MM-DD\"`. The days default to the 31\ndays to today (UTC), and span at most 400 days.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The org: `orgs/{org}`.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/RevenueFact"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.revenue_facts.list",
+      "permission": "revenue:read",
+      "tool": "money_revenue_facts_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the exchange rates Money converts at (units per US dollar by day), for any reader that converts revenue."
+      },
+      "description": "Lists the exchange rates Money converts at (units per US dollar by day),\nfor any reader that converts revenue.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*}/exchange_rates",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListExchangeRates.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, comparisons joined with `AND`: `currency_code = \"EUR\"`,\n`day >= \"YYYY-MM-DD\"`, `day <= \"YYYY-MM-DD\"`. The days\ndefault to the 31 days to today (UTC), and span at most 400 days.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The org reading: `orgs/{org}`. The rates are the same for every org.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ExchangeRate"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.exchange_rates.list",
+      "permission": "revenue:read",
+      "tool": "money_exchange_rates_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a domain."
       },
       "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a domain.",
@@ -35048,7 +35570,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@0a55f277ea679644aa69e50215c23fa0b819d04b0bf3c1df6d33d1cf86c8f613. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@8a9fca9773aec38ab008501562caa0e2762fc3d40938f82c8ce513c03d8b8e7d. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
