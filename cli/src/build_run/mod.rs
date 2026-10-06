@@ -94,19 +94,15 @@ const POOL_PURPOSE: &str = "build-workspace";
 /// The pool label naming a workspace's region; home-region workspaces have
 /// none, so the pool without `--region` is what it always was.
 const POOL_REGION: &str = "build-region";
-/// The `build-packages` egress preset: package and toolchain hosts, and the
-/// build-cache gateway's public name (a lease on the public network reaches
-/// the cache there with its run token; in-cluster leases use the Service).
-const BUILD_PACKAGES: [&str; 8] = [
-    "index.crates.io",
-    "static.crates.io",
-    "static.rust-lang.org",
-    "registry.npmjs.org",
-    "github.com",
-    "codeload.github.com",
-    "objects.githubusercontent.com",
-    BUILD_CACHE_HOST,
-];
+/// The `build-packages` egress preset: no internet package host. Crates and
+/// npm tarballs come through the build cache's mirrors (the cache token's
+/// `SYLPHX_CRATES_MIRROR` and `NPM_CONFIG_REGISTRY`), toolchains, PyPI and Go
+/// modules through its upstream doors, all of which a build lease reaches in
+/// the cell; the pinned Rust toolchain is in the lease image. The one name
+/// here is the build-cache gateway's public name (a lease on the public
+/// network reaches the cache there with its run token; in-cluster leases use
+/// the Service). Any other host is the caller's `--allow-host`.
+const BUILD_PACKAGES: [&str; 1] = [BUILD_CACHE_HOST];
 /// The build-cache gateway's public name.
 const BUILD_CACHE_HOST: &str = "build-cache.sylphx.net";
 
@@ -243,8 +239,9 @@ exit 0
 /// Crates come through the build cache's registry mirror
 /// (`SYLPHX_CRATES_MIRROR`, from the cache token) when it answers: Cargo reads
 /// `$W/.cargo/config.toml` as an ancestor of the tree, and the file is removed
-/// when the mirror is absent, so Cargo then reaches crates.io directly
-/// (fail-open, like the cache itself).
+/// when the mirror is absent, so Cargo then reaches crates.io directly, which
+/// a lease reaches only with `--allow-host`. npm, bun and pnpm read the
+/// token's `NPM_CONFIG_REGISTRY` themselves.
 ///
 /// The synced tree is a git work tree before the command starts, so tests
 /// and build scripts that call `git` behave as they do locally (see
@@ -313,7 +310,7 @@ pub fn command() -> Command {
         .arg(Arg::new("no-cache").long("no-cache").action(ArgAction::SetTrue)
             .help("Do not use the shared build cache (no token is minted)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
-            .help("Extra egress host beyond the package hosts (repeatable)"))
+            .help("Internet host the run may reach (repeatable); without it only the in-cell build cache and its crates and npm mirrors"))
         .arg(Arg::new("fresh").long("fresh").action(ArgAction::SetTrue)
             .help("Start from an empty workspace: no synced tree, no target/ or sccache"))
         .arg(Arg::new("dry-run").long("dry-run").action(ArgAction::SetTrue)
@@ -2266,13 +2263,23 @@ mod tests {
     }
 
     #[test]
-    fn lease_egress_allows_the_package_hosts_the_cache_gateway_and_allow_hosts() {
-        let d = allowed_domains(&["proxy.golang.org".to_string()]);
-        assert_eq!(d.len(), BUILD_PACKAGES.len() + 1);
-        assert!(d.contains(&"build-cache.sylphx.net".to_string()));
-        assert!(d.contains(&"index.crates.io".to_string()));
-        assert_eq!(d.last().map(String::as_str), Some("proxy.golang.org"));
-        assert_eq!(allowed_domains(&[]).len(), BUILD_PACKAGES.len());
+    fn lease_egress_is_the_cache_gateway_plus_allow_hosts_only() {
+        // No internet package host by default: the mirrors serve them.
+        assert_eq!(allowed_domains(&[]), ["build-cache.sylphx.net"]);
+        for h in [
+            "index.crates.io",
+            "static.crates.io",
+            "static.rust-lang.org",
+            "registry.npmjs.org",
+            "github.com",
+            "codeload.github.com",
+            "objects.githubusercontent.com",
+        ] {
+            assert!(!allowed_domains(&[]).contains(&h.to_string()), "{h}");
+        }
+        // A host the caller names is the opt-in.
+        let d = allowed_domains(&["registry.npmjs.org".to_string()]);
+        assert_eq!(d, ["build-cache.sylphx.net", "registry.npmjs.org"]);
     }
 
     #[test]

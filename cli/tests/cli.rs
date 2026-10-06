@@ -1044,7 +1044,12 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
             .eq_ignore_ascii_case("allowlist"),
         "{net}"
     );
-    assert!(net.to_string().contains("static.crates.io"), "{net}");
+    // No internet package host by default: only the build-cache gateway.
+    assert_eq!(
+        net["allowed_domains"],
+        json!(["build-cache.sylphx.net"]),
+        "{net}"
+    );
     // The guest calls carry the sandbox id and the lease token, never the key.
     let guest: Vec<&Seen> = seen.iter().skip(4).take(7).collect();
     for g in &guest {
