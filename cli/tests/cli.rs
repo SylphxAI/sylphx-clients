@@ -139,6 +139,44 @@ async fn run(sb: &Sandbox, url: &str, args: &[&str]) -> std::process::Output {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_link_file_in_another_shape_never_shadows_the_key_scope() {
+    // The older `{orgId, projectId}` file names no org, project or env: it is
+    // skipped with a warning, and the key's own env (whoami) is the default.
+    let (url, log) = serve(vec![
+        (200, whoami_reply()),
+        (
+            200,
+            json!({"name": format!("{ENV}/databases"), "databases": []}),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("legacy-link");
+    std::fs::write(
+        sb.dir.join(".sylphx/project.json"),
+        json!({"projectId": "proj_x", "orgId": "org_x"}).to_string(),
+    )
+    .unwrap();
+    let out = run(&sb, &url, &["data", "databases", "list", "-o", "json"]).await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{err}");
+    assert!(
+        err.contains("warning: ignoring") && err.contains(".sylphx/project.json"),
+        "{err}"
+    );
+    let log = log.lock().unwrap().clone();
+    assert!(
+        log[0].line.starts_with("GET /v1/whoami "),
+        "{}",
+        log[0].line
+    );
+    assert!(
+        log[1].line.starts_with(&format!("GET /v1/{ENV}/databases")),
+        "{}",
+        log[1].line
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn create_takes_the_id_and_the_linked_env_and_waits() {
     let db = json!({"name": format!("{ENV}/databases/main"), "spec": {"compute_units": 2}});
     let (url, log) = serve(vec![

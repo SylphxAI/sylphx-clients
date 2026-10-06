@@ -25,7 +25,9 @@ sylphx mcp                            # the MCP server over stdio
   are the spec fields in dotted kebab-case (`--spec.compute-units`);
   `--from-file` takes a whole request; `--output table|json|yaml|name`.
 - A bare id (`main`) expands below the linked env; parents default to the
-  linked project, else the key's scope.
+  linked project, else the key's scope. The link is the nearest
+  `.sylphx/project.json` naming an org, project or env; a file in another
+  shape (such as `{orgId, projectId}`) is skipped with a warning.
 - Mutations wait for their Operation (`--no-wait` to skip); `--dry-run` sets
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).

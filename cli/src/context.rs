@@ -214,14 +214,23 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::write(path, bytes)
 }
 
-/// The nearest `.sylphx/project.json` at or above `start`.
+/// The nearest `.sylphx/project.json` at or above `start` that names an org,
+/// project or env.
+///
+/// A file in another shape (the older `{orgId, projectId}` link) parses as an
+/// empty link; it is not a link, so the walk goes on upward and, with none
+/// found, the key's own scope (`whoami`) applies. One warning names the file.
 pub fn find_link(start: &Path) -> Option<(PathBuf, Link)> {
     let mut dir = Some(start);
     while let Some(d) = dir {
         let p = d.join(".sylphx").join("project.json");
         if let Ok(text) = std::fs::read_to_string(&p) {
-            if let Ok(link) = serde_json::from_str(&text) {
-                return Some((p, link));
+            match serde_json::from_str::<Link>(&text) {
+                Ok(link) if link != Link::default() => return Some((p, link)),
+                _ => eprintln!(
+                    "warning: ignoring {}: not a link (expected org, project or env)",
+                    p.display()
+                ),
             }
         }
         dir = d.parent();
