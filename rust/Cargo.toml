@@ -13,11 +13,14 @@ repository.workspace = true
 homepage.workspace = true
 
 [features]
-default = ["http", "verify"]
+# `resource` is default so the lane's clippy and tests (no feature flags) build it.
+default = ["http", "verify", "resource"]
 # The production transport (reqwest + rustls). Without it, bring a `Transport`.
 http = ["dep:reqwest", "dep:tokio", "dep:fastrand"]
 # Offline verification of Sylphx-signed tokens (`sylphx::auth::verify`).
 verify = ["dep:p256", "dep:ed25519-dalek", "dep:base64"]
+# Protected-resource OAuth for MCP servers (`sylphx::auth::resource`).
+resource = ["http", "dep:base64", "dep:sha2"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -27,6 +30,7 @@ tokio = { version = "1", features = ["time", "sync"], optional = true }
 p256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"], optional = true }
 ed25519-dalek = { version = "2", default-features = false, features = ["std"], optional = true }
 base64 = { version = "0.22", optional = true }
+sha2 = { version = "0.10", optional = true }
 # `sylphx::ids` mints and reads ids in every build.
 uuid = { version = "1", features = ["v7"] }
 fastrand = { version = "2", optional = true }
