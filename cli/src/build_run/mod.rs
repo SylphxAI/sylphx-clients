@@ -183,10 +183,10 @@ macro_rules! git_tree {
   if command -v timeout >/dev/null 2>&1; then TO="timeout 300"; fi
   if ! $TO sh -c '
     cd "$1" || exit 1
-    g() { git -c init.defaultBranch=main -c core.hooksPath=/dev/null -c commit.gpgsign=false -c user.name=sylphx -c user.email=build@sylphx.invalid "$@"; }
+    g() { git -c init.defaultBranch=main -c core.logAllRefUpdates=false -c core.hooksPath=/dev/null -c commit.gpgsign=false -c user.name=sylphx -c user.email=build@sylphx.invalid "$@"; }
     if [ ! -d .git ]; then g init -q && mkdir -p .git/info && printf "/target\n" >> .git/info/exclude || exit 1; fi
     g add -A && t=$(g write-tree) && c=$(g commit-tree "$t" -m "sylphx build run of $2") && g update-ref --no-deref HEAD "$c" || exit 1
-    g -c gc.pruneExpire=now gc --auto --quiet
+    g reflog expire --expire=now --all; g -c gc.pruneExpire=now gc --auto --quiet
   ' sylphx-git "$W/tree" "${SYLPHX_BUILD_GIT_HEAD:-an unknown commit}" > "$W/.sylphx/git.log" 2>&1; then
     echo "sylphx: warning: the tree on the build machine is not a git work tree, so git calls in the command fail: $(tail -n 1 "$W/.sylphx/git.log" 2>/dev/null)" >&2
   fi
@@ -2378,13 +2378,14 @@ mod tests {
             ".",
             SYS_PATH,
             &[],
-            "git rev-list --count --all && git log -1 --format=%s && git status --porcelain && git show HEAD:edit.txt && git ls-files",
+            "git rev-list --count --all && git log -1 --format=%s && git status --porcelain && git show HEAD:edit.txt && git ls-files && test -z \"$(git reflog)\" && echo no-reflog",
         );
         assert_eq!(code, 0, "{err}");
-        // One commit however many runs: the warm repository does not grow per run.
+        // One commit however many runs and no reflog keeping the replaced ones:
+        // the warm repository does not grow per run.
         assert_eq!(
             out,
-            "1\nsylphx build run of an unknown commit\nv2\nedit.txt\nkeep.txt\n"
+            "1\nsylphx build run of an unknown commit\nv2\nedit.txt\nkeep.txt\nno-reflog\n"
         );
         assert!(!err.contains("warning"), "{err}");
     }
