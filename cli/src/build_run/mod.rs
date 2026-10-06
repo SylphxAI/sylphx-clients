@@ -25,6 +25,7 @@
 //! failure (with `retryable` in the `result` event); 130 interrupted.
 
 mod guest;
+mod image;
 mod sync;
 
 use std::collections::{BTreeMap, HashSet};
@@ -43,6 +44,11 @@ use crate::build_cache;
 use crate::devices::{duration, parent_env, release_request, state, why, wire};
 use crate::Failure;
 use guest::{Event, Fault, Guest};
+
+/// `sylphx build image`'s arguments.
+pub fn image_command() -> Command {
+    image::command()
+}
 
 pub const EXIT_TIMEOUT: u8 = 124;
 pub const EXIT_PLATFORM: u8 = 125;
@@ -98,10 +104,21 @@ const BUILD_PACKAGES: [&str; 8] = [
     "github.com",
     "codeload.github.com",
     "objects.githubusercontent.com",
-    "build-cache.sylphx.net",
+    BUILD_CACHE_HOST,
 ];
+/// The build-cache gateway's public name.
+const BUILD_CACHE_HOST: &str = "build-cache.sylphx.net";
 
-/// The lease's egress allow-list: the preset, then each `--allow-host`.
+/// The lease's egress allow-list: for an image build [`image::allowed_domains`]
+/// (no internet package host), otherwise [`allowed_domains`].
+fn lease_domains(o: &Opts) -> Vec<String> {
+    match &o.image {
+        Some(img) => image::allowed_domains(img, &o.allow_hosts),
+        None => allowed_domains(&o.allow_hosts),
+    }
+}
+
+/// The `build-packages` preset, then each `--allow-host`.
 fn allowed_domains(extra: &[String]) -> Vec<String> {
     BUILD_PACKAGES
         .iter()
@@ -322,10 +339,23 @@ pub struct Opts {
     dry_run: bool,
     quiet: bool,
     json: bool,
+    /// Set for `build image`: `command` is rendered from it.
+    image: Option<image::Image>,
 }
 
-impl Opts {
-    pub fn parse(m: &ArgMatches) -> Result<Self, String> {
+/// The limits and placement every kind of build takes alike.
+struct Shared {
+    root: PathBuf,
+    rel: String,
+    size: String,
+    timeout: Duration,
+    region: Option<String>,
+    queue_timeout: Duration,
+    allow_hosts: Vec<String>,
+}
+
+impl Shared {
+    fn parse(m: &ArgMatches) -> Result<Self, String> {
         let dir = PathBuf::from(
             m.get_one::<String>("path")
                 .map(String::as_str)
@@ -335,13 +365,6 @@ impl Opts {
             return Err(format!("{} is not a directory", dir.display()));
         }
         let (root, rel) = sync::work_tree(&dir)?;
-        let command: Vec<String> = m
-            .get_many::<String>("command")
-            .map(|v| v.cloned().collect())
-            .unwrap_or_default();
-        if command.is_empty() || command[0].is_empty() {
-            return Err("give the command after --: sylphx build run -- cargo test".into());
-        }
         let timeout = match m.get_one::<String>("timeout") {
             Some(v) => duration(v, "--timeout")?,
             None => DEFAULT_TIMEOUT,
@@ -369,19 +392,6 @@ impl Opts {
                 ));
             }
         }
-        let mut env = BTreeMap::new();
-        for kv in m.get_many::<String>("env").into_iter().flatten() {
-            let (k, v) = kv
-                .split_once('=')
-                .ok_or_else(|| format!("--env {kv}: give NAME=VALUE"))?;
-            let ok = !k.is_empty()
-                && !k.starts_with(|c: char| c.is_ascii_digit())
-                && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
-            if !ok {
-                return Err(format!("--env {kv}: `{k}` is not a variable name"));
-            }
-            env.insert(k.to_string(), v.to_string());
-        }
         let mut allow_hosts = Vec::new();
         for h in m.get_many::<String>("allow-host").into_iter().flatten() {
             let ok = !h.is_empty()
@@ -397,7 +407,6 @@ impl Opts {
         Ok(Self {
             root,
             rel,
-            command,
             size: m
                 .get_one::<String>("size")
                 .cloned()
@@ -405,18 +414,81 @@ impl Opts {
             timeout,
             region,
             queue_timeout,
+            allow_hosts,
+        })
+    }
+}
+
+impl Opts {
+    /// `sylphx build run`.
+    pub fn parse(m: &ArgMatches) -> Result<Self, String> {
+        let sh = Shared::parse(m)?;
+        let command: Vec<String> = m
+            .get_many::<String>("command")
+            .map(|v| v.cloned().collect())
+            .unwrap_or_default();
+        if command.is_empty() || command[0].is_empty() {
+            return Err("give the command after --: sylphx build run -- cargo test".into());
+        }
+        let mut env = BTreeMap::new();
+        for kv in m.get_many::<String>("env").into_iter().flatten() {
+            let (k, v) = kv
+                .split_once('=')
+                .ok_or_else(|| format!("--env {kv}: give NAME=VALUE"))?;
+            let ok = !k.is_empty()
+                && !k.starts_with(|c: char| c.is_ascii_digit())
+                && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+            if !ok {
+                return Err(format!("--env {kv}: `{k}` is not a variable name"));
+            }
+            env.insert(k.to_string(), v.to_string());
+        }
+        Ok(Self {
+            root: sh.root,
+            rel: sh.rel,
+            command,
+            size: sh.size,
+            timeout: sh.timeout,
+            region: sh.region,
+            queue_timeout: sh.queue_timeout,
             artifacts: m
                 .get_many::<String>("artifact")
                 .map(|v| v.cloned().collect())
                 .unwrap_or_default(),
             out: m.get_one::<String>("out").map(PathBuf::from),
             env,
-            allow_hosts,
+            allow_hosts: sh.allow_hosts,
             fresh: m.get_flag("fresh"),
             no_cache: m.get_flag("no-cache"),
             dry_run: m.get_flag("dry-run"),
             quiet: m.get_flag("quiet"),
             json: m.get_one::<String>("output").map(String::as_str) == Some("json"),
+            image: None,
+        })
+    }
+
+    /// `sylphx build image`: the command is `sylphx-image-build` on the tree.
+    pub fn parse_image(m: &ArgMatches) -> Result<Self, String> {
+        let sh = Shared::parse(m)?;
+        let image = image::Image::parse(m)?;
+        Ok(Self {
+            command: image.argv(&sh.rel),
+            root: sh.root,
+            rel: sh.rel,
+            size: sh.size,
+            timeout: sh.timeout,
+            region: sh.region,
+            queue_timeout: sh.queue_timeout,
+            artifacts: Vec::new(),
+            out: None,
+            env: BTreeMap::new(),
+            allow_hosts: sh.allow_hosts,
+            fresh: false,
+            no_cache: false,
+            dry_run: false,
+            quiet: m.get_flag("quiet"),
+            json: m.get_one::<String>("output").map(String::as_str) == Some("json"),
+            image: Some(image),
         })
     }
 }
@@ -533,6 +605,8 @@ struct Stats {
     bytes_up: u64,
     bytes_down: u64,
     artifacts: usize,
+    /// `build image`: the script's metadata object.
+    image: Option<Value>,
 }
 
 /// `sylphx build run`. `client` is the signed-in client, or why there is none.
@@ -542,11 +616,36 @@ pub async fn run(
     m: &ArgMatches,
 ) -> Result<(), Failure> {
     let opts = Opts::parse(m).map_err(Failure::Usage)?;
+    run_opts(client, key, opts).await
+}
+
+/// `sylphx build image`: the same machinery, with `sylphx-image-build` as the
+/// command ([`image`]).
+pub async fn run_image(
+    client: Result<Client, Failure>,
+    key: Option<String>,
+    m: &ArgMatches,
+) -> Result<(), Failure> {
+    let mut opts = Opts::parse_image(m).map_err(Failure::Usage)?;
+    if let Some(img) = opts.image.as_mut() {
+        img.source = image::source_of(&opts.root);
+    }
+    run_opts(client, key, opts).await
+}
+
+async fn run_opts(
+    client: Result<Client, Failure>,
+    key: Option<String>,
+    opts: Opts,
+) -> Result<(), Failure> {
     let out = Out {
         json: opts.json,
         quiet: opts.quiet,
     };
     let t0 = Instant::now();
+    if opts.image.as_ref().is_some_and(|i| i.source.is_none()) {
+        out.progress("the work tree has local changes or no commit: building without SOURCE_DATE_EPOCH and a source commit, so the image is not reproducible");
+    }
     if opts.dry_run {
         return dry_run(&opts, &out);
     }
@@ -629,6 +728,9 @@ fn result_event(outcome: &Outcome, s: &Stats, ms: u64) -> Value {
     });
     if let Outcome::Platform { reason, .. } = outcome {
         result["error"] = json!(reason);
+    }
+    if let Some(image) = &s.image {
+        result["image"] = image.clone();
     }
     result
 }
@@ -863,8 +965,11 @@ impl Run<'_> {
             Ok(w) => w,
             Err(e) => return self.lost_or(&name, e).await,
         };
-        if let Err(a) = self.provision(&guest, &name).await {
-            return a;
+        // An image build needs no Rust toolchain.
+        if self.o.image.is_none() {
+            if let Err(a) = self.provision(&guest, &name).await {
+                return a;
+            }
         }
         let shape = format!("build-{}", self.o.size);
         let (cache, warned) = self.cache().await;
@@ -883,14 +988,25 @@ impl Run<'_> {
         self.out.event(
             json!({"type": "running", "lease": name, "size": self.o.size, "region": self.region(), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume, "cache": !cache.is_empty()}),
         );
-        let code = match self
+        if let Err(e) = self.send_auth(&guest).await {
+            return self.lost_or(&name, e).await;
+        }
+        let ran = self
             .exec(&mut guest, &mut minted, &name, m.volume, cache)
-            .await
-        {
+            .await;
+        // The credentials are gone before anything else is asked of the
+        // machine, whatever the build's end.
+        self.drop_auth(&guest).await;
+        let code = match ran {
             Ok(Some(c)) => c,
             Ok(None) => return Attempt::Done(Outcome::TimedOut),
             Err(e) => return self.lost_or(&name, e).await,
         };
+        if self.o.image.is_some() && code == 0 {
+            if let Err(o) = self.collect_image(&guest, &name).await {
+                return Attempt::Done(o);
+            }
+        }
         if !self.o.artifacts.is_empty() {
             if let Err(e) = self.collect(&guest, &name).await {
                 return Attempt::Done(Outcome::platform(
@@ -1300,7 +1416,7 @@ impl Run<'_> {
         spec.idle_timeout = IDLE_TIMEOUT.into();
         let mut net = sbx::LeaseNetwork::default();
         net.egress = Some(sbx::EgressPolicy::Allowlist);
-        net.allowed_domains = allowed_domains(&self.o.allow_hosts);
+        net.allowed_domains = lease_domains(self.o);
         spec.network = Some(net);
         if let Some(volume) = volume {
             let mut mount = sbx::VolumeMount::default();
@@ -1552,6 +1668,14 @@ impl Run<'_> {
         args.extend(self.o.command.iter().cloned());
         // The command's own `--env` wins over the cache's and ours.
         let mut env = cache;
+        if let Some(img) = &self.o.image {
+            // An image build gets the cache's mirror addresses, never its
+            // write tokens: no step of an image build needs sccache or Turbo.
+            env.retain(|k, _| image::forwarded(k));
+            env.entry("SYLPHX_OCI_MIRROR".into())
+                .or_insert_with(image::default_oci_mirror);
+            env.extend(img.env());
+        }
         if let Some(sha) = sync::head(&self.o.root) {
             env.insert("SYLPHX_BUILD_GIT_HEAD".into(), sha);
         }
@@ -1594,6 +1718,115 @@ impl Run<'_> {
         self.add(|s| s.bytes_down += p.bytes);
         self.held.with(|h| h.proc = None);
         Ok(result)
+    }
+
+    /// `build image --registry-auth`: puts the credentials on the machine as a
+    /// private file (0600 in a 0700 directory), and the file's values among
+    /// the secrets scrubbed from any text that leaves this process.
+    async fn send_auth(&self, g: &Guest) -> Result<(), Fault> {
+        let Some(file) = self.o.image.as_ref().and_then(|i| i.registry_auth.as_ref()) else {
+            return Ok(());
+        };
+        let bytes = std::fs::read(file).map_err(|e| {
+            Fault::Other(format!("reading --registry-auth {}: {e}", file.display()))
+        })?;
+        self.held.with(|h| {
+            h.secrets
+                .extend(image::auth_secrets(&String::from_utf8_lossy(&bytes)))
+        });
+        let none = BTreeMap::new();
+        let dir = image::private_dir();
+        let prep = r#"set -eu
+umask 077
+rm -rf "$1"
+mkdir -m 700 "$1"
+"#;
+        let (code, _, _) = g
+            .run(
+                USER,
+                &argv(&["/bin/sh", "-c", prep, "private", &dir]),
+                &none,
+            )
+            .await?;
+        if code != 0 {
+            return Err(Fault::Other(
+                "preparing the private directory failed".into(),
+            ));
+        }
+        let path = image::auth_path();
+        g.upload(&path, USER, &bytes).await?;
+        let (code, _, _) = g.run(USER, &argv(&["chmod", "600", &path]), &none).await?;
+        if code != 0 {
+            return Err(Fault::Other(
+                "securing the registry credentials failed".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Removes what [`Self::send_auth`] put on the machine; best effort (the
+    /// machine may be gone, and the next image build replaces the directory).
+    async fn drop_auth(&self, g: &Guest) {
+        if self
+            .o
+            .image
+            .as_ref()
+            .is_some_and(|i| i.registry_auth.is_some())
+        {
+            let _ = g
+                .run(
+                    USER,
+                    &argv(&["rm", "-rf", &image::private_dir()]),
+                    &BTreeMap::new(),
+                )
+                .await;
+        }
+    }
+
+    /// `build image`: copies the script's metadata (and the `--oci-out`
+    /// archive) back and prints the digest, frontend and process sandbox.
+    async fn collect_image(&self, g: &Guest, lease: &str) -> Result<(), Outcome> {
+        let fail = |what: &str, f: Fault| Outcome::platform(format!("{what}: {}", f.text()), true);
+        let Some(bytes) = g
+            .download(&image::metadata_path(), USER)
+            .await
+            .map_err(|f| fail("copying the image metadata back", f))?
+        else {
+            return Err(Outcome::platform(
+                "the build ended without writing its metadata",
+                false,
+            ));
+        };
+        let meta: Value = serde_json::from_slice(&bytes).map_err(|e| {
+            Outcome::platform(format!("the image metadata is not JSON: {e}"), false)
+        })?;
+        self.add(|s| s.bytes_down += bytes.len() as u64);
+        let dir = PathBuf::from(".sylphx/out").join(lease.rsplit('/').next().unwrap_or("run"));
+        let local = dir.join("image.json");
+        std::fs::create_dir_all(&dir)
+            .and_then(|_| std::fs::write(&local, &bytes))
+            .map_err(|e| Outcome::platform(format!("{}: {e}", local.display()), false))?;
+        if let Some(dest) = self.o.image.as_ref().and_then(|i| i.oci_out.as_ref()) {
+            let tar = g
+                .download(&image::oci_path(), USER)
+                .await
+                .map_err(|f| fail("copying the image archive back", f))?
+                .ok_or_else(|| Outcome::platform("the image archive was not written", false))?;
+            if let Some(parent) = dest.parent().filter(|p| !p.as_os_str().is_empty()) {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            std::fs::write(dest, &tar)
+                .map_err(|e| Outcome::platform(format!("{}: {e}", dest.display()), false))?;
+            self.add(|s| s.bytes_down += tar.len() as u64);
+        }
+        for line in image::summary(&meta) {
+            if self.o.json {
+                continue;
+            }
+            println!("{line}");
+        }
+        self.add(|s| s.image = Some(meta));
+        Ok(())
     }
 
     /// Copies the `--artifact` matches back, checking each digest.
@@ -1962,6 +2195,50 @@ mod tests {
         assert!(d.contains(&"build-cache.sylphx.net".to_string()));
         assert!(d.contains(&"index.crates.io".to_string()));
         assert_eq!(d.last().map(String::as_str), Some("proxy.golang.org"));
+        assert_eq!(allowed_domains(&[]).len(), BUILD_PACKAGES.len());
+    }
+
+    #[test]
+    fn an_image_build_leases_with_no_internet_package_host() {
+        let root = Command::new("sylphx")
+            .arg(
+                Arg::new("output")
+                    .long("output")
+                    .short('o')
+                    .global(true)
+                    .default_value("table"),
+            )
+            .subcommand(Command::new("build").subcommand(image_command()));
+        // A work tree of its own: the lease's copy has no `.git`.
+        let tree = std::env::temp_dir().join(format!("sylphx-image-egress-{}", std::process::id()));
+        std::fs::create_dir_all(&tree).unwrap();
+        assert!(std::process::Command::new("git")
+            .arg("-C")
+            .arg(&tree)
+            .args(["init", "-q"])
+            .status()
+            .unwrap()
+            .success());
+        let m = root
+            .try_get_matches_from([
+                "sylphx",
+                "build",
+                "image",
+                tree.to_str().unwrap(),
+                "--allow-host",
+                "Proxy.Example.com",
+            ])
+            .unwrap();
+        let (_, b) = m.subcommand().unwrap();
+        let (_, r) = b.subcommand().unwrap();
+        let o = Opts::parse_image(r).unwrap();
+        let _ = std::fs::remove_dir_all(&tree);
+        assert_eq!(
+            lease_domains(&o),
+            ["build-cache.sylphx.net", "proxy.example.com"]
+        );
+        assert!(o.command[0].ends_with("sylphx-image-build"));
+        // `build run` keeps its preset.
         assert_eq!(allowed_domains(&[]).len(), BUILD_PACKAGES.len());
     }
 
@@ -2636,6 +2913,7 @@ mod tests {
             bytes_up: 512,
             bytes_down: 2048,
             artifacts: 0,
+            image: None,
         };
         let captured = Mutex::new(Vec::new());
         let sink = |v: Value| captured.lock().unwrap().push(v);

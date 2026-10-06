@@ -34,12 +34,14 @@ use tree::{MethodCmd, Tree};
 /// Subcommands of a generated service this binary writes itself, as
 /// `(service, word)`: each is matched in `run` before the generated tree, and
 /// a short command (`MethodPolicy.porcelain`) starting with the same word
-/// gives way to it. `build run` and `build cache` run on a build machine and
-/// mint the cache env locally until Sylphx Build serves its methods.
+/// gives way to it. `build run`, `build image` and `build cache` run on a build
+/// machine and mint the cache env locally until Sylphx Build serves its
+/// methods.
 const HAND_WRITTEN: &[(&str, &str)] = &[
     ("auth", "enable"),
     ("auth", "status"),
     ("build", "run"),
+    ("build", "image"),
     ("build", "cache"),
     ("ai", "top"),
 ];
@@ -219,6 +221,7 @@ fn cli(tree: &Tree) -> Command {
             // `build run` is porcelain on the generated `build` service: a
             // command on a remote build machine (`build_run/`).
             s.subcommand(build_run::command())
+                .subcommand(build_run::image_command())
                 .subcommand(build_cache::command())
         } else if s.get_name() == "ai" {
             s.subcommand(
@@ -470,6 +473,11 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             let (_, rm) = sub.subcommand().expect("checked");
             let key = context::resolve(api_key.clone(), base_url.clone()).map(|r| r.key);
             build_run::run(client().await, key, rm).await
+        }
+        "build" if sub.subcommand_name() == Some("image") => {
+            let (_, im) = sub.subcommand().expect("checked");
+            let key = context::resolve(api_key.clone(), base_url.clone()).map(|r| r.key);
+            build_run::run_image(client().await, key, im).await
         }
         "build" if sub.subcommand_name() == Some("cache") => {
             let (_, cm) = sub.subcommand().expect("checked");
