@@ -2119,6 +2119,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sylphx-build-lease"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "reqwest",
+ "serde_json",
+ "sylphx",
+ "tokio",
+]
+
+[[package]]
 name = "sylphx-cli"
 version = "0.29.3"
 dependencies = [
@@ -2136,6 +2147,7 @@ dependencies = [
  "serde_yaml_ng",
  "sha2",
  "sylphx",
+ "sylphx-build-lease",
  "sylphx-mcp",
  "tokio",
 ]

@@ -24,8 +24,8 @@
 //! Exit codes: the command's own; 2 usage; 124 `--timeout`; 125 a platform
 //! failure (with `retryable` in the `result` event); 130 interrupted.
 
-mod guest;
 mod image;
+mod remote;
 mod store;
 mod sync;
 
@@ -42,9 +42,14 @@ use sylphx::sandboxes as sbx;
 use sylphx::{Client, HttpRequest};
 
 use crate::build_cache;
-use crate::devices::{duration, parent_env, release_request, state, why, wire};
+use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
-use guest::{Event, Fault, Guest};
+use sylphx_build_lease::guest::{Event, Fault, Guest};
+use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
+use sylphx_build_lease::{
+    allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
+    Verdict, BUILD_CACHE_HOST, WS,
+};
 
 /// `sylphx build image`'s arguments.
 pub fn image_command() -> Command {
@@ -55,16 +60,10 @@ pub const EXIT_TIMEOUT: u8 = 124;
 pub const EXIT_PLATFORM: u8 = 125;
 pub const EXIT_INTERRUPTED: u8 = 130;
 
-/// The warm workspace's mount point; the tree is `WS/tree`.
-const WS: &str = "/workspace";
 const USER: &str = "user";
-const TEMPLATE: &str = "template:build";
 const SIZES: [&str; 3] = ["standard", "large", "xlarge"];
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 const MAX_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
-/// Sync, toolchain install and copy-back on top of `--timeout`.
-const TTL_SLACK: Duration = Duration::from_secs(30 * 60);
-const IDLE_TIMEOUT: &str = "600s";
 /// How long a run waits for a machine before it answers 125 (retryable),
 /// unless `--queue-timeout` says otherwise.
 const DEFAULT_QUEUE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
@@ -77,8 +76,7 @@ const POLL: Duration = Duration::from_secs(2);
 const POOL_POLL: Duration = Duration::from_secs(10);
 /// A data-plane call this often keeps a silent command from idling out.
 const KEEPALIVE: Duration = Duration::from_secs(60);
-/// Lease tokens live an hour at most; renew well before.
-const TOKEN_TTL: Duration = Duration::from_secs(3600);
+/// Renew the lease token well before it expires.
 const TOKEN_RENEW: Duration = Duration::from_secs(45 * 60);
 /// Warm workspaces per (project, repository): the host's concurrent builds.
 const MAX_WARM: usize = 10;
@@ -94,258 +92,16 @@ const POOL_PURPOSE: &str = "build-workspace";
 /// The pool label naming a workspace's region; home-region workspaces have
 /// none, so the pool without `--region` is what it always was.
 const POOL_REGION: &str = "build-region";
-/// The `build-packages` egress preset: no internet package host. Crates and
-/// npm tarballs come through the build cache's mirrors (the cache token's
-/// `SYLPHX_CRATES_MIRROR` and `NPM_CONFIG_REGISTRY`), toolchains, PyPI and Go
-/// modules through its upstream doors, all of which a build lease reaches in
-/// the cell; the pinned Rust toolchain is in the lease image. The one name
-/// here is the build-cache gateway's public name (a lease on the public
-/// network reaches the cache there with its run token; in-cluster leases use
-/// the Service). Any other host is the caller's `--allow-host`.
-const BUILD_PACKAGES: [&str; 1] = [BUILD_CACHE_HOST];
-/// The build-cache gateway's public name.
-const BUILD_CACHE_HOST: &str = "build-cache.sylphx.net";
 
 /// The lease's egress allow-list: for an image build [`image::allowed_domains`]
-/// (no internet package host), otherwise [`allowed_domains`].
+/// (no internet package host), otherwise [`allowed_domains`] (the
+/// `build-packages` preset, then each `--allow-host`).
 fn lease_domains(o: &Opts) -> Vec<String> {
     match &o.image {
         Some(img) => image::allowed_domains(img, &o.allow_hosts),
         None => allowed_domains(&o.allow_hosts),
     }
 }
-
-/// The `build-packages` preset, then each `--allow-host`.
-fn allowed_domains(extra: &[String]) -> Vec<String> {
-    BUILD_PACKAGES
-        .iter()
-        .map(|h| h.to_string())
-        .chain(extra.iter().cloned())
-        .collect()
-}
-
-/// Prepares the workspace as root: the mount root belongs to the guest user,
-/// and the manifest is offered compressed for the client to read.
-const BOOTSTRAP: &str = r#"set -eu
-W=$1
-mkdir -p "$W/.sylphx"
-chown user:user "$W" "$W/.sylphx" 2>/dev/null || true
-rm -f "$W/.sylphx/manifest.gz"
-if [ -f "$W/.sylphx/manifest" ]; then
-  gzip -c "$W/.sylphx/manifest" > "$W/.sylphx/manifest.gz"
-  chown user:user "$W/.sylphx/manifest.gz" 2>/dev/null || true
-fi
-"#;
-
-/// The directories both guest scripts share: the build caches live on the
-/// workspace (`$W`) so a warm machine reuses them.
-macro_rules! guest_dirs {
-    () => {
-        r#"export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache"
-export PATH="$W/cargo/bin:$PATH"
-"#
-    };
-}
-
-/// The template's rustup home: the `build` image bakes the platform's pinned
-/// toolchain there (services/sandboxes/templates/build/Dockerfile). Named
-/// here because the image's `ENV RUSTUP_HOME` never reaches a guest command:
-/// envd starts each process with only `PATH`, `HOME`, `USER` and `LOGNAME`
-/// from its own environment, so rustup would look in `~/.rustup` instead.
-macro_rules! template_rustup_home {
-    () => {
-        "/opt/rustup"
-    };
-}
-
-/// The rustup home both guest scripts use, chosen in the tree: the
-/// template's ([`template_rustup_home`]), on the lease's own disk and fresh
-/// from the image each lease, whenever it holds the toolchain the tree names,
-/// so no download is needed and nothing a past lease left on the Volume is
-/// run; otherwise the workspace's, where rustup installs the tree's choice
-/// on first use. Both scripts choose alike, so the command runs the
-/// toolchain [`PROVISION`] checked.
-macro_rules! guest_toolchain {
-    () => {
-        concat!(
-            r#"if command -v rustup >/dev/null 2>&1; then
-  if RUSTUP_HOME=""#,
-            template_rustup_home!(),
-            r#"" RUSTUP_AUTO_INSTALL=0 rustup which rustc >/dev/null 2>&1; then
-    export RUSTUP_HOME=""#,
-            template_rustup_home!(),
-            r#""
-  else
-    export RUSTUP_HOME="$W/rustup"
-  fi
-fi
-"#
-        )
-    };
-}
-
-/// Makes `$W/tree` a git work tree: the real `.git` stays home (its packs
-/// would cost more than the tree), so the guest keeps its own repository in
-/// the warm workspace, created once with `git init`, and each run stages the
-/// synced tree (`git add -A`, only the changed files once warm) and points
-/// `HEAD` at one parentless commit of it, the message naming the local
-/// `HEAD` (`SYLPHX_BUILD_GIT_HEAD`). Each run replaces that commit rather
-/// than adding to a history, and `git gc --auto` prunes the replaced ones, so
-/// a long-lived warm workspace does not grow per run. The
-/// sync never sends or deletes `.git` ([`sync::plan`], [`sync::APPLY`]).
-/// Bounded and fail-open: a missing `git` or a failed step prints one
-/// `sylphx: warning:` line and the command still runs.
-macro_rules! git_tree {
-    () => {
-        r#"if command -v git >/dev/null 2>&1; then
-  TO=
-  if command -v timeout >/dev/null 2>&1; then TO="timeout 300"; fi
-  if ! $TO sh -c '
-    cd "$1" || exit 1
-    g() { git -c init.defaultBranch=main -c core.logAllRefUpdates=false -c core.hooksPath=/dev/null -c commit.gpgsign=false -c user.name=sylphx -c user.email=build@sylphx.invalid "$@"; }
-    if [ ! -d .git ]; then g init -q && mkdir -p .git/info && printf "/target\n" >> .git/info/exclude || exit 1; fi
-    g add -A && t=$(g write-tree) && c=$(g commit-tree "$t" -m "sylphx build run of $2") && g update-ref --no-deref HEAD "$c" || exit 1
-    g reflog expire --expire=now --all; g -c gc.pruneExpire=now gc --auto --quiet
-  ' sylphx-git "$W/tree" "${SYLPHX_BUILD_GIT_HEAD:-an unknown commit}" > "$W/.sylphx/git.log" 2>&1; then
-    echo "sylphx: warning: the tree on the build machine is not a git work tree, so git calls in the command fail: $(tail -n 1 "$W/.sylphx/git.log" 2>/dev/null)" >&2
-  fi
-else
-  echo "sylphx: warning: the build machine has no git, so git calls in the command fail" >&2
-fi
-"#
-    };
-}
-
-/// Everything that must be ready before the user's command starts: the tree
-/// directory and, for a Rust tree, a toolchain that runs. It runs as its own
-/// process so a failure here is told apart from the command's own exit
-/// status: any non-zero status is a platform failure (125), never the
-/// command's. A tree without Rust files (looked for up to the tree root) does
-/// not need the toolchain, so a failed install does not stop its command.
-///
-/// The toolchain is checked before use: its `rustc -vV` and `cargo -V` must
-/// run. One on the workspace (a toolchain the template does not bake) outlives
-/// the lease that installed it, so it must also match the checksums written
-/// when it was installed and checked (`.sylphx-sha256` in its directory); a
-/// copy that a lost lease left half-written or that a disk error made
-/// unreadable fails, is removed and installed again. rustup's own component
-/// list is left out, so a `rustup component add` in a command does not count
-/// as damage (the files it adds are not listed, so they are not checked). One with no checksums
-/// (installed by an older client) is installed again once. Installs go
-/// through the build cache's toolchain tier (`RUSTUP_DIST_SERVER`, from
-/// [`provision_env`]) and directly from static.rust-lang.org when the tier
-/// fails. The log is `$W/.sylphx/toolchain.log`; its tail goes to stderr on
-/// failure.
-const PROVISION: &str = concat!(
-    r#"W=$1 R=$2
-"#,
-    guest_dirs!(),
-    r#"cd "$W/tree/$R" || { echo "the work tree is missing on the machine" >&2; exit 3; }
-"#,
-    guest_toolchain!(),
-    r#"L="$W/.sylphx/toolchain.log"
-: > "$L"
-rust_tree() {
-  d=$PWD
-  while :; do
-    if [ -e "$d/rust-toolchain.toml" ] || [ -e "$d/rust-toolchain" ] || [ -e "$d/Cargo.toml" ]; then return 0; fi
-    [ "$d" = "$W/tree" ] && return 1
-    d=$(dirname "$d")
-  done
-}
-tc_dir() { t=$(RUSTUP_AUTO_INSTALL=0 rustup which rustc 2>/dev/null) && [ -n "$t" ] && echo "${t%/bin/rustc}"; }
-works() { T=$(tc_dir) && "$T/bin/rustc" -vV >> "$L" 2>&1 && "$T/bin/cargo" -V >> "$L" 2>&1; }
-sealed() { [ "$RUSTUP_HOME" != "$W/rustup" ] || ( cd "$T" && sha256sum -c --quiet --status .sylphx-sha256 ) >> "$L" 2>&1; }
-fetch() { { rustup toolchain install || rustup default stable; } >> "$L" 2>&1; }
-install() {
-  fetch && return 0
-  [ -n "${RUSTUP_DIST_SERVER:-}" ] || return 1
-  echo "the build cache's toolchain tier failed; fetching from static.rust-lang.org" >> "$L"
-  ( unset RUSTUP_DIST_SERVER RUSTUP_UPDATE_ROOT; fetch )
-}
-if command -v rustup >/dev/null 2>&1 && ! { works && sealed; }; then
-  if [ "$RUSTUP_HOME" = "$W/rustup" ]; then
-    if T=$(tc_dir); then
-      N=${T##*/}
-      echo "the workspace's toolchain $N failed its check; installing it again" >> "$L"
-      rustup toolchain uninstall "$N" >> "$L" 2>&1
-      rm -rf "$T" "$RUSTUP_HOME/update-hashes/$N"
-    fi
-    install
-    if ! works && rust_tree; then
-      echo "the toolchain still does not run; starting the workspace's rustup home over" >> "$L"
-      rm -rf "$W/rustup"
-      install
-    fi
-    if works; then
-      ( cd "$T" && find . -type f ! -name '.sylphx-sha256*' ! -path ./lib/rustlib/components ! -path './lib/rustlib/manifest-*' -exec sha256sum {} + > .sylphx-sha256.new && mv .sylphx-sha256.new .sylphx-sha256 ) >> "$L" 2>&1
-    fi
-  fi
-  if ! { works && sealed; } && rust_tree; then
-    echo "the Rust toolchain could not be installed or does not run:" >&2
-    tail -n 6 "$L" >&2
-    exit 4
-  fi
-fi
-exit 0
-"#
-);
-
-/// Runs the command (`$4…`) in `$W/tree/$R` with the build caches on the
-/// workspace: `target/`, the Cargo home, sccache, and rustup's toolchains
-/// ([`PROVISION`] has installed them; [`guest_toolchain`] picks the same
-/// rustup home). `$3` is 1 on a machine without a Volume: its disk ends with
-/// the lease, so sccache runs only against a remote cache the machine is
-/// given, never a local directory that would double `target/` on the same
-/// disk. The command's exit status is the script's.
-///
-/// Crates come through the build cache's registry mirror
-/// (`SYLPHX_CRATES_MIRROR`, from the cache token) when it answers: Cargo reads
-/// `$W/.cargo/config.toml` as an ancestor of the tree, and the file is removed
-/// when the mirror is absent, so Cargo then reaches crates.io directly, which
-/// a lease reaches only with `--allow-host`. npm, bun and pnpm read the
-/// token's `NPM_CONFIG_REGISTRY` themselves.
-///
-/// The synced tree is a git work tree before the command starts, so tests
-/// and build scripts that call `git` behave as they do locally (see
-/// [`git_tree`]).
-const RUN: &str = concat!(
-    r#"W=$1 R=$2 E=$3
-shift 3
-"#,
-    guest_dirs!(),
-    git_tree!(),
-    r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
-if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
-  if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
-fi
-mkdir -p "$W/.cargo"
-M=${SYLPHX_CRATES_MIRROR:-}
-if [ -n "$M" ] && curl -fsS -m 10 -o /dev/null "${M#sparse+}config.json" 2>/dev/null; then
-  printf '[source.crates-io]\nreplace-with = "sylphx-mirror"\n\n[source.sylphx-mirror]\nregistry = "%s"\n' "$M" > "$W/.cargo/config.toml"
-else
-  rm -f "$W/.cargo/config.toml"
-fi
-cd "$W/tree/$R" || exit 125
-"#,
-    guest_toolchain!(),
-    r#"exec "$@"
-"#
-);
-
-/// Lists the files matching the globs (`$3…`, relative to `$W/tree/$R`) with
-/// their SHA-256, for the copy-back.
-const ARTIFACTS: &str = r#"W=$1 R=$2
-shift 2
-cd "$W/tree/$R" || exit 0
-IFS=
-for g in "$@"; do
-  for f in $g; do
-    [ -f "$f" ] && sha256sum -- "$f"
-  done
-done
-exit 0
-"#;
 
 pub fn command() -> Command {
     Command::new("run")
@@ -380,6 +136,50 @@ pub fn command() -> Command {
             .help("Print what a cold run would send (files, bytes) and exit 0"))
         .arg(Arg::new("quiet").long("quiet").short('q').action(ArgAction::SetTrue)
             .help("No `sylphx:` progress lines on stderr"))
+        .arg(Arg::new("no-tree").long("no-tree").action(ArgAction::SetTrue)
+            .conflicts_with_all(["path", "artifact", "out", "env", "region", "fresh", "no-cache", "dry-run"])
+            .help("Run on the Build service with no input tree: the run is a Build record, its output streams back from its log"))
+        .arg(Arg::new("no-wait").long("no-wait").action(ArgAction::SetTrue).requires("no-tree")
+            .help("Create the Build and print it without waiting; read the output later with `sylphx build logs`"))
+}
+
+/// `sylphx build logs <build> [--follow]`: the log of a Build on the service.
+pub fn logs_command() -> Command {
+    Command::new("logs")
+        .about("Print a build's log; with --follow, keep printing until the build ends")
+        .long_about("Prints the log of a Build created by `sylphx build run --no-tree`, oldest line first: the command's stdout to stdout, its stderr and the platform's `sylphx:` lines to stderr. <BUILD> is a build name (orgs/{org}/projects/{project}/builds/{build}) or the id of a build in the linked project. With --follow the command waits for new lines and returns when the build has ended; without it, it prints what is written now.\n\nExample: sylphx build logs b01j8x --follow")
+        .arg(Arg::new("build").value_name("BUILD").required(true).index(1)
+            .help("The build name or id"))
+        .arg(Arg::new("follow").long("follow").short('f').action(ArgAction::SetTrue)
+            .help("Wait for new lines until the build ends"))
+}
+
+/// `sylphx build logs`.
+pub async fn logs(client: Result<Client, Failure>, m: &ArgMatches) -> Result<(), Failure> {
+    let client = client?;
+    let arg = m.get_one::<String>("build").cloned().unwrap_or_default();
+    let name = if arg.starts_with("orgs/") {
+        arg
+    } else {
+        let project = match remote::project(&client).await {
+            Ok(p) => p,
+            Err(Outcome::Platform { reason, .. }) => return Err(Failure::Usage(reason)),
+            Err(_) => return Err(Failure::Exit(EXIT_PLATFORM)),
+        };
+        format!("{project}/builds/{arg}")
+    };
+    let out = Out {
+        json: false,
+        quiet: false,
+    };
+    tokio::select! {
+        r = remote::follow(&client, &name, &out, m.get_flag("follow")) => match r {
+            Ok(()) => Ok(()),
+            Err(Outcome::Platform { reason, .. }) => Err(Failure::Refused(reason)),
+            Err(_) => Err(Failure::Exit(EXIT_PLATFORM)),
+        },
+        _ = interrupted() => Err(Failure::Exit(EXIT_INTERRUPTED)),
+    }
 }
 
 #[derive(Debug)]
@@ -402,6 +202,9 @@ pub struct Opts {
     json: bool,
     /// Set for `build image`: `command` is rendered from it.
     image: Option<image::Image>,
+    /// Run as a Build on the service, over no tree.
+    no_tree: bool,
+    no_wait: bool,
 }
 
 /// The limits and placement every kind of build takes alike.
@@ -416,16 +219,21 @@ struct Shared {
 }
 
 impl Shared {
-    fn parse(m: &ArgMatches) -> Result<Self, String> {
+    /// `no_tree`: a run over no tree has no work tree to find.
+    fn parse(m: &ArgMatches, no_tree: bool) -> Result<Self, String> {
         let dir = PathBuf::from(
             m.get_one::<String>("path")
                 .map(String::as_str)
                 .unwrap_or("."),
         );
-        if !dir.is_dir() {
+        if !no_tree && !dir.is_dir() {
             return Err(format!("{} is not a directory", dir.display()));
         }
-        let (root, rel) = sync::work_tree(&dir)?;
+        let (root, rel) = if no_tree {
+            (PathBuf::new(), String::new())
+        } else {
+            sync::work_tree(&dir)?
+        };
         let timeout = match m.get_one::<String>("timeout") {
             Some(v) => duration(v, "--timeout")?,
             None => DEFAULT_TIMEOUT,
@@ -483,7 +291,8 @@ impl Shared {
 impl Opts {
     /// `sylphx build run`.
     pub fn parse(m: &ArgMatches) -> Result<Self, String> {
-        let sh = Shared::parse(m)?;
+        let no_tree = m.get_flag("no-tree");
+        let sh = Shared::parse(m, no_tree)?;
         let command: Vec<String> = m
             .get_many::<String>("command")
             .map(|v| v.cloned().collect())
@@ -525,12 +334,14 @@ impl Opts {
             quiet: m.get_flag("quiet"),
             json: m.get_one::<String>("output").map(String::as_str) == Some("json"),
             image: None,
+            no_tree,
+            no_wait: m.get_flag("no-wait"),
         })
     }
 
     /// `sylphx build image`: the command is `sylphx-image-build` on the tree.
     pub fn parse_image(m: &ArgMatches) -> Result<Self, String> {
-        let sh = Shared::parse(m)?;
+        let sh = Shared::parse(m, false)?;
         let image = image::Image::parse(m)?;
         Ok(Self {
             command: image.argv(&sh.rel),
@@ -550,6 +361,8 @@ impl Opts {
             quiet: m.get_flag("quiet"),
             json: m.get_one::<String>("output").map(String::as_str) == Some("json"),
             image: Some(image),
+            no_tree: false,
+            no_wait: false,
         })
     }
 }
@@ -728,6 +541,25 @@ async fn run_opts(
             );
         }
     };
+    if opts.no_tree {
+        let created = Mutex::new(None::<String>);
+        let ended = tokio::select! {
+            o = remote::run(&client, &opts, &out, &created) => o,
+            _ = interrupted() => remote::Ended::Outcome(Outcome::Interrupted),
+        };
+        // The Build outlives this process unless it is stopped.
+        if matches!(ended, remote::Ended::Outcome(Outcome::Interrupted)) {
+            let name = created.lock().ok().and_then(|mut c| c.take());
+            if let Some(name) = name {
+                remote::cancel(&client, &name).await;
+            }
+        }
+        return match ended {
+            // `--no-wait` printed the Build and is done.
+            remote::Ended::Created => Ok(()),
+            remote::Ended::Outcome(o) => finish(&out, &o, &Stats::default(), t0),
+        };
+    }
     let held = Held::default();
     let stats = Mutex::new(Stats::default());
     let outcome = tokio::select! {
@@ -767,12 +599,7 @@ async fn interrupted() {
 }
 
 async fn release(client: &Client, name: &str) {
-    let r = tokio::time::timeout(
-        Duration::from_secs(30),
-        client.sandboxes().leases().release(release_request(name)),
-    )
-    .await;
-    if !matches!(r, Ok(Ok(_))) {
+    if !sylphx_build_lease::release(client, name).await {
         eprintln!("sylphx: warning: {name} was not released; its idle timeout ends it");
     }
 }
@@ -1491,31 +1318,17 @@ impl Run<'_> {
     /// Creates the build lease, with `volume` at [`WS`] or, without one, on
     /// the machine's own disk.
     async fn lease(&self, volume: Option<&str>) -> Result<sbx::Lease, LeaseErr> {
-        let mut spec = sbx::LeaseSpec::default();
-        spec.shape = format!("build-{}", self.o.size);
-        spec.image = TEMPLATE.into();
-        spec.region = self.region().to_string();
-        spec.kind = Some(sbx::LeaseKind::General);
-        spec.ttl = wire((self.o.timeout + TTL_SLACK).min(Duration::from_secs(24 * 3600)));
-        spec.idle_timeout = IDLE_TIMEOUT.into();
-        let mut net = sbx::LeaseNetwork::default();
-        net.egress = Some(sbx::EgressPolicy::Allowlist);
-        net.allowed_domains = lease_domains(self.o);
-        spec.network = Some(net);
-        if let Some(volume) = volume {
-            let mut mount = sbx::VolumeMount::default();
-            mount.volume = volume.to_string();
-            mount.mount_path = WS.into();
-            spec.volumes = vec![mount];
-        }
-        let mut meta = sylphx::common::ResourceMeta::default();
-        meta.labels.insert("purpose".into(), "build-run".into());
-        let mut lease = sbx::Lease::default();
-        lease.meta = Some(meta);
-        lease.spec = Some(spec);
-        let mut req = sbx::CreateLeaseRequest::default();
-        req.parent = self.parent.clone();
-        req.lease = Some(lease);
+        let domains = lease_domains(self.o);
+        let req = lease_request(
+            &self.parent,
+            &LeaseParams {
+                size: &self.o.size,
+                region: self.region(),
+                timeout: self.o.timeout,
+                domains: &domains,
+                volume,
+            },
+        );
         match self.client.sandboxes().leases().create(req).await {
             Ok(l) => {
                 self.held.with(|h| h.lease = Some(l.name.clone()));
@@ -1532,102 +1345,55 @@ impl Run<'_> {
     /// the lease) so the caller can take a fresh workspace.
     async fn ready(
         &self,
-        mut lease: sbx::Lease,
+        lease: sbx::Lease,
         pin: Option<Duration>,
         deadline: Instant,
     ) -> Result<Option<sbx::Lease>, Attempt> {
-        let t = Instant::now();
-        let leases = self.client.sandboxes().leases();
-        loop {
-            match state(&lease) {
-                sbx::LeaseState::Ready => return Ok(Some(lease)),
-                sbx::LeaseState::Refused => {
-                    self.held.with(|h| h.lease = None);
-                    let why = lease
-                        .status
-                        .as_ref()
-                        .and_then(|s| s.refusal.as_ref())
-                        .map(|r| r.as_str().to_string())
-                        .unwrap_or_default();
-                    let retryable = why == "no_capacity";
-                    return Err(Attempt::Done(Outcome::platform(
-                        format!("the build machine was refused: {why}"),
-                        retryable,
-                    )));
-                }
-                sbx::LeaseState::Ending | sbx::LeaseState::Ended => {
-                    self.held.with(|h| h.lease = None);
-                    let r = lease
-                        .status
-                        .as_ref()
-                        .and_then(|s| s.end_reason.as_ref())
-                        .map(|r| r.as_str().to_string())
-                        .unwrap_or_default();
-                    if r == "preempted" || r == "machine_lost" {
-                        return Err(Attempt::Lost(format!(
-                            "the build machine was {} before it started",
-                            r.replace('_', " ")
-                        )));
-                    }
-                    return Err(Attempt::Done(Outcome::platform(
-                        format!("the build machine ended before it was ready: {r}"),
-                        r == "boot_failed",
-                    )));
-                }
-                _ => {}
-            }
-            if pin.is_some_and(|p| t.elapsed() >= p) || Instant::now() >= deadline {
-                release(self.client, &lease.name).await;
+        match wait_ready(self.client, lease, pin, deadline).await {
+            Ready::Ready(l) => Ok(Some(*l)),
+            Ready::PinExpired => {
                 self.held.with(|h| h.lease = None);
-                if pin.is_some() && Instant::now() < deadline {
-                    return Ok(None);
-                }
-                return Err(Attempt::Done(Outcome::platform(
+                Ok(None)
+            }
+            Ready::QueueTimeout => {
+                self.held.with(|h| h.lease = None);
+                Err(Attempt::Done(Outcome::platform(
                     format!(
                         "no build machine{} within --queue-timeout {}s",
                         self.where_(),
                         self.o.queue_timeout.as_secs()
                     ),
                     true,
-                )));
+                )))
             }
-            tokio::time::sleep(POLL).await;
-            let mut get = sbx::GetLeaseRequest::default();
-            get.name = lease.name.clone();
-            lease = leases
-                .get(get)
-                .await
-                .map_err(|e| Attempt::Done(api("reading the build machine", &e)))?;
+            Ready::Refused { why, retryable } => {
+                self.held.with(|h| h.lease = None);
+                Err(Attempt::Done(Outcome::platform(
+                    format!("the build machine was refused: {why}"),
+                    retryable,
+                )))
+            }
+            Ready::Ended { reason, retryable } => {
+                self.held.with(|h| h.lease = None);
+                Err(Attempt::Done(Outcome::platform(
+                    format!("the build machine ended before it was ready: {reason}"),
+                    retryable,
+                )))
+            }
+            Ready::Lost(reason) => {
+                self.held.with(|h| h.lease = None);
+                Err(Attempt::Lost(reason))
+            }
+            Ready::Api(e) => Err(Attempt::Done(api("reading the build machine", &e))),
         }
     }
 
     async fn token(&self, lease: &str) -> Result<String, Fault> {
-        let mut req = sbx::MintLeaseTokenRequest::default();
-        req.name = lease.to_string();
-        req.scopes = vec![sbx::TokenScope::Guest];
-        req.ttl = wire(TOKEN_TTL);
-        self.client
-            .sandboxes()
-            .leases()
-            .mint_token(req)
-            .await
-            .map(|r| r.token)
-            .map_err(|e| Fault::Other(format!("minting a guest token: {}", why(&e))))
+        sylphx_build_lease::mint_token(self.client, lease).await
     }
 
     async fn guest(&self, lease: &sbx::Lease) -> Result<Guest, Fault> {
-        let ep = lease
-            .status
-            .as_ref()
-            .and_then(|s| s.endpoints.clone())
-            .unwrap_or_default();
-        if ep.guest_uri.is_empty() || ep.e2b_sandbox_id.is_empty() {
-            return Err(Fault::Other(
-                "the build machine has no guest endpoint".into(),
-            ));
-        }
-        let token = self.token(&lease.name).await?;
-        Guest::new(&ep.guest_uri, &ep.e2b_sandbox_id, &token).map_err(Fault::Other)
+        sylphx_build_lease::guest(self.client, lease).await
     }
 
     /// Brings the workspace's tree to this tree; answers whether it was warm
@@ -2048,70 +1814,6 @@ enum LeaseErr {
 /// How long preparing the machine (the toolchain install) may take.
 const PROVISION_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
-/// What a guest fault means for the run.
-#[derive(Debug, PartialEq, Eq)]
-enum Verdict {
-    /// Worth one more try on a new machine.
-    Retry(String),
-    Fail {
-        reason: String,
-        retryable: bool,
-    },
-}
-
-/// `end_reason` is why the lease ended, when it has.
-fn judge(end_reason: Option<&str>, f: &Fault) -> Verdict {
-    match end_reason {
-        Some(r @ ("preempted" | "machine_lost")) => {
-            Verdict::Retry(format!("the build machine was {}", r.replace('_', " ")))
-        }
-        Some(r) => Verdict::Fail {
-            reason: format!("the build machine ended: {r}"),
-            retryable: false,
-        },
-        None => match f {
-            Fault::Stream(t) => Verdict::Retry(t.clone()),
-            other => Verdict::Fail {
-                reason: other.text().to_string(),
-                retryable: true,
-            },
-        },
-    }
-}
-
-/// [`PROVISION`]'s environment: only the cache environment's toolchain tier
-/// (`RUSTUP_DIST_SERVER`, `RUSTUP_UPDATE_ROOT`: the build cache's
-/// `/upstream/static.rust-lang.org`, public content checked there against
-/// upstream's checksums and shared by every lease), never its tokens. Empty
-/// with `--no-cache` or no cache: rustup fetches directly.
-fn provision_env(cache: &BTreeMap<String, String>) -> BTreeMap<String, String> {
-    cache
-        .iter()
-        .filter(|(k, _)| matches!(k.as_str(), "RUSTUP_DIST_SERVER" | "RUSTUP_UPDATE_ROOT"))
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect()
-}
-
-/// The reason for a non-zero [`PROVISION`] status, with the last lines it
-/// wrote to stderr.
-fn provision_failure(code: i32, stderr: &[u8]) -> String {
-    let text = String::from_utf8_lossy(stderr);
-    let tail: String = text
-        .trim()
-        .chars()
-        .rev()
-        .take(400)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    if tail.is_empty() {
-        format!("preparing the build machine failed (status {code})")
-    } else {
-        format!("preparing the build machine failed (status {code}): {tail}")
-    }
-}
-
 /// A refused API call as a platform failure; retryable as the API says, and
 /// always when the API could not be reached.
 fn api(what: &str, e: &sylphx::Error) -> Outcome {
@@ -2233,6 +1935,7 @@ fn artifact_path(dir: &Path, remote: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sylphx_build_lease::BUILD_PACKAGES;
 
     fn parse(args: &[&str]) -> Result<Opts, String> {
         let mut root = Command::new("sylphx").arg(
@@ -2247,6 +1950,44 @@ mod tests {
         let (_, b) = m.subcommand().unwrap();
         let (_, r) = b.subcommand().unwrap();
         Opts::parse(r)
+    }
+
+    /// A fresh git work tree in a temporary directory, removed on drop, so a
+    /// test that parses a run over a tree never depends on the caller's
+    /// checkout (a copied source tree has no `.git`).
+    struct GitTree(std::path::PathBuf);
+
+    impl GitTree {
+        fn new() -> Self {
+            let p = std::env::temp_dir().join(format!(
+                "sylphx-build-tree-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir_all(&p).unwrap();
+            let ok = std::process::Command::new("git")
+                .arg("-C")
+                .arg(&p)
+                .args(["init", "-q"])
+                .status()
+                .unwrap()
+                .success();
+            assert!(ok, "git init in {}", p.display());
+            Self(p)
+        }
+
+        fn path(&self) -> &str {
+            self.0.to_str().unwrap()
+        }
+    }
+
+    impl Drop for GitTree {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
     }
 
     /// Runs [`RUN`] the way the guest does (`sh -c RUN … -- <command>`) in a
@@ -2420,7 +2161,7 @@ mod tests {
             let d = std::env::temp_dir().join(format!(
                 "sylphx-build-run-{tag}-{}-{}",
                 std::process::id(),
-                guest::rand_u64()
+                sylphx_build_lease::guest::rand_u64()
             ));
             std::fs::create_dir_all(d.join("tree")).unwrap();
             std::fs::create_dir_all(d.join(".sylphx")).unwrap();
@@ -2927,41 +2668,6 @@ esac
     }
 
     #[test]
-    fn faults_are_judged_retry_or_fail() {
-        let stream = Fault::Stream("the process stream broke".into());
-        assert_eq!(
-            judge(None, &stream),
-            Verdict::Retry("the process stream broke".into())
-        );
-        for r in ["preempted", "machine_lost"] {
-            assert!(matches!(
-                judge(Some(r), &Fault::Gone("x".into())),
-                Verdict::Retry(_)
-            ));
-        }
-        // The machine ended for another reason: no retry, even on a broken stream.
-        assert!(matches!(
-            judge(Some("idle"), &stream),
-            Verdict::Fail {
-                retryable: false,
-                ..
-            }
-        ));
-        for f in [
-            Fault::Gone("guest unreachable".into()),
-            Fault::Other("denied".into()),
-        ] {
-            assert!(matches!(
-                judge(None, &f),
-                Verdict::Fail {
-                    retryable: true,
-                    ..
-                }
-            ));
-        }
-    }
-
-    #[test]
     fn exit_codes_follow_docker_run_and_timeout() {
         assert_eq!(Outcome::Ran(0).code(), 0);
         assert_eq!(
@@ -2981,7 +2687,19 @@ esac
 
     #[test]
     fn the_command_follows_the_double_dash() {
-        let o = parse(&["sylphx", "build", "run", "--", "cargo", "test", "-p", "x"]).unwrap();
+        let tree = GitTree::new();
+        let o = parse(&[
+            "sylphx",
+            "build",
+            "run",
+            tree.path(),
+            "--",
+            "cargo",
+            "test",
+            "-p",
+            "x",
+        ])
+        .unwrap();
         assert_eq!(o.command, ["cargo", "test", "-p", "x"]);
         assert_eq!(o.size, "large");
         assert_eq!(o.timeout, DEFAULT_TIMEOUT);
@@ -2994,7 +2712,7 @@ esac
             "json",
             "build",
             "run",
-            ".",
+            tree.path(),
             "--size",
             "xlarge",
             "--timeout",
@@ -3020,10 +2738,12 @@ esac
     /// A caller that prefers one region: a region and a short wait for a machine.
     #[test]
     fn region_and_queue_timeout_parse() {
+        let tree = GitTree::new();
         let o = parse(&[
             "sylphx",
             "build",
             "run",
+            tree.path(),
             "--size",
             "standard",
             "--region",

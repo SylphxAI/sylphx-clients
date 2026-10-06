@@ -26,8 +26,8 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde_json::{json, Value};
 
-use super::guest::{Fault, Guest};
 use super::sync::{self, Mode, Tree};
+use sylphx_build_lease::guest::{Fault, Guest};
 
 /// Content bytes per `batchUpdate`; base64 keeps the body near 4 MiB. A file
 /// larger than this goes alone, as a `PUT`.
@@ -770,7 +770,7 @@ mod tests {
                 let p = std::env::temp_dir().join(format!(
                     "sylphx-fill-{tag}-{}-{:x}",
                     std::process::id(),
-                    super::super::super::guest::rand_u64()
+                    sylphx_build_lease::guest::rand_u64()
                 ));
                 std::fs::create_dir_all(&p).unwrap();
                 Scratch(p)
@@ -1083,16 +1083,16 @@ exit 0
         /// A process stream that writes `stdout` and exits `code`.
         pub fn process(stdout: &str, code: i32) -> Vec<u8> {
             let mut out =
-                super::super::super::guest::envelope(&json!({"event": {"start": {"pid": 7}}}));
+                sylphx_build_lease::guest::envelope(&json!({"event": {"start": {"pid": 7}}}));
             if !stdout.is_empty() {
-                out.extend(super::super::super::guest::envelope(
+                out.extend(sylphx_build_lease::guest::envelope(
                     &json!({"event": {"data": {"stdout": B64.encode(stdout)}}}),
                 ));
             }
-            out.extend(super::super::super::guest::envelope(
+            out.extend(sylphx_build_lease::guest::envelope(
                 &json!({"event": {"end": {"exitCode": code, "exited": true}}}),
             ));
-            let mut end = super::super::super::guest::envelope(&json!({}));
+            let mut end = sylphx_build_lease::guest::envelope(&json!({}));
             end[0] = 2;
             out.extend(end);
             out

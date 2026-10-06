@@ -390,7 +390,7 @@ mod tests {
     fn egress_has_no_internet_package_host() {
         let none = allowed_domains(&Image::default(), &[]);
         assert_eq!(none, [BUILD_CACHE_HOST]);
-        for h in super::super::BUILD_PACKAGES {
+        for h in sylphx_build_lease::BUILD_PACKAGES {
             if h != BUILD_CACHE_HOST {
                 assert!(!none.iter().any(|x| x == h), "{h}");
             }

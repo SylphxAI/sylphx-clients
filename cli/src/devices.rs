@@ -632,12 +632,6 @@ fn why_failure(f: Failure) -> String {
     }
 }
 
-pub(crate) fn release_request(name: &str) -> sbx::ReleaseLeaseRequest {
-    let mut req = sbx::ReleaseLeaseRequest::default();
-    req.name = name.to_string();
-    req
-}
-
 fn report_json(r: &Report) -> Value {
     let mut timings = Map::new();
     for (step, ms) in &r.timings {
@@ -800,11 +794,6 @@ pub(crate) fn duration(s: &str, flag: &str) -> Result<Duration, String> {
         .ok_or_else(|| format!("`{flag} {s}` is not a duration such as 20s, 5m, 1h30m"))
 }
 
-/// The wire form of a lease duration: `spec.ttl` is `"1800s"`.
-pub(crate) fn wire(d: Duration) -> String {
-    format!("{}s", d.as_secs())
-}
-
 /// The byte ranges of one upload: the first replace, the rest append. An empty
 /// file still needs one call, so it exists.
 fn chunks(len: usize, chunk: usize) -> Vec<(usize, usize)> {
@@ -853,14 +842,6 @@ fn device_of(lease: &sbx::Lease) -> (String, String) {
         .and_then(|s| s.device.clone())
         .unwrap_or_default();
     (device.model, device.os_version)
-}
-
-pub(crate) fn state(lease: &sbx::Lease) -> sbx::LeaseState {
-    lease
-        .status
-        .as_ref()
-        .and_then(|s| s.state.clone())
-        .unwrap_or(sbx::LeaseState::Unknown(String::new()))
 }
 
 fn refused(lease: &sbx::Lease) -> String {
@@ -915,17 +896,7 @@ fn tail(o: &Exec) -> String {
     }
 }
 
-pub(crate) fn why(e: &sylphx::Error) -> String {
-    match e {
-        sylphx::Error::Api {
-            code,
-            status,
-            detail,
-            ..
-        } => format!("{} ({status}) {detail}", code.as_str()),
-        other => other.to_string(),
-    }
-}
+pub(crate) use sylphx_build_lease::{release_request, state, why, wire};
 
 fn write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     std::fs::write(path, bytes).map_err(|e| format!("{}: {e}", path.display()))

@@ -1,0 +1,21 @@
+[package]
+name = "sylphx-build-lease"
+version = "0.1.0"
+description = "Sylphx Build's build lease: the Sandboxes lease request of a build, waiting for the machine, the guest daemon's process stream, and how a fault is judged. Shared by the CLI and the Build service."
+keywords = ["sylphx", "build", "sandboxes"]
+categories = ["api-bindings"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository = "https://github.com/SylphxAI/sylphx-clients"
+
+[dependencies]
+sylphx = { path = "../rust", version = "0.3.1" }
+base64 = "0.22"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
+serde_json = "1"
+tokio = { version = "1", features = ["time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }

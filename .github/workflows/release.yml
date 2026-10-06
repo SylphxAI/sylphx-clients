@@ -288,13 +288,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.99.0
-      - name: Publish sylphx, sylphx-mcp, sylphx-cli
+      - name: Publish sylphx, sylphx-mcp, sylphx-build-lease, sylphx-cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
           on_registry() { curl -fsS -A 'SylphxAI-clients-release/1.0' "https://crates.io/api/v1/crates/$1/$2" >/dev/null 2>&1; }
-          for crate in sylphx sylphx-mcp sylphx-cli; do
+          for crate in sylphx sylphx-mcp sylphx-build-lease sylphx-cli; do
             version="$(cargo metadata --no-deps --format-version 1 | jq -r --arg c "$crate" '.packages[] | select(.name == $c) | .version')"
             if on_registry "$crate" "$version"; then echo "$crate@$version is on crates.io already"; continue; fi
             cargo publish --locked -p "$crate"
