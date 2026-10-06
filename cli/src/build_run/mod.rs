@@ -321,6 +321,11 @@ impl Opts {
             if !ok {
                 return Err(format!("--env {kv}: `{k}` is not a variable name"));
             }
+            if k == crate::context::ENV_VAR {
+                return Err(format!(
+                    "--env {k}: it names this machine's default environment and is never sent to the run"
+                ));
+            }
             env.insert(k.to_string(), v.to_string());
         }
         Ok(Self {
@@ -3395,6 +3400,7 @@ esac
             &["--size", "huge"],
             &["--env", "NOVALUE"],
             &["--env", "1X=y"],
+            &["--env", "SYLPHX_ENVIRONMENT=orgs/o/projects/p/envs/e"],
             &["--allow-host", "a b"],
             &["/nonexistent-dir-for-test"],
         ] {

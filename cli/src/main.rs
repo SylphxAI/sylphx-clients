@@ -608,8 +608,8 @@ async fn auth_enable(
     format: Format,
 ) -> Result<(), Failure> {
     let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    let link = match context::find_link(&cwd) {
-        Some((_, l)) => l,
+    let link = match context::default_link(&cwd).map_err(Failure::Usage)? {
+        Some(l) => l,
         None => Link::from_whoami(&client.invoke("access.whoami", json!({})).await?),
     };
     // Full names may carry slugs; resolve them to ids first.
@@ -869,7 +869,8 @@ fn read_json_arg(s: &str) -> Result<Value, String> {
     serde_json::from_str(&text).map_err(|e| format!("not JSON: {e}"))
 }
 
-/// Defaults for names and parents: the linked project, else the key's scope.
+/// Defaults for names and parents: `SYLPHX_ENVIRONMENT`, else the linked project, else
+/// the key's scope.
 struct Defaults<'c> {
     client: &'c Client,
     link: Option<Link>,
@@ -882,8 +883,8 @@ impl Defaults<'_> {
         })?;
         if self.link.is_none() {
             let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-            self.link = Some(match context::find_link(&cwd) {
-                Some((_, l)) => l,
+            self.link = Some(match context::default_link(&cwd).map_err(Failure::Usage)? {
+                Some(l) => l,
                 None => Link::from_whoami(&self.client.invoke("access.whoami", json!({})).await?),
             });
         }

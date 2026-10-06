@@ -28,6 +28,9 @@ sylphx mcp                            # the MCP server over stdio
   linked project, else the key's scope. The link is the nearest
   `.sylphx/project.json` naming an org, project or env; a file in another
   shape (such as `{orgId, projectId}`) is skipped with a warning.
+  `SYLPHX_ENVIRONMENT=orgs/…/projects/…/envs/…` (a full name) overrides the
+  link for that process, so a CI job or a build wrapper never depends on the
+  checkout's `.sylphx/project.json`.
 - Mutations wait for their Operation (`--no-wait` to skip); `--dry-run` sets
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).

@@ -120,6 +120,7 @@ impl Sandbox {
             .env("SYLPHX_API_KEY", "sylphx_sk_test")
             .env("SYLPHX_BUILD_CACHE_URL", "http://127.0.0.1:9")
             .env("SYLPHX_CONFIG_DIR", self.dir.join("config"))
+            .env_remove("SYLPHX_ENVIRONMENT")
             .stdin(Stdio::null());
         c
     }
@@ -369,6 +370,56 @@ async fn revenue_summary_reads_the_linked_orgs_revenue() {
         line.contains("period=mtd") && line.contains("split=source"),
         "{line}"
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn sylphx_env_overrides_the_link_file() {
+    let other = "orgs/org_b/projects/prj_b/envs/env_b";
+    let (url, log) = serve(vec![(200, json!({"databases": []}))]).await;
+    let sb = Sandbox::new("env-override");
+    let mut c = sb.cmd(&url, &["data", "databases", "list"]);
+    c.env("SYLPHX_ENVIRONMENT", other);
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let seen = log.lock().unwrap();
+    assert!(
+        seen[0]
+            .line
+            .starts_with(&format!("GET /v1/{other}/databases")),
+        "{}",
+        seen[0].line
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn sylphx_env_of_another_shape_is_a_usage_error_and_calls_nothing() {
+    let (url, log) = serve(vec![]).await;
+    let sb = Sandbox::new("env-bad");
+    for bad in [
+        "orgs/org_b/projects/prj_b",
+        "env_b",
+        "orgs//projects/p/envs/e",
+        "orgs/o/projects/p/envs/e/x",
+    ] {
+        let mut c = sb.cmd(&url, &["data", "databases", "list"]);
+        c.env("SYLPHX_ENVIRONMENT", bad);
+        let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+            .await
+            .unwrap();
+        assert!(!out.status.success(), "{bad}");
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            err.contains("SYLPHX_ENVIRONMENT must be a full environment name"),
+            "{bad}: {err}"
+        );
+    }
+    assert!(log.lock().unwrap().is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread")]

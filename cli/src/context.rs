@@ -214,6 +214,45 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::write(path, bytes)
 }
 
+/// The variable that names the default environment for this process,
+/// before any `.sylphx/project.json`.
+pub const ENV_VAR: &str = "SYLPHX_ENVIRONMENT";
+
+impl Link {
+    /// The link a full environment name implies:
+    /// `orgs/{org}/projects/{project}/envs/{env}`, every segment non-empty.
+    pub fn from_env_name(name: &str) -> Option<Self> {
+        let parts: Vec<&str> = name.split('/').collect();
+        match parts.as_slice() {
+            ["orgs", o, "projects", p, "envs", e]
+                if !o.is_empty() && !p.is_empty() && !e.is_empty() =>
+            {
+                Some(Self {
+                    org: format!("orgs/{o}"),
+                    project: format!("orgs/{o}/projects/{p}"),
+                    env: name.to_string(),
+                })
+            }
+            _ => None,
+        }
+    }
+}
+
+/// The default link for commands run in `start`: `SYLPHX_ENVIRONMENT` when it is set
+/// (the Vercel CLI model, where `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`
+/// override `.vercel/project.json`, so a CI job or a build wrapper never
+/// depends on the checkout's link), else the nearest link file. `None` means
+/// neither: the caller falls back to the key's own scope. A set variable of
+/// another shape is an error, never silently ignored.
+pub fn default_link(start: &Path) -> Result<Option<Link>, String> {
+    match std::env::var(ENV_VAR) {
+        Ok(v) if !v.trim().is_empty() => Link::from_env_name(v.trim()).map(Some).ok_or_else(|| {
+            format!("{ENV_VAR} must be a full environment name, orgs/{{org}}/projects/{{project}}/envs/{{env}}")
+        }),
+        _ => Ok(find_link(start).map(|(_, l)| l)),
+    }
+}
+
 /// The nearest `.sylphx/project.json` at or above `start` that names an org,
 /// project or env.
 ///
