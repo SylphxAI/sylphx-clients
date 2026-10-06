@@ -145,8 +145,11 @@ fi
 /// Makes `$W/tree` a git work tree: the real `.git` stays home (its packs
 /// would cost more than the tree), so the guest keeps its own repository in
 /// the warm workspace, created once with `git init`, and each run stages the
-/// synced tree (`git add -A`, only the changed files once warm) and commits
-/// it, the message naming the local `HEAD` (`SYLPHX_BUILD_GIT_HEAD`). The
+/// synced tree (`git add -A`, only the changed files once warm) and points
+/// `HEAD` at one parentless commit of it, the message naming the local
+/// `HEAD` (`SYLPHX_BUILD_GIT_HEAD`). Each run replaces that commit rather
+/// than adding to a history, and `git gc --auto` prunes the replaced ones, so
+/// a long-lived warm workspace does not grow per run. The
 /// sync never sends or deletes `.git` ([`sync::plan`], [`sync::APPLY`]).
 /// Bounded and fail-open: a missing `git` or a failed step prints one
 /// `sylphx: warning:` line and the command still runs.
@@ -159,7 +162,8 @@ macro_rules! git_tree {
     cd "$1" || exit 1
     g() { git -c init.defaultBranch=main -c core.hooksPath=/dev/null -c commit.gpgsign=false -c user.name=sylphx -c user.email=build@sylphx.invalid "$@"; }
     if [ ! -d .git ]; then g init -q && mkdir -p .git/info && printf "/target\n" >> .git/info/exclude || exit 1; fi
-    g add -A && g commit -q --allow-empty --no-verify -m "sylphx build run of $2"
+    g add -A && t=$(g write-tree) && c=$(g commit-tree "$t" -m "sylphx build run of $2") && g update-ref --no-deref HEAD "$c" || exit 1
+    g -c gc.pruneExpire=now gc --auto --quiet
   ' sylphx-git "$W/tree" "${SYLPHX_BUILD_GIT_HEAD:-an unknown commit}" > "$W/.sylphx/git.log" 2>&1; then
     echo "sylphx: warning: the tree on the build machine is not a git work tree, so git calls in the command fail: $(tail -n 1 "$W/.sylphx/git.log" 2>/dev/null)" >&2
   fi
@@ -1995,7 +1999,7 @@ mod tests {
     }
 
     #[test]
-    fn a_warm_workspace_keeps_its_repository_and_commits_only_changes() {
+    fn a_warm_workspace_keeps_one_commit_of_the_current_tree() {
         let w = Ws::new("git-warm");
         w.file("tree/keep.txt", "keep\n");
         w.file("tree/edit.txt", "v1\n");
@@ -2006,10 +2010,14 @@ mod tests {
             ".",
             SYS_PATH,
             &[],
-            "git rev-list --count HEAD && git log -1 --format=%s && git show --name-only --format= HEAD",
+            "git rev-list --count --all && git log -1 --format=%s && git status --porcelain && git show HEAD:edit.txt && git ls-files",
         );
         assert_eq!(code, 0, "{err}");
-        assert_eq!(out, "2\nsylphx build run of an unknown commit\nedit.txt\n");
+        // One commit however many runs: the warm repository does not grow per run.
+        assert_eq!(
+            out,
+            "1\nsylphx build run of an unknown commit\nv2\nedit.txt\nkeep.txt\n"
+        );
         assert!(!err.contains("warning"), "{err}");
     }
 
