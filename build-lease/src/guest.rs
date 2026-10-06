@@ -4,6 +4,14 @@
 //! and HTTP `/files`. The lease is named by the `E2b-Sandbox-Id` header and
 //! the caller by a lease token in `X-Access-Token`; the guest user travels as
 //! HTTP Basic, as the E2B SDKs send it.
+//!
+//! A process stream crosses two proxies (the Sandboxes api and the Cell),
+//! and a rolling deploy of either ends every stream through it while the
+//! process runs on. Each process is started with a tag, so a broken stream
+//! is reattached to the same process with `process.Process/Connect`
+//! ([`Guest::reattach`]), as the E2B SDKs' `commands.connect` does, instead
+//! of the command being run again. envd keeps a finished process's exit
+//! event for 30 s, so a reattach just after the end still reads the status.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -204,6 +212,25 @@ fn net(e: reqwest::Error) -> Fault {
     Fault::Gone(format!("guest unreachable: {e}"))
 }
 
+/// envd sends a keepalive event on a quiet process stream this often (its
+/// `Keepalive-Ping-Interval` header, in seconds), so a silent command still
+/// moves bytes through every proxy and a dead connection is noticed.
+const KEEPALIVE_PING_SECS: &str = "30";
+
+/// How long [`Guest::reattach_within`] keeps trying to reach a process
+/// whose stream broke: a proxy's rolling deploy takes seconds, and envd keeps
+/// an ended process's exit status for 30 s.
+pub const REATTACH_BUDGET: Duration = Duration::from_secs(90);
+
+/// The waits between reattach attempts; the last one repeats.
+const REATTACH_BACKOFF: [Duration; 5] = [
+    Duration::from_secs(0),
+    Duration::from_secs(1),
+    Duration::from_secs(2),
+    Duration::from_secs(4),
+    Duration::from_secs(8),
+];
+
 /// A started process: read its events with [`Proc::next`].
 pub struct Proc {
     resp: reqwest::Response,
@@ -211,6 +238,23 @@ pub struct Proc {
     pending: std::collections::VecDeque<Event>,
     /// Bytes received, for `bytes_down`.
     pub bytes: u64,
+    /// The tag the process was started with; [`Guest::reattach`] finds it by
+    /// this.
+    tag: String,
+    user: String,
+    /// The process's pid, once its start event arrived: the command started.
+    pub pid: Option<u64>,
+}
+
+/// What [`Guest::reattach`] found.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Reattach {
+    /// The stream follows the process again; output it wrote while no
+    /// stream was attached is not replayed.
+    Attached,
+    /// envd knows no process with the tag: it never started, or it ended
+    /// more than 30 s before the reattach.
+    NotRunning,
 }
 
 impl Proc {
@@ -223,7 +267,12 @@ impl Proc {
             match self.resp.chunk().await {
                 Ok(Some(c)) => {
                     self.bytes += c.len() as u64;
-                    self.pending.extend(self.frames.push(&c));
+                    for e in self.frames.push(&c) {
+                        if let Event::Start(pid) = e {
+                            self.pid = Some(pid);
+                        }
+                        self.pending.push_back(e);
+                    }
                 }
                 Ok(None) => return Ok(None),
                 Err(e) => return Err(Fault::Stream(format!("the process stream broke: {e}"))),
@@ -314,7 +363,8 @@ impl Guest {
             .map_err(|e| Fault::Gone(format!("the download broke: {e}")))
     }
 
-    /// Starts `argv` in `cwd` as `user`, streaming its output.
+    /// Starts `argv` in `cwd` as `user`, streaming its output. The process
+    /// gets a fresh tag, so its stream can be reattached.
     pub async fn start(
         &self,
         user: &str,
@@ -322,15 +372,37 @@ impl Guest {
         cwd: &str,
         env: &BTreeMap<String, String>,
     ) -> Result<Proc, Fault> {
+        let tag = format!("sylphx-{:016x}", rand_u64());
         let mut process = json!({"cmd": argv[0], "args": &argv[1..], "envs": env});
         if !cwd.is_empty() {
             process["cwd"] = json!(cwd);
         }
         let resp = self
-            .req(reqwest::Method::POST, "process.Process/Start", user)
+            .stream(
+                "process.Process/Start",
+                user,
+                &json!({"process": process, "tag": tag}),
+            )
+            .await?;
+        Ok(Proc {
+            resp,
+            frames: Frames::default(),
+            pending: Default::default(),
+            bytes: 0,
+            tag,
+            user: user.to_string(),
+            pid: None,
+        })
+    }
+
+    /// Opens a process server stream (`Start`, `Connect`).
+    async fn stream(&self, rpc: &str, user: &str, msg: &Value) -> Result<reqwest::Response, Fault> {
+        let resp = self
+            .req(reqwest::Method::POST, rpc, user)
             .header("content-type", "application/connect+json")
             .header("connect-protocol-version", "1")
-            .body(envelope(&json!({"process": process})))
+            .header("keepalive-ping-interval", KEEPALIVE_PING_SECS)
+            .body(envelope(msg))
             .send()
             .await
             .map_err(net)?;
@@ -338,12 +410,84 @@ impl Guest {
             let s = resp.status();
             return Err(fault(s, &resp.text().await.unwrap_or_default()));
         }
-        Ok(Proc {
+        Ok(resp)
+    }
+
+    /// Points `p` at its process again after its stream broke
+    /// (`process.Process/Connect` by tag). The events that follow come from
+    /// the process as it is now, starting with a start event; output written
+    /// while nothing was attached is lost. One attempt: see
+    /// [`Guest::reattach_within`].
+    pub async fn reattach(&self, p: &mut Proc) -> Result<Reattach, Fault> {
+        let resp = self
+            .stream(
+                "process.Process/Connect",
+                &p.user,
+                &json!({"process": {"tag": p.tag}}),
+            )
+            .await?;
+        let mut next = Proc {
             resp,
             frames: Frames::default(),
             pending: Default::default(),
             bytes: 0,
-        })
+            tag: p.tag.clone(),
+            user: p.user.clone(),
+            pid: None,
+        };
+        // The first event tells: a start event (the process, or its retained
+        // end) or an error (no such process).
+        let first = next.next().await;
+        p.bytes += next.bytes;
+        match first {
+            Ok(Some(Event::Start(pid))) => {
+                p.resp = next.resp;
+                p.frames = next.frames;
+                p.pending = next.pending;
+                // Passed on, so a caller that never saw the first start event
+                // learns the pid it signals.
+                p.pending.push_front(Event::Start(pid));
+                p.pid = Some(pid);
+                Ok(Reattach::Attached)
+            }
+            Ok(Some(Event::Error(_))) => Ok(Reattach::NotRunning),
+            Ok(Some(_)) | Ok(None) => Err(Fault::Stream(
+                "the reattached stream did not start with the process".into(),
+            )),
+            Err(f) => Err(f),
+        }
+    }
+
+    /// [`Guest::reattach`], tried again on a fault (a proxy restarting, the
+    /// guest briefly unreachable) until `budget` has passed. The last fault
+    /// is the error: the caller asks the lease whether the machine is gone.
+    pub async fn reattach_within(&self, p: &mut Proc, budget: Duration) -> Result<Reattach, Fault> {
+        let deadline = tokio::time::Instant::now() + budget;
+        let mut i = 0;
+        loop {
+            let wait = REATTACH_BACKOFF[i.min(REATTACH_BACKOFF.len() - 1)];
+            i += 1;
+            if tokio::time::Instant::now() + wait > deadline {
+                return Err(Fault::Stream(format!(
+                    "the process stream could not be reattached within {}s",
+                    budget.as_secs()
+                )));
+            }
+            tokio::time::sleep(wait).await;
+            // Each attempt is bounded too: a proxy that accepts and then
+            // answers nothing must not hold the run past the budget.
+            match tokio::time::timeout_at(deadline, self.reattach(p)).await {
+                Ok(Ok(r)) => return Ok(r),
+                Ok(Err(f)) if tokio::time::Instant::now() >= deadline => return Err(f),
+                Ok(Err(_)) => {}
+                Err(_) => {
+                    return Err(Fault::Stream(format!(
+                        "the process stream could not be reattached within {}s",
+                        budget.as_secs()
+                    )))
+                }
+            }
+        }
     }
 
     /// Runs `argv` to its end and answers its exit code and output.
@@ -533,5 +677,145 @@ mod tests {
             matches!(got, Err(Fault::Stream(ref m)) if m.contains("stream broke")),
             "{got:?}"
         );
+    }
+
+    /// Reads one request (headers and a content-length body) and answers
+    /// its path and body.
+    async fn read_request(c: &mut tokio::net::TcpStream) -> (String, String) {
+        use tokio::io::AsyncReadExt;
+        let mut buf = Vec::new();
+        let mut chunk = [0u8; 4096];
+        loop {
+            let n = c.read(&mut chunk).await.unwrap();
+            buf.extend_from_slice(&chunk[..n]);
+            let text = String::from_utf8_lossy(&buf).to_string();
+            if let Some(end) = text.find("\r\n\r\n") {
+                let len = text[..end]
+                    .lines()
+                    .find_map(|l| {
+                        l.to_ascii_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(|v| v.trim().parse::<usize>().unwrap())
+                    })
+                    .unwrap_or(0);
+                if buf.len() >= end + 4 + len {
+                    let path = text.split_whitespace().nth(1).unwrap().to_string();
+                    let body = String::from_utf8_lossy(&buf[end + 9..end + 4 + len]).to_string();
+                    return (path, body);
+                }
+            }
+            if n == 0 {
+                panic!("the client closed before its request ended");
+            }
+        }
+    }
+
+    fn chunked(frames: &[Vec<u8>]) -> Vec<u8> {
+        let mut out = b"HTTP/1.1 200 OK\r\ncontent-type: application/connect+json\r\ntransfer-encoding: chunked\r\n\r\n".to_vec();
+        for f in frames {
+            out.extend(format!("{:x}\r\n", f.len()).into_bytes());
+            out.extend(f);
+            out.extend(b"\r\n");
+        }
+        out
+    }
+
+    /// A proxy restart drops the start stream mid-command; the run follows the
+    /// same process (Connect by the start's tag) and reads its exit status,
+    /// with no second start.
+    #[tokio::test]
+    async fn a_broken_stream_is_reattached_to_the_same_process() {
+        use tokio::io::AsyncWriteExt;
+        let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = l.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut c, _) = l.accept().await.unwrap();
+            let (path, body) = read_request(&mut c).await;
+            assert_eq!(path, "/process.Process/Start");
+            let tag = serde_json::from_str::<Value>(&body).unwrap()["tag"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            let mut resp = chunked(&[
+                frame(0, json!({"event": {"start": {"pid": 7}}})),
+                frame(0, json!({"event": {"data": {"stdout": B64.encode("a")}}})),
+            ]);
+            resp.extend(b"40\r\npart");
+            c.write_all(&resp).await.unwrap();
+            drop(c);
+            let (mut c, _) = l.accept().await.unwrap();
+            let (path, body) = read_request(&mut c).await;
+            assert_eq!(path, "/process.Process/Connect");
+            assert_eq!(
+                serde_json::from_str::<Value>(&body).unwrap(),
+                json!({"process": {"tag": tag}})
+            );
+            let mut resp = chunked(&[
+                frame(0, json!({"event": {"start": {"pid": 7}}})),
+                frame(0, json!({"event": {"data": {"stdout": B64.encode("b")}}})),
+                frame(
+                    0,
+                    json!({"event": {"end": {"exitCode": 3, "exited": true, "status": "exit status 3"}}}),
+                ),
+                frame(2, json!({})),
+            ]);
+            resp.extend(b"0\r\n\r\n");
+            c.write_all(&resp).await.unwrap();
+        });
+        let g = Guest::new(&format!("http://{addr}"), "sbx", "tok").unwrap();
+        let mut p = g
+            .start("user", &["cargo".to_string()], "", &BTreeMap::new())
+            .await
+            .unwrap();
+        assert_eq!(p.next().await.unwrap(), Some(Event::Start(7)));
+        assert_eq!(p.next().await.unwrap(), Some(Event::Stdout(b"a".to_vec())));
+        assert!(matches!(p.next().await, Err(Fault::Stream(_))));
+        assert_eq!(
+            g.reattach_within(&mut p, Duration::from_secs(10))
+                .await
+                .unwrap(),
+            Reattach::Attached
+        );
+        assert_eq!(p.next().await.unwrap(), Some(Event::Start(7)));
+        assert_eq!(p.next().await.unwrap(), Some(Event::Stdout(b"b".to_vec())));
+        assert_eq!(p.next().await.unwrap(), Some(Event::End(3)));
+        server.await.unwrap();
+    }
+
+    /// A process envd does not know (never started, or ended over 30 s ago)
+    /// is reported, not waited for.
+    #[tokio::test]
+    async fn reattaching_to_an_unknown_process_says_so() {
+        use tokio::io::AsyncWriteExt;
+        let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = l.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut c, _) = l.accept().await.unwrap();
+            read_request(&mut c).await;
+            c.write_all(&chunked(&[])).await.unwrap();
+            drop(c);
+            let (mut c, _) = l.accept().await.unwrap();
+            read_request(&mut c).await;
+            let mut resp = chunked(&[frame(
+                2,
+                json!({"error": {"code": "not_found", "message": "process with tag sylphx-1 not found"}}),
+            )]);
+            resp.extend(b"0\r\n\r\n");
+            c.write_all(&resp).await.unwrap();
+        });
+        let g = Guest::new(&format!("http://{addr}"), "sbx", "tok").unwrap();
+        let mut p = g
+            .start("user", &["true".to_string()], "", &BTreeMap::new())
+            .await
+            .unwrap();
+        assert!(matches!(p.next().await, Err(Fault::Stream(_)) | Ok(None)));
+        assert_eq!(p.pid, None);
+        assert_eq!(
+            g.reattach_within(&mut p, Duration::from_secs(10))
+                .await
+                .unwrap(),
+            Reattach::NotRunning
+        );
+        assert_eq!(p.pid, None);
     }
 }

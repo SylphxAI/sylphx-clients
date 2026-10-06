@@ -7,10 +7,13 @@
 //! and repository), leases a `build-<size>` machine with it mounted at
 //! [`WS`], sends only the files that differ from the workspace's manifest
 //! ([`sync`]), runs the command next to the warm `target/`, and always
-//! releases the lease. A preempted or lost run, or one whose output stream
-//! broke, is retried once after a short backoff. Anything that fails before
-//! the command starts (the machine, the sync, the toolchain install) is a
-//! platform failure, 125; once it has started, its own status is the exit code.
+//! releases the lease. Before the command starts, a preempted or lost
+//! machine, or a broken stream, is retried once after a short backoff, and
+//! anything that fails (the machine, the sync, the toolchain install) is a
+//! platform failure, 125. Once the command has started it is never run
+//! again: its own status is the exit code, a broken output stream is
+//! reattached to the running command (`Guest::reattach`), and a machine lost
+//! under it ends the run with 137, as a killed process.
 //!
 //! `--region` runs in that region's Cell, with that region's warm workspaces
 //! (a Volume lives in one Cell); no `--region` is the project's home region.
@@ -22,7 +25,9 @@
 //! 125, retryable, so a caller can try another region.
 //!
 //! Exit codes: the command's own; 2 usage; 124 `--timeout`; 125 a platform
-//! failure (with `retryable` in the `result` event); 130 interrupted.
+//! failure before the command started (with `retryable` in the `result`
+//! event); 130 interrupted; 137 the machine was lost after the command
+//! started.
 
 mod image;
 mod remote;
@@ -44,7 +49,7 @@ use sylphx::{Client, HttpRequest};
 use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
-use sylphx_build_lease::guest::{Event, Fault, Guest};
+use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
 use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
 use sylphx_build_lease::{
     allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
@@ -59,6 +64,10 @@ pub fn image_command() -> Command {
 pub const EXIT_TIMEOUT: u8 = 124;
 pub const EXIT_PLATFORM: u8 = 125;
 pub const EXIT_INTERRUPTED: u8 = 130;
+/// The command started and its machine was lost: 128 + SIGKILL, as a shell
+/// reports a process the kernel killed, never 125 (that is only for anything
+/// before the command starts).
+pub const EXIT_LOST: u8 = 137;
 
 const USER: &str = "user";
 const SIZES: [&str; 3] = ["standard", "large", "xlarge"];
@@ -106,7 +115,7 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted.\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo builds as CI does, with CARGO_INCREMENTAL=0 and CARGO_PROFILE_DEV_DEBUG=0 unless --env sets them.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -380,6 +389,9 @@ pub enum Outcome {
         reason: String,
         retryable: bool,
     },
+    /// The command started and the run lost it (the machine ended under
+    /// it): it is not run again, and the run exits as a killed process does.
+    Lost(String),
 }
 
 impl Outcome {
@@ -390,6 +402,7 @@ impl Outcome {
             Outcome::TimedOut => EXIT_TIMEOUT,
             Outcome::Interrupted => EXIT_INTERRUPTED,
             Outcome::Platform { .. } => EXIT_PLATFORM,
+            Outcome::Lost(_) => EXIT_LOST,
         }
     }
 
@@ -400,6 +413,7 @@ impl Outcome {
             Outcome::TimedOut => "timed_out",
             Outcome::Interrupted => "interrupted",
             Outcome::Platform { .. } => "platform_error",
+            Outcome::Lost(_) => "lost",
         }
     }
 
@@ -610,14 +624,14 @@ fn result_event(outcome: &Outcome, s: &Stats, ms: u64) -> Value {
         "type": "result",
         "exit_code": outcome.code(),
         "outcome": outcome.name(),
-        "retryable": matches!(outcome, Outcome::Platform { retryable: true, .. }),
+        "retryable": matches!(outcome, Outcome::Platform { retryable: true, .. } | Outcome::Lost(_)),
         "duration_ms": ms,
         "workspace": if s.warm { "warm" } else { "cold" },
         "bytes_up": s.bytes_up,
         "bytes_down": s.bytes_down,
         "from_store": s.from_store,
     });
-    if let Outcome::Platform { reason, .. } = outcome {
+    if let Outcome::Platform { reason, .. } | Outcome::Lost(reason) = outcome {
         result["error"] = json!(reason);
     }
     if let Some(image) = &s.image {
@@ -635,12 +649,18 @@ fn finish(out: &Out, outcome: &Outcome, s: &Stats, t0: Instant) -> Result<(), Fa
             if *retryable { " [retryable]" } else { "" }
         );
     }
+    if let Outcome::Lost(reason) = outcome {
+        eprintln!(
+            "sylphx: error: {reason} after the command started; it was not run again [retryable]"
+        );
+    }
     out.event(result_event(outcome, s, ms));
     let what = match outcome {
         Outcome::Ran(c) => format!("exit {c}"),
         Outcome::TimedOut => "timed out".into(),
         Outcome::Interrupted => "interrupted".into(),
         Outcome::Platform { .. } => "platform failure".into(),
+        Outcome::Lost(_) => "lost the machine".into(),
     };
     let arts = match s.artifacts {
         0 => String::new(),
@@ -742,6 +762,7 @@ async fn execute(
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
         no_volumes: false,
+        empty_next: AtomicBool::new(false),
     };
     let mut retries = Retries::default();
     loop {
@@ -760,8 +781,8 @@ async fn execute(
 /// again in the same instant.
 const RETRY_BACKOFF: Duration = Duration::from_secs(5);
 
-/// The one retry a run gets, whatever lost it: a machine preempted or lost,
-/// or a process stream that broke.
+/// The one retry a run gets before its command starts, whatever lost it: a
+/// machine preempted or lost, or a process stream that broke.
 #[derive(Default)]
 struct Retries {
     used: bool,
@@ -790,6 +811,22 @@ impl Retries {
     }
 }
 
+/// Why [`Run::exec`] lost the command, and whether it had started: only a
+/// command that never started may be run again.
+struct ExecFault {
+    started: bool,
+    fault: Fault,
+}
+
+impl ExecFault {
+    fn before(fault: Fault) -> Self {
+        ExecFault {
+            started: false,
+            fault,
+        }
+    }
+}
+
 enum Attempt {
     Done(Outcome),
     /// The machine was preempted or lost: worth one more try.
@@ -814,6 +851,9 @@ struct Run<'a> {
     /// The region refused a workspace Volume (`SHAPE_NOT_OFFERED`): every
     /// attempt of this run leases a machine without one.
     no_volumes: bool,
+    /// The last attempt ran out of space before its command started: the
+    /// retry empties its workspace first.
+    empty_next: AtomicBool,
 }
 
 /// A ready machine with its workspace.
@@ -858,11 +898,16 @@ impl Run<'_> {
         let (cache, store) = self.cache().await;
         let warm = match self.sync(&guest, &m, store.as_ref()).await {
             Ok(w) => w,
+            Err(e) if out_of_space(e.text()) => return self.out_of_space(&name).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
         // An image build needs no Rust toolchain.
         if self.o.image.is_none() {
             if let Err(a) = self.provision(&guest, &name, &cache).await {
+                if matches!(&a, Attempt::Done(Outcome::Platform { reason, .. }) if out_of_space(reason))
+                {
+                    return self.out_of_space(&name).await;
+                }
                 return a;
             }
         }
@@ -895,7 +940,14 @@ impl Run<'_> {
         let code = match ran {
             Ok(Some(c)) => c,
             Ok(None) => return Attempt::Done(Outcome::TimedOut),
-            Err(e) => return self.lost_or(&name, e).await,
+            Err(ExecFault {
+                started: false,
+                fault,
+            }) => return self.lost_or(&name, fault).await,
+            Err(ExecFault {
+                started: true,
+                fault,
+            }) => return self.lost_after_start(&name, fault).await,
         };
         if self.o.image.is_some() && code == 0 {
             if let Err(o) = self.collect_image(&guest, &name).await {
@@ -1038,6 +1090,36 @@ impl Run<'_> {
                 Attempt::Done(Outcome::platform(reason, retryable))
             }
         }
+    }
+
+    /// The workspace ran out of space before the command started: end this
+    /// machine and retry once on an emptied workspace (a fresh one in all
+    /// but its Volume). A second time is 125, as any loss before the start.
+    async fn out_of_space(&self, name: &str) -> Attempt {
+        self.empty_next.store(true, Ordering::Relaxed);
+        self.held.with(|h| {
+            h.proc = None;
+            h.lease = None;
+        });
+        release(self.client, name).await;
+        Attempt::Lost("the workspace ran out of space".into())
+    }
+
+    /// The command started and the run lost it: the machine ended, or the
+    /// command cannot be followed. It is never run again (it may have done
+    /// part of its work); the run ends as a killed process would.
+    async fn lost_after_start(&self, name: &str, f: Fault) -> Attempt {
+        let mut get = sbx::GetLeaseRequest::default();
+        get.name = name.to_string();
+        let lease = self.client.sandboxes().leases().get(get).await.ok();
+        let reason = lease
+            .as_ref()
+            .and_then(|l| l.status.as_ref())
+            .and_then(|s| s.end_reason.as_ref())
+            .map(|r| format!("the build machine ended: {}", r.as_str()))
+            .unwrap_or_else(|| f.text().to_string());
+        self.held.with(|h| h.proc = None);
+        Attempt::Done(Outcome::Lost(reason))
     }
 
     /// A ready lease of `build-<size>` with a workspace from the pool, or,
@@ -1406,10 +1488,19 @@ impl Run<'_> {
     ) -> Result<bool, Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
-        let (code, _, err) = g
+        let empty = self.empty_next.swap(false, Ordering::Relaxed);
+        let (code, out, err) = g
             .run(
                 "root",
-                &argv(&["/bin/sh", "-c", BOOTSTRAP, "bootstrap", WS]),
+                &argv(&[
+                    "/bin/sh",
+                    "-c",
+                    BOOTSTRAP,
+                    "bootstrap",
+                    WS,
+                    if m.volume { "1" } else { "0" },
+                    if empty { "1" } else { "0" },
+                ]),
                 &none,
             )
             .await?;
@@ -1418,6 +1509,15 @@ impl Run<'_> {
                 "preparing the workspace failed: {}",
                 String::from_utf8_lossy(&err).trim()
             )));
+        }
+        match String::from_utf8_lossy(&out).trim() {
+            "pruned" => self.out.progress(
+                "the workspace was short of space; removed its target/ (sccache refills it)",
+            ),
+            "emptied" if !empty => self
+                .out
+                .progress("the workspace was short of space; emptied it (a cold build)"),
+            _ => {}
         }
         let remote = if self.o.fresh {
             None
@@ -1556,6 +1656,8 @@ impl Run<'_> {
     }
 
     /// Runs the command, streaming its output; `None` when `--timeout` hit.
+    /// A broken stream is reattached to the running command; the error says
+    /// whether the command had started when the run lost it.
     async fn exec(
         &self,
         g: &mut Guest,
@@ -1563,7 +1665,7 @@ impl Run<'_> {
         lease: &str,
         volume: bool,
         cache: BTreeMap<String, String>,
-    ) -> Result<Option<i32>, Fault> {
+    ) -> Result<Option<i32>, ExecFault> {
         let mut args = vec![
             "/bin/sh".to_string(),
             "-c".into(),
@@ -1588,22 +1690,68 @@ impl Run<'_> {
             env.insert("SYLPHX_BUILD_GIT_HEAD".into(), sha);
         }
         env.extend(self.o.env.clone());
-        let mut p = g.start(USER, &args, "", &env).await?;
+        let mut p = g
+            .start(USER, &args, "", &env)
+            .await
+            .map_err(ExecFault::before)?;
         let deadline = tokio::time::Instant::now() + self.o.timeout;
         let mut tick = tokio::time::interval(KEEPALIVE);
         tick.tick().await;
+        let mut reattached = false;
         let result = loop {
             tokio::select! {
-                ev = p.next() => match ev? {
-                    Some(Event::Start(pid)) => {
+                ev = p.next() => match ev {
+                    Ok(Some(Event::Start(pid))) => {
                         let g2 = g.clone();
                         self.held.with(|h| h.proc = Some((g2, pid)));
                     }
-                    Some(Event::Stdout(b)) => self.out.stdout(&b),
-                    Some(Event::Stderr(b)) => self.out.stderr(&b),
-                    Some(Event::End(c)) => break Some(c),
-                    Some(Event::Error(m)) => return Err(Fault::Other(format!("the command could not run: {m}"))),
-                    None => return Err(Fault::Stream("the output stream closed before the command ended".into())),
+                    Ok(Some(Event::Stdout(b))) => self.out.stdout(&b),
+                    Ok(Some(Event::Stderr(b))) => self.out.stderr(&b),
+                    Ok(Some(Event::End(c))) => break Some(c),
+                    Ok(Some(Event::Error(m))) => {
+                        let f = Fault::Other(format!("the command could not run: {m}"));
+                        return Err(ExecFault { started: p.pid.is_some(), fault: f });
+                    }
+                    Ok(None) | Err(Fault::Stream(_)) => {
+                        // A proxy on the way restarted: follow the same
+                        // process again rather than running it twice.
+                        let broke = Instant::now();
+                        if let Ok(t) = self.token(lease).await {
+                            g.set_token(&t);
+                            *minted = Instant::now();
+                        }
+                        // `--timeout` still holds while the stream is down.
+                        let reattached_by = tokio::time::timeout_at(
+                            deadline,
+                            g.reattach_within(&mut p, REATTACH_BUDGET),
+                        )
+                        .await;
+                        let Ok(reattach) = reattached_by else {
+                            if let Some(pid) = p.pid {
+                                let _ = g.signal(pid, "SIGKILL").await;
+                            }
+                            break None;
+                        };
+                        match reattach {
+                            Ok(Reattach::Attached) => {
+                                let gap = broke.elapsed().as_millis() as u64;
+                                self.out.event(json!({"type": "reattached", "gap_ms": gap}));
+                                if !reattached {
+                                    reattached = true;
+                                    self.out.progress(&format!(
+                                        "warning: the output stream broke; reattached to the running command after {:.1} s (output written meanwhile is not shown)",
+                                        gap as f64 / 1000.0
+                                    ));
+                                }
+                            }
+                            Ok(Reattach::NotRunning) => {
+                                let f = Fault::Stream("the output stream broke and the command is no longer on the machine".into());
+                                return Err(ExecFault { started: p.pid.is_some(), fault: f });
+                            }
+                            Err(f) => return Err(ExecFault { started: p.pid.is_some(), fault: f }),
+                        }
+                    }
+                    Err(f) => return Err(ExecFault { started: p.pid.is_some(), fault: f }),
                 },
                 _ = tick.tick() => {
                     if minted.elapsed() >= TOKEN_RENEW {
@@ -1832,6 +1980,7 @@ fn scrub(outcome: Outcome, secrets: &[String]) -> Outcome {
             reason: build_cache::scrub(&reason, secrets),
             retryable,
         },
+        Outcome::Lost(reason) => Outcome::Lost(build_cache::scrub(&reason, secrets)),
         other => other,
     }
 }
@@ -1894,6 +2043,11 @@ fn vstate(v: &sbx::Volume) -> sbx::VolumeState {
         .as_ref()
         .and_then(|s| s.state.clone())
         .unwrap_or(sbx::VolumeState::Unknown(String::new()))
+}
+
+/// A failure text that says a disk was full (ENOSPC).
+fn out_of_space(text: &str) -> bool {
+    text.contains("No space left on device") || text.contains("ENOSPC")
 }
 
 fn argv(a: &[&str]) -> Vec<String> {
@@ -2391,6 +2545,147 @@ esac
         assert_eq!(err.matches("sylphx: warning:").count(), 1, "{err}");
         assert!(err.contains("has no git"), "{err}");
         assert!(!w.0.join("tree/.git").exists());
+    }
+
+    /// A fake `df -Pk <dir>` for a 100 GiB Volume whose free space is 10 GiB
+    /// while `target/` exists and 12 GiB while `sccache/` does (each
+    /// independently short of 15 GiB); with both gone, 90 GiB.
+    fn full_workspace_df(w: &Ws, sccache_full: bool) -> String {
+        let script = format!(
+            "#!/bin/sh\nd=$2\nfree=94371840\n[ -e \"$d/target\" ] && free=10485760\n{}echo 'Filesystem 1024-blocks Used Available Capacity Mounted'\necho \"/dev/vdb 104857600 0 $free 0% $d\"\n",
+            if sccache_full {
+                "[ -e \"$d/sccache\" ] && free=12582912\n"
+            } else {
+                ""
+            }
+        );
+        w.file("fakedf/df", &script);
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(
+            w.0.join("fakedf/df"),
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+        format!("{}:{SYS_PATH}", w.0.join("fakedf").display())
+    }
+
+    fn bootstrap(w: &Ws, path: &str, args: &[&str]) -> (i32, String, String) {
+        let out = std::process::Command::new("/bin/sh")
+            .args(["-c", BOOTSTRAP, "bootstrap"])
+            .arg(w.0.join("ws"))
+            .args(args)
+            .env_clear()
+            .env("PATH", path)
+            .output()
+            .unwrap();
+        (
+            out.status.code().unwrap_or(-1),
+            String::from_utf8_lossy(&out.stdout).into_owned(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    }
+
+    #[test]
+    fn a_nearly_full_workspace_loses_its_target_and_keeps_its_tree() {
+        let w = Ws::new("ws-prune");
+        w.file("ws/target/debug/big", "x");
+        w.file("ws/sccache/a", "x");
+        w.file("ws/tree/a.rs", "fn a() {}\n");
+        w.file("ws/.sylphx/manifest", "a.rs\n");
+        let path = full_workspace_df(&w, false);
+        let (code, out, err) = bootstrap(&w, &path, &["1", "0"]);
+        assert_eq!((code, out.trim()), (0, "pruned"), "{err}");
+        assert!(!w.0.join("ws/target").exists());
+        assert!(w.0.join("ws/sccache/a").exists());
+        assert!(w.0.join("ws/tree/a.rs").exists());
+        assert!(w.0.join("ws/.sylphx/manifest.gz").exists(), "still warm");
+    }
+
+    #[test]
+    fn a_workspace_still_short_after_pruning_is_emptied_into_a_fresh_one() {
+        let w = Ws::new("ws-empty");
+        w.file("ws/target/debug/big", "x");
+        w.file("ws/sccache/a", "x");
+        w.file("ws/tree/a.rs", "fn a() {}\n");
+        w.file("ws/.sylphx/manifest", "a.rs\n");
+        let path = full_workspace_df(&w, true);
+        let (code, out, err) = bootstrap(&w, &path, &["1", "0"]);
+        assert_eq!((code, out.trim()), (0, "emptied"), "{err}");
+        let left: Vec<_> = std::fs::read_dir(w.0.join("ws"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        assert_eq!(left, [".sylphx"], "no manifest, so the next sync is cold");
+        assert!(!w.0.join("ws/.sylphx/manifest.gz").exists());
+    }
+
+    #[test]
+    fn a_workspace_with_room_or_without_a_volume_is_left_alone() {
+        let w = Ws::new("ws-room");
+        w.file("ws/target/debug/big", "x");
+        w.file("ws/.sylphx/manifest", "a.rs\n");
+        let path = full_workspace_df(&w, false);
+        // No Volume (the machine's own disk): never checked.
+        let (code, out, err) = bootstrap(&w, &path, &["0", "0"]);
+        assert_eq!((code, out.as_str()), (0, ""), "{err}");
+        assert!(w.0.join("ws/target/debug/big").exists());
+        // The retry after running out of space empties it whatever df says.
+        let (code, out, err) = bootstrap(&w, &path, &["0", "1"]);
+        assert_eq!((code, out.trim()), (0, "emptied"), "{err}");
+    }
+
+    #[test]
+    fn a_volume_too_small_even_when_empty_stops_before_the_sync() {
+        let w = Ws::new("ws-small");
+        w.file(
+            "fakedf/df",
+            "#!/bin/sh\necho 'Filesystem 1024-blocks Used Available Capacity Mounted'\necho \"/dev/vdb 20971520 0 10485760 50% $2\"\n",
+        );
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(
+            w.0.join("fakedf/df"),
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+        let path = format!("{}:{SYS_PATH}", w.0.join("fakedf").display());
+        std::fs::create_dir_all(w.0.join("ws")).unwrap();
+        let (code, _, err) = bootstrap(&w, &path, &["1", "0"]);
+        assert_eq!(
+            code,
+            sylphx_build_lease::scripts::BOOTSTRAP_TOO_SMALL,
+            "{err}"
+        );
+        assert!(
+            err.contains("too little free space even when empty"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn the_bootstrap_floor_matches_the_named_limits() {
+        use sylphx_build_lease::scripts::{WORKSPACE_MIN_FREE_GIB, WORKSPACE_MIN_FREE_PERCENT};
+        assert!(BOOTSTRAP.contains(&format!(
+            "MIN_GIB={WORKSPACE_MIN_FREE_GIB} MIN_PCT={WORKSPACE_MIN_FREE_PERCENT}"
+        )));
+        assert!(out_of_space("gzip: stdout: No space left on device"));
+        assert!(!out_of_space("guest answered 503"));
+    }
+
+    #[test]
+    fn cargo_builds_as_ci_does_unless_the_caller_says_otherwise() {
+        let w = Ws::new("cargo-env");
+        w.file("tree/a.txt", "a\n");
+        let show =
+            r#"echo "inc=${CARGO_INCREMENTAL-unset} debug=${CARGO_PROFILE_DEV_DEBUG-unset}""#;
+        let (code, out, err) = w.run(".", SYS_PATH, &[], show);
+        assert_eq!((code, out.as_str()), (0, "inc=0 debug=0\n"), "{err}");
+        let (code, out, err) = w.run(
+            ".",
+            SYS_PATH,
+            &[("CARGO_INCREMENTAL", "1"), ("CARGO_PROFILE_DEV_DEBUG", "")],
+            show,
+        );
+        assert_eq!((code, out.as_str()), (0, "inc=1 debug=\n"), "{err}");
     }
 
     impl Drop for Ws {

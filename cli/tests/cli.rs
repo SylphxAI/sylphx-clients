@@ -1472,32 +1472,22 @@ async fn build_run_exits_125_when_the_toolchain_cannot_be_installed() {
     assert!(lines[10].contains(":release"), "{lines:?}");
 }
 
-/// A broken output stream is retried once, on a new machine after a backoff;
-/// when the retry runs, its own exit code is the run's.
+/// A process stream that breaks after the command started (a proxy on the way
+/// restarted) is reattached to the same process: no second start, no second
+/// machine, and the command's own exit code.
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_retries_a_broken_stream_once_and_keeps_the_commands_exit_code() {
-    let sb = Sandbox::new("stream-retry");
+async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
+    let sb = Sandbox::new("stream-reattach");
     project(&sb.dir);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    let lease_state = |state: &str| {
-        (
-            200u16,
-            "application/json",
-            json!({"name": format!("{ENV}/leases/l1"), "status": {"state": state}})
-                .to_string()
-                .into_bytes(),
-        )
-    };
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
     let mut replies = attempt_replies(&url, envd_process("", 0));
     replies.push(envd_broken());
-    replies.push(lease_state("ready")); // the lease is looked at: still running
-    replies.push(ended()); // released before the retry
-    replies.extend(attempt_replies(&url, envd_process("", 0)));
-    replies.push(envd_process("second try\n", 101));
+    replies.push(json_reply(json!({"token": "h.p.t", "generation": 1}))); // a fresh guest token
+    replies.push(envd_process("after the break\n", 101)); // Connect by tag
     replies.push(ended());
     let (_, log) = serve_bytes_on(listener, replies).await;
-    let t = std::time::Instant::now();
     let out = run(
         &sb,
         &url,
@@ -1506,44 +1496,136 @@ async fn build_run_retries_a_broken_stream_once_and_keeps_the_commands_exit_code
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(101), "{err}");
-    assert_eq!(String::from_utf8_lossy(&out.stdout), "second try\n");
-    assert!(err.contains("retrying once"), "{err}");
-    assert!(
-        t.elapsed() >= std::time::Duration::from_secs(4),
-        "a backoff: {:?}",
-        t.elapsed()
-    );
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "after the break\n");
+    assert!(err.contains("reattached to the running command"), "{err}");
+    assert!(!err.contains("retrying"), "{err}");
     let seen = log.lock().unwrap();
-    let releases = seen.iter().filter(|s| s.line.contains(":release")).count();
+    let start = seen
+        .iter()
+        .find(|s| s.body.contains("\"cargo\""))
+        .expect("the command was started");
+    assert!(
+        start.line.contains("process.Process/Start"),
+        "{}",
+        start.line
+    );
+    let tag = start
+        .body
+        .split("\"tag\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .to_string();
+    assert!(tag.starts_with("sylphx-"), "{tag}");
+    let connect = seen
+        .iter()
+        .find(|s| s.line.contains("process.Process/Connect"))
+        .expect("the run reattached");
+    assert!(
+        connect
+            .body
+            .contains(&format!("{{\"process\":{{\"tag\":\"{tag}\"}}}}")),
+        "{}",
+        connect.body
+    );
     assert_eq!(
-        releases, 2,
-        "the first machine is released before the retry"
+        seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
+        1,
+        "started once"
+    );
+    assert_eq!(
+        seen.iter().filter(|s| s.line.contains(":release")).count(),
+        1,
+        "one machine"
     );
 }
 
-/// A stream that breaks twice ends as 125, retryable.
+/// A machine lost after the command started ends the run with 137: the
+/// command is never run again, and 125 stays for failures before it starts.
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_exits_125_when_the_stream_breaks_twice() {
-    let sb = Sandbox::new("stream-twice");
+async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started() {
+    let sb = Sandbox::new("stream-lost");
     project(&sb.dir);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    let running = || {
-        (
-            200u16,
-            "application/json",
-            json!({"name": format!("{ENV}/leases/l1"), "status": {"state": "ready"}})
-                .to_string()
-                .into_bytes(),
-        )
-    };
-    let mut replies = Vec::new();
-    for _ in 0..2 {
-        replies.extend(attempt_replies(&url, envd_process("", 0)));
-        replies.push(envd_broken());
-        replies.push(running());
-        replies.push(ended());
-    }
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
+    let mut replies = attempt_replies(&url, envd_process("", 0));
+    replies.push(envd_broken());
+    replies.push(json_reply(json!({"token": "h.p.t", "generation": 1})));
+    // Connect: envd no longer knows the process.
+    replies.push((
+        200,
+        "application/connect+json",
+        envd_frame(
+            2,
+            json!({"error": {"code": "not_found", "message": "process not found"}}),
+        ),
+    ));
+    replies.push(json_reply(
+        json!({"name": format!("{ENV}/leases/l1"), "status": {"state": "ended", "endReason": "machine_lost"}}),
+    ));
+    replies.push(ended());
+    let (_, log) = serve_bytes_on(listener, replies).await;
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--no-cache",
+            "--",
+            "cargo",
+            "test",
+        ],
+    )
+    .await;
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(137), "{err}");
+    assert!(
+        err.contains("machine_lost after the command started"),
+        "{err}"
+    );
+    let result: Value = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .find(|v| v["type"] == "result")
+        .expect("a result event");
+    assert_eq!(result["outcome"], "lost");
+    assert_eq!(result["exit_code"], 137);
+    assert_eq!(result["retryable"], true);
+    let seen = log.lock().unwrap();
+    assert_eq!(
+        seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
+        1,
+        "never run again"
+    );
+}
+
+/// A workspace that runs out of space before the command starts (the
+/// warm Volume filled up) is not retried as it is: the machine is ended and
+/// the one retry empties the workspace first, then the command runs once.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_retries_a_full_workspace_once_on_an_emptied_one() {
+    let sb = Sandbox::new("ws-full");
+    project(&sb.dir);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut replies: Vec<_> = attempt_replies(&url, envd_process("", 0))
+        .into_iter()
+        .take(4)
+        .collect();
+    replies.push(envd_process_err(
+        "gzip: stdout: No space left on device\n",
+        1,
+    ));
+    replies.push(ended()); // the full machine is released before the retry
+    replies.extend(attempt_replies(&url, envd_process("", 0)));
+    replies.push(envd_process("built\n", 0));
+    replies.push(ended());
     let (_, log) = serve_bytes_on(listener, replies).await;
     let out = run(
         &sb,
@@ -1552,14 +1634,36 @@ async fn build_run_exits_125_when_the_stream_breaks_twice() {
     )
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
-    assert_eq!(out.status.code(), Some(125), "{err}");
-    assert!(err.contains("twice"), "{err}");
-    assert!(err.contains("[retryable]"), "{err}");
+    assert_eq!(out.status.code(), Some(0), "{err}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "built\n");
+    assert!(err.contains("ran out of space; retrying once"), "{err}");
     let seen = log.lock().unwrap();
-    let starts = seen.iter().filter(|s| s.body.contains("\"cargo\"")).count();
+    let boots: Vec<_> = seen
+        .iter()
+        .filter(|s| s.body.contains("\"bootstrap\""))
+        .collect();
+    assert_eq!(boots.len(), 2);
+    assert!(
+        boots[0]
+            .body
+            .contains("\"bootstrap\",\"/workspace\",\"1\",\"0\""),
+        "{}",
+        boots[0].body
+    );
+    assert!(
+        boots[1]
+            .body
+            .contains("\"bootstrap\",\"/workspace\",\"1\",\"1\""),
+        "{}",
+        boots[1].body
+    );
     assert_eq!(
-        starts, 2,
-        "the command is started once per attempt, no more"
+        seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
+        1
+    );
+    assert_eq!(
+        seen.iter().filter(|s| s.line.contains(":release")).count(),
+        2
     );
 }
 

@@ -60,8 +60,13 @@ sylphx mcp                            # the MCP server over stdio
   free workspace of any repository once and tries again. Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
   event; anything that fails before the command starts, such as the sync or the
-  toolchain install or a toolchain that fails its check, is 125, and a broken output stream is retried once after
-  a short backoff first), 130 interrupted. `--region REGION` runs in that region's Cell with
+  toolchain install or a toolchain that fails its check, is 125, and a machine
+  lost or a stream broken before the command starts is retried once after a
+  short backoff first), 130 interrupted, 137 the machine was lost after the
+  command started. A started command is never run twice: a broken output
+  stream is reattached to the running command. Cargo builds as CI does
+  (`CARGO_INCREMENTAL=0`, `CARGO_PROFILE_DEV_DEBUG=0`) unless `--env` sets
+  either. `--region REGION` runs in that region's Cell with
   that region's own warm workspaces (default: the project's home region); a
   region whose Cell offers no Volumes refuses the workspace at once, and the
   run builds on the machine's own disk instead (always cold, nothing left

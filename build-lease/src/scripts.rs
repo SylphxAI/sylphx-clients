@@ -2,11 +2,57 @@
 //! toolchain, running the command, listing artifacts. Shared by the CLI and
 //! the Build service so both run a command the same way.
 
+/// The free space a warm workspace keeps before a sync, whichever is larger
+/// ([`BOOTSTRAP`] holds the same numbers). Sized from a measured peak: a
+/// clean `cargo build --workspace --all-targets` plus `cargo clippy
+/// --workspace --all-targets` of SylphxAI/cloud on a lease (2026-10-06,
+/// incremental off, no debug info) grew an empty `target/` to 9.0 GiB, with
+/// a 0.54 GiB Cargo home and a 0.28 GiB tree: 9.8 GiB for one whole state,
+/// so 15 GiB leaves 50 % over it. sccache writes to the remote build cache
+/// whenever the run has one, so its local directory stays empty. The 100 GiB
+/// Volume (`VOLUME_GIB` in the CLI) therefore keeps about eight such states
+/// before a prune, and stays as it is.
+pub const WORKSPACE_MIN_FREE_GIB: u64 = 15;
+pub const WORKSPACE_MIN_FREE_PERCENT: u64 = 15;
+/// [`BOOTSTRAP`]'s status for a workspace too small even when empty.
+pub const BOOTSTRAP_TOO_SMALL: i32 = 75;
+
 /// Prepares the workspace as root: the mount root belongs to the guest user,
 /// and the manifest is offered compressed for the client to read.
+///
+/// `$2` = 1 on a warm workspace Volume: everything on it is a cache (the
+/// synced tree, `target/`, the Cargo home, sccache, toolchains), and
+/// `target/` grows without bound (Cargo never collects old artifacts), so a
+/// Volume fills until every run fails before its command. Before the sync
+/// the free space must be at least [`WORKSPACE_MIN_FREE_GIB`] or
+/// [`WORKSPACE_MIN_FREE_PERCENT`] of the Volume, whichever is larger. Short
+/// of it, `target/` is removed (sccache refills it); still short, the whole
+/// workspace is emptied, which makes it a fresh one (no manifest, so the
+/// client syncs it cold). Still short when empty: exit 75. `$3` = 1 empties
+/// it first anyway: the client asks for that on its one retry after a run
+/// ran out of space before its command started. Prints `pruned` or `emptied`
+/// on stdout when it did either.
 pub const BOOTSTRAP: &str = r#"set -eu
-W=$1
+W=$1 CHECK=${2:-0} EMPTY=${3:-0} MIN_GIB=15 MIN_PCT=15
 mkdir -p "$W/.sylphx"
+room() {
+  df -Pk "$W" | awk -v gib="$MIN_GIB" -v pct="$MIN_PCT" 'NR == 2 { need = $2 * pct / 100; if (need < gib * 1048576) need = gib * 1048576; exit !($4 >= need) }'
+}
+empty() {
+  find "$W" -mindepth 1 -maxdepth 1 ! -name lost+found -exec rm -rf {} +
+  mkdir -p "$W/.sylphx"
+  echo emptied
+}
+if [ "$EMPTY" = 1 ]; then
+  empty
+elif [ "$CHECK" = 1 ] && ! room; then
+  rm -rf "$W/target"
+  if room; then echo pruned; else empty; fi
+fi
+if [ "$CHECK" = 1 ] && ! room; then
+  echo "the workspace has too little free space even when empty: $(df -Ph "$W" | awk 'NR == 2 { print $4 " of " $2 " free" }')" >&2
+  exit 75
+fi
 chown user:user "$W" "$W/.sylphx" 2>/dev/null || true
 rm -f "$W/.sylphx/manifest.gz"
 if [ -f "$W/.sylphx/manifest" ]; then
@@ -192,6 +238,14 @@ pub fn provision_env(
 /// given, never a local directory that would double `target/` on the same
 /// disk. The command's exit status is the script's.
 ///
+/// Cargo builds as CI does (`.github/workflows/ci.yml`): incremental
+/// compilation off (`CARGO_INCREMENTAL=0`), which sccache cannot cache, so
+/// the workspace's own crates hit the cache too, and no debug info for the
+/// dev and test profiles (`CARGO_PROFILE_DEV_DEBUG=0`). A clean warm-cache
+/// `cargo build --workspace` of SylphxAI/cloud on `xlarge` took 4 min 29 s
+/// with these against 5 min 40 s without (docs/services/build/benchmark.md).
+/// Either variable set by the caller (`--env`), even to an empty value, wins.
+///
 /// Crates come through the build cache's registry mirror
 /// (`SYLPHX_CRATES_MIRROR`, from the cache token) when it answers: Cargo reads
 /// `$W/.cargo/config.toml` as an ancestor of the tree, and the file is removed
@@ -209,6 +263,7 @@ shift 3
     guest_dirs!(),
     git_tree!(),
     r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
+export CARGO_INCREMENTAL="${CARGO_INCREMENTAL-0}" CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG-0}"
 if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
   if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
 fi
