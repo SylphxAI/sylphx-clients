@@ -31,6 +31,19 @@ use context::Link;
 use output::Format;
 use tree::{MethodCmd, Tree};
 
+/// Subcommands of a generated service this binary writes itself, as
+/// `(service, word)`: each is matched in `run` before the generated tree, and
+/// a short command (`MethodPolicy.porcelain`) starting with the same word
+/// gives way to it. `build run` and `build cache` run on a build machine and
+/// mint the cache env locally until Sylphx Build serves its methods.
+const HAND_WRITTEN: &[(&str, &str)] = &[
+    ("auth", "enable"),
+    ("auth", "status"),
+    ("build", "run"),
+    ("build", "cache"),
+    ("ai", "top"),
+];
+
 fn cli(tree: &Tree) -> Command {
     let global = |a: Arg| a.global(true);
     let mut cmd = Command::new("sylphx")
@@ -184,7 +197,7 @@ fn cli(tree: &Tree) -> Command {
                         .value_parser(clap::value_parser!(clap_complete::Shell)),
                 ),
         );
-    for s in tree::service_commands(tree) {
+    for s in tree::service_commands(tree, HAND_WRITTEN) {
         // Enable Auth is porcelain on the generated `auth` service: it binds
         // Sylphx Auth to an environment through the composition route.
         let s = if s.get_name() == "auth" {

@@ -25,6 +25,31 @@ pub struct ServiceCmd {
     #[serde(default)]
     pub commands: Vec<MethodCmd>,
     pub collections: Vec<CollectionCmd>,
+    /// The short commands of `MethodPolicy.porcelain`
+    /// (`sylphx build cache env`): the same words as the SDK method and the
+    /// MCP tool.
+    #[serde(default)]
+    pub porcelain: Vec<PorcelainCmd>,
+}
+
+/// A short command: the handle's segments below the service, then the
+/// method's command under its short verb.
+#[derive(Debug, Clone, Deserialize)]
+pub struct PorcelainCmd {
+    pub path: Vec<String>,
+    #[serde(flatten)]
+    pub command: MethodCmd,
+}
+
+impl PorcelainCmd {
+    /// The words after the service noun: `["cache", "env"]`.
+    pub fn words(&self) -> Vec<&str> {
+        self.path
+            .iter()
+            .map(String::as_str)
+            .chain(std::iter::once(self.command.verb.as_str()))
+            .collect()
+    }
 }
 
 fn served_default() -> bool {
@@ -179,8 +204,10 @@ fn value_name(f: &FlagSpec) -> String {
     }
 }
 
-/// `sylphx <service> …` for every service in the tree.
-pub fn service_commands(tree: &Tree) -> Vec<Command> {
+/// `sylphx <service> …` for every service in the tree. `hand_written` names
+/// the `(service, word)` pairs the binary mounts itself (`build run`): a
+/// short command starting with that word gives way to it.
+pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Command> {
     tree.services
         .iter()
         .map(|s| {
@@ -208,9 +235,41 @@ pub fn service_commands(tree: &Tree) -> Vec<Command> {
                 }
                 cmd = cmd.subcommand(cc);
             }
-            cmd
+            let short: Vec<(Vec<&str>, &MethodCmd)> = s
+                .porcelain
+                .iter()
+                .map(|p| (p.words(), &p.command))
+                .filter(|(w, _)| !hand_written.contains(&(s.noun.as_str(), w[0])))
+                .collect();
+            mount(cmd, &short)
         })
         .collect()
+}
+
+/// Mounts short commands below `cmd`: a command whose words are only its
+/// verb directly, the others under one subcommand per handle segment.
+fn mount(mut cmd: Command, items: &[(Vec<&str>, &MethodCmd)]) -> Command {
+    let mut handles: Vec<&str> = Vec::new();
+    for (words, m) in items {
+        match words.as_slice() {
+            [_verb] => cmd = cmd.subcommand(method_command(m)),
+            [seg, ..] if !handles.contains(seg) => handles.push(seg),
+            _ => {}
+        }
+    }
+    for seg in handles {
+        let below: Vec<(Vec<&str>, &MethodCmd)> = items
+            .iter()
+            .filter(|(w, _)| w.len() > 1 && w[0] == seg)
+            .map(|(w, m)| (w[1..].to_vec(), *m))
+            .collect();
+        let handle = Command::new(seg.to_string())
+            .about(format!("`{seg}` commands"))
+            .subcommand_required(true)
+            .arg_required_else_help(true);
+        cmd = cmd.subcommand(mount(handle, &below));
+    }
+    cmd
 }
 
 /// Finds the method a generated command line selects.
@@ -223,6 +282,26 @@ pub fn find<'t>(
     let (sub, sub_m) = matches.subcommand()?;
     if let Some(m) = s.commands.iter().find(|m| m.verb == sub) {
         return Some((m, sub_m.clone()));
+    }
+    for p in &s.porcelain {
+        let words = p.words();
+        if words[0] != sub {
+            continue;
+        }
+        let mut cur = sub_m;
+        let mut hit = true;
+        for w in &words[1..] {
+            match cur.subcommand() {
+                Some((name, next)) if name == *w => cur = next,
+                _ => {
+                    hit = false;
+                    break;
+                }
+            }
+        }
+        if hit {
+            return Some((&p.command, cur.clone()));
+        }
     }
     let c = s.collections.iter().find(|c| c.noun == sub)?;
     let (verb, verb_m) = sub_m.subcommand()?;
@@ -373,4 +452,109 @@ pub fn split_pattern(pattern: &str) -> Option<(String, String)> {
     }
     let collection = segs[segs.len() - 2].to_string();
     Some((segs[..segs.len() - 2].join("/"), collection))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn root(hand_written: &[(&str, &str)]) -> Command {
+        let mut cmd = Command::new("sylphx");
+        for s in service_commands(&load(), hand_written) {
+            cmd = cmd.subcommand(s);
+        }
+        cmd
+    }
+
+    fn method_of(cmd: Command, argv: &[&str]) -> Option<String> {
+        let m = cmd.try_get_matches_from(argv).expect("parses");
+        let (service, sub) = m.subcommand().expect("service");
+        find(&load(), service, sub).map(|(c, _)| c.method.clone())
+    }
+
+    /// `MethodPolicy.porcelain` mounts each short command under the same
+    /// words as the SDK method and the MCP tool, and it resolves to the
+    /// method its full-tree command calls.
+    #[test]
+    fn short_commands_mount_and_resolve_to_their_method() {
+        root(&[]).debug_assert();
+        for (argv, method) in [
+            (
+                &[
+                    "sylphx",
+                    "build",
+                    "run",
+                    "orgs/o/projects/p",
+                    "--tree",
+                    "{}",
+                    "--command",
+                    "make",
+                ][..],
+                "build.builds.run",
+            ),
+            (
+                &["sylphx", "build", "image", "orgs/o/projects/p"],
+                "build.builds.build_image",
+            ),
+            (
+                &[
+                    "sylphx",
+                    "build",
+                    "logs",
+                    "read",
+                    "orgs/o/projects/p/builds/b",
+                ],
+                "build.builds.read_logs",
+            ),
+            (
+                &[
+                    "sylphx",
+                    "build",
+                    "cache",
+                    "env",
+                    "orgs/o/projects/p/build_caches/c",
+                ],
+                "build.build_caches.mint_env",
+            ),
+            (
+                &[
+                    "sylphx",
+                    "build",
+                    "caches",
+                    "purge",
+                    "orgs/o/projects/p/build_caches/c",
+                ],
+                "build.build_caches.purge",
+            ),
+            // The full-tree command stays beside the short one.
+            (
+                &[
+                    "sylphx",
+                    "build",
+                    "builds",
+                    "read-logs",
+                    "orgs/o/projects/p/builds/b",
+                ],
+                "build.builds.read_logs",
+            ),
+        ] {
+            assert_eq!(
+                method_of(root(&[]), argv).as_deref(),
+                Some(method),
+                "{argv:?}"
+            );
+        }
+    }
+
+    /// A word the binary writes by hand (`build run`) is not mounted from
+    /// the tree, so clap sees one subcommand per name.
+    #[test]
+    fn a_hand_written_word_takes_the_place_of_the_short_command() {
+        let cmd = root(&[("build", "run"), ("build", "cache")]);
+        let build = cmd.find_subcommand("build").expect("build");
+        assert!(build.find_subcommand("run").is_none());
+        assert!(build.find_subcommand("cache").is_none());
+        assert!(build.find_subcommand("image").is_some());
+        assert!(build.find_subcommand("caches").is_some());
+    }
 }

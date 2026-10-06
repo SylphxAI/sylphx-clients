@@ -5356,6 +5356,279 @@
       "commands": [],
       "display_name": "Sylphx Build",
       "noun": "build",
+      "porcelain": [
+        {
+          "effect": "write",
+          "flags": [
+            {
+              "field": "tree",
+              "flag": "--tree",
+              "required": true,
+              "summary": "The uploaded tree to run over.",
+              "type": "json"
+            },
+            {
+              "field": "command",
+              "flag": "--command",
+              "repeated": true,
+              "required": true,
+              "summary": "The program and its arguments.",
+              "type": "string"
+            },
+            {
+              "field": "artifacts",
+              "flag": "--artifacts",
+              "repeated": true,
+              "summary": "Globs of files kept after the command ends, whatever its exit code.",
+              "type": "string"
+            },
+            {
+              "field": "size",
+              "flag": "--size",
+              "summary": "The machine size; default `[build] size`, else STANDARD.",
+              "type": "enum",
+              "values": [
+                "standard",
+                "large",
+                "xlarge"
+              ]
+            },
+            {
+              "field": "timeout",
+              "flag": "--timeout",
+              "summary": "The time limit; default 1 hour.",
+              "type": "duration"
+            },
+            {
+              "field": "allow_hosts",
+              "flag": "--allow-hosts",
+              "repeated": true,
+              "summary": "Internet hosts the command may reach; empty means in-cell only.",
+              "type": "string"
+            },
+            {
+              "field": "cache",
+              "flag": "--cache",
+              "summary": "The BuildCache to use; default the project's `default` cache.",
+              "type": "string"
+            },
+            {
+              "field": "build_id",
+              "flag": "--build-id",
+              "summary": "The id segment of the Build's name; the server assigns one when unset.",
+              "type": "string"
+            },
+            {
+              "field": "validate_only",
+              "flag": "--dry-run",
+              "summary": "Validate and print the result without writing (validate_only).",
+              "type": "bool"
+            }
+          ],
+          "http": "POST /v1/{parent=orgs/*/projects/*}/builds:run",
+          "method": "build.builds.run",
+          "path": [],
+          "permission": "build:run",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "parent",
+            "pattern": "orgs/{org}/projects/{project}"
+          },
+          "summary": "Runs one command over an uploaded tree and settles with its exit code, like the local command. A caller that gets a failure before the command started (BUILD_FAILURE_SETUP_FAILED, NO_CAPACITY) may build locally.",
+          "verb": "run",
+          "waits": {
+            "default": true,
+            "skip_flag": "--no-wait"
+          }
+        },
+        {
+          "effect": "write",
+          "flags": [
+            {
+              "field": "source",
+              "flag": "--source",
+              "summary": "A commit, read through the Broker at that exact commit.",
+              "type": "json"
+            },
+            {
+              "field": "tree",
+              "flag": "--tree",
+              "summary": "An uploaded tree.",
+              "type": "json"
+            },
+            {
+              "field": "image",
+              "flag": "--image",
+              "summary": "The image to build.",
+              "type": "json"
+            },
+            {
+              "field": "size",
+              "flag": "--size",
+              "summary": "The machine size; default `[build] size`, else STANDARD.",
+              "type": "enum",
+              "values": [
+                "standard",
+                "large",
+                "xlarge"
+              ]
+            },
+            {
+              "field": "timeout",
+              "flag": "--timeout",
+              "summary": "The time limit; default 1 hour.",
+              "type": "duration"
+            },
+            {
+              "field": "allow_hosts",
+              "flag": "--allow-hosts",
+              "repeated": true,
+              "summary": "Internet hosts the build may reach; empty means in-cell only.",
+              "type": "string"
+            },
+            {
+              "field": "cache",
+              "flag": "--cache",
+              "summary": "The BuildCache to use; default the project's `default` cache.",
+              "type": "string"
+            },
+            {
+              "field": "build_id",
+              "flag": "--build-id",
+              "summary": "The id segment of the Build's name; the server assigns one when unset.",
+              "type": "string"
+            },
+            {
+              "field": "validate_only",
+              "flag": "--dry-run",
+              "summary": "Validate and print the result without writing (validate_only).",
+              "type": "bool"
+            }
+          ],
+          "http": "POST /v1/{parent=orgs/*/projects/*}/builds:buildImage",
+          "method": "build.builds.build_image",
+          "path": [],
+          "permission": "build:run",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "parent",
+            "pattern": "orgs/{org}/projects/{project}"
+          },
+          "summary": "Builds an image, with an SBOM and signed provenance, from a commit or an uploaded tree.",
+          "verb": "image",
+          "waits": {
+            "default": true,
+            "skip_flag": "--no-wait"
+          }
+        },
+        {
+          "effect": "read",
+          "flags": [
+            {
+              "field": "page_size",
+              "flag": "--page-size",
+              "summary": "At most this many lines; default 500, clamped to 5000.",
+              "type": "int"
+            },
+            {
+              "field": "page_token",
+              "flag": "--page-token",
+              "summary": "`next_page_token` of the previous page.",
+              "type": "string"
+            },
+            {
+              "field": "wait",
+              "flag": "--wait",
+              "summary": "On a running build, wait up to this long (at most 30s) for new lines before returning an empty page.",
+              "type": "duration"
+            }
+          ],
+          "http": "GET /v1/{name=orgs/*/projects/*/builds/*}:readLogs",
+          "method": "build.builds.read_logs",
+          "path": [
+            "logs"
+          ],
+          "permission": "build:read",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "name",
+            "pattern": "orgs/{org}/projects/{project}/builds/{build}"
+          },
+          "summary": "Reads a page of a build's log lines, oldest first. With `wait`, an empty page on a running build waits up to that long for new lines, so a client follows the log by passing each `next_page_token` back.",
+          "verb": "read"
+        },
+        {
+          "effect": "write",
+          "flags": [
+            {
+              "field": "access",
+              "flag": "--access",
+              "summary": "What the token may do; default READ.",
+              "type": "enum",
+              "values": [
+                "read",
+                "read_write"
+              ]
+            }
+          ],
+          "http": "POST /v1/{name=orgs/*/projects/*/build_caches/*}:mintEnv",
+          "method": "build.build_caches.mint_env",
+          "path": [
+            "cache"
+          ],
+          "permission": "build:run",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "name",
+            "pattern": "orgs/{org}/projects/{project}/build_caches/{build_cache}"
+          },
+          "summary": "Mints the settings a build that runs elsewhere (a laptop, a CI runner) uses to reach the cache: the sccache, Turbo and crates mirror doors and a short-lived token, as environment variables.",
+          "verb": "env"
+        },
+        {
+          "confirm": {
+            "prompt": true,
+            "skip_flag": "--yes"
+          },
+          "effect": "destructive",
+          "flags": [
+            {
+              "field": "etag",
+              "flag": "--etag",
+              "summary": "Purge only if the current etag matches.",
+              "type": "string"
+            },
+            {
+              "field": "validate_only",
+              "flag": "--dry-run",
+              "summary": "Validate and print the result without writing (validate_only).",
+              "type": "bool"
+            }
+          ],
+          "http": "POST /v1/{name=orgs/*/projects/*/build_caches/*}:purge",
+          "method": "build.build_caches.purge",
+          "path": [
+            "caches"
+          ],
+          "permission": "build:write",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "name",
+            "pattern": "orgs/{org}/projects/{project}/build_caches/{build_cache}"
+          },
+          "summary": "Empties a build cache and keeps the cache. The undo is that the next build refills it.",
+          "verb": "purge",
+          "waits": {
+            "default": true,
+            "skip_flag": "--no-wait"
+          }
+        }
+      ],
       "served": false,
       "stage": "preview"
     },
@@ -25401,6 +25674,288 @@
       "commands": [],
       "display_name": "Sylphx Workflows",
       "noun": "workflows",
+      "porcelain": [
+        {
+          "effect": "write",
+          "flags": [
+            {
+              "field": "schedule.meta.labels",
+              "flag": "--meta.labels",
+              "repeated": true,
+              "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+              "type": "key=value"
+            },
+            {
+              "field": "schedule.meta.annotations",
+              "flag": "--meta.annotations",
+              "repeated": true,
+              "summary": "Caller-writable, unindexed annotations.",
+              "type": "key=value"
+            },
+            {
+              "field": "schedule.meta.display_name",
+              "flag": "--meta.display-name",
+              "summary": "Caller-writable human-readable name.",
+              "type": "string"
+            },
+            {
+              "field": "schedule.spec.workflow",
+              "flag": "--spec.workflow",
+              "required": true,
+              "summary": "The Workflow the Schedule starts, in the same environment.",
+              "type": "string"
+            },
+            {
+              "field": "schedule.spec.input",
+              "flag": "--spec.input",
+              "summary": "The input of every Run, at most 64 KiB of JSON.",
+              "type": "json"
+            },
+            {
+              "field": "schedule.spec.calendar.cron",
+              "flag": "--spec.calendar.cron",
+              "summary": "A 5-field cron expression, for example `0 3 * * *`.",
+              "type": "string"
+            },
+            {
+              "field": "schedule.spec.calendar.time_zone",
+              "flag": "--spec.calendar.time-zone",
+              "summary": "IANA time zone; default `UTC`.",
+              "type": "string"
+            },
+            {
+              "field": "schedule.spec.interval.every",
+              "flag": "--spec.interval.every",
+              "summary": "The period, 1s to 365d.",
+              "type": "duration"
+            },
+            {
+              "field": "schedule.spec.interval.offset",
+              "flag": "--spec.interval.offset",
+              "summary": "Phase offset within each period.",
+              "type": "duration"
+            },
+            {
+              "field": "schedule.spec.jitter",
+              "flag": "--spec.jitter",
+              "summary": "Random delay added to each fire, at most min(interval, 1h).",
+              "type": "duration"
+            },
+            {
+              "field": "schedule.spec.overlap_policy",
+              "flag": "--spec.overlap-policy",
+              "summary": "What a fire does while a previous Run is still running.",
+              "type": "enum",
+              "values": [
+                "skip",
+                "buffer_one",
+                "buffer_all",
+                "cancel_other",
+                "allow"
+              ]
+            },
+            {
+              "field": "schedule.spec.catchup_window",
+              "flag": "--spec.catchup-window",
+              "summary": "Missed fires older than this are skipped; 10s to 365d.",
+              "type": "duration"
+            },
+            {
+              "field": "schedule.spec.paused",
+              "flag": "--spec.paused",
+              "summary": "Whether fires are paused.",
+              "type": "bool"
+            },
+            {
+              "field": "schedule.spec.pause_note",
+              "flag": "--spec.pause-note",
+              "summary": "Why the Schedule is paused; shown in status.",
+              "type": "string"
+            },
+            {
+              "field": "allow_missing",
+              "flag": "--allow-missing",
+              "summary": "Create the schedule when it does not exist (declarative upsert).",
+              "type": "bool"
+            },
+            {
+              "field": "validate_only",
+              "flag": "--dry-run",
+              "summary": "Validate and print the result without writing (validate_only).",
+              "type": "bool"
+            }
+          ],
+          "http": "PATCH /v1/{schedule.name=orgs/*/projects/*/envs/*/schedules/*}",
+          "method": "workflows.schedules.update",
+          "path": [],
+          "permission": "workflows:write",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "schedule.name",
+            "pattern": "orgs/{org}/projects/{project}/envs/{env}/schedules/{schedule}"
+          },
+          "resource_field": "schedule",
+          "sends_etag": true,
+          "summary": "Updates a schedule; with `allow_missing` it creates the schedule when it does not exist, so its short name `schedule` is an upsert by name.",
+          "update_mask": "from-flags",
+          "verb": "schedule",
+          "waits": {
+            "default": true,
+            "skip_flag": "--no-wait"
+          }
+        },
+        {
+          "effect": "write",
+          "flags": [
+            {
+              "default_from_context": true,
+              "field": "parent",
+              "flag": "--parent",
+              "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}",
+              "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+              "type": "string"
+            },
+            {
+              "field": "run.meta.labels",
+              "flag": "--meta.labels",
+              "repeated": true,
+              "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+              "type": "key=value"
+            },
+            {
+              "field": "run.meta.annotations",
+              "flag": "--meta.annotations",
+              "repeated": true,
+              "summary": "Caller-writable, unindexed annotations.",
+              "type": "key=value"
+            },
+            {
+              "field": "run.meta.display_name",
+              "flag": "--meta.display-name",
+              "summary": "Caller-writable human-readable name.",
+              "type": "string"
+            },
+            {
+              "field": "run.input",
+              "flag": "--input",
+              "summary": "The Run input, at most 256 KiB of JSON.",
+              "type": "json"
+            },
+            {
+              "field": "run.start_delay",
+              "flag": "--start-delay",
+              "summary": "Delay the first invocation by this much.",
+              "type": "duration"
+            },
+            {
+              "field": "run.schedule_time",
+              "flag": "--schedule-time",
+              "summary": "When the first invocation is due: set it directly, or through `start_delay`; at most 365 days ahead. A Run cancelled before then closes `cancelled` with no invocation.",
+              "type": "timestamp"
+            },
+            {
+              "field": "validate_only",
+              "flag": "--dry-run",
+              "summary": "Validate and print the result without writing (validate_only).",
+              "type": "bool"
+            }
+          ],
+          "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/workflows/*}/runs",
+          "method": "workflows.runs.create",
+          "path": [],
+          "permission": "workflows:run",
+          "positional": {
+            "arg": "ID",
+            "field": "run_id",
+            "optional": true,
+            "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+          },
+          "resource_field": "run",
+          "summary": "Starts a Run of a Workflow, now or after `start_delay` or at `schedule_time`. `run_id` is the caller's key: the same key and intent return the same Run, a changed intent is refused. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`.",
+          "verb": "start"
+        },
+        {
+          "effect": "write",
+          "flags": [
+            {
+              "field": "signal",
+              "flag": "--signal",
+              "required": true,
+              "summary": "The signal name the handler waits on.",
+              "type": "string"
+            },
+            {
+              "field": "payload",
+              "flag": "--payload",
+              "summary": "The signal payload, at most 64 KiB of JSON.",
+              "type": "json"
+            }
+          ],
+          "http": "POST /v1/{name=orgs/*/projects/*/envs/*/workflows/*/runs/*}:signal",
+          "method": "workflows.runs.signal",
+          "path": [],
+          "permission": "workflows:run",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "name",
+            "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}/runs/{run}"
+          },
+          "summary": "Sends a named signal to a running Run; a `wait` op for that name resumes with its payload. A signal to a closed Run fails with INVALID_STATE. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`.",
+          "verb": "signal"
+        },
+        {
+          "confirm": {
+            "prompt": true,
+            "skip_flag": "--yes"
+          },
+          "effect": "destructive",
+          "flags": [
+            {
+              "field": "reason",
+              "flag": "--reason",
+              "summary": "Why the Run is cancelled.",
+              "type": "string"
+            }
+          ],
+          "http": "POST /v1/{name=orgs/*/projects/*/envs/*/workflows/*/runs/*}:cancel",
+          "method": "workflows.runs.cancel",
+          "path": [],
+          "permission": "workflows:run",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "name",
+            "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}/runs/{run}"
+          },
+          "summary": "Requests cancellation. Timers and waits stop; a running invocation is not interrupted: the handler receives one final invocation with `cancel: true`, and the Run ends `cancelled` when it answers. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`.",
+          "verb": "cancel"
+        },
+        {
+          "effect": "read",
+          "flags": [
+            {
+              "field": "timeout",
+              "flag": "--timeout",
+              "summary": "How long to wait; default 30s, at most 60s.",
+              "type": "duration"
+            }
+          ],
+          "http": "POST /v1/{name=orgs/*/projects/*/envs/*/workflows/*/runs/*}:wait",
+          "method": "workflows.runs.wait",
+          "path": [],
+          "permission": "workflows:read",
+          "positional": {
+            "arg": "NAME",
+            "default_from_context": false,
+            "field": "name",
+            "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}/runs/{run}"
+          },
+          "summary": "Waits up to `timeout` (at most 60s) for the Run to close, then returns it, closed or not. Its short name is `result`: the closed Run carries the handler's output or error. An end user's session may call it on a Workflow whose `callers` is `USERS` when the session holds the Workflow's `permission`.",
+          "verb": "result"
+        }
+      ],
       "stage": "preview"
     }
   ],
