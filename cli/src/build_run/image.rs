@@ -42,6 +42,7 @@ pub fn forwarded(key: &str) -> bool {
         key,
         "SYLPHX_CRATES_MIRROR"
             | "SYLPHX_OCI_MIRROR"
+            | "SYLPHX_APT_MIRROR"
             | "PIP_INDEX_URL"
             | "PIP_TRUSTED_HOST"
             | "UV_INDEX_URL"
@@ -428,6 +429,7 @@ mod tests {
         for k in [
             "SYLPHX_CRATES_MIRROR",
             "SYLPHX_OCI_MIRROR",
+            "SYLPHX_APT_MIRROR",
             "PIP_INDEX_URL",
             "PIP_TRUSTED_HOST",
             "GOPROXY",
