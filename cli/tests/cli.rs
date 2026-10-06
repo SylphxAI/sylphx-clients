@@ -2190,3 +2190,130 @@ async fn build_cache_env_needs_a_project_and_a_key() {
     assert_eq!(out.status.code(), Some(125));
     assert!(String::from_utf8_lossy(&out.stderr).contains("not signed in"));
 }
+
+/// The test vector secret of the Standard Webhooks reference libraries; not a
+/// credential.
+const LISTEN_SECRET: &str = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"; // gitleaks:allow
+
+/// `sylphx events listen --forward URL`: a temporary Queue subscribed to the
+/// env's bus, each leased event POSTed to the local receiver with a valid
+/// Standard Webhooks signature, acked, and the Queue and Subscription deleted
+/// on the way out.
+#[tokio::test(flavor = "multi_thread")]
+async fn events_listen_relays_a_published_event_signed_to_the_local_url() {
+    use base64::Engine as _;
+    let (url, log) = serve(vec![
+        (200, json!({"name": format!("{ENV}/queues/q")})),
+        (200, json!({"name": format!("{ENV}/subscriptions/s")})),
+        (
+            200,
+            json!({"messages": [{
+                "message_id": "01HMSG",
+                "event": {"id": "evt-1", "source": "test", "type": "order.created",
+                          "data": {"n": 1}},
+                "lease": {"message_id": "01HMSG", "lease_generation": "3"},
+                "delivery_count": 1
+            }]}),
+        ),
+        (200, json!({})),
+        (200, json!({})),
+        (200, json!({})),
+    ])
+    .await;
+    let (hook, received) = serve(vec![(204, json!({}))]).await;
+    let sb = Sandbox::new("events-listen");
+    let forward = format!("{hook}/hook");
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "events",
+            "listen",
+            "--forward",
+            &forward,
+            "--secret",
+            LISTEN_SECRET,
+            "--count",
+            "1",
+            "-o",
+            "json",
+        ],
+    )
+    .await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    // The receiver got the CloudEvent, signed under the secret.
+    let got = received.lock().unwrap()[0].clone();
+    assert!(got.line.starts_with("POST /hook "), "{}", got.line);
+    let header = |name: &str| {
+        got.head
+            .lines()
+            .find_map(|l| {
+                let (k, v) = l.split_once(':')?;
+                k.eq_ignore_ascii_case(name).then(|| v.trim().to_string())
+            })
+            .unwrap_or_default()
+    };
+    assert_eq!(header("webhook-id"), "01HMSG");
+    let timestamp = header("webhook-timestamp");
+    let now = now_secs() as i64;
+    assert!((now - timestamp.parse::<i64>().unwrap()).abs() < 300);
+    let key = base64::engine::general_purpose::STANDARD
+        .decode(LISTEN_SECRET.trim_start_matches("whsec_"))
+        .unwrap();
+    let mut mac = <hmac::Hmac<sha2::Sha256> as hmac::Mac>::new_from_slice(&key).unwrap();
+    hmac::Mac::update(
+        &mut mac,
+        format!("01HMSG.{timestamp}.{}", got.body).as_bytes(),
+    );
+    let expected = format!(
+        "v1,{}",
+        base64::engine::general_purpose::STANDARD.encode(hmac::Mac::finalize(mac).into_bytes())
+    );
+    assert_eq!(header("webhook-signature"), expected);
+    assert_eq!(
+        serde_json::from_str::<Value>(&got.body).unwrap(),
+        json!({"specversion": "1.0", "id": "evt-1", "source": "test",
+               "type": "order.created", "data": {"n": 1}})
+    );
+
+    // The listener's own calls, in order.
+    let log = log.lock().unwrap().clone();
+    let lines: Vec<&str> = log.iter().map(|s| s.line.as_str()).collect();
+    assert!(
+        lines[0].starts_with(&format!("POST /v1/{ENV}/queues?queue_id=listen-")),
+        "{lines:?}"
+    );
+    assert!(
+        lines[1].starts_with(&format!(
+            "POST /v1/{ENV}/subscriptions?subscription_id=listen-"
+        )),
+        "{lines:?}"
+    );
+    let sub: Value = serde_json::from_str(&log[1].body).unwrap();
+    assert_eq!(sub["spec"]["topic"], format!("{ENV}/topics/default"));
+    assert!(sub["spec"]["queue"]
+        .as_str()
+        .unwrap()
+        .starts_with(&format!("{ENV}/queues/listen-")));
+    assert!(lines[2].contains(":lease "), "{lines:?}");
+    assert!(lines[3].contains(":ack "), "{lines:?}");
+    let ack: Value = serde_json::from_str(&log[3].body).unwrap();
+    assert_eq!(ack["leases"][0]["message_id"], "01HMSG");
+    assert!(
+        lines[4].starts_with(&format!("DELETE /v1/{ENV}/subscriptions/listen-")),
+        "{lines:?}"
+    );
+    assert!(
+        lines[5].starts_with(&format!("DELETE /v1/{ENV}/queues/listen-")),
+        "{lines:?}"
+    );
+
+    let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(printed["status"], 204);
+    assert_eq!(printed["type"], "order.created");
+}

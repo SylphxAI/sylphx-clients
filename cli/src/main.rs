@@ -3,7 +3,7 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `devices`, `build run`, `build cache env`, `mcp`, `completion`, `ai top`) is hand-written on the
+//! `api`, `devices`, `build run`, `build cache env`, `events listen`, `mcp`, `completion`, `ai top`) is hand-written on the
 //! same SDK.
 
 mod ai_top;
@@ -14,6 +14,7 @@ mod build_run;
 mod context;
 mod devices;
 mod enable;
+mod events_listen;
 mod names;
 mod output;
 mod token;
@@ -44,6 +45,7 @@ const HAND_WRITTEN: &[(&str, &str)] = &[
     ("build", "image"),
     ("build", "cache"),
     ("ai", "top"),
+    ("events", "listen"),
 ];
 
 fn cli(tree: &Tree) -> Command {
@@ -223,6 +225,10 @@ fn cli(tree: &Tree) -> Command {
             s.subcommand(build_run::command())
                 .subcommand(build_run::image_command())
                 .subcommand(build_cache::command())
+        } else if s.get_name() == "events" {
+            // `events listen` is porcelain on the generated `events` service:
+            // a topic relayed to a local URL through a temporary Queue.
+            s.subcommand(events_listen::command())
         } else if s.get_name() == "ai" {
             s.subcommand(
                 Command::new("top")
@@ -497,6 +503,10 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 ai_top_run::TopError::Api(e) => Failure::Api(e),
                 ai_top_run::TopError::Msg(m) => Failure::Refused(m),
             })
+        }
+        "events" if sub.subcommand_name() == Some("listen") => {
+            let (_, lm) = sub.subcommand().expect("checked");
+            events_listen::run(&client().await?, lm, format == Format::Json).await
         }
         "auth" if matches!(sub.subcommand_name(), Some("enable" | "status")) => {
             let (verb, vm) = sub.subcommand().expect("checked");

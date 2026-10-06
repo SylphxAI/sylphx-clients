@@ -17,6 +17,7 @@ sylphx devices run --app app.apk       # a smoke test on a fresh Android device:
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
 eval "$(sylphx build cache env)"      # point local sccache and Turbo at the project's shared build cache
 sylphx build run --region gra --queue-timeout 120s -- cargo check   # in region gra, or exit 125 after 2 min
+sylphx events listen --forward localhost:3000/hook   # a topic's events, signed like a webhook, to a local URL
 sylphx mcp                            # the MCP server over stdio
 ```
 
@@ -29,6 +30,18 @@ sylphx mcp                            # the MCP server over stdio
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
+- `sylphx events listen [TOPIC] --forward URL` relays a topic (default: the
+  environment's whole bus) to a local URL while you develop. It creates a
+  temporary Queue and a Subscription of the topic into it, long-polls the
+  Queue, and POSTs each event as the CloudEvent JSON body a webhook endpoint
+  receives, with `webhook-id`, `webhook-timestamp` and `webhook-signature`
+  (Standard Webhooks) under the `whsec_…` secret printed at start: `--secret`,
+  else `SYLPHX_LISTEN_SECRET`, else one generated once and kept in the config
+  directory (`listen-secret`, 0600). An event the receiver answers is acked
+  and printed with its status; one it cannot reach is tried again after 3 s.
+  `--types` and `--sources` filter; `--count N` exits after N events; `-o
+  json` prints one JSON line per event. Ctrl-C deletes the Queue and the
+  Subscription.
 - `sylphx devices run` installs an APK on a fresh Android device lease,
   launches it (or a `--game-loop`), watches it with screenshots, and writes
   `result.json`, `junit.xml`, `logcat.txt`, and `crash.txt` into `--out`
