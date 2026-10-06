@@ -43,6 +43,7 @@ pub fn forwarded(key: &str) -> bool {
         "SYLPHX_CRATES_MIRROR"
             | "SYLPHX_OCI_MIRROR"
             | "PIP_INDEX_URL"
+            | "PIP_TRUSTED_HOST"
             | "UV_INDEX_URL"
             | "GOPROXY"
             | "GOSUMDB"
@@ -428,6 +429,7 @@ mod tests {
             "SYLPHX_CRATES_MIRROR",
             "SYLPHX_OCI_MIRROR",
             "PIP_INDEX_URL",
+            "PIP_TRUSTED_HOST",
             "GOPROXY",
             "MISE_URL_REPLACEMENTS",
         ] {
