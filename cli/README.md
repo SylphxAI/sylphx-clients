@@ -40,7 +40,9 @@ sylphx mcp                            # the MCP server over stdio
   GLOB` files are copied into `--out` (`.sylphx/out/<run>/`). A warm workspace
   (a pool of up to 10 Volumes per project and repository) keeps the tree,
   `target/`, the Cargo registry, sccache and toolchains, so a repeat run sends
-  only the changed files. Exit codes: the command's own, 2 usage, 124
+  only the changed files. The region's workspaces are a cache: when it has no
+  room for a new one (`NO_CAPACITY`), the run deletes the least recently used
+  free workspace of any repository once and tries again. Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
   event; anything that fails before the command starts, such as the sync or the
   toolchain install, is 125, and a broken output stream is retried once after

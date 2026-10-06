@@ -75,7 +75,13 @@ const TOKEN_TTL: Duration = Duration::from_secs(3600);
 const TOKEN_RENEW: Duration = Duration::from_secs(45 * 60);
 /// Warm workspaces per (project, repository): the host's concurrent builds.
 const MAX_WARM: usize = 10;
-const VOLUME_GIB: i32 = 200;
+/// After evicting a workspace, how often and how long a create that is still
+/// refused `NO_CAPACITY` waits for the quota to free the evicted claim's room.
+const EVICT_WAITS: u32 = 3;
+const EVICT_WAIT: Duration = Duration::from_secs(5);
+/// A new workspace's size: the largest desk target is about 30 GB, so 100 GiB
+/// holds it with room; workspaces made at the old 200 GiB keep their size.
+const VOLUME_GIB: i32 = 100;
 const VOLUME_CLASS: &str = "local";
 const POOL_PURPOSE: &str = "build-workspace";
 /// The pool label naming a workspace's region; home-region workspaces have
@@ -1134,6 +1140,40 @@ impl Run<'_> {
         }
     }
 
+    /// Deletes the least recently used free workspace of any repository in
+    /// this environment and region, to make room for a new one. False when
+    /// none is free. A workspace a run takes meanwhile is not deleted: the
+    /// api deletes only an unattached volume, atomically.
+    async fn evict_lru(&self) -> Result<bool, Outcome> {
+        let mut req = sbx::ListVolumesRequest::default();
+        req.parent = self.parent.clone();
+        let all = self
+            .client
+            .sandboxes()
+            .volumes()
+            .list_all(req)
+            .await
+            .map_err(|e| api("listing workspaces", &e))?;
+        let Some(victim) = lru_free_workspace(&all, self.o.region.as_deref()) else {
+            return Ok(false);
+        };
+        let mut del = sbx::DeleteVolumeRequest::default();
+        del.name = victim.name.clone();
+        del.allow_missing = true;
+        match self.client.sandboxes().volumes().delete(del).await {
+            Ok(_) => {
+                self.out.progress(&format!(
+                    "the region's workspaces are full; removed the least recently used one ({})",
+                    victim.name
+                ));
+                Ok(true)
+            }
+            // Taken by a run meanwhile: the retried create says if room is left.
+            Err(sylphx::Error::Api { code, .. }) if code.as_str() == "RESOURCE_IN_USE" => Ok(true),
+            Err(e) => Err(api("removing a workspace", &e)),
+        }
+    }
+
     /// The pool: this project's (environment's) workspaces of this repository.
     async fn pool(&self) -> Result<Vec<sbx::Volume>, Outcome> {
         let mut req = sbx::ListVolumesRequest::default();
@@ -1164,24 +1204,53 @@ impl Run<'_> {
             body["meta"]["labels"][POOL_REGION] = json!(r);
             body["spec"]["region"] = json!(r);
         }
-        let v: sbx::Volume = match self
-            .client
-            .call(HttpRequest {
-                method: "POST",
-                path: format!("/v1/{}/volumes", self.parent),
-                query: vec![],
-                body: Some(body),
-                mutation: true,
-                origin: None,
-                effect_ids: false,
-            })
-            .await
-        {
-            Ok(v) => v,
-            Err(sylphx::Error::Api { code, .. }) if code.as_str() == "SHAPE_NOT_OFFERED" => {
-                return Ok(None)
+        // The region's room for workspaces is a cache: when it is full, the
+        // least recently used free workspace (any repository's) gives way,
+        // once, and the create is tried again.
+        let mut evicted = false;
+        let mut waits = 0;
+        let v: sbx::Volume = loop {
+            match self
+                .client
+                .call(HttpRequest {
+                    method: "POST",
+                    path: format!("/v1/{}/volumes", self.parent),
+                    query: vec![],
+                    body: Some(body.clone()),
+                    mutation: true,
+                    origin: None,
+                    effect_ids: false,
+                })
+                .await
+            {
+                Ok(v) => break v,
+                Err(sylphx::Error::Api { code, .. }) if code.as_str() == "SHAPE_NOT_OFFERED" => {
+                    return Ok(None)
+                }
+                // The quota frees an evicted claim's room a moment after its
+                // delete: a few short waits before the run gives up.
+                Err(sylphx::Error::Api { code, .. })
+                    if code.as_str() == "NO_CAPACITY" && evicted && waits < EVICT_WAITS =>
+                {
+                    waits += 1;
+                    tokio::time::sleep(EVICT_WAIT).await;
+                }
+                Err(sylphx::Error::Api { code, .. })
+                    if code.as_str() == "NO_CAPACITY" && !evicted =>
+                {
+                    evicted = true;
+                    if !self.evict_lru().await? {
+                        return Err(Outcome::platform(
+                            format!(
+                                "no room for another workspace{} and every workspace is in use",
+                                self.where_()
+                            ),
+                            true,
+                        ));
+                    }
+                }
+                Err(e) => return Err(api("creating a workspace", &e)),
             }
-            Err(e) => return Err(api("creating a workspace", &e)),
         };
         let deadline = deadline.min(Instant::now() + VOLUME_WAIT);
         let mut v = v;
@@ -1696,6 +1765,28 @@ fn free_warm<'a>(
     }
     free.retain(|v| !full.contains(&v.name));
     free
+}
+
+/// The free build workspace of any repository, in this region, that was
+/// used least recently (its last attach or detach is its `update_time`).
+fn lru_free_workspace<'a>(all: &'a [sbx::Volume], region: Option<&str>) -> Option<&'a sbx::Volume> {
+    all.iter()
+        .filter(|v| {
+            let l = v.meta.as_ref().map(|m| &m.labels);
+            let label = |k: &str| l.and_then(|l| l.get(k)).map(String::as_str);
+            label("purpose") == Some(POOL_PURPOSE)
+                && label(POOL_REGION) == region
+                && vstate(v) == sbx::VolumeState::Available
+        })
+        .min_by(|a, b| {
+            let t = |v: &sbx::Volume| {
+                v.meta
+                    .as_ref()
+                    .map(|m| m.update_time.clone())
+                    .unwrap_or_default()
+            };
+            t(a).cmp(&t(b)).then_with(|| a.name.cmp(&b.name))
+        })
 }
 
 /// Whether a Volume is one of this pool's workspaces: this repository's, in
@@ -2314,6 +2405,87 @@ mod tests {
         assert!(!in_pool(&home, "r", Some("gra")));
         assert!(!in_pool(&gra, "r", Some("fra")));
         assert!(!in_pool(&other, "r", None));
+    }
+
+    /// A full region gives up its least recently used free workspace, of
+    /// any repository, and never an attached, creating or other-region one.
+    #[test]
+    fn the_least_recently_used_free_workspace_gives_way() {
+        fn vol(
+            name: &str,
+            region: Option<&str>,
+            state: sbx::VolumeState,
+            used: &str,
+        ) -> sbx::Volume {
+            let mut meta = sylphx::common::ResourceMeta::default();
+            meta.labels.insert("purpose".into(), POOL_PURPOSE.into());
+            meta.labels.insert("build-repo".into(), name.into());
+            if let Some(r) = region {
+                meta.labels.insert(POOL_REGION.into(), r.into());
+            }
+            meta.update_time = used.into();
+            let mut st = sbx::VolumeStatus::default();
+            st.state = Some(state);
+            let mut v = sbx::Volume::default();
+            v.name = name.into();
+            v.meta = Some(meta);
+            v.status = Some(st);
+            v
+        }
+        let mut other = vol(
+            "x",
+            None,
+            sbx::VolumeState::Available,
+            "2026-10-06T00:00:00.000Z",
+        );
+        other
+            .meta
+            .as_mut()
+            .unwrap()
+            .labels
+            .insert("purpose".into(), "data".into());
+        let all = vec![
+            vol(
+                "busy",
+                None,
+                sbx::VolumeState::Attached,
+                "2026-10-05T00:00:00.000Z",
+            ),
+            vol(
+                "new",
+                None,
+                sbx::VolumeState::Creating,
+                "2026-10-05T00:00:00.000Z",
+            ),
+            vol(
+                "gra",
+                Some("gra"),
+                sbx::VolumeState::Available,
+                "2026-10-05T00:00:00.000Z",
+            ),
+            vol(
+                "recent",
+                None,
+                sbx::VolumeState::Available,
+                "2026-10-06T01:54:00.000Z",
+            ),
+            vol(
+                "oldest",
+                None,
+                sbx::VolumeState::Available,
+                "2026-10-05T20:45:00.000Z",
+            ),
+            other,
+        ];
+        assert_eq!(
+            lru_free_workspace(&all, None).map(|v| v.name.as_str()),
+            Some("oldest")
+        );
+        assert_eq!(
+            lru_free_workspace(&all, Some("gra")).map(|v| v.name.as_str()),
+            Some("gra")
+        );
+        assert!(lru_free_workspace(&all[..2], None).is_none());
     }
 
     /// A run takes a free warm workspace whose node has room: one whose
