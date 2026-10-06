@@ -2253,6 +2253,19 @@ mod tests {
     /// when `mirror_up`. The workspace starts with a stale Cargo config from
     /// an earlier run. Returns the command's stdout.
     fn run_prelude(ok_home: &str, mirror: Option<&str>, mirror_up: bool, cmd: &str) -> String {
+        run_prelude_env(ok_home, mirror, mirror_up, cmd, &[]).0
+    }
+
+    /// [`run_prelude`] with extra environment, returning stdout and stderr.
+    /// `sccache` is a stub too, so no real server starts: `--start-server`
+    /// exits `$STUB_SCCACHE_START` (default 0) and says why on stderr.
+    fn run_prelude_env(
+        ok_home: &str,
+        mirror: Option<&str>,
+        mirror_up: bool,
+        cmd: &str,
+        env: &[(&str, &str)],
+    ) -> (String, String) {
         let base = std::env::temp_dir().join(format!(
             "sylphx-build-run-{}-{}",
             std::process::id(),
@@ -2280,6 +2293,11 @@ mod tests {
                 "curl",
                 format!("#!/bin/sh\nexit {}\n", if mirror_up { 0 } else { 7 }),
             ),
+            (
+                "sccache",
+                "#!/bin/sh\nif [ \"$1\" = --start-server ]; then\n  echo 'sccache: Starting the server...'\n  [ \"${STUB_SCCACHE_START:-0}\" = 0 ] && exit 0\n  printf '\\nsccache: error: Server startup failed: cache storage failed to read\\n\\nContext:\\n' >&2\n  exit \"$STUB_SCCACHE_START\"\nfi\nexit 0\n"
+                    .to_string(),
+            ),
         ];
         for (name, body) in stubs {
             let f = bin.join(name);
@@ -2296,6 +2314,7 @@ mod tests {
         if let Some(m) = mirror {
             c.env("SYLPHX_CRATES_MIRROR", m);
         }
+        c.envs(env.iter().copied());
         let out = c.output().unwrap();
         let _ = std::fs::remove_dir_all(&base);
         assert!(
@@ -2303,7 +2322,48 @@ mod tests {
             "{}",
             String::from_utf8_lossy(&out.stderr)
         );
-        String::from_utf8(out.stdout).unwrap()
+        (
+            String::from_utf8(out.stdout).unwrap(),
+            String::from_utf8(out.stderr).unwrap(),
+        )
+    }
+
+    #[test]
+    fn a_build_cache_that_does_not_answer_never_fails_the_build() {
+        let wrapper = "echo \"[${RUSTC_WRAPPER:-}]\"";
+        let webdav = ("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache");
+        // The cache answers: compiles go through sccache, nothing is said.
+        let (out, err) = run_prelude_env("/opt/rustup", None, false, wrapper, &[webdav]);
+        assert_eq!(out, "[sccache]\n");
+        assert!(!err.contains("sylphx: warning: the build cache"), "{err}");
+        // sccache's server refuses to start (its backend is down): the run
+        // compiles without it and says so once, with sccache's reason.
+        let (out, err) = run_prelude_env(
+            "/opt/rustup",
+            None,
+            false,
+            wrapper,
+            &[webdav, ("STUB_SCCACHE_START", "2")],
+        );
+        assert_eq!(out, "[]\n");
+        assert_eq!(
+            err.matches("sylphx: warning: the build cache did not answer, so this run compiles without it: sccache: error: Server startup failed: cache storage failed to read\n").count(),
+            1,
+            "{err}"
+        );
+        // A caller's own wrapper is left alone and no server is started.
+        let (out, _) = run_prelude_env(
+            "/opt/rustup",
+            None,
+            false,
+            wrapper,
+            &[
+                webdav,
+                ("STUB_SCCACHE_START", "2"),
+                ("RUSTC_WRAPPER", "mine"),
+            ],
+        );
+        assert_eq!(out, "[mine]\n");
     }
 
     #[test]

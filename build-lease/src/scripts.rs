@@ -256,6 +256,14 @@ pub fn provision_env(
 /// The synced tree is a git work tree before the command starts, so tests
 /// and build scripts that call `git` behave as they do locally (see
 /// [`git_tree`]).
+///
+/// The cache only speeds a build up, so its outage never fails one. sccache
+/// refuses to start its server when the cache backend does not answer (0.18:
+/// "Server startup failed: cache storage failed to read"), and every compile
+/// it wraps then exits 2, which Cargo reports as a failed `sccache <rustc>
+/// -vV`. So the server is started here, after the toolchain is chosen, and
+/// the command runs without `RUSTC_WRAPPER` and with one `sylphx: warning:`
+/// line when it will not start. A server already running answers at once.
 pub const RUN: &str = concat!(
     r#"W=$1 R=$2 E=$3
 shift 3
@@ -263,9 +271,10 @@ shift 3
     guest_dirs!(),
     git_tree!(),
     r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
+SC=
 export CARGO_INCREMENTAL="${CARGO_INCREMENTAL-0}" CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG-0}"
 if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
-  if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
+  if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then SC=1; fi
 fi
 mkdir -p "$W/.cargo"
 M=${SYLPHX_CRATES_MIRROR:-}
@@ -277,7 +286,16 @@ fi
 cd "$W/tree/$R" || exit 125
 "#,
     guest_toolchain!(),
-    r#"exec "$@"
+    r#"if [ -n "$SC" ]; then
+  TO=
+  if command -v timeout >/dev/null 2>&1; then TO="timeout 60"; fi
+  if SE=$($TO sccache --start-server 2>&1 >/dev/null); then
+    export RUSTC_WRAPPER=sccache
+  else
+    echo "sylphx: warning: the build cache did not answer, so this run compiles without it: $(printf '%s\n' "$SE" | grep -m 1 -v '^[[:space:]]*$')" >&2
+  fi
+fi
+exec "$@"
 "#
 );
 

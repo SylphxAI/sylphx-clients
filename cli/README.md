@@ -90,6 +90,10 @@ sylphx mcp                            # the MCP server over stdio
   the cache's environment into the command's (your `--env` wins). If the
   cache cannot be reached the run builds without it and prints one
   `sylphx: warning: build cache unavailable (…)` line; `--no-cache` skips it.
+  The same holds when sccache's server will not start on the machine because
+  the cache stops answering after the token is minted: the command then runs
+  without `RUSTC_WRAPPER` and the warning says so, rather than every compile
+  failing with sccache's exit 2.
   The token is never printed, logged or put in an event.
 - `sylphx build cache env [--project ID] [-o json]` mints a read-only token
   (12 h) and prints `export NAME='value'` lines for a POSIX shell (plus
