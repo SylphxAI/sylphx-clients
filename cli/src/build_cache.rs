@@ -24,7 +24,7 @@ use crate::output::{self, Format};
 use crate::{Defaults, Failure};
 
 /// Where the gateway is, unless `SYLPHX_BUILD_CACHE_URL` says otherwise.
-pub const DEFAULT_URL: &str = "https://build-cache.sylphx.com";
+pub const DEFAULT_URL: &str = "https://build-cache.sylphx.net";
 const URL_ENV: &str = "SYLPHX_BUILD_CACHE_URL";
 /// A cache that does not answer this fast only slows the build: give up.
 const MINT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -522,13 +522,31 @@ mod tests {
 
     #[test]
     fn plain_http_only_for_localhost() {
-        assert!(check_url("https://build-cache.sylphx.com").is_ok());
+        assert!(check_url("https://build-cache.sylphx.net").is_ok());
         assert!(check_url("http://127.0.0.1:8080").is_ok());
         assert!(check_url("http://localhost").is_ok());
         assert!(check_url("http://[::1]:80").is_ok());
         assert!(check_url("http://cache.example.com").is_err());
         assert!(check_url("ftp://x").is_err());
         assert!(check_url("https://").is_err());
+    }
+
+    /// The default gateway is a hostname the build-cache service actually
+    /// serves: a default with no route answers 404 and every run builds
+    /// without the cache.
+    #[test]
+    fn default_url_is_a_served_build_cache_domain() {
+        let toml = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../services/build/sylphx.toml");
+        let Ok(text) = std::fs::read_to_string(&toml) else {
+            return; // a packaged crate has no monorepo beside it
+        };
+        let host = DEFAULT_URL.trim_start_matches("https://");
+        assert!(
+            text.contains(&format!("hostname = \"{host}\"")),
+            "{DEFAULT_URL} is not a [[domains]] hostname in {}",
+            toml.display()
+        );
     }
 
     #[test]

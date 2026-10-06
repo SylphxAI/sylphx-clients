@@ -65,7 +65,7 @@ sylphx mcp                            # the MCP server over stdio
   `export RUSTC_WRAPPER=sccache` when sccache is installed and the variable
   is unset); `-o json` prints the environment as an object. The output holds
   a credential. Exit 0; 2 usage; 125 platform failure. The gateway is
-  `https://build-cache.sylphx.com`, or `SYLPHX_BUILD_CACHE_URL`.
+  `https://build-cache.sylphx.net`, or `SYLPHX_BUILD_CACHE_URL`.
 
 ## `sylphx ai top`
 

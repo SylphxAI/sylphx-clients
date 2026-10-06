@@ -84,17 +84,26 @@ impl Plan {
     }
 }
 
+/// Whether `path` is the guest's own git directory or inside it: the
+/// workspace keeps its own repository there (see `git_tree!` in the run
+/// script), so the sync never sends or deletes it.
+pub fn in_git_dir(path: &str) -> bool {
+    path == ".git" || path.starts_with(".git/")
+}
+
 /// The diff between this tree and what the workspace last materialized.
+/// Paths in `.git` are never part of it.
 pub fn plan(local: &Tree, remote: Option<&Tree>) -> Plan {
     let Some(remote) = remote else {
         return Plan {
             full: true,
-            upload: local.keys().cloned().collect(),
+            upload: local.keys().filter(|p| !in_git_dir(p)).cloned().collect(),
             remove: Vec::new(),
         };
     };
     let upload = local
         .iter()
+        .filter(|(p, _)| !in_git_dir(p))
         .filter(|(p, e)| {
             remote
                 .get(*p)
@@ -104,7 +113,7 @@ pub fn plan(local: &Tree, remote: Option<&Tree>) -> Plan {
         .collect();
     let remove = remote
         .keys()
-        .filter(|p| !local.contains_key(*p))
+        .filter(|p| !local.contains_key(*p) && !in_git_dir(p))
         .cloned()
         .collect();
     Plan {
@@ -238,7 +247,9 @@ pub fn lists(tree: &Tree, plan: &Plan) -> Lists {
 /// manifest on the workspace always describes the tree exactly. Extracted
 /// files get the time of extraction, so they are newer than any output built
 /// from what they replace; files the sync does not touch keep their times,
-/// which is what lets cargo reuse its fingerprints.
+/// which is what lets cargo reuse its fingerprints. The tree's `.git` (the
+/// guest's own repository) is never swept, so a warm run only stages what
+/// changed; a full sync replaces the tree, `.git` included.
 pub const APPLY: &str = r#"set -eu
 export LC_ALL=C
 W=$1 FULL=$2
@@ -253,7 +264,7 @@ mkdir -p "$T" "$W/target"
 touch "$S/manifest.old" "$S/drop" "$S/add" "$S/remove"
 if [ -s "$S/remove" ]; then
   (cd "$T" && xargs -0 rm -rf -- < "$S/remove")
-  find "$T" -mindepth 1 -depth -type d -empty -delete
+  find "$T" -mindepth 1 -depth -type d -empty ! -path "$T/.git" ! -path "$T/.git/*" -delete
 fi
 for f in "$S"/in-*.tar.gz; do
   [ -e "$f" ] || continue
@@ -696,6 +707,20 @@ fn ascii_cut(s: &str) -> String {
         .collect()
 }
 
+/// The commit checked out in the work tree at `root`, if it has one; the
+/// guest names it in its own commit and exports it as
+/// `SYLPHX_BUILD_GIT_HEAD`.
+pub fn head(root: &Path) -> Option<String> {
+    let out = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["rev-parse", "--verify", "-q", "HEAD"])
+        .output()
+        .ok()?;
+    let sha = String::from_utf8(out.stdout).ok()?.trim().to_string();
+    (out.status.success() && !sha.is_empty()).then_some(sha)
+}
+
 /// The work-tree root that encloses `dir`, and `dir` relative to it.
 pub fn work_tree(dir: &Path) -> Result<(PathBuf, String), String> {
     let out = Command::new("git")
@@ -1104,6 +1129,47 @@ mod tests {
         // Nothing changed: nothing is sent and the manifest stays the same.
         let local2 = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
         assert_eq!(plan(&local2, Some(&after)), Plan::default());
+    }
+
+    #[test]
+    fn the_guests_git_dir_is_never_sent_or_removed() {
+        let remote = tree(&[(".git/HEAD", 'a', Mode::File), ("a", 'a', Mode::File)]);
+        let local = tree(&[
+            (".git/config", 'b', Mode::File),
+            (".gitignore", 'c', Mode::File),
+        ]);
+        let p = plan(&local, Some(&remote));
+        assert_eq!(p.upload, vec![".gitignore"]);
+        assert_eq!(p.remove, vec!["a"]);
+        assert_eq!(plan(&local, None).upload, vec![".gitignore"]);
+    }
+
+    /// The guest's repository in the tree, empty directories included,
+    /// survives a warm sync that deletes files and sweeps empty directories.
+    #[cfg(unix)]
+    #[test]
+    fn a_warm_sync_keeps_the_trees_git_dir() {
+        let src = Scratch::new("src-git");
+        let ws = Scratch::new("ws-git");
+        let root = &src.0;
+        git(root, &["init", "-q"]);
+        write(root, "a.rs", "a\n");
+        write(root, "dir/b.rs", "b\n");
+        let mut cache = StatCache::default();
+        let local = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
+        assert!(apply(&ws.0, root, &local, &plan(&local, None), 1));
+        let g = ws.0.join("tree/.git");
+        std::fs::create_dir_all(g.join("refs/heads")).unwrap();
+        write(&g, "HEAD", "ref: refs/heads/main\n");
+
+        std::fs::remove_dir_all(root.join("dir")).unwrap();
+        let local = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
+        let p = plan(&local, remote(&ws.0).as_ref());
+        assert_eq!(p.remove, vec!["dir/b.rs"]);
+        assert!(apply(&ws.0, root, &local, &p, 0));
+        assert!(!ws.0.join("tree/dir").exists(), "emptied directories go");
+        assert!(g.join("refs/heads").is_dir(), "the git dir stays whole");
+        assert!(g.join("HEAD").is_file());
     }
 
     /// A sync interrupted after the manifest was moved aside leaves no

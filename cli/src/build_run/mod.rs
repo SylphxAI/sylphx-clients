@@ -142,6 +142,34 @@ fi
     };
 }
 
+/// Makes `$W/tree` a git work tree: the real `.git` stays home (its packs
+/// would cost more than the tree), so the guest keeps its own repository in
+/// the warm workspace, created once with `git init`, and each run stages the
+/// synced tree (`git add -A`, only the changed files once warm) and commits
+/// it, the message naming the local `HEAD` (`SYLPHX_BUILD_GIT_HEAD`). The
+/// sync never sends or deletes `.git` ([`sync::plan`], [`sync::APPLY`]).
+/// Bounded and fail-open: a missing `git` or a failed step prints one
+/// `sylphx: warning:` line and the command still runs.
+macro_rules! git_tree {
+    () => {
+        r#"if command -v git >/dev/null 2>&1; then
+  TO=
+  if command -v timeout >/dev/null 2>&1; then TO="timeout 300"; fi
+  if ! $TO sh -c '
+    cd "$1" || exit 1
+    g() { git -c init.defaultBranch=main -c core.hooksPath=/dev/null -c commit.gpgsign=false -c user.name=sylphx -c user.email=build@sylphx.invalid "$@"; }
+    if [ ! -d .git ]; then g init -q && mkdir -p .git/info && printf "/target\n" >> .git/info/exclude || exit 1; fi
+    g add -A && g commit -q --allow-empty --no-verify -m "sylphx build run of $2"
+  ' sylphx-git "$W/tree" "${SYLPHX_BUILD_GIT_HEAD:-an unknown commit}" > "$W/.sylphx/git.log" 2>&1; then
+    echo "sylphx: warning: the tree on the build machine is not a git work tree, so git calls in the command fail: $(tail -n 1 "$W/.sylphx/git.log" 2>/dev/null)" >&2
+  fi
+else
+  echo "sylphx: warning: the build machine has no git, so git calls in the command fail" >&2
+fi
+"#
+    };
+}
+
 /// Everything that must be ready before the user's command starts: the tree
 /// directory and, for a Rust tree, the toolchain named by its
 /// `rust-toolchain.toml` (installed on first use onto the workspace). It runs
@@ -189,11 +217,16 @@ exit 0
 /// `$W/.cargo/config.toml` as an ancestor of the tree, and the file is removed
 /// when the mirror is absent, so Cargo then reaches crates.io directly
 /// (fail-open, like the cache itself).
+///
+/// The synced tree is a git work tree before the command starts, so tests
+/// and build scripts that call `git` behave as they do locally (see
+/// [`git_tree`]).
 const RUN: &str = concat!(
     r#"W=$1 R=$2 E=$3
 shift 3
 "#,
     guest_dirs!(),
+    git_tree!(),
     r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
 if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
   if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then export RUSTC_WRAPPER=sccache; fi
@@ -1444,8 +1477,11 @@ impl Run<'_> {
             if volume { "0" } else { "1" }.into(),
         ];
         args.extend(self.o.command.iter().cloned());
-        // The command's own `--env` wins over the cache's.
+        // The command's own `--env` wins over the cache's and ours.
         let mut env = cache;
+        if let Some(sha) = sync::head(&self.o.root) {
+            env.insert("SYLPHX_BUILD_GIT_HEAD".into(), sha);
+        }
         env.extend(self.o.env.clone());
         let mut p = g.start(USER, &args, "", &env).await?;
         let deadline = tokio::time::Instant::now() + self.o.timeout;
@@ -1892,6 +1928,119 @@ mod tests {
                 String::from_utf8_lossy(&out.stderr).into_owned(),
             )
         }
+    }
+
+    impl Ws {
+        /// Runs [`RUN`] in `tree/<rel>` with `PATH` and extra `env`;
+        /// answers the status, stdout and stderr.
+        fn run(
+            &self,
+            rel: &str,
+            path: &str,
+            env: &[(&str, &str)],
+            cmd: &str,
+        ) -> (i32, String, String) {
+            let out = std::process::Command::new("/bin/sh")
+                .args(["-c", RUN, "sylphx-run"])
+                .arg(&self.0)
+                .args([rel, "0", "sh", "-c", cmd])
+                .env_clear()
+                .env("PATH", path)
+                .envs(env.iter().copied())
+                .output()
+                .unwrap();
+            (
+                out.status.code().unwrap_or(-1),
+                String::from_utf8_lossy(&out.stdout).into_owned(),
+                String::from_utf8_lossy(&out.stderr).into_owned(),
+            )
+        }
+
+        /// A `bin` directory holding only links to `tools` (and `sh`).
+        fn bin(&self, name: &str, tools: &[&str]) -> String {
+            let d = self.0.join(name);
+            std::fs::create_dir_all(&d).unwrap();
+            for t in tools.iter().chain(&["sh"]) {
+                let src = ["/usr/bin", "/bin"]
+                    .iter()
+                    .map(|b| Path::new(b).join(t))
+                    .find(|p| p.exists())
+                    .unwrap_or_else(|| panic!("{t} is not installed"));
+                let _ = std::os::unix::fs::symlink(src, d.join(t));
+            }
+            d.display().to_string()
+        }
+    }
+
+    const SYS_PATH: &str = "/usr/bin:/bin";
+
+    #[test]
+    fn the_tree_is_a_git_work_tree_naming_the_local_head() {
+        let w = Ws::new("git-tree");
+        w.file("tree/crate/a.txt", "a\n");
+        w.file("tree/b.txt", "b\n");
+        std::os::unix::fs::symlink("../target", w.0.join("tree/target")).unwrap();
+        let (code, out, err) = w.run(
+            "crate",
+            SYS_PATH,
+            &[("SYLPHX_BUILD_GIT_HEAD", "0123abc")],
+            "git rev-parse --is-inside-work-tree && git log -1 --format=%s && git ls-files --full-name :/",
+        );
+        assert_eq!(code, 0, "{err}");
+        assert_eq!(
+            out,
+            "true\nsylphx build run of 0123abc\nb.txt\ncrate/a.txt\n"
+        );
+        assert!(!err.contains("warning"), "{err}");
+    }
+
+    #[test]
+    fn a_warm_workspace_keeps_its_repository_and_commits_only_changes() {
+        let w = Ws::new("git-warm");
+        w.file("tree/keep.txt", "keep\n");
+        w.file("tree/edit.txt", "v1\n");
+        let (code, _, err) = w.run(".", SYS_PATH, &[], "true");
+        assert_eq!(code, 0, "{err}");
+        w.file("tree/edit.txt", "v2\n");
+        let (code, out, err) = w.run(
+            ".",
+            SYS_PATH,
+            &[],
+            "git rev-list --count HEAD && git log -1 --format=%s && git show --name-only --format= HEAD",
+        );
+        assert_eq!(code, 0, "{err}");
+        assert_eq!(out, "2\nsylphx build run of an unknown commit\nedit.txt\n");
+        assert!(!err.contains("warning"), "{err}");
+    }
+
+    #[test]
+    fn a_failed_git_step_warns_and_the_command_keeps_its_exit_code() {
+        let w = Ws::new("git-fail");
+        w.file("tree/a.txt", "a\n");
+        w.file(
+            "fake/git",
+            "#!/bin/sh\necho 'fatal: disk full' >&2\nexit 128\n",
+        );
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(w.0.join("fake/git"), std::fs::Permissions::from_mode(0o755))
+            .unwrap();
+        let path = format!("{}:{SYS_PATH}", w.0.join("fake").display());
+        let (code, out, err) = w.run(".", &path, &[], "echo ran; exit 7");
+        assert_eq!((code, out.as_str()), (7, "ran\n"), "{err}");
+        assert_eq!(err.matches("sylphx: warning:").count(), 1, "{err}");
+        assert!(err.contains("fatal: disk full"), "{err}");
+    }
+
+    #[test]
+    fn a_machine_without_git_warns_and_runs_the_command() {
+        let w = Ws::new("git-none");
+        w.file("tree/a.txt", "a\n");
+        let path = w.bin("nogit", &["mkdir", "rm", "tail"]);
+        let (code, out, err) = w.run(".", &path, &[], "echo ran");
+        assert_eq!((code, out.as_str()), (0, "ran\n"), "{err}");
+        assert_eq!(err.matches("sylphx: warning:").count(), 1, "{err}");
+        assert!(err.contains("has no git"), "{err}");
+        assert!(!w.0.join("tree/.git").exists());
     }
 
     impl Drop for Ws {
