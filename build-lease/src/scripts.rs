@@ -11,9 +11,28 @@
 /// so 15 GiB leaves 50 % over it. sccache writes to the remote build cache
 /// whenever the run has one, so its local directory stays empty. The 100 GiB
 /// Volume (`VOLUME_GIB` in the CLI) therefore keeps about eight such states
-/// before a prune, and stays as it is.
+/// before a prune, and stays as it is. `target/` is what fills it: read on
+/// two of SylphxAI/cloud's warm workspaces (2026-10-06 22:03Z and 22:10Z),
+/// everything else came to 0.97 and 1.42 GiB (the Cargo registry 0.66-1.0,
+/// the tree 0.31, its git repository 0.07; sccache, git dependencies and
+/// rustup empty), while one `target/` held 30.3 GiB after five hours, 17.3
+/// GiB of it `debug/incremental` written before builds ran with incremental
+/// compilation off.
 pub const WORKSPACE_MIN_FREE_GIB: u64 = 15;
 pub const WORKSPACE_MIN_FREE_PERCENT: u64 = 15;
+/// The files a sync puts on the workspace before its apply step consumes
+/// them (`$W/.sylphx/in-*.tar.gz`, the `drop`, `add` and `remove` lists, the
+/// build store's `fill` and `fill.gz`) and the git dependencies' uploads
+/// (`$W/git-deps/in`). [`BOOTSTRAP`] removes them before each sync.
+pub const SYNC_LEFTOVERS: &[&str] = &[
+    ".sylphx/in-*.tar.gz",
+    ".sylphx/drop",
+    ".sylphx/add",
+    ".sylphx/remove",
+    ".sylphx/fill",
+    ".sylphx/fill.gz",
+    "git-deps/in",
+];
 /// [`BOOTSTRAP`]'s status for a workspace too small even when empty.
 pub const BOOTSTRAP_TOO_SMALL: i32 = 75;
 
@@ -32,9 +51,20 @@ pub const BOOTSTRAP_TOO_SMALL: i32 = 75;
 /// it first anyway: the client asks for that on its one retry after a run
 /// ran out of space before its command started. Prints `pruned` or `emptied`
 /// on stdout when it did either.
+///
+/// First it removes whatever an earlier run's sync left before its apply
+/// finished ([`SYNC_LEFTOVERS`]): the client sends a whole new set after this
+/// script, and the apply step reads every `in-*.tar.gz`, list and fill it
+/// finds. envd keeps the part of an upload it wrote before the disk filled
+/// (its 507 "not enough disk space available"), so a leftover can be a
+/// truncated tarball: on 2026-10-06 one failed the next run's apply on a
+/// pruned workspace with `gzip: stdin: unexpected end of file`. A leftover
+/// `remove` or `add` list would also delete tree files or misstate the
+/// manifest without failing anything.
 pub const BOOTSTRAP: &str = r#"set -eu
 W=$1 CHECK=${2:-0} EMPTY=${3:-0} MIN_GIB=15 MIN_PCT=15
 mkdir -p "$W/.sylphx"
+rm -rf "$W/.sylphx"/in-*.tar.gz "$W/.sylphx/drop" "$W/.sylphx/add" "$W/.sylphx/remove" "$W/.sylphx/fill" "$W/.sylphx/fill.gz" "$W/git-deps/in"
 room() {
   df -Pk "$W" | awk -v gib="$MIN_GIB" -v pct="$MIN_PCT" 'NR == 2 { need = $2 * pct / 100; if (need < gib * 1048576) need = gib * 1048576; exit !($4 >= need) }'
 }

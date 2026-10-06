@@ -917,11 +917,12 @@ impl Run<'_> {
         let (cache, store) = self.cache().await;
         let warm = match self.sync(&guest, &m, store.as_ref()).await {
             Ok(w) => w,
-            Err(e) if out_of_space(e.text()) => return self.out_of_space(&name).await,
+            Err(e) if workspace_full(e.text()) => return self.out_of_space(&name).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
         let git_env = match self.send_git_deps(&guest).await {
             Ok(e) => e,
+            Err(e) if out_of_space(e.text()) => return self.out_of_space(&name).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
         // An image build needs no Rust toolchain.
@@ -1642,7 +1643,7 @@ impl Run<'_> {
             .await?;
         if code != 0 {
             return Err(Fault::Other(format!(
-                "applying the sync failed: {}",
+                "{APPLY_FAILED}: {}",
                 String::from_utf8_lossy(&err).trim()
             )));
         }
@@ -2153,9 +2154,28 @@ fn vstate(v: &sbx::Volume) -> sbx::VolumeState {
         .unwrap_or(sbx::VolumeState::Unknown(String::new()))
 }
 
-/// A failure text that says a disk was full (ENOSPC).
+/// A failure text that says a disk was full: ENOSPC from a guest tool, or
+/// envd's 507 for an upload it could not finish ("not enough disk space
+/// available", "not enough inodes available").
 fn out_of_space(text: &str) -> bool {
-    text.contains("No space left on device") || text.contains("ENOSPC")
+    text.contains("No space left on device")
+        || text.contains("ENOSPC")
+        || text.contains("507 Insufficient Storage")
+        || text.contains("not enough disk space")
+        || text.contains("not enough inodes")
+}
+
+/// How [`Run::sync`] names a failed apply step.
+const APPLY_FAILED: &str = "applying the sync failed";
+
+/// A sync failure the run treats as a full workspace: one that says so, or
+/// any failure of the apply step. Whatever stops the apply (a truncated
+/// upload, a tool that died on a full disk without saying ENOSPC) leaves the
+/// tree and its manifest half-written, so the one retry starts from an
+/// emptied workspace (a cold sync) rather than a second try on the same
+/// state. A second failure is 125, retryable, as any loss before the start.
+fn workspace_full(text: &str) -> bool {
+    out_of_space(text) || text.starts_with(APPLY_FAILED)
 }
 
 fn argv(a: &[&str]) -> Vec<String> {
@@ -2837,6 +2857,138 @@ esac
         )));
         assert!(out_of_space("gzip: stdout: No space left on device"));
         assert!(!out_of_space("guest answered 503"));
+    }
+
+    /// Any failed apply and envd's 507 for a cut-short upload empty the
+    /// workspace for the one retry; other faults keep their own verdict.
+    #[test]
+    fn a_failed_apply_or_a_cut_short_upload_counts_as_a_full_workspace() {
+        assert!(workspace_full(
+            "applying the sync failed: gzip: stdin: unexpected end of file"
+        ));
+        assert!(workspace_full(&format!("{APPLY_FAILED}: tar: short read")));
+        let envd = r#"guest answered 507 Insufficient Storage: {"code":507,"message":"not enough disk space available"}"#;
+        assert!(out_of_space(envd) && workspace_full(envd));
+        assert!(out_of_space("not enough inodes available: no space"));
+        assert!(!workspace_full("guest answered 503 Service Unavailable"));
+        assert!(!workspace_full("preparing the git dependencies failed: x"));
+    }
+
+    /// A gzip tarball of one file, `name`, as the client sends it, with
+    /// incompressible content so that a cut-off copy ends mid-stream.
+    fn tarball(w: &Ws, name: &str, bytes: usize) -> Vec<u8> {
+        let mut x: u64 = 0x9e37_79b9_7f4a_7c15;
+        let body: String = (0..bytes)
+            .map(|_| {
+                x ^= x << 13;
+                x ^= x >> 7;
+                x ^= x << 17;
+                char::from(b'!' + (x % 90) as u8)
+            })
+            .collect();
+        w.file(&format!("src/{name}"), &body);
+        let out = std::process::Command::new("tar")
+            .args(["-czf", "-", "-C"])
+            .arg(w.0.join("src"))
+            .arg(name)
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        out.stdout
+    }
+
+    fn apply(w: &Ws, full: &str) -> (bool, String) {
+        let out = std::process::Command::new("/bin/sh")
+            .args(["-c", sync::APPLY, "apply"])
+            .arg(w.0.join("ws"))
+            .args([full, "0"])
+            .env_clear()
+            .env("PATH", SYS_PATH)
+            .output()
+            .unwrap();
+        (
+            out.status.success(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    }
+
+    /// 2026-10-06 21:54Z: two runs on a full workspace had envd answer 507
+    /// partway through an upload, which leaves the part it wrote; at 21:59Z
+    /// the next run pruned `target/`, sent its own tarball, and its apply
+    /// read the leftover too: `gzip: stdin: unexpected end of file`. The
+    /// bootstrap now clears every leftover before the sync, so the same
+    /// state applies cleanly; a leftover `remove` list would otherwise have
+    /// deleted a tree file without failing.
+    #[test]
+    fn a_truncated_upload_left_by_an_earlier_run_never_reaches_the_next_apply() {
+        let w = Ws::new("ws-leftover");
+        let fresh = tarball(&w, "new.rs", 64);
+        let cut = tarball(&w, "old.rs", 256 << 10);
+        let leftover = |w: &Ws| {
+            w.file("ws/tree/keep.rs", "fn keep() {}\n");
+            let s = w.0.join("ws/.sylphx");
+            std::fs::create_dir_all(&s).unwrap();
+            std::fs::write(s.join("in-0003.tar.gz"), &cut[..cut.len() / 2]).unwrap();
+            std::fs::write(s.join("remove"), b"keep.rs\0").unwrap();
+        };
+        let send = |w: &Ws| {
+            std::fs::write(w.0.join("ws/.sylphx/in-0000.tar.gz"), &fresh).unwrap();
+        };
+
+        // The failure as it was: the apply meets the cut-off tarball.
+        leftover(&w);
+        send(&w);
+        let (ok, err) = apply(&w, "0");
+        assert!(!ok);
+        assert!(err.contains("unexpected end of file"), "{err}");
+        assert!(workspace_full(&format!("{APPLY_FAILED}: {}", err.trim())));
+
+        // The same leftovers with the bootstrap first: a clean apply.
+        let w = Ws::new("ws-leftover-fixed");
+        leftover(&w);
+        let (code, _, err) = bootstrap(&w, SYS_PATH, &["0", "0"]);
+        assert_eq!(code, 0, "{err}");
+        send(&w);
+        let (ok, err) = apply(&w, "0");
+        assert!(ok, "{err}");
+        assert!(w.0.join("ws/tree/new.rs").exists());
+        assert!(w.0.join("ws/tree/keep.rs").exists(), "no stale remove list");
+        assert!(!w.0.join("ws/tree/old.rs").exists());
+    }
+
+    /// Every file a sync stages before its apply is removed by the
+    /// bootstrap; the manifest, the tree and the caches stay.
+    #[test]
+    fn the_bootstrap_clears_every_sync_leftover_and_keeps_the_workspace() {
+        use sylphx_build_lease::scripts::SYNC_LEFTOVERS;
+        let w = Ws::new("ws-clear");
+        for l in SYNC_LEFTOVERS {
+            let p = l.replace('*', "0007");
+            if p.ends_with("fill") || p.ends_with("/in") {
+                w.file(&format!("ws/{p}/x"), "x");
+            } else {
+                w.file(&format!("ws/{p}"), "x");
+            }
+        }
+        w.file("ws/.sylphx/manifest", "a.rs\n");
+        w.file("ws/tree/a.rs", "fn a() {}\n");
+        w.file("ws/target/debug/a", "x");
+        w.file("ws/git-deps/0123456789abcdef.git/HEAD", "x");
+        let (code, _, err) = bootstrap(&w, SYS_PATH, &["0", "0"]);
+        assert_eq!(code, 0, "{err}");
+        for l in SYNC_LEFTOVERS {
+            let p = l.replace('*', "0007");
+            assert!(!w.0.join("ws").join(&p).exists(), "{p} is left");
+        }
+        for keep in [
+            ".sylphx/manifest",
+            ".sylphx/manifest.gz",
+            "tree/a.rs",
+            "target/debug/a",
+            "git-deps/0123456789abcdef.git/HEAD",
+        ] {
+            assert!(w.0.join("ws").join(keep).exists(), "{keep} is gone");
+        }
     }
 
     #[test]
