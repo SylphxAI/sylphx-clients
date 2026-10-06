@@ -101,12 +101,18 @@ pub fn run_request(project: String, timeout: Duration) -> Request {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Minted {
     pub env: BTreeMap<String, String>,
+    /// The token itself, when the reply names it (the build store's bearer).
+    pub token: Option<String>,
+    /// The cache the token is for, when the reply names it.
+    pub cache: Option<String>,
 }
 
 impl std::fmt::Debug for Minted {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Minted")
             .field("env", &self.env.keys().collect::<Vec<_>>())
+            .field("token", &self.token.as_ref().map(|_| "[redacted]"))
+            .field("cache", &self.cache)
             .finish()
     }
 }
@@ -116,6 +122,7 @@ impl Minted {
     pub fn secrets(&self) -> Vec<String> {
         self.env
             .values()
+            .chain(&self.token)
             .filter(|v| v.len() >= 8)
             .cloned()
             .collect()
@@ -295,7 +302,16 @@ fn parse_env(v: &Value) -> Result<Minted, MintError> {
         }
         env.insert(k.clone(), val.to_string());
     }
-    Ok(Minted { env })
+    let text = |k: &str| {
+        v[k].as_str()
+            .filter(|s| !s.is_empty() && !s.contains('\0'))
+            .map(str::to_string)
+    };
+    Ok(Minted {
+        env,
+        token: text("token"),
+        cache: text("cache"),
+    })
 }
 
 fn valid_name(k: &str) -> bool {
@@ -496,8 +512,11 @@ mod tests {
 
     #[test]
     fn the_env_is_a_bounded_map_of_strings() {
-        let ok = parse_env(&json!({"env": {"A_B": "x", "C": "y"}, "token": "t"})).unwrap();
+        let ok = parse_env(&json!({"env": {"A_B": "x", "C": "y"}, "token": "t", "cache": "bc_1"}))
+            .unwrap();
         assert_eq!(ok.env.len(), 2);
+        assert_eq!(ok.token.as_deref(), Some("t"));
+        assert_eq!(ok.cache.as_deref(), Some("bc_1"));
         for bad in [
             json!({}),
             json!({"env": []}),
@@ -512,7 +531,9 @@ mod tests {
 
     #[test]
     fn minted_does_not_print_its_values() {
-        let m = parse_env(&json!({"env": {"TOKEN": "s3cret-value"}})).unwrap();
+        let m =
+            parse_env(&json!({"env": {"TOKEN": "s3cret-value"}, "token": "s3cret-token"})).unwrap();
+        assert!(m.secrets().contains(&"s3cret-token".to_string()));
         let shown = format!("{m:?}");
         assert!(
             shown.contains("TOKEN") && !shown.contains("s3cret"),

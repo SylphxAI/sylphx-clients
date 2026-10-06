@@ -159,6 +159,7 @@ pub fn line(path: &str, e: &Entry) -> String {
 }
 
 /// The whole manifest of a tree.
+#[cfg(test)]
 pub fn render(tree: &Tree) -> String {
     let mut out = format!("{HEADER}\n");
     for (p, e) in tree {
@@ -216,10 +217,17 @@ pub struct Lists {
     pub remove: Vec<u8>,
 }
 
-pub fn lists(tree: &Tree, plan: &Plan) -> Lists {
+/// The lists for `plan`, leaving out of `add` the paths in `filled`: the
+/// guest fills those from the build store and appends their lines itself.
+pub fn lists(tree: &Tree, plan: &Plan, filled: &BTreeSet<String>) -> Lists {
     let mut l = Lists::default();
     if plan.full {
-        l.add = render(tree);
+        l.add = format!("{HEADER}\n");
+        for (p, e) in tree {
+            if !filled.contains(p) {
+                l.add.push_str(&line(p, e));
+            }
+        }
         return l;
     }
     for p in plan.upload.iter().chain(&plan.remove) {
@@ -227,7 +235,7 @@ pub fn lists(tree: &Tree, plan: &Plan) -> Lists {
         l.drop.push('\n');
     }
     for p in &plan.upload {
-        if let Some(e) = tree.get(p) {
+        if let Some(e) = tree.get(p).filter(|_| !filled.contains(p)) {
             l.add.push_str(&line(p, e));
         }
     }
@@ -240,7 +248,10 @@ pub fn lists(tree: &Tree, plan: &Plan) -> Lists {
 
 /// Applies one sync on the guest, as the guest user, with `sh`, `tar`,
 /// `gzip`, `awk` and `xargs`. `$1` is the workspace, `$2` is 1 for a full
-/// sync, 2 for a full sync that also empties the build caches (`--fresh`).
+/// sync, 2 for a full sync that also empties the build caches (`--fresh`),
+/// `$3` is 1 when the build store filled `.sylphx/fill/tree` (see
+/// [`super::store::FILL`]): those files are copied in after the tarballs and
+/// their lines (`.sylphx/fill/ok`) appended after `add`.
 ///
 /// The manifest is moved aside first and written back last, so a sync that
 /// is interrupted anywhere leaves no manifest and the next sync is full; a
@@ -252,7 +263,7 @@ pub fn lists(tree: &Tree, plan: &Plan) -> Lists {
 /// changed; a full sync replaces the tree, `.git` included.
 pub const APPLY: &str = r#"set -eu
 export LC_ALL=C
-W=$1 FULL=$2
+W=$1 FULL=$2 FILL=${3:-0}
 T=$W/tree S=$W/.sylphx
 mkdir -p "$S"
 if [ -f "$S/manifest" ]; then mv -f "$S/manifest" "$S/manifest.old"; fi
@@ -271,11 +282,15 @@ for f in "$S"/in-*.tar.gz; do
   tar -xzmf "$f" -C "$T"
   rm -f "$f"
 done
+if [ "$FILL" = 1 ]; then
+  (cd "$S/fill/tree" && tar -cf - .) | tar -xmf - -C "$T"
+fi
 if [ ! -e "$T/target" ] && [ ! -L "$T/target" ]; then ln -s ../target "$T/target"; fi
 awk -v D="$S/drop" -v AT=73 'BEGIN { while ((getline l < D) > 0) d[l] = 1 } !(substr($0, AT) in d)' "$S/manifest.old" > "$S/manifest.next"
 cat "$S/add" >> "$S/manifest.next"
+if [ "$FILL" = 1 ]; then cat "$S/fill/ok" >> "$S/manifest.next"; fi
 mv -f "$S/manifest.next" "$S/manifest"
-rm -f "$S/manifest.old" "$S/drop" "$S/add" "$S/remove"
+rm -rf "$S/manifest.old" "$S/drop" "$S/add" "$S/remove" "$S/fill"
 "#;
 
 /// The files a run sends: tracked and untracked-but-not-ignored, as
@@ -741,15 +756,15 @@ pub fn work_tree(dir: &Path) -> Result<(PathBuf, String), String> {
 
 /// Where the stat cache of this work tree lives (inside its git dir).
 pub fn cache_path(root: &Path) -> Option<PathBuf> {
+    git_path(root, "sylphx/cas-index")
+}
+
+/// `name` inside this work tree's git dir.
+pub fn git_path(root: &Path, name: &str) -> Option<PathBuf> {
     let out = Command::new("git")
         .arg("-C")
         .arg(root)
-        .args([
-            "rev-parse",
-            "--path-format=absolute",
-            "--git-path",
-            "sylphx/cas-index",
-        ])
+        .args(["rev-parse", "--path-format=absolute", "--git-path", name])
         .output()
         .ok()?;
     out.status
@@ -982,7 +997,7 @@ mod tests {
         for (i, t) in tarballs(root, &p.upload, local).unwrap().iter().enumerate() {
             std::fs::write(s.join(format!("in-{i:04}.tar.gz")), t).unwrap();
         }
-        let l = lists(local, p);
+        let l = lists(local, p, &BTreeSet::new());
         std::fs::write(s.join("drop"), &l.drop).unwrap();
         std::fs::write(s.join("add"), &l.add).unwrap();
         std::fs::write(s.join("remove"), &l.remove).unwrap();

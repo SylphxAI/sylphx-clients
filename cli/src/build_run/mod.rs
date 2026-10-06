@@ -26,6 +26,7 @@
 
 mod guest;
 mod image;
+mod store;
 mod sync;
 
 use std::collections::{BTreeMap, HashSet};
@@ -605,6 +606,8 @@ struct Stats {
     bytes_up: u64,
     bytes_down: u64,
     artifacts: usize,
+    /// Files the build machine took from the build store, not the upload.
+    from_store: usize,
     /// `build image`: the script's metadata object.
     image: Option<Value>,
 }
@@ -725,6 +728,7 @@ fn result_event(outcome: &Outcome, s: &Stats, ms: u64) -> Value {
         "workspace": if s.warm { "warm" } else { "cold" },
         "bytes_up": s.bytes_up,
         "bytes_down": s.bytes_down,
+        "from_store": s.from_store,
     });
     if let Outcome::Platform { reason, .. } = outcome {
         result["error"] = json!(reason);
@@ -917,7 +921,8 @@ struct Run<'a> {
     /// The caller's key, for minting the cache token.
     key: Option<&'a str>,
     cache_url: String,
-    /// The one `build cache unavailable` warning is given once per run.
+    /// One warning per run: the build cache unavailable, or the build store
+    /// not taking the sync.
     cache_warned: AtomicBool,
     /// The region refused a workspace Volume (`SHAPE_NOT_OFFERED`): every
     /// attempt of this run leases a machine without one.
@@ -961,7 +966,10 @@ impl Run<'_> {
             Err(e) => return self.lost_or(&name, e).await,
         };
         let mut minted = Instant::now();
-        let warm = match self.sync(&guest, &m).await {
+        let warned_before = self.cache_warned.load(Ordering::Relaxed);
+        // Minted before the sync: the build store takes the sync's files.
+        let (cache, store) = self.cache().await;
+        let warm = match self.sync(&guest, &m, store.as_ref()).await {
             Ok(w) => w,
             Err(e) => return self.lost_or(&name, e).await,
         };
@@ -972,7 +980,7 @@ impl Run<'_> {
             }
         }
         let shape = format!("build-{}", self.o.size);
-        let (cache, warned) = self.cache().await;
+        let warned = !warned_before && self.cache_warned.load(Ordering::Relaxed);
         // At most three `sylphx:` lines: a warning takes the place of this one.
         if !warned {
             self.out.progress(&format!(
@@ -1018,13 +1026,14 @@ impl Run<'_> {
         Attempt::Done(Outcome::Ran(code))
     }
 
-    /// The cache environment for the command, minted just before it starts so
-    /// the token covers the run. Empty with `--no-cache`, and when no token
-    /// can be had (a cache that is missing only slows the build); the bool
-    /// says the warning line was written.
-    async fn cache(&self) -> (BTreeMap<String, String>, bool) {
+    /// The cache environment for the command, minted before the sync (its
+    /// lifetime is the run's timeout plus slack, which covers the sync). Empty
+    /// with `--no-cache`, and when no token
+    /// can be had (a cache that is missing only slows the build). The build
+    /// store, when the token reaches it, takes the sync's files.
+    async fn cache(&self) -> (BTreeMap<String, String>, Option<store::Store>) {
         if self.o.no_cache {
-            return (BTreeMap::new(), false);
+            return (BTreeMap::new(), None);
         }
         let minted = match (self.key, build_cache::project_id(&self.parent)) {
             (Some(key), Some(project)) => {
@@ -1039,7 +1048,17 @@ impl Run<'_> {
         match minted {
             Ok(m) => {
                 self.held.with(|h| h.secrets.extend(m.secrets()));
-                (m.env, false)
+                // The gateway as the build machine reaches it.
+                let cluster = m.env.get("TURBO_API").cloned().unwrap_or_default();
+                let st = m.token.as_deref().and_then(|t| {
+                    store::Store::new(
+                        &self.cache_url,
+                        &cluster,
+                        m.cache.as_deref().unwrap_or(""),
+                        t,
+                    )
+                });
+                (m.env, st)
             }
             Err(e) => {
                 let first = !self.cache_warned.swap(true, Ordering::Relaxed);
@@ -1049,7 +1068,7 @@ impl Run<'_> {
                         e.short()
                     );
                 }
-                (BTreeMap::new(), first)
+                (BTreeMap::new(), None)
             }
         }
     }
@@ -1548,7 +1567,12 @@ impl Run<'_> {
 
     /// Brings the workspace's tree to this tree; answers whether it was warm
     /// (a trusted manifest, so only the diff was sent).
-    async fn sync(&self, g: &Guest, m: &Machine) -> Result<bool, Fault> {
+    async fn sync(
+        &self,
+        g: &Guest,
+        m: &Machine,
+        store: Option<&store::Store>,
+    ) -> Result<bool, Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
         let (code, _, err) = g
@@ -1581,10 +1605,48 @@ impl Run<'_> {
         let warm = remote.is_some();
         let plan = sync::plan(&self.tree, remote.as_ref());
         let bytes = plan.upload_bytes(&self.tree);
-        let tars = sync::tarballs(&self.o.root, &plan.upload, &self.tree).map_err(Fault::Other)?;
-        let lists = sync::lists(&self.tree, &plan);
-        let s = format!("{WS}/.sylphx");
         let mut up = 0u64;
+        let filled = match store {
+            Some(st) if !plan.upload.is_empty() => {
+                let mut known = store::Known::load(
+                    sync::git_path(&self.o.root, "sylphx/cas-known"),
+                    &st.instance_key(),
+                );
+                let f = store::fill(
+                    g,
+                    st,
+                    &mut known,
+                    store::Local {
+                        root: &self.o.root,
+                        tree: &self.tree,
+                    },
+                    &plan.upload,
+                    WS,
+                    USER,
+                )
+                .await?;
+                known.save(&self.tree);
+                up += f.sent;
+                if let Some(w) = &f.warning {
+                    if !self.cache_warned.swap(true, Ordering::Relaxed) {
+                        eprintln!(
+                            "sylphx: warning: build store: {w}; sending those files directly"
+                        );
+                    }
+                }
+                f.paths
+            }
+            _ => Default::default(),
+        };
+        let direct: Vec<String> = plan
+            .upload
+            .iter()
+            .filter(|p| !filled.contains(*p))
+            .cloned()
+            .collect();
+        let tars = sync::tarballs(&self.o.root, &direct, &self.tree).map_err(Fault::Other)?;
+        let lists = sync::lists(&self.tree, &plan, &filled);
+        let s = format!("{WS}/.sylphx");
         for (i, t) in tars.iter().enumerate() {
             g.upload(&format!("{s}/in-{i:04}.tar.gz"), USER, t).await?;
             up += t.len() as u64;
@@ -1602,6 +1664,7 @@ impl Run<'_> {
         self.add(|st| {
             st.bytes_up += up;
             st.warm = warm;
+            st.from_store = filled.len();
         });
         let full = match (self.o.fresh, plan.full) {
             (true, _) => "2",
@@ -1611,7 +1674,15 @@ impl Run<'_> {
         let (code, _, err) = g
             .run(
                 USER,
-                &argv(&["/bin/sh", "-c", sync::APPLY, "apply", WS, full]),
+                &argv(&[
+                    "/bin/sh",
+                    "-c",
+                    sync::APPLY,
+                    "apply",
+                    WS,
+                    full,
+                    if filled.is_empty() { "0" } else { "1" },
+                ]),
                 &none,
             )
             .await?;
@@ -1623,9 +1694,14 @@ impl Run<'_> {
         }
         let secs = t.elapsed().as_secs_f64();
         self.out.progress(&format!(
-            "synced {} files, {}, in {secs:.1} s{}",
+            "synced {} files, {}, in {secs:.1} s{}{}",
             plan.upload.len(),
             human(up),
+            if filled.is_empty() {
+                String::new()
+            } else {
+                format!("; {} from the build store", filled.len())
+            },
             if plan.remove.is_empty() {
                 String::new()
             } else {
@@ -1639,6 +1715,7 @@ impl Run<'_> {
             "removed": plan.remove.len(),
             "bytes": bytes,
             "bytes_up": up,
+            "from_store": filled.len(),
             "duration_ms": t.elapsed().as_millis() as u64,
             "workspace": if warm { "warm" } else { "cold" },
             "new_volume": m.volume && !m.warm_volume,
@@ -2901,6 +2978,7 @@ mod tests {
                     ("workspace", Value::is_string),
                     ("bytes_up", Value::is_u64),
                     ("bytes_down", Value::is_u64),
+                    ("from_store", Value::is_u64),
                 ],
                 other => panic!("unknown event type {other}"),
             };
@@ -2914,6 +2992,7 @@ mod tests {
             bytes_up: 512,
             bytes_down: 2048,
             artifacts: 0,
+            from_store: 7,
             image: None,
         };
         let captured = Mutex::new(Vec::new());
