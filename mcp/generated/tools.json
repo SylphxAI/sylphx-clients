@@ -26083,6 +26083,14 @@
                     "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
                     "type": "boolean"
                   },
+                  "auth_kind": {
+                    "description": "How a connected mailbox logs in to both servers; unset means `PASSWORD`.",
+                    "enum": [
+                      "password",
+                      "oauth"
+                    ],
+                    "type": "string"
+                  },
                   "backfill_start_time": {
                     "description": "Read mail received on or after this day on the first poll.",
                     "format": "date-time",
@@ -26135,6 +26143,20 @@
                     ],
                     "type": "string",
                     "x-sylphx-immutable": true
+                  },
+                  "oauth_provider": {
+                    "description": "The OAuth provider, for `OAUTH`; the environment's Mailbox OAuth App of\nthis provider is the client the grant belongs to. With `imap` or `smtp`\nunset the provider's own servers are used: Google `imap.gmail.com:993`\nand `smtp.gmail.com:465`, Microsoft `outlook.office365.com:993` and\n`smtp.office365.com:587` (STARTTLS).",
+                    "enum": [
+                      "google",
+                      "microsoft"
+                    ],
+                    "type": "string"
+                  },
+                  "oauth_refresh_token": {
+                    "description": "The OAuth refresh token, for `OAUTH`; write-only, sealed at rest like the\npassword, never returned. A connect link sets it without the caller ever\nholding it; a caller that ran its own consent may set it directly, when\nthe token was issued to the environment's Mailbox OAuth App.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
                   },
                   "password": {
                     "description": "The login password of both servers; write-only, sealed at rest.",
@@ -26276,6 +26298,14 @@
                     "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
                     "type": "boolean"
                   },
+                  "auth_kind": {
+                    "description": "How a connected mailbox logs in to both servers; unset means `PASSWORD`.",
+                    "enum": [
+                      "password",
+                      "oauth"
+                    ],
+                    "type": "string"
+                  },
                   "backfill_start_time": {
                     "description": "Read mail received on or after this day on the first poll.",
                     "format": "date-time",
@@ -26328,6 +26358,20 @@
                     ],
                     "type": "string",
                     "x-sylphx-immutable": true
+                  },
+                  "oauth_provider": {
+                    "description": "The OAuth provider, for `OAUTH`; the environment's Mailbox OAuth App of\nthis provider is the client the grant belongs to. With `imap` or `smtp`\nunset the provider's own servers are used: Google `imap.gmail.com:993`\nand `smtp.gmail.com:465`, Microsoft `outlook.office365.com:993` and\n`smtp.office365.com:587` (STARTTLS).",
+                    "enum": [
+                      "google",
+                      "microsoft"
+                    ],
+                    "type": "string"
+                  },
+                  "oauth_refresh_token": {
+                    "description": "The OAuth refresh token, for `OAUTH`; write-only, sealed at rest like the\npassword, never returned. A connect link sets it without the caller ever\nholding it; a caller that ran its own consent may set it directly, when\nthe token was issued to the environment's Mailbox OAuth App.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
                   },
                   "password": {
                     "description": "The login password of both servers; write-only, sealed at rest.",
@@ -26492,6 +26536,569 @@
       "method_id": "notify.mailboxes.erase_address",
       "permission": "notify:write",
       "tool": "notify_mailboxes_erase_address"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a mailbox OAuth app."
+      },
+      "description": "Gets a mailbox OAuth app.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailbox_oauth_apps/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMailboxOauthApp.",
+        "properties": {
+          "name": {
+            "description": "The name of the mailbox OAuth app to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxOauthApp"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_oauth_apps.get",
+      "permission": "notify:read",
+      "tool": "notify_mailbox_oauth_apps_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists mailbox OAuth apps."
+      },
+      "description": "Lists mailbox OAuth apps.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/mailbox_oauth_apps",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMailboxOauthApps.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxOauthApp"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_oauth_apps.list",
+      "permission": "notify:read",
+      "tool": "notify_mailbox_oauth_apps_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a mailbox OAuth app."
+      },
+      "description": "Creates a mailbox OAuth app.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/mailbox_oauth_apps",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateMailboxOauthApp.",
+        "properties": {
+          "mailbox_oauth_app": {
+            "additionalProperties": false,
+            "description": "The mailbox OAuth app to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/mailbox_oauth_apps/{mailbox_oauth_app}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "client_id": {
+                    "description": "The client id the provider issued.",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "description": "The client secret; write-only, sealed at rest, never returned.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "provider": {
+                    "description": "The provider.",
+                    "enum": [
+                      "google",
+                      "microsoft"
+                    ],
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "tenant": {
+                    "description": "Microsoft only: who may consent, `common` (the default: any work, school\nor personal account), `organizations`, `consumers`, or one tenant id.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "client_id"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "mailbox_oauth_app_id": {
+            "description": "The mailbox OAuth app id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxOauthApp"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "mailbox_oauth_app"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_oauth_apps.create",
+      "permission": "notify:write",
+      "tool": "notify_mailbox_oauth_apps_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a mailbox OAuth app."
+      },
+      "description": "Updates a mailbox OAuth app.",
+      "effect": "write",
+      "http": "PATCH /v1/{mailbox_oauth_app.name=orgs/*/projects/*/envs/*/mailbox_oauth_apps/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateMailboxOauthApp.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the mailbox OAuth app when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "mailbox_oauth_app": {
+            "additionalProperties": false,
+            "description": "The mailbox OAuth app to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/mailbox_oauth_apps/{mailbox_oauth_app}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "client_id": {
+                    "description": "The client id the provider issued.",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "description": "The client secret; write-only, sealed at rest, never returned.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "provider": {
+                    "description": "The provider.",
+                    "enum": [
+                      "google",
+                      "microsoft"
+                    ],
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "tenant": {
+                    "description": "Microsoft only: who may consent, `common` (the default: any work, school\nor personal account), `organizations`, `consumers`, or one tenant id.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "client_id"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mailbox_oauth_app"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_oauth_apps.update",
+      "permission": "notify:write",
+      "tool": "notify_mailbox_oauth_apps_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a mailbox OAuth app; refused while a mailbox uses it."
+      },
+      "description": "Deletes a mailbox OAuth app; refused while a mailbox uses it.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/mailbox_oauth_apps/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteMailboxOauthApp.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the mailbox OAuth app does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the mailbox OAuth app to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxOauthApp"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_oauth_apps.delete",
+      "permission": "notify:write",
+      "tool": "notify_mailbox_oauth_apps_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a mailbox connect link."
+      },
+      "description": "Gets a mailbox connect link.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailbox_connect_links/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMailboxConnectLink.",
+        "properties": {
+          "name": {
+            "description": "The name of the mailbox connect link to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxConnectLink"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_connect_links.get",
+      "permission": "notify:read",
+      "tool": "notify_mailbox_connect_links_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists mailbox connect links."
+      },
+      "description": "Lists mailbox connect links.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/mailbox_connect_links",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMailboxConnectLinks.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxConnectLink"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_connect_links.list",
+      "permission": "notify:read",
+      "tool": "notify_mailbox_connect_links_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Mints a mailbox connect link for one end user; the response carries its `url`, which no later call returns."
+      },
+      "description": "Mints a mailbox connect link for one end user; the response carries its\n`url`, which no later call returns.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/mailbox_connect_links",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateMailboxConnectLink.",
+        "properties": {
+          "mailbox_connect_link": {
+            "additionalProperties": false,
+            "description": "The mailbox connect link to create; only caller-writable fields are read.",
+            "properties": {
+              "backfill_start_time": {
+                "description": "The new mailbox reads mail received on or after this day on its first\npoll.",
+                "format": "date-time",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "display_name": {
+                "description": "The From display name of the new mailbox.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "login_hint": {
+                "description": "The address to suggest on the consent screen (`login_hint`); the\nmailbox takes the address the provider confirms, whatever this says.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "mailbox": {
+                "description": "The mailbox to reconnect, keeping its id and feed; it must be signed in\nas the same address. Empty creates a new connected mailbox.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+              },
+              "mailbox_id": {
+                "description": "The id of the new mailbox; the server assigns one when empty.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata; labels may carry the customer's own end-user id.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/mailbox_connect_links/{mailbox_connect_link}`.",
+                "type": "string"
+              },
+              "provider": {
+                "description": "The provider whose consent the page opens; the environment needs that\nprovider's Mailbox OAuth App.",
+                "enum": [
+                  "google",
+                  "microsoft"
+                ],
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "refresh_url": {
+                "description": "Where a claimed or expired link sends the end user, HTTPS; your server\nmints a new link there. Empty shows a page saying the link has expired.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "return_url": {
+                "description": "Where the end user lands when done, HTTPS, with `connect_link={id}` and\n`result=connected` or `result=failed` added to the query. The query\nproves nothing: read the link back with your key for the outcome.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "ttl": {
+                "description": "How long the link stays open; default 1 hour, at most 7 days.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "required": [
+              "provider",
+              "return_url"
+            ],
+            "type": "object"
+          },
+          "mailbox_connect_link_id": {
+            "description": "The mailbox connect link id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MailboxConnectLink"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "mailbox_connect_link"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.mailbox_connect_links.create",
+      "permission": "notify:write",
+      "tool": "notify_mailbox_connect_links_create"
     },
     {
       "annotations": {
@@ -35570,7 +36177,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@8a9fca9773aec38ab008501562caa0e2762fc3d40938f82c8ce513c03d8b8e7d. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@f43687e14b51721de401af0b4dfdca44ad768a0c80ebc87a5f5fd6b3ff19f7d7. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
