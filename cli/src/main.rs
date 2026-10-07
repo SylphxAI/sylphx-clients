@@ -13,6 +13,7 @@ mod build_cache;
 mod build_run;
 mod context;
 mod devices;
+mod docs_cmd;
 mod enable;
 mod events_listen;
 mod names;
@@ -48,6 +49,7 @@ const HAND_WRITTEN: &[(&str, &str)] = &[
     ("build", "cache"),
     ("ai", "top"),
     ("events", "listen"),
+    ("data", "docs"),
 ];
 
 fn cli(tree: &Tree) -> Command {
@@ -254,6 +256,10 @@ fn cli(tree: &Tree) -> Command {
                 .subcommand(build_run::logs_command())
                 .subcommand(build_run::image_command())
                 .subcommand(build_cache::command())
+        } else if s.get_name() == "data" {
+            // `data docs` is porcelain on the generated `data` service: a
+            // Markdown tree in a search index (`docs_cmd`).
+            s.subcommand(docs_cmd::command())
         } else if s.get_name() == "events" {
             // `events listen` is porcelain on the generated `events` service:
             // a topic relayed to a local URL through a temporary Queue.
@@ -505,9 +511,11 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "mcp" => {
             let c = context::client(api_key.clone(), base_url.clone()).await?;
-            sylphx_mcp::serve_stdio(sylphx_mcp::Server::new(c))
-                .await
-                .map_err(|e| Failure::Usage(e.to_string()))
+            sylphx_mcp::serve_stdio(
+                sylphx_mcp::Server::new(c).with_docs(sylphx_mcp::docs::DocsIndex::from_env()),
+            )
+            .await
+            .map_err(|e| Failure::Usage(e.to_string()))
         }
         "completion" => {
             let shell = *sub
@@ -549,6 +557,10 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 ai_top_run::TopError::Api(e) => Failure::Api(e),
                 ai_top_run::TopError::Msg(m) => Failure::Refused(m),
             })
+        }
+        "data" if sub.subcommand_name() == Some("docs") => {
+            let (_, dm) = sub.subcommand().expect("checked");
+            docs_cmd::run(&client().await?, dm, format).await
         }
         "events" if sub.subcommand_name() == Some("listen") => {
             let (_, lm) = sub.subcommand().expect("checked");

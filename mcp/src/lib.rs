@@ -7,7 +7,10 @@
 //!   `data_databases_create`, …), each with its request's input schema;
 //! - **three meta tools** that reach every other method without flooding the
 //!   context: `sylphx_search_methods`, `sylphx_describe_method`, and
-//!   `sylphx_call`.
+//!   `sylphx_call`;
+//! - **two docs tools**, `docs_search` and `docs_read`, when the server is
+//!   given a docs index (`SYLPHX_DOCS_INDEX`): Markdown indexed by heading in
+//!   a Sylphx Data search index, read through the Search API ([`docs`]).
 //!
 //! Every call goes through the generated Rust SDK's one dynamic entry point
 //! ([`sylphx::Client::invoke`]); destructive methods require `confirm: true`.
@@ -23,6 +26,7 @@ use std::sync::{Arc, OnceLock};
 use serde_json::{json, Map, Value};
 use sylphx::{Client, Error, HttpRequest, Transport};
 
+pub mod docs;
 #[cfg(feature = "stdio")]
 mod stdio;
 #[cfg(feature = "stdio")]
@@ -158,6 +162,7 @@ pub struct Server<T> {
     client: Option<Client<T>>,
     shared: Arc<Catalog>,
     mode: Mode,
+    docs: Option<docs::DocsIndex>,
 }
 
 /// Checks the headers Streamable HTTP mirrors from the message (revision
@@ -204,15 +209,27 @@ impl<T: Transport> Server<T> {
             client,
             shared,
             mode,
+            docs: None,
         }
     }
 
+    /// Adds the read-only docs tools (`docs_search`, `docs_read`) over a
+    /// search index of Markdown chunks ([`docs`]); `None` leaves them out.
+    pub fn with_docs(mut self, docs: Option<docs::DocsIndex>) -> Self {
+        self.docs = docs;
+        self
+    }
+
     /// The tools `tools/list` returns.
-    pub fn tools(&self) -> &[Value] {
-        match self.mode {
-            Mode::Local => &self.shared.local_tools,
-            Mode::RemoteReadOnly => &self.shared.remote_tools,
+    pub fn tools(&self) -> Vec<Value> {
+        let mut tools = match self.mode {
+            Mode::Local => self.shared.local_tools.clone(),
+            Mode::RemoteReadOnly => self.shared.remote_tools.clone(),
+        };
+        if self.docs.is_some() {
+            tools.extend(docs_tools());
         }
+        tools
     }
 
     /// Catalog entries this server may show and call.
@@ -293,6 +310,7 @@ impl<T: Transport> Server<T> {
             return Ok(tool_error("arguments must be a JSON object"));
         };
         match name {
+            "docs_search" | "docs_read" => Ok(self.call_docs(name, &args).await),
             "sylphx_search_methods" => {
                 let query = args
                     .get("query")
@@ -339,6 +357,46 @@ impl<T: Transport> Server<T> {
                     .unwrap_or(false);
                 Ok(self.call_method(&id, Value::Object(args), confirm).await)
             }
+        }
+    }
+
+    /// `docs_search` and `docs_read`, when the server has a docs index.
+    async fn call_docs(&self, name: &str, args: &Map<String, Value>) -> Value {
+        let Some(index) = &self.docs else {
+            return tool_error(&format!(
+                "{name} needs a docs index: set {} (and {} when the index holds several sources), then restart the server",
+                docs::INDEX_ENV,
+                docs::SOURCE_ENV
+            ));
+        };
+        let Some(client) = &self.client else {
+            return tool_error(
+                "no Sylphx credentials: set SYLPHX_API_KEY (an Access key) or run `sylphx login`, then restart the server",
+            );
+        };
+        let text = |k: &str| args.get(k).and_then(Value::as_str).unwrap_or_default();
+        let number = |k: &str| args.get(k).and_then(Value::as_u64);
+        let result = if name == "docs_search" {
+            docs::search(
+                client,
+                index,
+                text("query"),
+                number("limit").map(|n| n.min(u64::from(u32::MAX)) as u32),
+            )
+            .await
+        } else {
+            docs::read(
+                client,
+                index,
+                text("path"),
+                number("start_line").map(|n| n as usize),
+                number("end_line").map(|n| n as usize),
+            )
+            .await
+        };
+        match result {
+            Ok(v) => tool_ok(v),
+            Err(e) => error_result(e),
         }
     }
 
@@ -472,6 +530,49 @@ fn settled(op: Value) -> Value {
         }
         _ => op,
     }
+}
+
+/// The docs tools' definitions (read-only, closed-world).
+fn docs_tools() -> Vec<Value> {
+    let annotations = |title: &str| {
+        json!({
+            "title": title, "readOnlyHint": true, "destructiveHint": false,
+            "idempotentHint": true, "openWorldHint": false
+        })
+    };
+    vec![
+        json!({
+            "name": "docs_search",
+            "title": "Search the docs",
+            "description": "Search the configured documentation (Markdown indexed by heading) and get the best sections, each as path:line with the matching line. Words must all match; \"quoted phrases\", `or` and `-word` work. Read a hit with docs_read.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "What to look for, e.g. rate limits"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": docs::MAX_SEARCH_LIMIT, "description": "Hits to return; default 8"}
+                },
+                "required": ["query"],
+                "additionalProperties": false
+            },
+            "annotations": annotations("Search the docs"),
+        }),
+        json!({
+            "name": "docs_read",
+            "title": "Read a doc",
+            "description": "Read a documentation file by path, whole or a line range, as indexed. Without end_line at most 600 lines come back; `truncated` says whether more follow.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "The file's path, e.g. docs/api/limits.md"},
+                    "start_line": {"type": "integer", "minimum": 1, "description": "First line, 1-based; default 1"},
+                    "end_line": {"type": "integer", "minimum": 1, "description": "Last line, inclusive"}
+                },
+                "required": ["path"],
+                "additionalProperties": false
+            },
+            "annotations": annotations("Read a doc"),
+        }),
+    ]
 }
 
 fn tool_ok(value: Value) -> Value {

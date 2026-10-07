@@ -29,7 +29,7 @@ impl<T: Transport + Send + Sync + 'static> App for Stdio<T> {
     }
 
     fn tools(&self) -> Vec<Value> {
-        self.0.tools().to_vec()
+        self.0.tools()
     }
 
     fn call(&self, name: &str, args: &Value, _call: &Call) -> Result<String, String> {

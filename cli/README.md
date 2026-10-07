@@ -18,6 +18,7 @@ sylphx build run -- cargo test        # this work tree's command on a remote bui
 eval "$(sylphx build cache env)"      # point local sccache and Turbo at the project's shared build cache
 sylphx build run --region gra --queue-timeout 120s -- cargo check   # in region gra, or exit 125 after 2 min
 sylphx events listen --forward localhost:3000/hook   # a topic's events, signed like a webhook, to a local URL
+sylphx data docs search --index docs rate limits    # Markdown docs in a search index: path:line hits
 sylphx mcp                            # the MCP server over stdio
 sylphx mcp setup                      # register it with Claude Code, Codex, Cursor, VS Code, …
 ```
@@ -36,6 +37,15 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
+- `sylphx data docs sync|search|read` keeps a Markdown tree in one of the
+  environment's search indexes. `sync [GLOB…] --index ID --revision REV`
+  (run it on each merge) writes one document per `#` to `###` section with
+  its path, heading and line numbers, then deletes the documents it wrote for
+  that source at any other revision (nothing else in the index); a run matching no file is refused. `search QUERY` prints the
+  best sections as `path:line` with the matching line; `read PATH[:LINE]
+  [--lines A-B]` prints a file or a range of it. `--index` and `--source`
+  default to `SYLPHX_DOCS_INDEX` and `SYLPHX_DOCS_SOURCE`, which also give
+  `sylphx mcp` its `docs_search` and `docs_read` tools.
 - `sylphx events listen [TOPIC] --forward URL` relays a topic (default: the
   environment's whole bus) to a local URL while you develop. It creates a
   temporary Queue and a Subscription of the topic into it, long-polls the

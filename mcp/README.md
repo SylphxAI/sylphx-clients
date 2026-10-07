@@ -28,6 +28,18 @@ Or by hand (stdio):
   every other method without flooding the context.
 - Tool annotations come from each method's effect; destructive calls need
   `confirm: true`.
+- `docs_search` and `docs_read`, read-only, when `SYLPHX_DOCS_INDEX` names a
+  search index of the key's environment (and `SYLPHX_DOCS_SOURCE` a source,
+  when the index holds several): Markdown docs chunked by heading, answered
+  as `path:line` hits and read back by path and line range. The index is
+  filled by `sylphx data docs sync` on each merge of the docs' repository,
+  so a reader needs `data:read` on that environment, not the repository.
+
+```sh
+sylphx data docs sync --index docs --revision "$GITHUB_SHA" README.md 'docs/**/*.md'
+sylphx data docs search --index docs rate limits    # docs/api/limits.md:42  Limits > Rate limits
+sylphx data docs read --index docs docs/api/limits.md --lines 40-60
+```
 
 The stdio protocol is [rmcp](https://github.com/modelcontextprotocol/rust-sdk),
 the official Rust MCP SDK, through
