@@ -6,19 +6,35 @@ keywords = ["sylphx", "mcp", "mcp-server", "agents"]
 categories = ["command-line-utilities", "api-bindings"]
 readme = "README.md"
 edition.workspace = true
-rust-version.workspace = true
+# sylphx-mcp-kit (rmcp) needs 1.88.
+rust-version = "1.88"
 license.workspace = true
 homepage.workspace = true
 repository = "https://github.com/SylphxAI/sylphx-clients"
 
+[features]
+default = ["stdio"]
+# The stdio server and client setup on sylphx-mcp-kit (rmcp). The remote door
+# (the Resource API front) uses only the transport-agnostic `Server::handle`.
+stdio = ["dep:sylphx-mcp-kit", "dep:tokio"]
+
 [[bin]]
 name = "sylphx-mcp"
 path = "src/main.rs"
+required-features = ["stdio"]
 
 [dependencies]
 sylphx = { path = "../rust", version = "0.3.1" }
 serde_json = "1"
-tokio = { version = "1", features = ["io-std", "io-util", "macros", "rt-multi-thread"] }
+sylphx-mcp-kit = { version = "0.7.2", default-features = false, features = ["server", "setup"], optional = true }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"], optional = true }
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }
+# The stdio test drives the server with an rmcp client.
+rmcp = { version = "3.4", default-features = false, features = ["client", "transport-io"] }
+tokio = { version = "1", features = ["io-util", "macros", "rt-multi-thread"] }
+
+[[test]]
+name = "stdio"
+required-features = ["stdio"]

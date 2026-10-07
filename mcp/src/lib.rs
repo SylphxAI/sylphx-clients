@@ -12,14 +12,21 @@
 //! Every call goes through the generated Rust SDK's one dynamic entry point
 //! ([`sylphx::Client::invoke`]); destructive methods require `confirm: true`.
 //! [`Server::handle`] is transport-agnostic (one JSON-RPC message in, at most
-//! one out): [`serve_stdio`] runs it over stdio for `sylphx mcp` and
-//! `npx @sylphx/mcp`, and the Resource API front can mount it for the remote
-//! server at `https://api.sylphx.com/mcp`.
+//! one out): the Resource API front mounts it for the remote server at
+//! `https://api.sylphx.com/mcp`. Over stdio (`sylphx mcp`, `npx @sylphx/mcp`)
+//! the protocol is rmcp's, the official Rust MCP SDK, through
+//! `sylphx-mcp-kit` ([`serve_stdio`], feature `stdio`), the same stack as
+//! our other MCP servers.
 
 use std::sync::{Arc, OnceLock};
 
 use serde_json::{json, Map, Value};
 use sylphx::{Client, Error, HttpRequest, Transport};
+
+#[cfg(feature = "stdio")]
+mod stdio;
+#[cfg(feature = "stdio")]
+pub use stdio::{serve_stdio, serve_transport, setup, SetupOptions};
 
 /// The generated tool manifest.
 pub const MANIFEST: &str = include_str!("../generated/tools.json");
@@ -490,30 +497,4 @@ fn error_result(e: Error) -> Value {
         }
         other => tool_error(&other.to_string()),
     }
-}
-
-/// Serves newline-delimited JSON-RPC over stdin/stdout until stdin closes.
-pub async fn serve_stdio<T: Transport>(server: Server<T>) -> std::io::Result<()> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    let mut lines = BufReader::new(tokio::io::stdin()).lines();
-    let mut stdout = tokio::io::stdout();
-    while let Some(line) = lines.next_line().await? {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let response = match serde_json::from_str::<Value>(&line) {
-            Ok(message) => server.handle(message).await,
-            Err(e) => Some(json!({
-                "jsonrpc": "2.0", "id": null,
-                "error": { "code": -32700, "message": format!("parse error: {e}") }
-            })),
-        };
-        if let Some(r) = response {
-            let mut out = serde_json::to_vec(&r).unwrap_or_default();
-            out.push(b'\n');
-            stdout.write_all(&out).await?;
-            stdout.flush().await?;
-        }
-    }
-    Ok(())
 }

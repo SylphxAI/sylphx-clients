@@ -19,6 +19,7 @@ eval "$(sylphx build cache env)"      # point local sccache and Turbo at the pro
 sylphx build run --region gra --queue-timeout 120s -- cargo check   # in region gra, or exit 125 after 2 min
 sylphx events listen --forward localhost:3000/hook   # a topic's events, signed like a webhook, to a local URL
 sylphx mcp                            # the MCP server over stdio
+sylphx mcp setup                      # register it with Claude Code, Codex, Cursor, VS Code, …
 ```
 
 - `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]`: flags

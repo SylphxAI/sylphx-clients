@@ -192,7 +192,33 @@ fn cli(tree: &Tree) -> Command {
                         .help("Request body"),
                 ),
         )
-        .subcommand(Command::new("mcp").about("Run the Sylphx MCP server over stdio"))
+        .subcommand(
+            Command::new("mcp")
+                .about("Run the Sylphx MCP server over stdio")
+                .subcommand(
+                    Command::new("setup")
+                        .about("Register the Sylphx MCP server with the MCP clients on this machine")
+                        .arg(
+                            Arg::new("client")
+                                .long("client")
+                                .value_name("ID")
+                                .action(ArgAction::Append)
+                                .help("Only this client: claude-code, codex, cursor, vscode, vscode-insiders, claude-desktop, windsurf or gemini (repeatable)"),
+                        )
+                        .arg(
+                            Arg::new("remove")
+                                .long("remove")
+                                .action(ArgAction::SetTrue)
+                                .help("Remove the entry instead of adding it"),
+                        )
+                        .arg(
+                            Arg::new("dry-run")
+                                .long("dry-run")
+                                .action(ArgAction::SetTrue)
+                                .help("Print the changes without writing them"),
+                        ),
+                ),
+        )
         .subcommand(devices::command())
         .subcommand(
             Command::new("completion")
@@ -463,6 +489,19 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 )
             );
             Ok(())
+        }
+        "mcp" if sub.subcommand_matches("setup").is_some() => {
+            let setup = sub.subcommand_matches("setup").expect("matched above");
+            let options = sylphx_mcp::SetupOptions {
+                dry_run: setup.get_flag("dry-run"),
+                remove: setup.get_flag("remove"),
+                clients: setup
+                    .get_many::<String>("client")
+                    .map(|c| c.cloned().collect()),
+            };
+            sylphx_mcp::setup(&options)
+                .map(|_| ())
+                .map_err(|e| Failure::Usage(e.to_string()))
         }
         "mcp" => {
             let c = context::client(api_key.clone(), base_url.clone()).await?;

@@ -658,7 +658,7 @@ fn mcp_answers_over_stdio() {
         .unwrap();
     {
         let stdin = child.stdin.as_mut().unwrap();
-        writeln!(stdin, "{}", json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}})).unwrap();
+        writeln!(stdin, "{}", json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}}})).unwrap();
         writeln!(
             stdin,
             "{}",
