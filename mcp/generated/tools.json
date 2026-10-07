@@ -33124,6 +33124,463 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a profile: its kind, grants, sites and latest version; never a value."
+      },
+      "description": "Gets a profile: its kind, grants, sites and latest version; never a value.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/profiles/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetProfile.",
+        "properties": {
+          "name": {
+            "description": "The name of the profile to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/Profile"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profiles.get",
+      "permission": "secrets:read",
+      "tool": "secrets_profiles_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the profiles of an environment."
+      },
+      "description": "Lists the profiles of an environment.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/profiles",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListProfiles.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/Profile"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profiles.list",
+      "permission": "secrets:read",
+      "tool": "secrets_profiles_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an empty profile; its first version is written by a write-back mount (`:open` with WRITE_BACK, then `:commit`)."
+      },
+      "description": "Creates an empty profile; its first version is written by a write-back\nmount (`:open` with WRITE_BACK, then `:commit`).",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/profiles",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateProfile.",
+        "properties": {
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/Profile"
+          },
+          "profile": {
+            "additionalProperties": false,
+            "description": "The profile to create; only spec is read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/profiles/{profile}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "grants": {
+                    "description": "Who may mount it and how. A principal with no grant cannot mount it,\nwhatever its scopes.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A ProfileGrant lets one principal mount a profile in a mode.",
+                      "properties": {
+                        "mode": {
+                          "description": "The most it may mount: READ_ONLY, or WRITE_BACK (which includes\nREAD_ONLY).",
+                          "enum": [
+                            "read_only",
+                            "write_back"
+                          ],
+                          "type": "string"
+                        },
+                        "principal": {
+                          "description": "The Access principal, as its keys carry it (for example a service\naccount's id).",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "principal",
+                        "mode"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "kind": {
+                    "description": "What the profile holds.",
+                    "enum": [
+                      "browser",
+                      "computer"
+                    ],
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "paths": {
+                    "description": "For a `computer` profile: the paths under the sandbox's home directory\nits archive holds, for example `.config/app`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "profile_id": {
+            "description": "The id of the new profile, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "profile"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profiles.create",
+      "permission": "secrets:write",
+      "tool": "secrets_profiles_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a profile's grants or declared paths. Granting a mount is this call: nothing else adds a grant."
+      },
+      "description": "Updates a profile's grants or declared paths. Granting a mount is this\ncall: nothing else adds a grant.",
+      "effect": "write",
+      "http": "PATCH /v1/{profile.name=orgs/*/projects/*/envs/*/profiles/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateProfile.",
+        "properties": {
+          "profile": {
+            "additionalProperties": false,
+            "description": "The profile to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/profiles/{profile}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "grants": {
+                    "description": "Who may mount it and how. A principal with no grant cannot mount it,\nwhatever its scopes.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A ProfileGrant lets one principal mount a profile in a mode.",
+                      "properties": {
+                        "mode": {
+                          "description": "The most it may mount: READ_ONLY, or WRITE_BACK (which includes\nREAD_ONLY).",
+                          "enum": [
+                            "read_only",
+                            "write_back"
+                          ],
+                          "type": "string"
+                        },
+                        "principal": {
+                          "description": "The Access principal, as its keys carry it (for example a service\naccount's id).",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "principal",
+                        "mode"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "kind": {
+                    "description": "What the profile holds.",
+                    "enum": [
+                      "browser",
+                      "computer"
+                    ],
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "paths": {
+                    "description": "For a `computer` profile: the paths under the sandbox's home directory\nits archive holds, for example `.config/app`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write (`spec.grants`, `spec.paths`); unset writes both.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profiles.update",
+      "permission": "secrets:write",
+      "tool": "secrets_profiles_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a profile; with `force`, a profile that has versions too, which destroys every version."
+      },
+      "description": "Deletes a profile; with `force`, a profile that has versions too, which\ndestroys every version.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/profiles/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteProfile.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also destroy every version; without it a profile with versions fails\nwith INVALID_STATE.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the profile to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/Profile"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profiles.delete",
+      "permission": "secrets:write",
+      "tool": "secrets_profiles_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a profile version: its sites and lineage; never a value."
+      },
+      "description": "Gets a profile version: its sites and lineage; never a value.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/profiles/*/profile_versions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetProfileVersion.",
+        "properties": {
+          "name": {
+            "description": "The name of the profile version to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/ProfileVersion"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profile_versions.get",
+      "permission": "secrets:read",
+      "tool": "secrets_profile_versions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a profile's versions, newest first."
+      },
+      "description": "Lists a profile's versions, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/profiles/*}/profile_versions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListProfileVersions.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The profile whose versions to list.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/ProfileVersion"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "secrets.profile_versions.list",
+      "permission": "secrets:read",
+      "tool": "secrets_profile_versions_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a workflow."
       },
       "description": "Gets a workflow.",
@@ -36177,7 +36634,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@f43687e14b51721de401af0b4dfdca44ad768a0c80ebc87a5f5fd6b3ff19f7d7. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@5921d3969e498cd4081c84844d25e565062941438bc76c12b20b8997687d2fe2. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
