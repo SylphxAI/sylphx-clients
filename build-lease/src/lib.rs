@@ -4,9 +4,11 @@
 //!   stream, files).
 //! - [`machine`]: the lease request of a build, waiting for the machine to be
 //!   ready, a guest token, releasing the lease, and how a fault is judged.
+//! - [`pool`]: the warm Volume pool a build's state stays on between leases.
 
 pub mod guest;
 pub mod machine;
+pub mod pool;
 pub mod scripts;
 
 pub use machine::{

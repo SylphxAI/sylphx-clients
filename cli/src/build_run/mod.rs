@@ -51,6 +51,9 @@ use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
+use sylphx_build_lease::pool::{
+    free_warm, in_pool, is_dead, lru_free, vstate, REGION_LABEL, VOLUME_CLASS,
+};
 use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
 use sylphx_build_lease::{
     allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
@@ -97,11 +100,9 @@ const EVICT_WAIT: Duration = Duration::from_secs(5);
 /// A new workspace's size: the largest desk target is about 30 GB, so 100 GiB
 /// holds it with room; workspaces made at the old 200 GiB keep their size.
 const VOLUME_GIB: i32 = 100;
-const VOLUME_CLASS: &str = "local";
 const POOL_PURPOSE: &str = "build-workspace";
-/// The pool label naming a workspace's region; home-region workspaces have
-/// none, so the pool without `--region` is what it always was.
-const POOL_REGION: &str = "build-region";
+/// The pool's scope label: one pool per (environment, repository).
+const POOL_SCOPE: &str = "build-repo";
 
 /// The lease's egress allow-list: for an image build [`image::allowed_domains`]
 /// (no internet package host), otherwise [`allowed_domains`] (the
@@ -1160,15 +1161,7 @@ impl Run<'_> {
                 return self.acquire_without_volume(deadline).await;
             }
             let pool = self.pool().await.map_err(Attempt::Done)?;
-            let live = pool
-                .iter()
-                .filter(|v| {
-                    !matches!(
-                        vstate(v),
-                        sbx::VolumeState::Failed | sbx::VolumeState::Deleting
-                    )
-                })
-                .count();
+            let live = pool.iter().filter(|v| !is_dead(v)).count();
             let free = free_warm(&pool, &mut full, live < MAX_WARM);
             let mut leased = None;
             let mut warm_name = None;
@@ -1287,7 +1280,7 @@ impl Run<'_> {
             .list_all(req)
             .await
             .map_err(|e| api("listing workspaces", &e))?;
-        let Some(victim) = lru_free_workspace(&all, self.o.region.as_deref()) else {
+        let Some(victim) = lru_free(&all, POOL_PURPOSE, self.o.region.as_deref(), |_| true) else {
             return Ok(false);
         };
         let mut del = sbx::DeleteVolumeRequest::default();
@@ -1320,7 +1313,15 @@ impl Run<'_> {
             .map_err(|e| api("listing workspaces", &e))?;
         Ok(all
             .into_iter()
-            .filter(|v| in_pool(v, &self.repo, self.o.region.as_deref()))
+            .filter(|v| {
+                in_pool(
+                    v,
+                    POOL_PURPOSE,
+                    POOL_SCOPE,
+                    &self.repo,
+                    self.o.region.as_deref(),
+                )
+            })
             .collect())
     }
 
@@ -1334,7 +1335,7 @@ impl Run<'_> {
             "spec": {"sizeGib": VOLUME_GIB, "storageClass": VOLUME_CLASS},
         });
         if let Some(r) = &self.o.region {
-            body["meta"]["labels"][POOL_REGION] = json!(r);
+            body["meta"]["labels"][REGION_LABEL] = json!(r);
             body["spec"]["region"] = json!(r);
         }
         // The region's room for workspaces is a cache: when it is full, the
@@ -2094,66 +2095,6 @@ fn scrub(outcome: Outcome, secrets: &[String]) -> Outcome {
     }
 }
 
-/// The free warm workspaces a run may take, in a stable order, without those
-/// whose node had no room for it (`full`). When the pool has no room for a
-/// fresh workspace (`room` false) and every free one was full, `full` is
-/// cleared: waiting on a warm node is then the only way to run.
-fn free_warm<'a>(
-    pool: &'a [sbx::Volume],
-    full: &mut HashSet<String>,
-    room: bool,
-) -> Vec<&'a sbx::Volume> {
-    let mut free: Vec<&sbx::Volume> = pool
-        .iter()
-        .filter(|v| vstate(v) == sbx::VolumeState::Available)
-        .collect();
-    free.sort_by(|a, b| a.name.cmp(&b.name));
-    if !room && free.iter().all(|v| full.contains(&v.name)) {
-        full.clear();
-    }
-    free.retain(|v| !full.contains(&v.name));
-    free
-}
-
-/// The free build workspace of any repository, in this region, that was
-/// used least recently (its last attach or detach is its `update_time`).
-fn lru_free_workspace<'a>(all: &'a [sbx::Volume], region: Option<&str>) -> Option<&'a sbx::Volume> {
-    all.iter()
-        .filter(|v| {
-            let l = v.meta.as_ref().map(|m| &m.labels);
-            let label = |k: &str| l.and_then(|l| l.get(k)).map(String::as_str);
-            label("purpose") == Some(POOL_PURPOSE)
-                && label(POOL_REGION) == region
-                && vstate(v) == sbx::VolumeState::Available
-        })
-        .min_by(|a, b| {
-            let t = |v: &sbx::Volume| {
-                v.meta
-                    .as_ref()
-                    .map(|m| m.update_time.clone())
-                    .unwrap_or_default()
-            };
-            t(a).cmp(&t(b)).then_with(|| a.name.cmp(&b.name))
-        })
-}
-
-/// Whether a Volume is one of this pool's workspaces: this repository's, in
-/// this region (`None`, the home region, is the pool without a region label).
-fn in_pool(v: &sbx::Volume, repo: &str, region: Option<&str>) -> bool {
-    let l = v.meta.as_ref().map(|m| &m.labels);
-    let label = |k: &str| l.and_then(|l| l.get(k)).map(String::as_str);
-    label("purpose") == Some(POOL_PURPOSE)
-        && label("build-repo") == Some(repo)
-        && label(POOL_REGION) == region
-}
-
-fn vstate(v: &sbx::Volume) -> sbx::VolumeState {
-    v.status
-        .as_ref()
-        .and_then(|s| s.state.clone())
-        .unwrap_or(sbx::VolumeState::Unknown(String::new()))
-}
-
 /// A failure text that says a disk was full: ENOSPC from a guest tool, or
 /// envd's 507 for an upload it could not finish ("not enough disk space
 /// available", "not enough inodes available").
@@ -2486,7 +2427,7 @@ mod tests {
             lease_domains(&o),
             ["build-cache.sylphx.net", "proxy.example.com"]
         );
-        assert!(o.command[0].ends_with("sylphx-image-build"));
+        assert!(o.command[5].ends_with("sylphx-image-build"));
         // `build run` keeps its preset.
         assert_eq!(allowed_domains(&[]).len(), BUILD_PACKAGES.len());
     }
@@ -3375,151 +3316,6 @@ esac
         assert_eq!(o.region.as_deref(), Some("gra"));
         assert_eq!(o.queue_timeout, Duration::from_secs(120));
         assert_eq!(o.timeout, Duration::from_secs(3600));
-    }
-
-    /// A Volume lives in one region's Cell: a run uses only its region's
-    /// workspaces, and the home pool is exactly the pool before regions.
-    #[test]
-    fn the_pool_is_per_region() {
-        fn vol(labels: &[(&str, &str)]) -> sbx::Volume {
-            let mut meta = sylphx::common::ResourceMeta::default();
-            for (k, v) in labels {
-                meta.labels.insert(k.to_string(), v.to_string());
-            }
-            let mut v = sbx::Volume::default();
-            v.meta = Some(meta);
-            v
-        }
-        let home = vol(&[("purpose", POOL_PURPOSE), ("build-repo", "r")]);
-        let gra = vol(&[
-            ("purpose", POOL_PURPOSE),
-            ("build-repo", "r"),
-            (POOL_REGION, "gra"),
-        ]);
-        let other = vol(&[("purpose", POOL_PURPOSE), ("build-repo", "s")]);
-        assert!(in_pool(&home, "r", None));
-        assert!(!in_pool(&gra, "r", None));
-        assert!(in_pool(&gra, "r", Some("gra")));
-        assert!(!in_pool(&home, "r", Some("gra")));
-        assert!(!in_pool(&gra, "r", Some("fra")));
-        assert!(!in_pool(&other, "r", None));
-    }
-
-    /// A full region gives up its least recently used free workspace, of
-    /// any repository, and never an attached, creating or other-region one.
-    #[test]
-    fn the_least_recently_used_free_workspace_gives_way() {
-        fn vol(
-            name: &str,
-            region: Option<&str>,
-            state: sbx::VolumeState,
-            used: &str,
-        ) -> sbx::Volume {
-            let mut meta = sylphx::common::ResourceMeta::default();
-            meta.labels.insert("purpose".into(), POOL_PURPOSE.into());
-            meta.labels.insert("build-repo".into(), name.into());
-            if let Some(r) = region {
-                meta.labels.insert(POOL_REGION.into(), r.into());
-            }
-            meta.update_time = used.into();
-            let mut st = sbx::VolumeStatus::default();
-            st.state = Some(state);
-            let mut v = sbx::Volume::default();
-            v.name = name.into();
-            v.meta = Some(meta);
-            v.status = Some(st);
-            v
-        }
-        let mut other = vol(
-            "x",
-            None,
-            sbx::VolumeState::Available,
-            "2026-10-06T00:00:00.000Z",
-        );
-        other
-            .meta
-            .as_mut()
-            .unwrap()
-            .labels
-            .insert("purpose".into(), "data".into());
-        let all = vec![
-            vol(
-                "busy",
-                None,
-                sbx::VolumeState::Attached,
-                "2026-10-05T00:00:00.000Z",
-            ),
-            vol(
-                "new",
-                None,
-                sbx::VolumeState::Creating,
-                "2026-10-05T00:00:00.000Z",
-            ),
-            vol(
-                "gra",
-                Some("gra"),
-                sbx::VolumeState::Available,
-                "2026-10-05T00:00:00.000Z",
-            ),
-            vol(
-                "recent",
-                None,
-                sbx::VolumeState::Available,
-                "2026-10-06T01:54:00.000Z",
-            ),
-            vol(
-                "oldest",
-                None,
-                sbx::VolumeState::Available,
-                "2026-10-05T20:45:00.000Z",
-            ),
-            other,
-        ];
-        assert_eq!(
-            lru_free_workspace(&all, None).map(|v| v.name.as_str()),
-            Some("oldest")
-        );
-        assert_eq!(
-            lru_free_workspace(&all, Some("gra")).map(|v| v.name.as_str()),
-            Some("gra")
-        );
-        assert!(lru_free_workspace(&all[..2], None).is_none());
-    }
-
-    /// A run takes a free warm workspace whose node has room: one whose
-    /// node had none is skipped while another free warm workspace or room
-    /// for a fresh one remains, and is waited on again only when neither
-    /// does.
-    #[test]
-    fn a_run_skips_a_warm_workspace_whose_node_is_full() {
-        fn vol(name: &str, state: sbx::VolumeState) -> sbx::Volume {
-            let mut v = sbx::Volume::default();
-            v.name = name.into();
-            let mut st = sbx::VolumeStatus::default();
-            st.state = Some(state);
-            v.status = Some(st);
-            v
-        }
-        let pool = vec![
-            vol("v-b", sbx::VolumeState::Available),
-            vol("v-a", sbx::VolumeState::Available),
-            vol("v-c", sbx::VolumeState::Attached),
-        ];
-        let names = |f: Vec<&sbx::Volume>| f.iter().map(|v| v.name.clone()).collect::<Vec<_>>();
-        let mut full = HashSet::new();
-        // Free ones only, in a stable order.
-        assert_eq!(names(free_warm(&pool, &mut full, true)), ["v-a", "v-b"]);
-        // v-a's node had no room: v-b is next.
-        full.insert("v-a".to_string());
-        assert_eq!(names(free_warm(&pool, &mut full, true)), ["v-b"]);
-        // Both full, room for a fresh workspace: none of them; the run
-        // takes a fresh one.
-        full.insert("v-b".to_string());
-        assert!(free_warm(&pool, &mut full, true).is_empty());
-        assert_eq!(full.len(), 2);
-        // Both full and no room for a fresh one: wait on the warm ones again.
-        assert_eq!(names(free_warm(&pool, &mut full, false)), ["v-a", "v-b"]);
-        assert!(full.is_empty());
     }
 
     /// A caller sends --region only when `build run --help` lists both

@@ -25,6 +25,18 @@ pub const GUEST_BIN: &str = "/usr/local/bin/sylphx-image-build";
 pub fn state_dir() -> String {
     format!("{WS}/buildkit")
 }
+/// Removes the tree's `target` link to the warm workspace's `target/`
+/// before the image build, then runs it. The sync links `tree/target` to
+/// `../target` for `build run`; in an image's context that link dangles
+/// (`COPY . /app` gives `/app/target` pointing nowhere), and tools that walk
+/// the source fail on it (`next build`: `ENOENT, stat '/app/target'`). Only
+/// that exact link goes; a `target` of the source's own stays. The next sync
+/// puts it back.
+pub const UNLINK_TARGET: &str = r#"t=$1/target
+shift
+if [ -L "$t" ] && [ "$(readlink "$t")" = ../target ]; then rm -f "$t"; fi
+exec "$@"
+"#;
 /// The script's metadata file, copied back after the build.
 pub fn metadata_path() -> String {
     format!("{WS}/.sylphx/image.json")
@@ -157,8 +169,23 @@ impl Image {
         })
     }
 
-    /// The guest command line; the build context is the tree directory.
+    /// The guest command line: [`UNLINK_TARGET`], then the image build of
+    /// [`Self::guest_argv`].
     pub fn argv(&self, rel: &str) -> Vec<String> {
+        let mut a = vec![
+            "/bin/sh".to_string(),
+            "-c".into(),
+            UNLINK_TARGET.into(),
+            "sylphx-image".into(),
+            format!("{WS}/tree"),
+        ];
+        a.extend(self.guest_argv(rel));
+        a
+    }
+
+    /// `sylphx-image-build`'s command line; the build context is the tree
+    /// directory.
+    pub fn guest_argv(&self, rel: &str) -> Vec<String> {
         let ctx = if rel.is_empty() || rel == "." {
             format!("{WS}/tree")
         } else {
@@ -313,7 +340,7 @@ mod tests {
     fn defaults_render_the_minimal_command() {
         let i = parse(&["sylphx", "image"]).unwrap();
         assert_eq!(
-            i.argv(""),
+            i.guest_argv(""),
             [
                 GUEST_BIN,
                 "--context",
@@ -324,8 +351,56 @@ mod tests {
                 "/workspace/.sylphx/image.json"
             ]
         );
-        let sub = i.argv("services/api");
+        let sub = i.guest_argv("services/api");
         assert_eq!(sub[2], "/workspace/tree/services/api");
+        // The guest runs the build behind the unlink of the tree's target link.
+        let a = i.argv("services/api");
+        assert_eq!(
+            a[..5],
+            [
+                "/bin/sh",
+                "-c",
+                UNLINK_TARGET,
+                "sylphx-image",
+                "/workspace/tree"
+            ]
+        );
+        assert_eq!(a[5..], sub[..]);
+    }
+
+    /// Only the sync's own `target -> ../target` link leaves the tree; a
+    /// source's own `target` (a directory or another link) stays, and the
+    /// build runs either way.
+    #[test]
+    fn the_image_context_drops_only_the_workspace_target_link() {
+        let dir = std::env::temp_dir().join(format!("sylphx-image-target-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let run = |tree: &Path| {
+            let out = std::process::Command::new("/bin/sh")
+                .args(["-c", UNLINK_TARGET, "sylphx-image"])
+                .arg(tree)
+                .args(["echo", "built"])
+                .output()
+                .unwrap();
+            assert!(out.status.success());
+            assert_eq!(String::from_utf8_lossy(&out.stdout), "built\n");
+        };
+        let ours = dir.join("ours");
+        std::fs::create_dir_all(&ours).unwrap();
+        std::os::unix::fs::symlink("../target", ours.join("target")).unwrap();
+        run(&ours);
+        assert!(std::fs::symlink_metadata(ours.join("target")).is_err());
+        let theirs = dir.join("theirs");
+        std::fs::create_dir_all(theirs.join("target")).unwrap();
+        run(&theirs);
+        assert!(theirs.join("target").is_dir());
+        let link = dir.join("link");
+        std::fs::create_dir_all(&link).unwrap();
+        std::os::unix::fs::symlink("build/out", link.join("target")).unwrap();
+        run(&link);
+        assert!(std::fs::symlink_metadata(link.join("target")).is_ok());
+        run(&dir.join("none"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
