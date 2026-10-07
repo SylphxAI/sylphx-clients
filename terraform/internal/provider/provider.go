@@ -7,6 +7,7 @@ package provider
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/SylphxAI/terraform-provider-sylphx/internal/client"
 	"github.com/SylphxAI/terraform-provider-sylphx/internal/def"
@@ -59,7 +60,7 @@ func (p *sylphxProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 			"base_url": schema.StringAttribute{Optional: true, Description: "The API base URL; defaults to SYLPHX_BASE_URL, then https://api.sylphx.com."},
 			"org":      schema.StringAttribute{Optional: true, Description: "Default org id (or `orgs/{org}`) for resources whose `parent` is unset; SYLPHX_ORG."},
 			"project":  schema.StringAttribute{Optional: true, Description: "Default project id; SYLPHX_PROJECT."},
-			"env":      schema.StringAttribute{Optional: true, Description: "Default environment id; SYLPHX_ENV."},
+			"env":      schema.StringAttribute{Optional: true, Description: "Default environment id, or its full name `orgs/{org}/projects/{project}/envs/{env}` (which also sets an unset org and project); SYLPHX_ENVIRONMENT, as the sylphx CLI reads it."},
 		},
 	}
 }
@@ -84,11 +85,12 @@ func (p *sylphxProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		}
 		return os.Getenv(env)
 	}
+	org, project, env := defaultsFromEnvName(pick(m.Org, "SYLPHX_ORG"), pick(m.Project, "SYLPHX_PROJECT"), pick(m.Env, "SYLPHX_ENVIRONMENT"))
 	data := &Data{
 		Client:  client.New(pick(m.BaseURL, "SYLPHX_BASE_URL"), pick(m.APIKey, "SYLPHX_API_KEY"), "terraform-provider-sylphx/"+p.version),
-		Org:     pick(m.Org, "SYLPHX_ORG"),
-		Project: pick(m.Project, "SYLPHX_PROJECT"),
-		Env:     pick(m.Env, "SYLPHX_ENV"),
+		Org:     org,
+		Project: project,
+		Env:     env,
 	}
 	resp.ResourceData = data
 	resp.DataSourceData = data
@@ -116,4 +118,21 @@ func (p *sylphxProvider) DataSources(_ context.Context) []func() datasource.Data
 		out = append(out, func() datasource.DataSource { return &sxDataSource{def: r} })
 	}
 	return out
+}
+
+// defaultsFromEnvName fills an unset org and project from a full environment
+// name (`orgs/{org}/projects/{project}/envs/{env}`), the one meaning of
+// SYLPHX_ENVIRONMENT across the sylphx CLI and this provider. A bare id is
+// left as it is.
+func defaultsFromEnvName(org, project, env string) (string, string, string) {
+	p := strings.Split(env, "/")
+	if len(p) == 6 && p[0] == "orgs" && p[2] == "projects" && p[4] == "envs" && p[1] != "" && p[3] != "" && p[5] != "" {
+		if org == "" {
+			org = p[1]
+		}
+		if project == "" {
+			project = p[3]
+		}
+	}
+	return org, project, env
 }

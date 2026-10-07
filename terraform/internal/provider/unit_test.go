@@ -137,3 +137,25 @@ func TestDefaultParent(t *testing.T) {
 		t.Fatal("missing defaults must not produce a parent:", got)
 	}
 }
+
+// A full environment name in SYLPHX_ENVIRONMENT also sets an unset org and
+// project; explicit values and bare ids are kept.
+func TestDefaultsFromEnvName(t *testing.T) {
+	full := "orgs/org_a/projects/prj_a/envs/env_a"
+	for _, c := range []struct{ org, project, env, wantOrg, wantProject string }{
+		{"", "", full, "org_a", "prj_a"},
+		{"org_x", "", full, "org_x", "prj_a"},
+		{"", "", "env_a", "", ""},
+		{"", "", "orgs/org_a/projects/prj_a", "", ""},
+		{"", "", "orgs//projects/p/envs/e", "", ""},
+	} {
+		o, p, e := defaultsFromEnvName(c.org, c.project, c.env)
+		if o != c.wantOrg || p != c.wantProject || e != c.env {
+			t.Errorf("%q,%q,%q: got %q,%q,%q", c.org, c.project, c.env, o, p, e)
+		}
+	}
+	d := &Data{Org: "org_a", Project: "prj_a", Env: full}
+	if got := defaultParent("orgs/{org}/projects/{project}/envs/{env}", d); got != full {
+		t.Errorf("defaultParent: %q", got)
+	}
+}
