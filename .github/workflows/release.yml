@@ -77,7 +77,7 @@ jobs:
           set -eu
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-            ca-certificates curl git build-essential pkg-config \
+            ca-certificates curl git build-essential pkg-config python3 \
             gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user >/dev/null
       - uses: actions/checkout@v6
         timeout-minutes: 10
@@ -102,8 +102,8 @@ jobs:
           echo "$out"
           [ "$out" = "sylphx ${{ needs.check.outputs.version }}" ]
           $bin data databases create --help >/dev/null
-          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
-            | $bin mcp | grep -q '"serverInfo"'
+          python3 -I scripts/test-smoke-mcp.py
+          python3 -I scripts/smoke-mcp.py -- $bin mcp
           # No newer glibc symbol than Ubuntu 22.04's.
           ! objdump -T "dist/${{ matrix.asset }}" 2>/dev/null | grep -oE 'GLIBC_2\.(3[6-9]|[4-9][0-9])' | head -1 | grep -q .
       - uses: actions/upload-artifact@v6
@@ -152,8 +152,8 @@ jobs:
           echo "$out"
           [ "$out" = "sylphx ${{ needs.check.outputs.version }}" ]
           "dist/${{ matrix.asset }}" data databases create --help >/dev/null
-          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
-            | "dist/${{ matrix.asset }}" mcp | grep -q '"serverInfo"'
+          python3 -I scripts/test-smoke-mcp.py
+          python3 -I scripts/smoke-mcp.py -- "dist/${{ matrix.asset }}" mcp
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.asset }}
