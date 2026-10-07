@@ -1557,6 +1557,2692 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets an agent."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an agent.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agents/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAgent.",
+        "properties": {
+          "name": {
+            "description": "The name of the agent to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.get",
+      "permission": "agents:read",
+      "served": false,
+      "tool": "agents_agents_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists agents."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists agents.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/agents",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListAgents.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.list",
+      "permission": "agents:read",
+      "served": false,
+      "tool": "agents_agents_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an agent and its version 1."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates an agent and its version 1.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/agents",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateAgent.",
+        "properties": {
+          "agent": {
+            "additionalProperties": false,
+            "description": "The agent to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state: the definition the next version takes.",
+                "properties": {
+                  "budget": {
+                    "additionalProperties": false,
+                    "description": "Spend and time limits per turn and per session.",
+                    "properties": {
+                      "max_session_spend_micros": {
+                        "description": "Spend per session in micro-USD, models and tools together; 0 is the\nproject's spend limit only.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "max_steps_per_turn": {
+                        "description": "Model and tool steps per turn, 1 to 1000; default 100.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "turn_timeout": {
+                        "description": "One turn's wall-clock deadline, 10s to 24h; default 30m.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "end_user_access": {
+                    "description": "Whether end-user session access is intended for this agent. Reserved\nuntil the backend enforces end-user ownership; all contract methods\ncurrently require a secret key.",
+                    "type": "boolean"
+                  },
+                  "environment": {
+                    "additionalProperties": false,
+                    "description": "Whether sessions get a Sylphx Sandboxes environment (shell, files,\nbrowser, computer use), attached on first need and put in standby when\nidle.",
+                    "properties": {
+                      "budget": {
+                        "additionalProperties": false,
+                        "description": "The lease's CPU and cost ceiling, separate from model and tool spend.",
+                        "properties": {
+                          "max_cost_micros": {
+                            "description": "End COST_BUDGET once the shape's list price times wall seconds reaches\nthis many millionths of a US dollar.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "max_cpu_seconds": {
+                            "description": "End CPU_BUDGET after this many vCPU-seconds of guest CPU time.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "egress": {
+                        "additionalProperties": false,
+                        "description": "The lease's outbound policy, using the Sandboxes network contract.",
+                        "properties": {
+                          "allowed_cidrs": {
+                            "description": "Public CIDRs reachable when `egress` is ALLOWLIST.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "allowed_domains": {
+                            "description": "Hosts reachable when `egress` is ALLOWLIST: exact names or one leading\n`*.` wildcard label, for example `api.openai.com`, `*.github.com`.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "egress": {
+                            "description": "Default ALLOW.",
+                            "enum": [
+                              "allow",
+                              "deny",
+                              "allowlist"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "idle_standby": {
+                        "description": "Put the environment in standby after this long idle, 1m to 24h; default\n10m.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "repo": {
+                        "additionalProperties": false,
+                        "description": "The repository to prepare inside the fresh lease, if any.",
+                        "properties": {
+                          "revision": {
+                            "description": "The commit or ref to check out; empty uses the repository's default branch.",
+                            "type": "string"
+                          },
+                          "uri": {
+                            "description": "The repository URI. Access uses the session's bound credential handles.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "uri"
+                        ],
+                        "type": "object"
+                      },
+                      "shape": {
+                        "description": "A Sylphx Sandboxes shape; empty gives sessions no environment.",
+                        "type": "string"
+                      },
+                      "template": {
+                        "description": "The Sandboxes image: `template:<name>` or an artifact image by digest,\npassed unchanged to the lease's `image` field.",
+                        "type": "string"
+                      },
+                      "ttl": {
+                        "description": "The lease's maximum wall time, passed to Sandboxes as `ttl`. The lease\nis released when the session ends even if this bound has not been reached.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "harness": {
+                    "description": "The execution harness, independent of `model`: `runtime` (default),\n`claude_code` or `codex`. It is part of the immutable version, not an\nenvironment-wide setting. An omitted or empty value means `runtime`.",
+                    "type": "string"
+                  },
+                  "instructions": {
+                    "description": "The system instructions, at most 256 KiB.",
+                    "type": "string"
+                  },
+                  "mcp_servers": {
+                    "description": "The MCP servers whose tools the agent may call, at most 32.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "An McpServer is a remote MCP server whose tools the agent may call.",
+                      "properties": {
+                        "allowed_tools": {
+                          "description": "Only these of its tools; empty allows every tool it lists.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "credential": {
+                          "additionalProperties": false,
+                          "description": "The credential the gateway presents to the server.",
+                          "properties": {
+                            "connection": {
+                              "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                              "type": "string",
+                              "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                            },
+                            "end_user_provider": {
+                              "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                              "type": "string"
+                            },
+                            "handle": {
+                              "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                              "type": "string"
+                            },
+                            "placement": {
+                              "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                              "type": "string"
+                            },
+                            "secret": {
+                              "description": "A Kernel Secret of this environment, by name.",
+                              "type": "string",
+                              "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "label": {
+                          "description": "The label its tools are prefixed with, unique within the agent.",
+                          "type": "string"
+                        },
+                        "uri": {
+                          "description": "The server's Streamable HTTP endpoint.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "uri"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "memory_stores": {
+                    "description": "The memory stores the agent recalls from and writes to, as MemoryStore\nnames; at most 8.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
+                  },
+                  "model": {
+                    "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
+                    "type": "string"
+                  },
+                  "skills": {
+                    "description": "Skills: instruction packs the agent loads when relevant, at most 64.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A Skill is an instruction pack the agent loads when its description\nmatches the task.",
+                      "properties": {
+                        "description": {
+                          "description": "When to use it, shown to the model; at most 1024 characters.",
+                          "type": "string"
+                        },
+                        "instructions": {
+                          "description": "The instructions it loads, at most 256 KiB.",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "The skill's name, unique within the agent.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description",
+                        "instructions"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "tool_policy": {
+                    "additionalProperties": false,
+                    "description": "The policy every tool call passes before it runs.",
+                    "properties": {
+                      "approval_timeout": {
+                        "description": "How long a call waits for a person's answer before it is denied, 1m to\n7d; default 24h.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "default_decision": {
+                        "description": "The decision for a call no rule matches; default allow.",
+                        "enum": [
+                          "allow",
+                          "deny",
+                          "ask"
+                        ],
+                        "type": "string"
+                      },
+                      "egress_allow_hosts": {
+                        "description": "Hosts every network call of the agent's tools may reach, beyond the\ntools' own endpoints; `*.example.com` matches subdomains. Private and\ninternal addresses are refused whatever this says.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "rules": {
+                        "description": "Rules in order; the first match decides. At most 256.",
+                        "items": {
+                          "additionalProperties": false,
+                          "description": "A ToolPolicyRule matches tool calls by tool name.",
+                          "properties": {
+                            "condition": {
+                              "description": "A CEL condition over the call's `input`, the session's `end_user` and\n`labels`; the rule matches only when it is true. Empty always matches.",
+                              "type": "string"
+                            },
+                            "decision": {
+                              "description": "The decision.",
+                              "enum": [
+                                "allow",
+                                "deny",
+                                "ask"
+                              ],
+                              "type": "string"
+                            },
+                            "tool": {
+                              "description": "A tool name, `<mcp label>__<tool>` for an MCP tool; `*` matches any\ncharacters.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "tool",
+                            "decision"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "tools": {
+                    "description": "The tools the agent may call, at most 128, each `name` once.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A Tool is one tool an agent may call. Every call goes through the tool\ngateway: the policy check, credential injection at egress (the model, the\nevent log and traces see a handle, never the value), the egress guard, and\none usage record and trace span per call.",
+                      "properties": {
+                        "app_function": {
+                          "additionalProperties": false,
+                          "description": "The app's own server code: the gateway calls it with a short-lived\nsigned token bound to the session, turn and step.",
+                          "properties": {
+                            "timeout": {
+                              "description": "One call's deadline, 1s to 15m; default 60s.",
+                              "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                              "type": "string"
+                            },
+                            "uri": {
+                              "description": "The HTTPS endpoint the gateway calls, a Hosting route or a verified\nNetwork Domain of this project.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uri"
+                          ],
+                          "type": "object"
+                        },
+                        "builtin": {
+                          "additionalProperties": false,
+                          "description": "A platform tool: `shell`, `files`, `browser`, `computer`, `web_fetch`,\n`web_search` or `memory`.",
+                          "properties": {
+                            "config": {
+                              "additionalProperties": true,
+                              "description": "Tool-specific settings, at most 16 KiB of JSON.",
+                              "type": "object"
+                            },
+                            "id": {
+                              "description": "The built-in tool's id.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "type": "object"
+                        },
+                        "client": {
+                          "additionalProperties": false,
+                          "description": "Run by the client: the app executes it and returns the result as an\nevent (`:submitToolResult`).",
+                          "properties": {
+                            "timeout": {
+                              "description": "How long the session waits for the result before the call fails, 1s to\n24h; default 10m.",
+                              "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "description": {
+                          "description": "What the tool does, shown to the model; at most 4096 characters.",
+                          "type": "string"
+                        },
+                        "http": {
+                          "additionalProperties": false,
+                          "description": "An HTTP API described by OpenAPI.",
+                          "properties": {
+                            "credential": {
+                              "additionalProperties": false,
+                              "description": "The credential the gateway injects at egress; the model never sees it.",
+                              "properties": {
+                                "connection": {
+                                  "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                                  "type": "string",
+                                  "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                                },
+                                "end_user_provider": {
+                                  "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                                  "type": "string"
+                                },
+                                "handle": {
+                                  "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                                  "type": "string"
+                                },
+                                "placement": {
+                                  "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                                  "type": "string"
+                                },
+                                "secret": {
+                                  "description": "A Kernel Secret of this environment, by name.",
+                                  "type": "string",
+                                  "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "openapi": {
+                              "additionalProperties": true,
+                              "description": "An OpenAPI 3 document, at most 1 MiB of JSON.",
+                              "type": "object"
+                            },
+                            "openapi_uri": {
+                              "description": "An HTTPS URL of an OpenAPI 3 document.",
+                              "type": "string"
+                            },
+                            "operation_id": {
+                              "description": "The operation the tool calls; empty exposes every operation as its own\ntool named `<tool>_<operationId>`.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "input_schema": {
+                          "additionalProperties": true,
+                          "description": "The JSON Schema of the tool's input. Built-in tools carry their own.",
+                          "type": "object"
+                        },
+                        "name": {
+                          "description": "The name the model calls, unique within the agent.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "model"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "agent_id": {
+            "description": "The agent id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "agent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.create",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_agents_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates an agent. A change to `spec` mints the next AgentVersion; sessions already started keep the version they pinned."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates an agent. A change to `spec` mints the next AgentVersion;\nsessions already started keep the version they pinned.",
+      "effect": "write",
+      "http": "PATCH /v1/{agent.name=orgs/*/projects/*/envs/*/agents/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateAgent.",
+        "properties": {
+          "agent": {
+            "additionalProperties": false,
+            "description": "The agent to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state: the definition the next version takes.",
+                "properties": {
+                  "budget": {
+                    "additionalProperties": false,
+                    "description": "Spend and time limits per turn and per session.",
+                    "properties": {
+                      "max_session_spend_micros": {
+                        "description": "Spend per session in micro-USD, models and tools together; 0 is the\nproject's spend limit only.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "max_steps_per_turn": {
+                        "description": "Model and tool steps per turn, 1 to 1000; default 100.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "turn_timeout": {
+                        "description": "One turn's wall-clock deadline, 10s to 24h; default 30m.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "end_user_access": {
+                    "description": "Whether end-user session access is intended for this agent. Reserved\nuntil the backend enforces end-user ownership; all contract methods\ncurrently require a secret key.",
+                    "type": "boolean"
+                  },
+                  "environment": {
+                    "additionalProperties": false,
+                    "description": "Whether sessions get a Sylphx Sandboxes environment (shell, files,\nbrowser, computer use), attached on first need and put in standby when\nidle.",
+                    "properties": {
+                      "budget": {
+                        "additionalProperties": false,
+                        "description": "The lease's CPU and cost ceiling, separate from model and tool spend.",
+                        "properties": {
+                          "max_cost_micros": {
+                            "description": "End COST_BUDGET once the shape's list price times wall seconds reaches\nthis many millionths of a US dollar.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "max_cpu_seconds": {
+                            "description": "End CPU_BUDGET after this many vCPU-seconds of guest CPU time.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "egress": {
+                        "additionalProperties": false,
+                        "description": "The lease's outbound policy, using the Sandboxes network contract.",
+                        "properties": {
+                          "allowed_cidrs": {
+                            "description": "Public CIDRs reachable when `egress` is ALLOWLIST.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "allowed_domains": {
+                            "description": "Hosts reachable when `egress` is ALLOWLIST: exact names or one leading\n`*.` wildcard label, for example `api.openai.com`, `*.github.com`.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "egress": {
+                            "description": "Default ALLOW.",
+                            "enum": [
+                              "allow",
+                              "deny",
+                              "allowlist"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "idle_standby": {
+                        "description": "Put the environment in standby after this long idle, 1m to 24h; default\n10m.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "repo": {
+                        "additionalProperties": false,
+                        "description": "The repository to prepare inside the fresh lease, if any.",
+                        "properties": {
+                          "revision": {
+                            "description": "The commit or ref to check out; empty uses the repository's default branch.",
+                            "type": "string"
+                          },
+                          "uri": {
+                            "description": "The repository URI. Access uses the session's bound credential handles.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "uri"
+                        ],
+                        "type": "object"
+                      },
+                      "shape": {
+                        "description": "A Sylphx Sandboxes shape; empty gives sessions no environment.",
+                        "type": "string"
+                      },
+                      "template": {
+                        "description": "The Sandboxes image: `template:<name>` or an artifact image by digest,\npassed unchanged to the lease's `image` field.",
+                        "type": "string"
+                      },
+                      "ttl": {
+                        "description": "The lease's maximum wall time, passed to Sandboxes as `ttl`. The lease\nis released when the session ends even if this bound has not been reached.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "harness": {
+                    "description": "The execution harness, independent of `model`: `runtime` (default),\n`claude_code` or `codex`. It is part of the immutable version, not an\nenvironment-wide setting. An omitted or empty value means `runtime`.",
+                    "type": "string"
+                  },
+                  "instructions": {
+                    "description": "The system instructions, at most 256 KiB.",
+                    "type": "string"
+                  },
+                  "mcp_servers": {
+                    "description": "The MCP servers whose tools the agent may call, at most 32.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "An McpServer is a remote MCP server whose tools the agent may call.",
+                      "properties": {
+                        "allowed_tools": {
+                          "description": "Only these of its tools; empty allows every tool it lists.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "credential": {
+                          "additionalProperties": false,
+                          "description": "The credential the gateway presents to the server.",
+                          "properties": {
+                            "connection": {
+                              "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                              "type": "string",
+                              "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                            },
+                            "end_user_provider": {
+                              "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                              "type": "string"
+                            },
+                            "handle": {
+                              "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                              "type": "string"
+                            },
+                            "placement": {
+                              "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                              "type": "string"
+                            },
+                            "secret": {
+                              "description": "A Kernel Secret of this environment, by name.",
+                              "type": "string",
+                              "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "label": {
+                          "description": "The label its tools are prefixed with, unique within the agent.",
+                          "type": "string"
+                        },
+                        "uri": {
+                          "description": "The server's Streamable HTTP endpoint.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "uri"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "memory_stores": {
+                    "description": "The memory stores the agent recalls from and writes to, as MemoryStore\nnames; at most 8.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
+                  },
+                  "model": {
+                    "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
+                    "type": "string"
+                  },
+                  "skills": {
+                    "description": "Skills: instruction packs the agent loads when relevant, at most 64.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A Skill is an instruction pack the agent loads when its description\nmatches the task.",
+                      "properties": {
+                        "description": {
+                          "description": "When to use it, shown to the model; at most 1024 characters.",
+                          "type": "string"
+                        },
+                        "instructions": {
+                          "description": "The instructions it loads, at most 256 KiB.",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "The skill's name, unique within the agent.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description",
+                        "instructions"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "tool_policy": {
+                    "additionalProperties": false,
+                    "description": "The policy every tool call passes before it runs.",
+                    "properties": {
+                      "approval_timeout": {
+                        "description": "How long a call waits for a person's answer before it is denied, 1m to\n7d; default 24h.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "default_decision": {
+                        "description": "The decision for a call no rule matches; default allow.",
+                        "enum": [
+                          "allow",
+                          "deny",
+                          "ask"
+                        ],
+                        "type": "string"
+                      },
+                      "egress_allow_hosts": {
+                        "description": "Hosts every network call of the agent's tools may reach, beyond the\ntools' own endpoints; `*.example.com` matches subdomains. Private and\ninternal addresses are refused whatever this says.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "rules": {
+                        "description": "Rules in order; the first match decides. At most 256.",
+                        "items": {
+                          "additionalProperties": false,
+                          "description": "A ToolPolicyRule matches tool calls by tool name.",
+                          "properties": {
+                            "condition": {
+                              "description": "A CEL condition over the call's `input`, the session's `end_user` and\n`labels`; the rule matches only when it is true. Empty always matches.",
+                              "type": "string"
+                            },
+                            "decision": {
+                              "description": "The decision.",
+                              "enum": [
+                                "allow",
+                                "deny",
+                                "ask"
+                              ],
+                              "type": "string"
+                            },
+                            "tool": {
+                              "description": "A tool name, `<mcp label>__<tool>` for an MCP tool; `*` matches any\ncharacters.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "tool",
+                            "decision"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "tools": {
+                    "description": "The tools the agent may call, at most 128, each `name` once.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A Tool is one tool an agent may call. Every call goes through the tool\ngateway: the policy check, credential injection at egress (the model, the\nevent log and traces see a handle, never the value), the egress guard, and\none usage record and trace span per call.",
+                      "properties": {
+                        "app_function": {
+                          "additionalProperties": false,
+                          "description": "The app's own server code: the gateway calls it with a short-lived\nsigned token bound to the session, turn and step.",
+                          "properties": {
+                            "timeout": {
+                              "description": "One call's deadline, 1s to 15m; default 60s.",
+                              "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                              "type": "string"
+                            },
+                            "uri": {
+                              "description": "The HTTPS endpoint the gateway calls, a Hosting route or a verified\nNetwork Domain of this project.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uri"
+                          ],
+                          "type": "object"
+                        },
+                        "builtin": {
+                          "additionalProperties": false,
+                          "description": "A platform tool: `shell`, `files`, `browser`, `computer`, `web_fetch`,\n`web_search` or `memory`.",
+                          "properties": {
+                            "config": {
+                              "additionalProperties": true,
+                              "description": "Tool-specific settings, at most 16 KiB of JSON.",
+                              "type": "object"
+                            },
+                            "id": {
+                              "description": "The built-in tool's id.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "type": "object"
+                        },
+                        "client": {
+                          "additionalProperties": false,
+                          "description": "Run by the client: the app executes it and returns the result as an\nevent (`:submitToolResult`).",
+                          "properties": {
+                            "timeout": {
+                              "description": "How long the session waits for the result before the call fails, 1s to\n24h; default 10m.",
+                              "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "description": {
+                          "description": "What the tool does, shown to the model; at most 4096 characters.",
+                          "type": "string"
+                        },
+                        "http": {
+                          "additionalProperties": false,
+                          "description": "An HTTP API described by OpenAPI.",
+                          "properties": {
+                            "credential": {
+                              "additionalProperties": false,
+                              "description": "The credential the gateway injects at egress; the model never sees it.",
+                              "properties": {
+                                "connection": {
+                                  "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                                  "type": "string",
+                                  "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                                },
+                                "end_user_provider": {
+                                  "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                                  "type": "string"
+                                },
+                                "handle": {
+                                  "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                                  "type": "string"
+                                },
+                                "placement": {
+                                  "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                                  "type": "string"
+                                },
+                                "secret": {
+                                  "description": "A Kernel Secret of this environment, by name.",
+                                  "type": "string",
+                                  "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "openapi": {
+                              "additionalProperties": true,
+                              "description": "An OpenAPI 3 document, at most 1 MiB of JSON.",
+                              "type": "object"
+                            },
+                            "openapi_uri": {
+                              "description": "An HTTPS URL of an OpenAPI 3 document.",
+                              "type": "string"
+                            },
+                            "operation_id": {
+                              "description": "The operation the tool calls; empty exposes every operation as its own\ntool named `<tool>_<operationId>`.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "input_schema": {
+                          "additionalProperties": true,
+                          "description": "The JSON Schema of the tool's input. Built-in tools carry their own.",
+                          "type": "object"
+                        },
+                        "name": {
+                          "description": "The name the model calls, unique within the agent.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "model"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "allow_missing": {
+            "description": "Create the agent when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.update",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_agents_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an agent and its versions. An agent with sessions is refused with `INVALID_STATE` unless `force` is set, which deletes them too."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an agent and its versions. An agent with sessions is refused\nwith `INVALID_STATE` unless `force` is set, which deletes them too.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/agents/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteAgent.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the agent does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also delete the agent's sessions; without it, an agent with sessions\nis refused with `INVALID_STATE`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the agent to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.delete",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_agents_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an agent version."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an agent version.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agents/*/agent_versions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAgentVersion.",
+        "properties": {
+          "name": {
+            "description": "The name of the agent version to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_versions.get",
+      "permission": "agents:read",
+      "served": false,
+      "tool": "agents_agent_versions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists an agent's versions, newest first."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an agent's versions, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/agents/*}/agent_versions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListAgentVersions.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `version_number`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The agent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_versions.list",
+      "permission": "agents:read",
+      "served": false,
+      "tool": "agents_agent_versions_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts a session of an agent, pinned to its current version unless `agent_version` names another. Requires a secret key until end-user ownership is implemented. The session starts idle; `:send` starts its first turn."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Starts a session of an agent, pinned to its current version unless\n`agent_version` names another. Requires a secret key until end-user\nownership is implemented. The session starts idle; `:send` starts its\nfirst turn.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/agent_sessions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateAgentSession.",
+        "properties": {
+          "agent_session": {
+            "additionalProperties": false,
+            "description": "The session to create; only caller-writable fields are read.",
+            "properties": {
+              "agent": {
+                "description": "The Agent the session talks to.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+              },
+              "agent_version": {
+                "description": "The AgentVersion the session pinned; the Agent's current version when\nunset at create.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
+              },
+              "credentials": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+                  "properties": {
+                    "connection": {
+                      "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                    },
+                    "end_user_provider": {
+                      "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                      "type": "string"
+                    },
+                    "handle": {
+                      "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                      "type": "string"
+                    },
+                    "placement": {
+                      "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                      "type": "string"
+                    },
+                    "secret": {
+                      "description": "A Kernel Secret of this environment, by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Session-scoped credential bindings, keyed by the tool or MCP credential\nname. Values are references or opaque handles, never secret values.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "environment": {
+                "additionalProperties": false,
+                "description": "The environment for this session; when omitted, use the pinned Agent\nversion's default. An explicit value replaces that default.",
+                "properties": {
+                  "budget": {
+                    "additionalProperties": false,
+                    "description": "The lease's CPU and cost ceiling, separate from model and tool spend.",
+                    "properties": {
+                      "max_cost_micros": {
+                        "description": "End COST_BUDGET once the shape's list price times wall seconds reaches\nthis many millionths of a US dollar.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "max_cpu_seconds": {
+                        "description": "End CPU_BUDGET after this many vCPU-seconds of guest CPU time.",
+                        "format": "int64",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "egress": {
+                    "additionalProperties": false,
+                    "description": "The lease's outbound policy, using the Sandboxes network contract.",
+                    "properties": {
+                      "allowed_cidrs": {
+                        "description": "Public CIDRs reachable when `egress` is ALLOWLIST.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "allowed_domains": {
+                        "description": "Hosts reachable when `egress` is ALLOWLIST: exact names or one leading\n`*.` wildcard label, for example `api.openai.com`, `*.github.com`.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "egress": {
+                        "description": "Default ALLOW.",
+                        "enum": [
+                          "allow",
+                          "deny",
+                          "allowlist"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "idle_standby": {
+                    "description": "Put the environment in standby after this long idle, 1m to 24h; default\n10m.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "repo": {
+                    "additionalProperties": false,
+                    "description": "The repository to prepare inside the fresh lease, if any.",
+                    "properties": {
+                      "revision": {
+                        "description": "The commit or ref to check out; empty uses the repository's default branch.",
+                        "type": "string"
+                      },
+                      "uri": {
+                        "description": "The repository URI. Access uses the session's bound credential handles.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "uri"
+                    ],
+                    "type": "object"
+                  },
+                  "shape": {
+                    "description": "A Sylphx Sandboxes shape; empty gives sessions no environment.",
+                    "type": "string"
+                  },
+                  "template": {
+                    "description": "The Sandboxes image: `template:<name>` or an artifact image by digest,\npassed unchanged to the lease's `image` field.",
+                    "type": "string"
+                  },
+                  "ttl": {
+                    "description": "The lease's maximum wall time, passed to Sandboxes as `ttl`. The lease\nis released when the session ends even if this bound has not been reached.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}`.",
+                "type": "string"
+              },
+              "profiles": {
+                "description": "Granted platform Profiles to mount when the session starts, each by\nresource name and mode. The runtime never puts profile values in events.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "ProfileMount attaches a platform Profile by name, never its sign-in values.",
+                  "properties": {
+                    "mode": {
+                      "description": "`read_only` (default) or `write_back`. Only a write_back grant saves\nchanges at session end while its lease still answers; empty is read_only.",
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "`orgs/{org}/projects/{project}/envs/{env}/profiles/{profile}`.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
+              "title": {
+                "description": "A short title; set by the caller or summarised by the runtime.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "agent"
+            ],
+            "type": "object"
+          },
+          "agent_session_id": {
+            "description": "The session id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "agent_session"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.create",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a session."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a session.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAgentSession.",
+        "properties": {
+          "name": {
+            "description": "The name of the session to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.get",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists sessions, newest first. With a publishable key, only the caller's end user's sessions."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists sessions, newest first. With a publishable key, only the caller's\nend user's sessions.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/agent_sessions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListAgentSessions.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `agent`, `end_user` and `state`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.list",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a session and its events. A session whose turn is running is refused with `INVALID_STATE` unless `force` is set, which interrupts it first."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a session and its events. A session whose turn is running is\nrefused with `INVALID_STATE` unless `force` is set, which interrupts it\nfirst.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteAgentSession.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the session does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Interrupt a running turn and delete; without it, a running session is\nrefused with `INVALID_STATE`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the session to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.delete",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Sends a user message. On an idle or failed session it starts a new turn; while a turn runs it is refused with `INVALID_STATE` (use `:steer`). The same `Idempotency-Key` returns the same event."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Sends a user message. On an idle or failed session it starts a new turn;\nwhile a turn runs it is refused with `INVALID_STATE` (use `:steer`).\nThe same `Idempotency-Key` returns the same event.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:send",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SendAgentSessionMessage.",
+        "properties": {
+          "message": {
+            "additionalProperties": false,
+            "description": "The message, 1 to 64 parts.",
+            "properties": {
+              "parts": {
+                "description": "The content, in order; 1 to 64 parts.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "A ContentPart is one piece of a message.",
+                  "properties": {
+                    "file": {
+                      "additionalProperties": false,
+                      "description": "A file, by Sylphx Data object URL or an https URL.",
+                      "properties": {
+                        "filename": {
+                          "description": "Its display name.",
+                          "type": "string"
+                        },
+                        "media_type": {
+                          "description": "Its media type, for example `image/png`.",
+                          "type": "string"
+                        },
+                        "uri": {
+                          "description": "Where the file is.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "uri"
+                      ],
+                      "type": "object"
+                    },
+                    "text": {
+                      "description": "Text.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "parts"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "The name of the session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "name",
+          "message"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.send",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_send"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Sends a message into the running turn; the agent reads it at its next step. On an idle session it is the same as `:send`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Sends a message into the running turn; the agent reads it at its next\nstep. On an idle session it is the same as `:send`.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:steer",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SteerAgentSession.",
+        "properties": {
+          "message": {
+            "additionalProperties": false,
+            "description": "The message, 1 to 64 parts.",
+            "properties": {
+              "parts": {
+                "description": "The content, in order; 1 to 64 parts.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "A ContentPart is one piece of a message.",
+                  "properties": {
+                    "file": {
+                      "additionalProperties": false,
+                      "description": "A file, by Sylphx Data object URL or an https URL.",
+                      "properties": {
+                        "filename": {
+                          "description": "Its display name.",
+                          "type": "string"
+                        },
+                        "media_type": {
+                          "description": "Its media type, for example `image/png`.",
+                          "type": "string"
+                        },
+                        "uri": {
+                          "description": "Where the file is.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "uri"
+                      ],
+                      "type": "object"
+                    },
+                    "text": {
+                      "description": "Text.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "parts"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "The name of the session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "name",
+          "message"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.steer",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_steer"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Stops the running turn at its current step. Calls already made keep their results; the session becomes idle. A no-op on an idle session."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Stops the running turn at its current step. Calls already made keep\ntheir results; the session becomes idle. A no-op on an idle session.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:interrupt",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of InterruptAgentSession.",
+        "properties": {
+          "name": {
+            "description": "The name of the session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "reason": {
+            "description": "Why, recorded on the status event; at most 500 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.interrupt",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_interrupt"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Answers a tool call waiting for approval; the turn continues."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Answers a tool call waiting for approval; the turn continues.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:decideApproval",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DecideAgentSessionApproval.",
+        "properties": {
+          "call_id": {
+            "description": "The waiting ToolCall's `id`.",
+            "type": "string"
+          },
+          "decision": {
+            "description": "The answer.",
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "reason": {
+            "description": "Why, at most 500 characters; the agent reads it with a rejection.",
+            "type": "string"
+          },
+          "remember": {
+            "description": "Also allow later calls of the same tool in this session without asking\n(\"always allow\"); only with APPROVE.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "call_id",
+          "decision"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.decide_approval",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_decide_approval"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Returns the result of a client tool call; the turn continues."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Returns the result of a client tool call; the turn continues.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:submitToolResult",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SubmitAgentSessionToolResult.",
+        "properties": {
+          "call_id": {
+            "description": "The waiting client ToolCall's `id`.",
+            "type": "string"
+          },
+          "error": {
+            "description": "Whether the call failed; `output` then holds the error.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "output": {
+            "description": "The result, at most 1 MiB of JSON."
+          }
+        },
+        "required": [
+          "name",
+          "call_id",
+          "output"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.submit_tool_result",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_submit_tool_result"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a session event."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a session event.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/session_events/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetSessionEvent.",
+        "properties": {
+          "name": {
+            "description": "The name of the session event to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/SessionEvent"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.session_events.get",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_session_events_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a session's events in sequence order. To follow a session, call again with the filter `sequence > N`, N the last sequence read; `wait` holds the call open until a newer event is appended or the wait ends."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a session's events in sequence order. To follow a session, call\nagain with the filter `sequence > N`, N the last sequence read; `wait`\nholds the call open until a newer event is appended or the wait ends.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/session_events",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListSessionEvents.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `type` and `sequence`; for example\n`sequence > 42`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The session to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/SessionEvent"
+          },
+          "wait": {
+            "description": "When no event matches the filter, wait up to this long for one, at most\n60s; unset answers at once.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.session_events.list",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_session_events_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a memory store."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a memory store.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/memory_stores/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMemoryStore.",
+        "properties": {
+          "name": {
+            "description": "The name of the memory store to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memory_stores.get",
+      "permission": "agents:read",
+      "served": false,
+      "tool": "agents_memory_stores_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists memory stores."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists memory stores.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/memory_stores",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMemoryStores.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memory_stores.list",
+      "permission": "agents:read",
+      "served": false,
+      "tool": "agents_memory_stores_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a memory store."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a memory store.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/memory_stores",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateMemoryStore.",
+        "properties": {
+          "memory_store": {
+            "additionalProperties": false,
+            "description": "The memory store to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "agent_writes": {
+                    "description": "Whether agents write memories themselves after each turn; otherwise\nonly callers write them.",
+                    "type": "boolean"
+                  },
+                  "description": {
+                    "description": "What the store is for, shown to agents; at most 1024 characters.",
+                    "type": "string"
+                  },
+                  "retention": {
+                    "description": "Memories older than this since their last update are deleted, 1d to\n3650d; unset keeps them until deleted.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "description": "Whose memories are kept apart.",
+                    "enum": [
+                      "project",
+                      "agent",
+                      "end_user"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "scope"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "memory_store_id": {
+            "description": "The memory store id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "memory_store"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memory_stores.create",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_memory_stores_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a memory store."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a memory store.",
+      "effect": "write",
+      "http": "PATCH /v1/{memory_store.name=orgs/*/projects/*/envs/*/memory_stores/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateMemoryStore.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the memory store when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "memory_store": {
+            "additionalProperties": false,
+            "description": "The memory store to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "agent_writes": {
+                    "description": "Whether agents write memories themselves after each turn; otherwise\nonly callers write them.",
+                    "type": "boolean"
+                  },
+                  "description": {
+                    "description": "What the store is for, shown to agents; at most 1024 characters.",
+                    "type": "string"
+                  },
+                  "retention": {
+                    "description": "Memories older than this since their last update are deleted, 1d to\n3650d; unset keeps them until deleted.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "description": "Whose memories are kept apart.",
+                    "enum": [
+                      "project",
+                      "agent",
+                      "end_user"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "scope"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "memory_store"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memory_stores.update",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_memory_stores_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a memory store. A store an agent names is refused with `RESOURCE_IN_USE`; a store with memories is refused with `INVALID_STATE` unless `force` is set, which deletes them too."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a memory store. A store an agent names is refused with\n`RESOURCE_IN_USE`; a store with memories is refused with `INVALID_STATE`\nunless `force` is set, which deletes them too.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/memory_stores/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteMemoryStore.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the memory store does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also delete the store's memories; without it, a store with memories is\nrefused with `INVALID_STATE`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the memory store to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memory_stores.delete",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_memory_stores_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a memory."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a memory.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/memory_stores/*/memories/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMemory.",
+        "properties": {
+          "name": {
+            "description": "The name of the memory to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Memory"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memories.get",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_memories_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a store's memories, newest first. With a publishable key, only the caller's end user's memories."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a store's memories, newest first. With a publishable key, only the\ncaller's end user's memories.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/memory_stores/*}/memories",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMemories.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `end_user` and `agent`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The memory store to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Memory"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memories.list",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_memories_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Writes a memory."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Writes a memory.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/memory_stores/*}/memories",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateMemory.",
+        "properties": {
+          "memory": {
+            "additionalProperties": false,
+            "description": "The memory to create; only caller-writable fields are read.",
+            "properties": {
+              "agent": {
+                "description": "The agent it belongs to, for a store scoped to agents.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+              },
+              "content": {
+                "description": "The memory, at most 16 KiB of text.",
+                "type": "string"
+              },
+              "end_user": {
+                "description": "The end user it is about, for a store scoped to end users.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}`.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "content"
+            ],
+            "type": "object"
+          },
+          "memory_id": {
+            "description": "The memory id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The memory store to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Memory"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "memory"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memories.create",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_memories_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Changes a memory's content."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Changes a memory's content.",
+      "effect": "write",
+      "http": "PATCH /v1/{memory.name=orgs/*/projects/*/envs/*/memory_stores/*/memories/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateMemory.",
+        "properties": {
+          "memory": {
+            "additionalProperties": false,
+            "description": "The memory to update; `name` identifies it.",
+            "properties": {
+              "agent": {
+                "description": "The agent it belongs to, for a store scoped to agents.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+              },
+              "content": {
+                "description": "The memory, at most 16 KiB of text.",
+                "type": "string"
+              },
+              "end_user": {
+                "description": "The end user it is about, for a store scoped to end users.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}`.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "content"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "memory"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memories.update",
+      "permission": "agents:write",
+      "served": false,
+      "tool": "agents_memories_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a memory. An end user may delete their own."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a memory. An end user may delete their own.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/memory_stores/*/memories/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteMemory.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the memory does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the memory to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Memory"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memories.delete",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_memories_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Recalls the memories that best match a query, by hybrid full-text and vector search. With a publishable key, only the caller's end user's memories. A read with a request body, like a query."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Recalls the memories that best match a query, by hybrid full-text and\nvector search. With a publishable key, only the caller's end user's\nmemories. A read with a request body, like a query.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/memory_stores/*}/memories:search",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SearchMemories.",
+        "properties": {
+          "agent": {
+            "description": "Only memories of this agent.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          },
+          "end_user": {
+            "description": "Only memories about this end user.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          },
+          "page_size": {
+            "description": "At most this many; default 10, clamped to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The memory store to search.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Memory"
+          },
+          "query": {
+            "description": "What to recall, 1 to 2000 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "query"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.memories.search",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_memories_search"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an AI model."
       },
       "description": "Gets an AI model.",
@@ -38725,7 +41411,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@fb95f0c42a0ec5d8e3cb694c0054b529c0b24b184112c65ef60c9044b4ce61f9. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@3118f36f16f799965338811e17ed3a9f565a9f136b14c95e9c94a1e21d42ea3e. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
