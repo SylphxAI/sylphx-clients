@@ -1172,7 +1172,7 @@ impl Run<'_> {
                         warm_name = Some(v.name.clone());
                         break;
                     }
-                    Err(LeaseErr::InUse) => continue,
+                    Err(LeaseErr::InUse | LeaseErr::Gone) => continue,
                     Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
                 }
             }
@@ -1183,7 +1183,8 @@ impl Run<'_> {
                 };
                 match self.lease(Some(&vol)).await {
                     Ok(l) => leased = Some((l, false)),
-                    Err(LeaseErr::InUse) => {}
+                    // Taken or evicted meanwhile: the next pass looks again.
+                    Err(LeaseErr::InUse | LeaseErr::Gone) => {}
                     Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
                 }
             }
@@ -1237,7 +1238,7 @@ impl Run<'_> {
     async fn acquire_without_volume(&mut self, deadline: Instant) -> Result<Machine, Attempt> {
         let lease = match self.lease(None).await {
             Ok(l) => l,
-            Err(LeaseErr::InUse) => {
+            Err(LeaseErr::InUse | LeaseErr::Gone) => {
                 return Err(Attempt::Done(Outcome::platform(
                     "the build machine was refused: in use",
                     true,
@@ -1441,10 +1442,16 @@ impl Run<'_> {
                 self.held.with(|h| h.lease = Some(l.name.clone()));
                 Ok(l)
             }
-            Err(sylphx::Error::Api { code, .. }) if code.as_str().contains("IN_USE") => {
-                Err(LeaseErr::InUse)
+            Err(e) => {
+                let refusal = match &e {
+                    sylphx::Error::Api { code, detail, .. } => {
+                        lease_refusal(code.as_str(), detail, volume)
+                    }
+                    _ => None,
+                };
+                Err(refusal
+                    .unwrap_or_else(|| LeaseErr::Fatal(api("creating the build machine", &e))))
             }
-            Err(e) => Err(LeaseErr::Fatal(api("creating the build machine", &e))),
         }
     }
 
@@ -2042,10 +2049,33 @@ mkdir -m 700 "$1"
     }
 }
 
+#[derive(Debug)]
 enum LeaseErr {
     /// The workspace is attached to another lease.
     InUse,
+    /// The workspace was deleted after it was picked: another run evicted
+    /// it to make room (`evict_lru` takes any repository's free workspace).
+    /// The run tries the next workspace, as for [`LeaseErr::InUse`].
+    Gone,
     Fatal(Outcome),
+}
+
+/// The lease refusals a run recovers from by taking another workspace;
+/// `None` for every other error, which ends the run. A workspace that is
+/// gone (404) or being deleted (400 `INVALID_STATE`) counts only when the
+/// error names the workspace `volume`, so a missing environment or project
+/// still fails at once.
+fn lease_refusal(code: &str, detail: &str, volume: Option<&str>) -> Option<LeaseErr> {
+    if code.contains("IN_USE") {
+        return Some(LeaseErr::InUse);
+    }
+    let id = volume?.rsplit('/').next().filter(|id| !id.is_empty())?;
+    let names_it = detail
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '_'))
+        .any(|w| w == id);
+    let gone = code == "RESOURCE_NOT_FOUND"
+        || (code == "INVALID_STATE" && detail.ends_with("is deleting."));
+    (gone && names_it).then_some(LeaseErr::Gone)
 }
 
 /// The locked git dependencies a command run in `rel` can use, each packed
@@ -2159,6 +2189,69 @@ fn artifact_path(dir: &Path, remote: &str) -> Option<PathBuf> {
 mod tests {
     use super::*;
     use sylphx_build_lease::BUILD_PACKAGES;
+
+    const VOL: &str = "orgs/org_a/projects/prj_b/envs/env_c/volumes/vol-2zqbvdtx";
+
+    #[test]
+    fn an_evicted_workspace_is_retried_not_fatal() {
+        // The 2026-10-07 failure: the picked workspace was deleted by
+        // another run's eviction before the lease was created.
+        let detail = format!("{VOL} does not exist");
+        assert!(matches!(
+            lease_refusal("RESOURCE_NOT_FOUND", &detail, Some(VOL)),
+            Some(LeaseErr::Gone)
+        ));
+        assert!(matches!(
+            lease_refusal(
+                "RESOURCE_NOT_FOUND",
+                "volumes/vol-2zqbvdtx does not exist",
+                Some("vol-2zqbvdtx")
+            ),
+            Some(LeaseErr::Gone)
+        ));
+    }
+
+    #[test]
+    fn a_workspace_being_deleted_is_retried() {
+        let detail = format!("{VOL} is deleting.");
+        assert!(matches!(
+            lease_refusal("INVALID_STATE", &detail, Some(VOL)),
+            Some(LeaseErr::Gone)
+        ));
+        let other = format!("{VOL} is attached elsewhere.");
+        assert!(lease_refusal("INVALID_STATE", &other, Some(VOL)).is_none());
+    }
+
+    #[test]
+    fn a_404_that_does_not_name_the_workspace_still_fails() {
+        let env_missing = "orgs/org_a/projects/prj_b/envs/env_c does not exist";
+        assert!(lease_refusal("RESOURCE_NOT_FOUND", env_missing, Some(VOL)).is_none());
+        assert!(lease_refusal(
+            "RESOURCE_NOT_FOUND",
+            "volumes/vol-2zqbvdtxy does not exist",
+            Some(VOL)
+        )
+        .is_none());
+        assert!(lease_refusal("RESOURCE_NOT_FOUND", env_missing, None).is_none());
+        assert!(lease_refusal(
+            "PERMISSION_DENIED",
+            &format!("{VOL} does not exist"),
+            Some(VOL)
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn a_workspace_in_use_is_retried() {
+        assert!(matches!(
+            lease_refusal("RESOURCE_IN_USE", "", Some(VOL)),
+            Some(LeaseErr::InUse)
+        ));
+        assert!(matches!(
+            lease_refusal("RESOURCE_IN_USE", "", None),
+            Some(LeaseErr::InUse)
+        ));
+    }
 
     fn parse(args: &[&str]) -> Result<Opts, String> {
         let mut root = Command::new("sylphx").arg(
