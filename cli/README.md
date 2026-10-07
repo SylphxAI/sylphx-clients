@@ -116,6 +116,47 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   a credential. Exit 0; 2 usage; 125 platform failure. The gateway is
   `https://build-cache.sylphx.net`, or `SYLPHX_BUILD_CACHE_URL`.
 
+## `sylphx work runner`
+
+A self-hosted runner for Sylphx Work: it takes ready steps from your
+workspace and runs your command for each one on this machine, as GitHub's
+self-hosted runners take jobs.
+
+```sh
+sylphx work runner --label kind:build,member:group:builder -- ./run-step.sh   # one step, then exit (default)
+sylphx work runner --loop --label kind:build,member:group:builder,cap:repo-write -- ./run-step.sh
+```
+
+- It long-polls Work (`POST /v2/claim` with `n: 1`, its labels, its runner
+  name and `wait`) for a ready step whose required labels `--label` covers.
+  The runner (`--name`, default the host name) is catalogued on that claim, so
+  the workspace's coverage counts it as a live runner for each
+  `member:<group>` label it advertises.
+- The command gets the claim (item, checkpoint, context, `profile`,
+  `workspaceProfile`, token) as JSON on standard input and in
+  `$SYLPHX_WORK_CLAIM_FILE`, and the claim token, scoped to that one item, in
+  `$SYLPHX_WORK_CLAIM_TOKEN`; `$SYLPHX_WORK_URL`, `$SYLPHX_WORK_ITEM`,
+  `$SYLPHX_WORK_GENERATION` and `$SYLPHX_WORK_RUNNER` name the rest.
+  `SYLPHX_API_KEY` is removed from its environment: the step acts with the
+  claim token, never the runner's key. `SYLPHX_CONFIG_DIR` points to an empty
+  per-step directory rather than the runner's saved login; it is removed after
+  the step. Each beat writes the renewed token to
+  `$SYLPHX_WORK_CLAIM_TOKEN_FILE`. Work names no harness or model: the command
+  is yours.
+- While the command runs the runner beats the claim at half its
+  time-to-live (`--ttl`, default the step kind's lease). A beat that answers
+  `cancel` (dropped, reassigned or revoked) stops the command's process group
+  (SIGTERM, SIGKILL after 10 s).
+- When the command ends the runner releases the step with a checkpoint that
+  names its exit status, unless the command already handed it over with the
+  claim token. With `--ephemeral` (the default) it then exits 0, whatever the
+  command's status; `--loop` takes the next step. Ctrl-C stops the command,
+  hands the step over and exits 130. `-o json` prints one JSON line per step
+  (`item`, `generation`, `exitCode`, `cancelled`, `handedOverBy`).
+- Work's address is `--work-url`, else `SYLPHX_WORK_URL`, else
+  `https://work.sylphx.com`; the key is your login, `SYLPHX_API_KEY` or
+  `--api-key`.
+
 ## `sylphx ai top`
 
 The operator live view of the AI gateway's seats, replacing `janus status`,

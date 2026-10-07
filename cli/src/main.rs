@@ -3,7 +3,7 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `devices`, `build run`, `build cache env`, `events listen`, `mcp`, `completion`, `ai top`) is hand-written on the
+//! `api`, `devices`, `build run`, `build cache env`, `events listen`, `work runner`, `mcp`, `completion`, `ai top`) is hand-written on the
 //! same SDK.
 
 mod ai_top;
@@ -20,6 +20,7 @@ mod names;
 mod output;
 mod token;
 mod tree;
+mod work_runner;
 
 use std::io::{IsTerminal, Read, Write};
 use std::process::ExitCode;
@@ -222,6 +223,7 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(devices::command())
+        .subcommand(work_runner::command())
         .subcommand(
             Command::new("completion")
                 .about("Print a shell completion script")
@@ -441,6 +443,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "link" => link(&client().await?, sub).await,
         "devices" => devices::run(&client().await?, sub).await,
+        "work" => work_runner::run(api_key.clone(), sub, format == Format::Json).await,
         "api" => {
             let method = sub.get_one::<String>("method").expect("required").clone();
             let path = sub.get_one::<String>("path").expect("required").clone();
