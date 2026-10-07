@@ -16043,6 +16043,2097 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a space."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a space.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/spaces/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetSpace.",
+        "properties": {
+          "name": {
+            "description": "The name of the space to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.spaces.get",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_spaces_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists spaces."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists spaces.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/spaces",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListSpaces.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.spaces.list",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_spaces_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a space."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a space.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/spaces",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateSpace.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+          },
+          "space": {
+            "additionalProperties": false,
+            "description": "The space to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/spaces/{space}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "grants": {
+                    "description": "Who may read and write the space, beyond `owner` and what `parent`\ngrants; at most 200. A repeated grant is stored once.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A SpaceGrant is one share tuple on a space: `space:<id>#<role>@<subject>`.",
+                      "properties": {
+                        "role": {
+                          "description": "The role granted.",
+                          "enum": [
+                            "reader",
+                            "writer",
+                            "owner"
+                          ],
+                          "type": "string"
+                        },
+                        "subject": {
+                          "description": "The share subject: `user:<id>`, `end_user:<id>`, `agent:<id>`, or a\nuserset such as `workspace:<id>#member`.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "subject"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "kind": {
+                    "description": "What the space holds.",
+                    "enum": [
+                      "workspace",
+                      "project",
+                      "team",
+                      "end_user",
+                      "agent",
+                      "shared"
+                    ],
+                    "type": "string"
+                  },
+                  "owner": {
+                    "description": "The principal a private space belongs to, as a share subject:\n`end_user:<id>` for `SPACE_KIND_END_USER`, `agent:<id>` or\n`agent:<id>/end_user:<id>` for `SPACE_KIND_AGENT`. Empty for a shared\nspace. The owner is granted `owner` on the space.",
+                    "type": "string"
+                  },
+                  "parent": {
+                    "description": "The space this one inherits grants from, for example a project space\nunder its workspace space. A reader of the parent reads this space.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+                  },
+                  "schemas": {
+                    "description": "The Knowledge Schemas whose types the space accepts, as resource names;\nthe core schema is always accepted. At most 20.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "knowledge.sylphx.com/KnowledgeSchema"
+                  },
+                  "sensitive": {
+                    "description": "The space holds customer personal data. Its records are never sent in\nembeddings outside the cell's model routes, and enter a context pack or\nan answer that spans spaces only for a reader that holds `reader` on\nthis space directly. Only deterministic entity matches apply to it.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "space_id": {
+            "description": "The space id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "space"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.spaces.create",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_spaces_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a space."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a space.",
+      "effect": "write",
+      "http": "PATCH /v1/{space.name=orgs/*/projects/*/envs/*/spaces/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateSpace.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the space when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "space": {
+            "additionalProperties": false,
+            "description": "The space to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/spaces/{space}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "grants": {
+                    "description": "Who may read and write the space, beyond `owner` and what `parent`\ngrants; at most 200. A repeated grant is stored once.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A SpaceGrant is one share tuple on a space: `space:<id>#<role>@<subject>`.",
+                      "properties": {
+                        "role": {
+                          "description": "The role granted.",
+                          "enum": [
+                            "reader",
+                            "writer",
+                            "owner"
+                          ],
+                          "type": "string"
+                        },
+                        "subject": {
+                          "description": "The share subject: `user:<id>`, `end_user:<id>`, `agent:<id>`, or a\nuserset such as `workspace:<id>#member`.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "subject"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "kind": {
+                    "description": "What the space holds.",
+                    "enum": [
+                      "workspace",
+                      "project",
+                      "team",
+                      "end_user",
+                      "agent",
+                      "shared"
+                    ],
+                    "type": "string"
+                  },
+                  "owner": {
+                    "description": "The principal a private space belongs to, as a share subject:\n`end_user:<id>` for `SPACE_KIND_END_USER`, `agent:<id>` or\n`agent:<id>/end_user:<id>` for `SPACE_KIND_AGENT`. Empty for a shared\nspace. The owner is granted `owner` on the space.",
+                    "type": "string"
+                  },
+                  "parent": {
+                    "description": "The space this one inherits grants from, for example a project space\nunder its workspace space. A reader of the parent reads this space.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+                  },
+                  "schemas": {
+                    "description": "The Knowledge Schemas whose types the space accepts, as resource names;\nthe core schema is always accepted. At most 20.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "knowledge.sylphx.com/KnowledgeSchema"
+                  },
+                  "sensitive": {
+                    "description": "The space holds customer personal data. Its records are never sent in\nembeddings outside the cell's model routes, and enter a context pack or\nan answer that spans spaces only for a reader that holds `reader` on\nthis space directly. Only deterministic entity matches apply to it.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "space"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.spaces.update",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_spaces_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a space. A space that still holds records is refused with `INVALID_STATE` unless `force` is set, which deletes its episodes and facts too."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a space. A space that still holds records is refused with\n`INVALID_STATE` unless `force` is set, which deletes its episodes and\nfacts too.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/spaces/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteSpace.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the space does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also delete the space's episodes and facts; without it, a space that\nholds records is refused with `INVALID_STATE`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the space to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.spaces.delete",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_spaces_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a knowledge schema."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a knowledge schema.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/knowledge_schemas/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetKnowledgeSchema.",
+        "properties": {
+          "name": {
+            "description": "The name of the knowledge_schema to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/KnowledgeSchema"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.knowledge_schemas.get",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_knowledge_schemas_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists knowledge schemas."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists knowledge schemas.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/knowledge_schemas",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListKnowledgeSchemas.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/KnowledgeSchema"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.knowledge_schemas.list",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_knowledge_schemas_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a knowledge schema."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a knowledge schema.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/knowledge_schemas",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateKnowledgeSchema.",
+        "properties": {
+          "knowledge_schema": {
+            "additionalProperties": false,
+            "description": "The knowledge schema to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/knowledge_schemas/{knowledge_schema}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "entity_types": {
+                    "description": "The entity types; at most 200.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "An EntityTypeDefinition is one entity type of a schema.",
+                      "properties": {
+                        "description": {
+                          "description": "What the type is, for people and for extraction; at most 1000\ncharacters.",
+                          "type": "string"
+                        },
+                        "match_kinds": {
+                          "description": "The external id kinds that resolve entities of this type\ndeterministically, for example `email` and `phone` for a contact.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "properties_schema": {
+                          "additionalProperties": true,
+                          "description": "The JSON Schema (2020-12) an entity's `properties` must satisfy.",
+                          "type": "object"
+                        },
+                        "type_id": {
+                          "description": "The type id within the schema, snake_case; entities name it\n`<schema>.<type>`.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type_id"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "relation_types": {
+                    "description": "The relation types; at most 500.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A RelationTypeDefinition is one relation type of a schema.",
+                      "properties": {
+                        "description": {
+                          "description": "What the relation means; at most 1000 characters.",
+                          "type": "string"
+                        },
+                        "object_types": {
+                          "description": "The entity types the object may have; empty is a value fact or any.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "predicate": {
+                          "description": "The predicate within the schema, snake_case; relations name it\n`<schema>.<predicate>`.",
+                          "type": "string"
+                        },
+                        "subject_types": {
+                          "description": "The entity types the subject may have; empty is any.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "predicate"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "knowledge_schema_id": {
+            "description": "The knowledge schema id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/KnowledgeSchema"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "knowledge_schema"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.knowledge_schemas.create",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_knowledge_schemas_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a knowledge schema. An accepted update publishes a new revision; a change that would invalidate existing records is refused with `INVALID_FIELD`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a knowledge schema. An accepted update publishes a new\nrevision; a change that would invalidate existing records is refused\nwith `INVALID_FIELD`.",
+      "effect": "write",
+      "http": "PATCH /v1/{knowledge_schema.name=orgs/*/projects/*/envs/*/knowledge_schemas/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateKnowledgeSchema.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the knowledge schema when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "knowledge_schema": {
+            "additionalProperties": false,
+            "description": "The knowledge schema to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/knowledge_schemas/{knowledge_schema}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "entity_types": {
+                    "description": "The entity types; at most 200.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "An EntityTypeDefinition is one entity type of a schema.",
+                      "properties": {
+                        "description": {
+                          "description": "What the type is, for people and for extraction; at most 1000\ncharacters.",
+                          "type": "string"
+                        },
+                        "match_kinds": {
+                          "description": "The external id kinds that resolve entities of this type\ndeterministically, for example `email` and `phone` for a contact.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "properties_schema": {
+                          "additionalProperties": true,
+                          "description": "The JSON Schema (2020-12) an entity's `properties` must satisfy.",
+                          "type": "object"
+                        },
+                        "type_id": {
+                          "description": "The type id within the schema, snake_case; entities name it\n`<schema>.<type>`.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type_id"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "relation_types": {
+                    "description": "The relation types; at most 500.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A RelationTypeDefinition is one relation type of a schema.",
+                      "properties": {
+                        "description": {
+                          "description": "What the relation means; at most 1000 characters.",
+                          "type": "string"
+                        },
+                        "object_types": {
+                          "description": "The entity types the object may have; empty is a value fact or any.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "predicate": {
+                          "description": "The predicate within the schema, snake_case; relations name it\n`<schema>.<predicate>`.",
+                          "type": "string"
+                        },
+                        "subject_types": {
+                          "description": "The entity types the subject may have; empty is any.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "predicate"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "knowledge_schema"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.knowledge_schemas.update",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_knowledge_schemas_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a knowledge schema. A schema a space still accepts is refused with `RESOURCE_IN_USE`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a knowledge schema. A schema a space still accepts is refused\nwith `RESOURCE_IN_USE`.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/knowledge_schemas/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteKnowledgeSchema.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the knowledge schema does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the knowledge schema to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/KnowledgeSchema"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.knowledge_schemas.delete",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_knowledge_schemas_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an episode."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an episode.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/spaces/*/episodes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetEpisode.",
+        "properties": {
+          "name": {
+            "description": "The name of the episode to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Episode"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.episodes.get",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_episodes_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a space's episodes, newest first. The filter is limited to `kind` and `extraction`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a space's episodes, newest first. The filter is limited to\n`kind` and `extraction`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/episodes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListEpisodes.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `kind` and `extraction`; for example\n`kind = EPISODE_KIND_NOTE AND extraction = EXTRACTION_DONE`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Episode"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.episodes.list",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_episodes_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records an episode and returns at once (`remember`); extraction reads it afterwards."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records an episode and returns at once (`remember`); extraction reads\nit afterwards.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/episodes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateEpisode.",
+        "properties": {
+          "episode": {
+            "additionalProperties": false,
+            "description": "The episode to create; only caller-writable fields are read.",
+            "properties": {
+              "data": {
+                "additionalProperties": true,
+                "description": "Structured content, for a caller that already knows the shape (an\nimported row, a form).",
+                "type": "object"
+              },
+              "entities": {
+                "description": "The entities the caller says the episode is about, as resource names;\nextraction adds the ones it finds. At most 50.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+              },
+              "kind": {
+                "description": "What the episode is.",
+                "enum": [
+                  "note",
+                  "message",
+                  "step_result",
+                  "document_chunk",
+                  "imported_row",
+                  "structured"
+                ],
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/episodes/{episode}`.",
+                "type": "string"
+              },
+              "occur_time": {
+                "description": "When it happened in the world; default the time it was recorded.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "provenance": {
+                "additionalProperties": false,
+                "description": "Where it came from and who wrote it.",
+                "properties": {
+                  "method": {
+                    "description": "How the content was produced; default `SOURCE_METHOD_STATED`. Only the\nservice writes `SOURCE_METHOD_EXTRACTED`.",
+                    "enum": [
+                      "stated",
+                      "extracted",
+                      "imported"
+                    ],
+                    "type": "string"
+                  },
+                  "references": {
+                    "description": "References to where the content came from: a run and step, a work item,\na message, a URL. At most 20.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A SourceRef points at where a record's content came from.",
+                      "properties": {
+                        "label": {
+                          "description": "A short label to show with a citation.",
+                          "type": "string"
+                        },
+                        "uri": {
+                          "description": "A URI: a URL, or a URN of a platform record such as a Workflows run step.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "uri"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              },
+              "text": {
+                "description": "The text as written, at most 64 KiB. An episode has `text`, `data`, or\nboth.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "episode_id": {
+            "description": "The episode id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Episode"
+          },
+          "skip_extraction": {
+            "description": "Record the episode without extraction, for content that is already\nstructured or must not be read by a model.",
+            "type": "boolean"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "episode"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.episodes.create",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_remember"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an episode, the facts that cite only it, and its search and embedding entries; facts that also cite other episodes are re-scored."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an episode, the facts that cite only it, and its search and\nembedding entries; facts that also cite other episodes are re-scored.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/spaces/*/episodes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteEpisode.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the episode does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the episode to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Episode"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.episodes.delete",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_episodes_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an entity."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an entity.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/entities/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetEntity.",
+        "properties": {
+          "name": {
+            "description": "The name of the entity to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.get",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_entities_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the entities the caller may see. The filter is limited to `entity_type` and `lifecycle`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists the entities the caller may see. The filter is limited to\n`entity_type` and `lifecycle`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/entities",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListEntities.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `entity_type` and `lifecycle`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.list",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_entities_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an entity in a space. An entity whose external id already names one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which names it; use Update with `allow_missing` to upsert."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates an entity in a space. An entity whose external id already\nnames one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which\nnames it; use Update with `allow_missing` to upsert.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entities",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateEntity.",
+        "properties": {
+          "entity": {
+            "additionalProperties": false,
+            "description": "The entity to create; only caller-writable fields are read.",
+            "properties": {
+              "aliases": {
+                "description": "Other names it is known by; at most 50.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "entity_type": {
+                "description": "The type: a core type (`person`, `organisation`, `customer`, `contact`,\n`product`, `project`, `document`, `decision`, `playbook`, `case`,\n`topic`) or a type of an accepted Knowledge Schema, `<schema>.<type>`.",
+                "type": "string"
+              },
+              "external_ids": {
+                "description": "Identifiers in other systems. Two writes with the same external id in\none graph are the same entity (deterministic resolution). At most 50.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "An ExternalId is an entity's identifier in another system.",
+                  "properties": {
+                    "kind": {
+                      "description": "The kind of identifier: `email`, `phone`, `auth_subject`,\n`channel_user`, `account`, or a caller's own kind.",
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "The identifier, normalised (a lowercase email, an E.164 phone number).",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/entities/{entity}`.",
+                "type": "string"
+              },
+              "properties": {
+                "additionalProperties": true,
+                "description": "Properties, valid against the type's JSON Schema.",
+                "type": "object"
+              },
+              "space": {
+                "description": "The space the entity was first stated in.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+              },
+              "title": {
+                "description": "The name people use for it.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "entity_type",
+              "title",
+              "space"
+            ],
+            "type": "object"
+          },
+          "entity_id": {
+            "description": "The entity id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "entity"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.create",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_entities_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates an entity. With `allow_missing` it is the structured upsert (`upsert_entity`): an entity matched by `external_ids` is updated, otherwise one is created."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates an entity. With `allow_missing` it is the structured upsert\n(`upsert_entity`): an entity matched by `external_ids` is updated,\notherwise one is created.",
+      "effect": "write",
+      "http": "PATCH /v1/{entity.name=orgs/*/projects/*/envs/*/entities/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateEntity.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the entity when no entity matches (`upsert_entity`): the name, or\nelse `external_ids`, identifies it.",
+            "type": "boolean"
+          },
+          "entity": {
+            "additionalProperties": false,
+            "description": "The entity to update; `name` identifies it.",
+            "properties": {
+              "aliases": {
+                "description": "Other names it is known by; at most 50.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "entity_type": {
+                "description": "The type: a core type (`person`, `organisation`, `customer`, `contact`,\n`product`, `project`, `document`, `decision`, `playbook`, `case`,\n`topic`) or a type of an accepted Knowledge Schema, `<schema>.<type>`.",
+                "type": "string"
+              },
+              "external_ids": {
+                "description": "Identifiers in other systems. Two writes with the same external id in\none graph are the same entity (deterministic resolution). At most 50.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "An ExternalId is an entity's identifier in another system.",
+                  "properties": {
+                    "kind": {
+                      "description": "The kind of identifier: `email`, `phone`, `auth_subject`,\n`channel_user`, `account`, or a caller's own kind.",
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "The identifier, normalised (a lowercase email, an E.164 phone number).",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/entities/{entity}`.",
+                "type": "string"
+              },
+              "properties": {
+                "additionalProperties": true,
+                "description": "Properties, valid against the type's JSON Schema.",
+                "type": "object"
+              },
+              "space": {
+                "description": "The space the entity was first stated in.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+              },
+              "title": {
+                "description": "The name people use for it.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "entity_type",
+              "title",
+              "space"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.update",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_entities_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an entity and every fact about it. With `force` it is a data-rights erasure: the episodes the person wrote are deleted too, with their search and embedding entries."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an entity and every fact about it. With `force` it is a\ndata-rights erasure: the episodes the person wrote are deleted too, with\ntheir search and embedding entries.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/entities/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteEntity.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the entity does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Also delete the episodes this person wrote (a data-rights erasure).",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the entity to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.delete",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_entities_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Merges other entities into this one: their facts and external ids resolve to it. The merge is recorded and reversible with `:split`; it is never a silent rewrite."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Merges other entities into this one: their facts and external ids\nresolve to it. The merge is recorded and reversible with `:split`; it is\nnever a silent rewrite.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/entities/*}:merge",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of MergeEntity.",
+        "properties": {
+          "entities": {
+            "description": "The entities to merge into it; 1 to 20.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "name": {
+            "description": "The entity that survives the merge.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "reason": {
+            "description": "Why they are the same, recorded with the merge; at most 1000\ncharacters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "entities"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.merge",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_entities_merge"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Splits a merged entity back out of this one, with the facts and external ids it brought."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Splits a merged entity back out of this one, with the facts and\nexternal ids it brought.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/entities/*}:split",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SplitEntity.",
+        "properties": {
+          "entity": {
+            "description": "The merged entity to restore.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "name": {
+            "description": "The entity a merge folded the other into.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          }
+        },
+        "required": [
+          "name",
+          "entity"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.split",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_entities_split"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Returns one entity's profile in one call (`entity`): the entity, its current facts in both directions, the entities they name and the recent episodes about it, trimmed to what the caller may see. A read with a request body."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Returns one entity's profile in one call (`entity`): the entity, its\ncurrent facts in both directions, the entities they name and the recent\nepisodes about it, trimmed to what the caller may see. A read with a\nrequest body.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/entities/*}:profile",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ProfileEntity.",
+        "properties": {
+          "max_episodes": {
+            "description": "At most this many recent episodes; default 20, clamped to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The entity.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "valid_time": {
+            "description": "The profile as it was valid at this time; default now.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.profile",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_entity"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Searches the graph (`recall`): hybrid lexical and semantic search over episodes and facts, fused by reciprocal rank, then at most two hops of expansion from the top entities. Returns a context pack with citations, built only from records the caller may see."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Searches the graph (`recall`): hybrid lexical and semantic search over\nepisodes and facts, fused by reciprocal rank, then at most two hops of\nexpansion from the top entities. Returns a context pack with citations,\nbuilt only from records the caller may see.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:recall",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RecallEntities.",
+        "properties": {
+          "entity_types": {
+            "description": "Only entities of these types; default every type.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_facts": {
+            "description": "At most this many facts in the pack; default 30, clamped to 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_hops": {
+            "description": "How many hops to expand from the top entities, 0 to 2; default 2.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "parent": {
+            "description": "The environment whose graph to search.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "query": {
+            "description": "What to recall, in natural language; 1 to 4000 characters.",
+            "type": "string"
+          },
+          "spaces": {
+            "description": "The spaces to search, as resource names; default every space the caller\nmay read. At most 50.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+          },
+          "valid_time": {
+            "description": "Recall the graph as it was valid at this time; default now.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "query"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.recall",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_recall"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Answers a question through Sylphx AI (`ask`), from a context pack built only from records the caller may see, with citations to its episodes."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Answers a question through Sylphx AI (`ask`), from a context pack built\nonly from records the caller may see, with citations to its episodes.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:ask",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AskEntities.",
+        "properties": {
+          "parent": {
+            "description": "The environment whose graph to ask.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+          },
+          "question": {
+            "description": "The question, in natural language; 1 to 4000 characters.",
+            "type": "string"
+          },
+          "spaces": {
+            "description": "The spaces to answer from, as resource names; default every space the\ncaller may read. At most 50.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
+          },
+          "valid_time": {
+            "description": "Answer about the graph as it was valid at this time; default now.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "question"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.entities.ask",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_ask"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a relation."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a relation.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/spaces/*/relations/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetRelation.",
+        "properties": {
+          "name": {
+            "description": "The name of the relation to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Relation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.relations.get",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_relations_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a space's facts. The filter is limited to `subject`, `predicate`, `object` and `provenance.channel`; superseded facts are listed only with `show_superseded`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a space's facts. The filter is limited to `subject`, `predicate`,\n`object` and `provenance.channel`; superseded facts are listed only with\n`show_superseded`.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/relations",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListRelations.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter, limited to `subject`, `predicate`, `object` and\n`provenance.channel`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Relation"
+          },
+          "show_superseded": {
+            "description": "Also list facts that a newer record replaced.",
+            "type": "boolean"
+          },
+          "valid_time": {
+            "description": "List facts as they were valid at this time, including facts closed\nsince; default now.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.relations.list",
+      "permission": "knowledge:read",
+      "served": false,
+      "tool": "knowledge_relations_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records a fact in a space (`relate`). A fact that contradicts a current one with the same subject and a single-valued predicate closes the older fact; nothing is overwritten."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records a fact in a space (`relate`). A fact that contradicts a current\none with the same subject and a single-valued predicate closes the older\nfact; nothing is overwritten.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/relations",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateRelation.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Relation"
+          },
+          "relation": {
+            "additionalProperties": false,
+            "description": "The relation to create; only caller-writable fields are read.",
+            "properties": {
+              "episodes": {
+                "description": "The episodes the fact comes from. A structured write with none records\nits own episode and cites it; an extracted fact cites the episodes it was\nread from.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-resource-reference": "knowledge.sylphx.com/Episode"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/relations/{relation}`.",
+                "type": "string"
+              },
+              "object": {
+                "description": "The other entity, for an edge. A fact has `object`, `value`, or both.",
+                "type": "string",
+                "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+              },
+              "predicate": {
+                "description": "The relation type, snake_case, for example `works_at` or `prefers`; a\ncore predicate or one of an accepted Knowledge Schema.",
+                "type": "string"
+              },
+              "statement": {
+                "description": "The fact as one sentence, used for search and shown with citations.",
+                "type": "string"
+              },
+              "subject": {
+                "description": "The entity the fact is about.",
+                "type": "string",
+                "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
+              },
+              "valid_end_time": {
+                "description": "When the fact stopped holding in the world; unset while it holds.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "valid_start_time": {
+                "description": "When the fact starts to hold in the world; default when it was recorded.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "value": {
+                "description": "The value, for a fact about one entity."
+              }
+            },
+            "required": [
+              "subject",
+              "predicate"
+            ],
+            "type": "object"
+          },
+          "relation_id": {
+            "description": "The relation id, the final name segment; the server assigns one when\nempty.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "relation"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.relations.create",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_relate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a fact. Deletion is for data that must go; a fact that stopped being true is closed with `:close`."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a fact. Deletion is for data that must go; a fact that stopped\nbeing true is closed with `:close`.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/spaces/*/relations/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteRelation.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the relation does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the relation to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Relation"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.relations.delete",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_relations_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Closes a fact (`close_fact`): it stopped holding in the world at `valid_end_time`. The fact stays readable for questions about the time before the close."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Closes a fact (`close_fact`): it stopped holding in the world at\n`valid_end_time`. The fact stays readable for questions about the time\nbefore the close.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/spaces/*/relations/*}:close",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CloseRelation.",
+        "properties": {
+          "etag": {
+            "description": "Close only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The fact to close.",
+            "type": "string",
+            "x-sylphx-resource-reference": "knowledge.sylphx.com/Relation"
+          },
+          "valid_end_time": {
+            "description": "When the fact stopped holding in the world; default now.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "knowledge.relations.close",
+      "permission": "knowledge:write",
+      "served": false,
+      "tool": "knowledge_close_fact"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a catalog."
       },
       "description": "Gets a catalog.",
@@ -36634,7 +38725,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@5921d3969e498cd4081c84844d25e565062941438bc76c12b20b8997687d2fe2. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@fb95f0c42a0ec5d8e3cb694c0054b529c0b24b184112c65ef60c9044b4ce61f9. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
