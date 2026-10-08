@@ -268,13 +268,13 @@ pub fn provision_env(
 /// given, never a local directory that would double `target/` on the same
 /// disk. The command's exit status is the script's.
 ///
-/// Cargo builds as CI does (`.github/workflows/ci.yml`): incremental
-/// compilation off (`CARGO_INCREMENTAL=0`), which sccache cannot cache, so
-/// the workspace's own crates hit the cache too, and no debug info for the
-/// dev and test profiles (`CARGO_PROFILE_DEV_DEBUG=0`). A clean warm-cache
-/// `cargo build --workspace` of SylphxAI/cloud on `xlarge` took 4 min 29 s
-/// with these against 5 min 40 s without (docs/services/build/benchmark.md).
-/// Either variable set by the caller (`--env`), even to an empty value, wins.
+/// Persistent workspaces use incremental compilation (`CARGO_INCREMENTAL=1`)
+/// so their target directory speeds up source edits. Ephemeral machines keep
+/// CI's `CARGO_INCREMENTAL=0` and use sccache instead. sccache refuses
+/// incremental compilation, so it is automatically enabled only when
+/// incremental compilation is off. No debug info is emitted for dev and test
+/// profiles (`CARGO_PROFILE_DEV_DEBUG=0`). Caller settings (`--env`), including
+/// an explicit compiler wrapper or an empty value, win.
 ///
 /// Crates come through the build cache's registry mirror
 /// (`SYLPHX_CRATES_MIRROR`, from the cache token) when it answers: Cargo reads
@@ -302,8 +302,10 @@ shift 3
     git_tree!(),
     r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
 SC=
-export CARGO_INCREMENTAL="${CARGO_INCREMENTAL-0}" CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG-0}"
-if [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
+I=1
+if [ "$E" = 1 ]; then I=0; fi
+export CARGO_INCREMENTAL="${CARGO_INCREMENTAL-$I}" CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG-0}"
+if [ "${CARGO_INCREMENTAL:-0}" != 1 ] && [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
   if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then SC=1; fi
 fi
 mkdir -p "$W/.cargo"

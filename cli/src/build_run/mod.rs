@@ -117,7 +117,7 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo builds as CI does, with CARGO_INCREMENTAL=0 and CARGO_PROFILE_DEV_DEBUG=0 unless --env sets them.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=1 on persistent workspaces without automatically enabling sccache; ephemeral machines use CARGO_INCREMENTAL=0 with sccache. CARGO_PROFILE_DEV_DEBUG=0 in both cases. --env overrides these defaults.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -2345,6 +2345,17 @@ mod tests {
         cmd: &str,
         env: &[(&str, &str)],
     ) -> (String, String) {
+        run_prelude_disk(ok_home, mirror, mirror_up, cmd, env, "0")
+    }
+
+    fn run_prelude_disk(
+        ok_home: &str,
+        mirror: Option<&str>,
+        mirror_up: bool,
+        cmd: &str,
+        env: &[(&str, &str)],
+        ephemeral: &str,
+    ) -> (String, String) {
         let base = std::env::temp_dir().join(format!(
             "sylphx-build-run-{}-{}",
             std::process::id(),
@@ -2387,7 +2398,7 @@ mod tests {
         let mut c = std::process::Command::new("sh");
         c.args(["-c", RUN, "sylphx-run"])
             .arg(&ws)
-            .args(["crate", "0", "sh", "-c", cmd])
+            .args(["crate", ephemeral, "sh", "-c", cmd])
             .env_clear()
             .env("PATH", format!("{}:/usr/bin:/bin", bin.display()));
         if let Some(m) = mirror {
@@ -2408,11 +2419,54 @@ mod tests {
     }
 
     #[test]
+    fn incremental_compilation_does_not_use_sccache() {
+        let (out, err) = run_prelude_env(
+            "/opt/rustup",
+            None,
+            false,
+            "echo \"${CARGO_INCREMENTAL}:${RUSTC_WRAPPER:-}\"",
+            &[("CARGO_INCREMENTAL", "1"), ("STUB_SCCACHE_START", "2")],
+        );
+        assert_eq!(out, "1:\n");
+        assert!(!err.contains("sylphx: warning: the build cache"), "{err}");
+    }
+
+    #[test]
+    fn persistent_targets_use_incremental_and_ephemeral_targets_use_sccache() {
+        let show = "echo \"${CARGO_INCREMENTAL}:${RUSTC_WRAPPER:-}\"";
+        let (out, _) = run_prelude_env("/opt/rustup", None, false, show, &[]);
+        assert_eq!(out, "1:\n");
+        let (out, _) = run_prelude_disk(
+            "/opt/rustup",
+            None,
+            false,
+            show,
+            &[("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache")],
+            "1",
+        );
+        assert_eq!(out, "0:sccache\n");
+        let (out, _) = run_prelude_env(
+            "/opt/rustup",
+            None,
+            false,
+            show,
+            &[("CARGO_INCREMENTAL", "0")],
+        );
+        assert_eq!(out, "0:sccache\n");
+    }
+
+    #[test]
     fn a_build_cache_that_does_not_answer_never_fails_the_build() {
         let wrapper = "echo \"[${RUSTC_WRAPPER:-}]\"";
         let webdav = ("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache");
         // The cache answers: compiles go through sccache, nothing is said.
-        let (out, err) = run_prelude_env("/opt/rustup", None, false, wrapper, &[webdav]);
+        let (out, err) = run_prelude_env(
+            "/opt/rustup",
+            None,
+            false,
+            wrapper,
+            &[webdav, ("CARGO_INCREMENTAL", "0")],
+        );
         assert_eq!(out, "[sccache]\n");
         assert!(!err.contains("sylphx: warning: the build cache"), "{err}");
         // sccache's server refuses to start (its backend is down): the run
@@ -2422,7 +2476,11 @@ mod tests {
             None,
             false,
             wrapper,
-            &[webdav, ("STUB_SCCACHE_START", "2")],
+            &[
+                webdav,
+                ("CARGO_INCREMENTAL", "0"),
+                ("STUB_SCCACHE_START", "2"),
+            ],
         );
         assert_eq!(out, "[]\n");
         assert_eq!(
@@ -3046,13 +3104,13 @@ esac
     }
 
     #[test]
-    fn cargo_builds_as_ci_does_unless_the_caller_says_otherwise() {
+    fn cargo_uses_the_persistent_target_unless_the_caller_says_otherwise() {
         let w = Ws::new("cargo-env");
         w.file("tree/a.txt", "a\n");
         let show =
             r#"echo "inc=${CARGO_INCREMENTAL-unset} debug=${CARGO_PROFILE_DEV_DEBUG-unset}""#;
         let (code, out, err) = w.run(".", SYS_PATH, &[], show);
-        assert_eq!((code, out.as_str()), (0, "inc=0 debug=0\n"), "{err}");
+        assert_eq!((code, out.as_str()), (0, "inc=1 debug=0\n"), "{err}");
         let (code, out, err) = w.run(
             ".",
             SYS_PATH,

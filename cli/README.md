@@ -78,9 +78,12 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   lost or a stream broken before the command starts is retried once after a
   short backoff first), 130 interrupted, 137 the machine was lost after the
   command started. A started command is never run twice: a broken output
-  stream is reattached to the running command. Cargo builds as CI does
-  (`CARGO_INCREMENTAL=0`, `CARGO_PROFILE_DEV_DEBUG=0`) unless `--env` sets
-  either. `--region REGION` runs in that region's Cell with
+  stream is reattached to the running command. Cargo uses incremental compilation
+  on persistent workspaces (`CARGO_INCREMENTAL=1`) without automatically enabling
+  sccache, which refuses incremental builds. Ephemeral machines use
+  `CARGO_INCREMENTAL=0` with sccache when a remote cache is available.
+  Both use `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults
+  and an explicit compiler wrapper is preserved. `--region REGION` runs in that region's Cell with
   that region's own warm workspaces (default: the project's home region); a
   region whose Cell offers no Volumes refuses the workspace at once, and the
   run builds on the machine's own disk instead (always cold, nothing left
