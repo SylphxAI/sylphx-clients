@@ -51,9 +51,7 @@ use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
-use sylphx_build_lease::pool::{
-    free_warm, in_pool, is_dead, lru_free, vstate, REGION_LABEL, VOLUME_CLASS,
-};
+use sylphx_build_lease::pool::{free_warm, in_pool, lru_free, vstate, REGION_LABEL, VOLUME_CLASS};
 use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
 use sylphx_build_lease::{
     allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
@@ -91,8 +89,6 @@ const POOL_POLL: Duration = Duration::from_secs(10);
 const KEEPALIVE: Duration = Duration::from_secs(60);
 /// Renew the lease token well before it expires.
 const TOKEN_RENEW: Duration = Duration::from_secs(45 * 60);
-/// Warm workspaces per (project, repository): the host's concurrent builds.
-const MAX_WARM: usize = 10;
 /// After evicting a workspace, how often and how long a create that is still
 /// refused `NO_CAPACITY` waits for the quota to free the evicted claim's room.
 const EVICT_WAITS: u32 = 3;
@@ -1161,8 +1157,9 @@ impl Run<'_> {
                 return self.acquire_without_volume(deadline).await;
             }
             let pool = self.pool().await.map_err(Attempt::Done)?;
-            let live = pool.iter().filter(|v| !is_dead(v)).count();
-            let free = free_warm(&pool, &mut full, live < MAX_WARM);
+            // Cache capacity is admitted by the Cell's storage resources,
+            // not a per-repository workspace count in the client.
+            let free = free_warm(&pool, &mut full, true);
             let mut leased = None;
             let mut warm_name = None;
             for v in free {
@@ -1176,7 +1173,7 @@ impl Run<'_> {
                     Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
                 }
             }
-            if leased.is_none() && live < MAX_WARM {
+            if leased.is_none() {
                 let Some(vol) = self.new_volume(deadline).await.map_err(Attempt::Done)? else {
                     self.no_volumes = true;
                     continue;
@@ -1207,9 +1204,9 @@ impl Run<'_> {
             };
             self.out
                 .event(json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": self.region()}));
-            // A warm workspace pins the run to its node; fall back to a fresh
-            // workspace elsewhere only while the pool has room for one.
-            let pin = (warm_volume && live < MAX_WARM).then_some(PIN_WAIT);
+            // A warm workspace pins the run to its node; let the Cell admit
+            // a fresh workspace elsewhere if this node stays busy.
+            let pin = warm_volume.then_some(PIN_WAIT);
             match self.ready(lease, pin, deadline).await? {
                 Some(l) => {
                     return Ok(Machine {
