@@ -3199,6 +3199,29 @@ esac
     }
 
     #[test]
+    fn provisioning_prunes_only_the_workspace_copy_served_by_the_template() {
+        let w = Ws::new("tc-image-prune");
+        w.file("tree/Cargo.toml", "[workspace]\n");
+        w.rustup(false);
+        assert_eq!(w.sh(PROVISION, ".", &[]).0, 0);
+        w.file(&format!("rustup/update-hashes/{TC}"), "old");
+        w.file("rustup/toolchains/other/bin/rustc", "keep");
+        w.file("rustup/update-hashes/other", "keep");
+        w.bake_image();
+
+        for _ in 0..2 {
+            let (code, err) = w.sh(PROVISION, ".", &[]);
+            assert_eq!(code, 0, "{err}");
+            assert!(!w.tc("rustup").exists());
+            assert!(!w.0.join("rustup/update-hashes").join(TC).exists());
+            assert!(w.0.join("rustup/toolchains/other/bin/rustc").exists());
+            assert!(w.0.join("rustup/update-hashes/other").exists());
+            assert!(w.tc("image-rustup").join("bin/rustc").exists());
+            assert_eq!(w.fetches(), 0);
+        }
+    }
+
+    #[test]
     fn a_broken_template_toolchain_is_a_platform_failure() {
         let w = Ws::new("tc-image-bad");
         w.file("tree/Cargo.toml", "[workspace]\n");

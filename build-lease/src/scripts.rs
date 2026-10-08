@@ -189,7 +189,8 @@ fi
 /// through the build cache's toolchain tier (`RUSTUP_DIST_SERVER`, from
 /// [`provision_env`]) and directly from static.rust-lang.org when the tier
 /// fails. The log is `$W/.sylphx/toolchain.log`; its tail goes to stderr on
-/// failure.
+/// failure. When the template's toolchain runs, its same-named workspace
+/// copy and update hash are removed; other workspace toolchains are kept.
 pub const PROVISION: &str = concat!(
     r#"W=$1 R=$2
 "#,
@@ -240,6 +241,12 @@ if command -v rustup >/dev/null 2>&1 && ! { works && sealed; }; then
     tail -n 6 "$L" >&2
     exit 4
   fi
+fi
+if [ "$RUSTUP_HOME" = ""#,
+    template_rustup_home!(),
+    r#"" ] && works; then
+  N=${T##*/}
+  rm -rf "$W/rustup/toolchains/$N" "$W/rustup/update-hashes/$N"
 fi
 exit 0
 "#
