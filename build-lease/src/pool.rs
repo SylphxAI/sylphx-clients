@@ -63,8 +63,9 @@ pub fn in_pool(
         && label(v, REGION_LABEL) == region
 }
 
-/// The free warm Volumes a build may take, in a stable order, without those
-/// whose node had no room for it (`full`). When the pool has no room for a
+/// The free warm Volumes a build may take, least recently used first (name
+/// breaks ties), without those whose node had no room for it (`full`).
+/// When the pool has no room for a
 /// fresh Volume (`room` false) and every free one was full, `full` is
 /// cleared: waiting on a warm node is then the only way to run.
 pub fn free_warm<'a>(
@@ -76,7 +77,7 @@ pub fn free_warm<'a>(
         .iter()
         .filter(|v| vstate(v) == sbx::VolumeState::Available)
         .collect();
-    free.sort_by(|a, b| a.name.cmp(&b.name));
+    free.sort_by(|a, b| used(a).cmp(used(b)).then_with(|| a.name.cmp(&b.name)));
     if !room && free.iter().all(|v| full.contains(&v.name)) {
         full.clear();
     }
@@ -250,6 +251,26 @@ mod tests {
             name(lru_free(&all, P, None, |v| v.name != "oldest")).as_deref(),
             Some("recent")
         );
+    }
+
+    #[test]
+    fn free_warm_tries_least_recently_used_workspaces_before_volume_names() {
+        use sbx::VolumeState::{Attached, Available};
+        let pool = vec![
+            vol("v-a", &[], Available, "2026-10-06T12:00:00.000Z"),
+            vol("v-z", &[], Available, "2026-10-06T10:00:00.000Z"),
+            vol("v-b", &[], Available, "2026-10-06T11:00:00.000Z"),
+            vol("v-c", &[], Available, "2026-10-06T11:00:00.000Z"),
+            vol("busy", &[], Attached, "2026-10-06T09:00:00.000Z"),
+        ];
+        let mut full = HashSet::new();
+        let free = free_warm(&pool, &mut full, true);
+        let names: Vec<&str> = free.iter().map(|v| v.name.as_str()).collect();
+        assert_eq!(names, ["v-z", "v-b", "v-c", "v-a"]);
+        full.insert("v-z".into());
+        let free = free_warm(&pool, &mut full, true);
+        let names: Vec<&str> = free.iter().map(|v| v.name.as_str()).collect();
+        assert_eq!(names, ["v-b", "v-c", "v-a"]);
     }
 
     /// A build takes a free warm Volume whose node has room: one whose node

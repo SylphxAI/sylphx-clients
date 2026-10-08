@@ -1538,7 +1538,7 @@ impl Run<'_> {
             .await?;
         if code != 0 {
             return Err(Fault::Other(format!(
-                "preparing the workspace failed: {}",
+                "{BOOTSTRAP_FAILED}: {}",
                 String::from_utf8_lossy(&err).trim()
             )));
         }
@@ -2136,17 +2136,18 @@ fn out_of_space(text: &str) -> bool {
         || text.contains("not enough inodes")
 }
 
-/// How [`Run::sync`] names a failed apply step.
+/// How [`Run::sync`] names a failed bootstrap or apply step.
+const BOOTSTRAP_FAILED: &str = "preparing the workspace failed";
 const APPLY_FAILED: &str = "applying the sync failed";
 
 /// A sync failure the run treats as a full workspace: one that says so, or
-/// any failure of the apply step. Whatever stops the apply (a truncated
-/// upload, a tool that died on a full disk without saying ENOSPC) leaves the
+/// any failure of the bootstrap or apply step. Whatever stops these steps (a
+/// truncated upload, a tool that died without saying ENOSPC) can leave the
 /// tree and its manifest half-written, so the one retry starts from an
 /// emptied workspace (a cold sync) rather than a second try on the same
 /// state. A second failure is 125, retryable, as any loss before the start.
 fn workspace_full(text: &str) -> bool {
-    out_of_space(text) || text.starts_with(APPLY_FAILED)
+    out_of_space(text) || text.starts_with(BOOTSTRAP_FAILED) || text.starts_with(APPLY_FAILED)
 }
 
 fn argv(a: &[&str]) -> Vec<String> {
@@ -2191,6 +2192,25 @@ mod tests {
     use sylphx_build_lease::BUILD_PACKAGES;
 
     const VOL: &str = "orgs/org_a/projects/prj_b/envs/env_c/volumes/vol-2zqbvdtx";
+
+    #[test]
+    fn a_failed_bootstrap_retries_before_the_command_starts() {
+        assert!(workspace_full(
+            "preparing the workspace failed: gzip: stdin: unexpected end of file"
+        ));
+        assert!(workspace_full(
+            "preparing the workspace failed: gzip: No space left on device"
+        ));
+        assert!(workspace_full("preparing the workspace failed: "));
+        assert!(!workspace_full("guest answered 503"));
+        let mut retries = Retries::default();
+        let failed = || Attempt::Lost("the workspace ran out of space".into());
+        assert!(matches!(retries.next(failed()), Step::Again { .. }));
+        match retries.next(failed()) {
+            Step::Done(outcome) => assert_eq!(outcome.code(), 125),
+            Step::Again { .. } => panic!("a bootstrap failure must not retry indefinitely"),
+        }
+    }
 
     #[test]
     fn an_evicted_workspace_is_retried_not_fatal() {
