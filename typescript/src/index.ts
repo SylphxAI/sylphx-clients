@@ -45,7 +45,14 @@ export { METHODS } from './methods.js'
 export * as ids from './ids.js'
 export * from './auth/client.js'
 
+import { Flags, FlagsHandle, type FlagsHandleOptions } from './flags.js'
+export { FlagsHandle, type FlagsHandleOptions } from './flags.js'
+
 export class Sylphx extends Client {
+	/** Bind typed flags to one environment and subject. Keep the handle for offline values. */
+	flags(options: FlagsHandleOptions): FlagsHandle {
+		return new FlagsHandle(new Flags({ ...options, client: this }), options.context)
+	}
 	/** Sylphx Access (`preview`). */
 	readonly access: access.AccessApi
 	/** Sylphx Agents (`preview`). */

@@ -44,6 +44,25 @@ async fn main() -> Result<(), sylphx::Error> {
   hosts, retired on 2026-09-03) are not read; a base URL on such a host is
   ignored with a warning.
 
+## Typed flags with offline defaults
+
+```rust,ignore
+let mut context = sylphx::config::EvaluationContext::default();
+context.user_id = "alice".into();
+let mut flags = sx.flags("orgs/my-org/projects/my-project/envs/production", context);
+let enabled = flags.bool("new-checkout", false).await;
+let layout = flags.string("layout", "classic").await;
+let limit = flags.number("limit", 10.0).await;
+let settings = flags.json("settings", serde_json::json!({"color": "blue"})).await;
+```
+
+Each call evaluates through the existing Config API. Keep the handle for that
+environment and subject: when the API is unreachable it serves its last
+successful evaluations held in memory, or the call-site default without a
+cache. Missing flags and scalar type mismatches also return the default.
+A new handle has no cache; use separate handles for separate environments and
+subjects.
+
 ## Protecting an MCP server with Sylphx Auth
 
 With the default `resource` feature,

@@ -89,6 +89,26 @@ This package is generated from the Sylphx schema registry by `sylphx-gen`; do
 not edit it by hand. Source: `clients/typescript` in the Sylphx monorepo,
 published from its MIT mirror.
 
+## Typed flags with offline defaults
+
+```ts
+const flags = sylphx.flags({
+	parent: 'orgs/my-org/projects/my-project/envs/production',
+	context: { userId: 'alice' },
+})
+const enabled = await flags.bool('new-checkout', false)
+const layout = await flags.string('layout', 'classic')
+const limit = await flags.number('limit', 10)
+const settings = await flags.json('settings', { color: 'blue' })
+```
+
+Keep the handle for that environment and subject. It uses the existing Config
+flags evaluator (remote by default, with a five-minute cache). If the API is
+unreachable, it returns the last evaluated values held in memory, then the
+call-site default when none exist. Missing flags and scalar type mismatches
+also return the default. A new handle has no offline cache; create a separate
+handle when changing environment or subject. OpenFeature providers are unchanged.
+
 ## Browser sign-in: `createAuthClient`
 
 A small client for Sylphx Auth's client API (`/v1/client/*`) in a browser app.
