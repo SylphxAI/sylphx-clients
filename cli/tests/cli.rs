@@ -1095,7 +1095,6 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     // The guest is the same stub: its address is the lease's guest_uri.
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    drop(listener);
     let replies = vec![
         json_reply(json!({"volumes": []})),
         json_reply(
@@ -1114,7 +1113,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         envd_process("hello from the build machine\n", 3),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
     ];
-    let (url2, log) = serve_bytes_at(&url, replies).await;
+    let (url2, log) = serve_bytes_on(listener, replies).await;
     assert_eq!(url, url2);
     let out = run(
         &sb,
