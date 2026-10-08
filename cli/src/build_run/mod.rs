@@ -1583,7 +1583,7 @@ impl Run<'_> {
                         root: &self.o.root,
                         tree: &self.tree,
                     },
-                    &plan.upload,
+                    &plan,
                     WS,
                     USER,
                 )

@@ -1,7 +1,9 @@
 //! Content-addressed upload of `sylphx build run` (the remote build execution
 //! ADR, decision 2, step 5): of the files a sync sends, the client uploads
 //! only the blobs the org's build store lacks, and the build machine fills
-//! the workspace from the store inside the Cell.
+//! the workspace from the store inside the Cell. Full/cold syncs use the
+//! compressed tarballs directly: fetching an entire tree one blob per file
+//! costs more time than the upload it saves.
 //!
 //! * The client asks the store which digests it lacks
 //!   (`POST {public}/v2/{instance}/blobs:findMissing`, REAPI over HTTP/JSON)
@@ -421,8 +423,9 @@ pub struct Filled {
     pub warning: Option<String>,
 }
 
-/// Puts the blobs of `upload` that the store lacks into it and has the guest
-/// fill those paths from it. A store or fill failure is a warning, never an
+/// Puts the blobs of a warm sync's upload that the store lacks into it and
+/// has the guest fill those paths from it. A full sync stays in the tarball.
+/// A store or fill failure is a warning, never an
 /// error: the files it did not fill go in the tarball. Only a guest fault
 /// (the machine is gone) is an error.
 pub async fn fill(
@@ -430,13 +433,16 @@ pub async fn fill(
     store: &Store,
     known: &mut Known,
     local: Local<'_>,
-    upload: &[String],
+    plan: &sync::Plan,
     ws: &str,
     user: &str,
 ) -> Result<Filled, Fault> {
     let (root, tree) = (local.root, local.tree);
     let mut f = Filled::default();
-    let mut paths = split(tree, upload);
+    if plan.full {
+        return Ok(f);
+    }
+    let mut paths = split(tree, &plan.upload);
     if paths.is_empty() {
         return Ok(f);
     }
@@ -1121,6 +1127,40 @@ exit 0
             .sum()
     }
 
+    #[tokio::test]
+    async fn a_cold_sync_uses_the_tarball_without_store_or_guest_fill_requests() {
+        fn route(_: &str, _: &[u8]) -> (u16, &'static str, Vec<u8>) {
+            (503, "text/plain", b"must not be called".to_vec())
+        }
+        let (base, log) = fake::serve(route).await;
+        let st = Store::new(&base, "http://cache.svc", "bc_1", "tok").unwrap();
+        let g = Guest::new(&base, "sbx", "lease-tok").unwrap();
+        let mut known = Known::load(None, "k");
+        let tree: Tree = [("src/a.rs".into(), ent("content", Mode::File))].into();
+        let plan = sync::plan(&tree, None);
+        assert!(plan.full);
+        let f = fill(
+            &g,
+            &st,
+            &mut known,
+            Local {
+                root: Path::new("."),
+                tree: &tree,
+            },
+            &plan,
+            "/workspace",
+            "user",
+        )
+        .await
+        .unwrap();
+        assert_eq!(f.warning, None);
+        assert!(f.paths.is_empty());
+        assert_eq!(f.sent, 0);
+        assert!(known.set.is_empty());
+        assert!(log.lock().unwrap().is_empty());
+        assert_eq!(sync::lists(&tree, &plan, &f.paths).add, sync::render(&tree));
+    }
+
     /// Only the blob the store lacks is uploaded, the guest fills every
     /// path, and `sent` is exactly the bytes of the requests and the list.
     #[tokio::test]
@@ -1192,7 +1232,10 @@ exit 0
                 root: &root,
                 tree: &tree,
             },
-            &upload,
+            &sync::Plan {
+                upload: upload.clone(),
+                ..Default::default()
+            },
             "/workspace",
             "user",
         )
@@ -1236,7 +1279,10 @@ exit 0
                 root: &root,
                 tree: &tree,
             },
-            &upload,
+            &sync::Plan {
+                upload: upload.clone(),
+                ..Default::default()
+            },
             "/workspace",
             "user",
         )
@@ -1266,7 +1312,10 @@ exit 0
                 root: &root,
                 tree: &tree,
             },
-            &upload,
+            &sync::Plan {
+                upload: upload.clone(),
+                ..Default::default()
+            },
             "/workspace",
             "user",
         )
@@ -1300,7 +1349,10 @@ exit 0
                 root: &root,
                 tree: &tree,
             },
-            &upload,
+            &sync::Plan {
+                upload: upload.clone(),
+                ..Default::default()
+            },
             "/workspace",
             "user",
         )
