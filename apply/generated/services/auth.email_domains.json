@@ -1,0 +1,56 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.email_domains.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.email_domains.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "email_domain_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.email_domains.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.email_domains.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.email_domains.verify",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/EmailDomain"
+    }
+  ]
+}

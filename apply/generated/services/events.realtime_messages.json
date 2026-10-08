@@ -1,0 +1,27 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_messages.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "events.realtime_messages.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "events.sylphx.com/RealtimeMessage"
+    }
+  ]
+}

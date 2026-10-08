@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.distributed_jobs.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "workflows.distributed_jobs.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "distributed_job_id",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.distributed_jobs.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.distributed_jobs.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "workflows.distributed_jobs.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "workflows.sylphx.com/DistributedJob"
+    }
+  ]
+}

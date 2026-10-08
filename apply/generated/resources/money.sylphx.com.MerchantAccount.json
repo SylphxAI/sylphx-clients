@@ -1,0 +1,22 @@
+{
+  "collection": "merchant_accounts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "MerchantAccount",
+  "message": "sylphx.money.v1.MerchantAccount",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
+  "plural": "merchantAccounts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "merchantAccount",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/MerchantAccount"
+}

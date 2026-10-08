@@ -1,0 +1,68 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mailboxes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.mailboxes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "mailbox_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mailboxes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mailboxes.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "notify.mailboxes.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mailboxes.erase_address",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/Mailbox"
+    }
+  ]
+}

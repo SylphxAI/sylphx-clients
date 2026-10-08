@@ -1,0 +1,61 @@
+{
+  "name": "sylphx.sandboxes.v1.EndReason",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "END_REASON_RELEASED",
+      "wire": "released"
+    },
+    {
+      "number": 2,
+      "proto_name": "END_REASON_EXPIRED",
+      "wire": "expired"
+    },
+    {
+      "number": 3,
+      "proto_name": "END_REASON_IDLE",
+      "wire": "idle"
+    },
+    {
+      "number": 4,
+      "proto_name": "END_REASON_CPU_BUDGET",
+      "wire": "cpu_budget"
+    },
+    {
+      "number": 5,
+      "proto_name": "END_REASON_COST_BUDGET",
+      "wire": "cost_budget"
+    },
+    {
+      "number": 6,
+      "proto_name": "END_REASON_ABUSE",
+      "wire": "abuse"
+    },
+    {
+      "number": 7,
+      "proto_name": "END_REASON_QUOTA",
+      "wire": "quota"
+    },
+    {
+      "number": 8,
+      "proto_name": "END_REASON_ORG_DELETED",
+      "wire": "org_deleted"
+    },
+    {
+      "number": 9,
+      "proto_name": "END_REASON_MACHINE_LOST",
+      "wire": "machine_lost"
+    },
+    {
+      "number": 10,
+      "proto_name": "END_REASON_BOOT_FAILED",
+      "wire": "boot_failed"
+    },
+    {
+      "number": 11,
+      "proto_name": "END_REASON_PREEMPTED",
+      "wire": "preempted"
+    }
+  ]
+}

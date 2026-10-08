@@ -1,0 +1,22 @@
+{
+  "collection": "email_domains",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "EmailDomain",
+  "message": "sylphx.auth.v1.EmailDomain",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}/email_domains/{email_domain}",
+  "plural": "emailDomains",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "emailDomain",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/EmailDomain"
+}

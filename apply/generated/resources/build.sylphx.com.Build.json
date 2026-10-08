@@ -1,0 +1,24 @@
+{
+  "collection": "builds",
+  "controller": "services/build/controller",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": false,
+  "kind": "Build",
+  "message": "sylphx.build.v1.Build",
+  "meters": [
+    "build.minutes"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/builds/{build}",
+  "plural": "builds",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "build",
+  "shape": "spec_status",
+  "singular": "build",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "build.sylphx.com/Build"
+}

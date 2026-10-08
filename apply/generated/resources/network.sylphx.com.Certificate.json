@@ -1,0 +1,22 @@
+{
+  "collection": "certificates",
+  "controller": "services/network/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Certificate",
+  "message": "sylphx.network.v1.Certificate",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/certificates/{certificate}",
+  "plural": "certificates",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "network",
+  "shape": "spec_status",
+  "singular": "certificate",
+  "stale_bound": "86400s",
+  "storage": "kernel",
+  "terraform": false,
+  "type": "network.sylphx.com/Certificate"
+}

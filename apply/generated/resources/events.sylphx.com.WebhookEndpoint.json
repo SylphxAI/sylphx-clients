@@ -1,0 +1,22 @@
+{
+  "collection": "webhook_endpoints",
+  "controller": "services/events/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "WebhookEndpoint",
+  "message": "sylphx.events.v1.WebhookEndpoint",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/webhook_endpoints/{webhook_endpoint}",
+  "plural": "webhookEndpoints",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "spec_status",
+  "singular": "webhookEndpoint",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "events.sylphx.com/WebhookEndpoint"
+}

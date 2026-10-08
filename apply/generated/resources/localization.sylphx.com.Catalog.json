@@ -1,0 +1,22 @@
+{
+  "collection": "catalogs",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Catalog",
+  "message": "sylphx.localization.v1.Catalog",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}",
+  "plural": "catalogs",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "localization",
+  "shape": "spec_status",
+  "singular": "catalog",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "localization.sylphx.com/Catalog"
+}

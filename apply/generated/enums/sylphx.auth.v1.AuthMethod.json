@@ -1,0 +1,46 @@
+{
+  "name": "sylphx.auth.v1.AuthMethod",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "AUTH_METHOD_PASSWORD",
+      "wire": "password"
+    },
+    {
+      "number": 2,
+      "proto_name": "AUTH_METHOD_MAGIC_LINK",
+      "wire": "magic_link"
+    },
+    {
+      "number": 3,
+      "proto_name": "AUTH_METHOD_EMAIL_OTP",
+      "wire": "email_otp"
+    },
+    {
+      "number": 4,
+      "proto_name": "AUTH_METHOD_PASSKEY",
+      "wire": "passkey"
+    },
+    {
+      "number": 5,
+      "proto_name": "AUTH_METHOD_TOTP",
+      "wire": "totp"
+    },
+    {
+      "number": 6,
+      "proto_name": "AUTH_METHOD_OIDC",
+      "wire": "oidc"
+    },
+    {
+      "number": 7,
+      "proto_name": "AUTH_METHOD_SAML",
+      "wire": "saml"
+    },
+    {
+      "number": 8,
+      "proto_name": "AUTH_METHOD_DEVICE",
+      "wire": "device"
+    }
+  ]
+}

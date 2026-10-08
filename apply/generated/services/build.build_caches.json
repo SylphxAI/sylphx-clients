@@ -1,0 +1,64 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.build_caches.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "build.build_caches.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "build.build_caches.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "build.build_caches.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.build_caches.mint_env",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.build_caches.purge",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "build.sylphx.com/BuildCache"
+    }
+  ]
+}

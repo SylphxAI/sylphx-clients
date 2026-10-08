@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_settings.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "money.usage_settings.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "money.sylphx.com/UsageSettings"
+    }
+  ]
+}

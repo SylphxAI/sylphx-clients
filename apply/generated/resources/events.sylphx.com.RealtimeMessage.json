@@ -1,0 +1,22 @@
+{
+  "collection": "realtime_messages",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "RealtimeMessage",
+  "message": "sylphx.events.v1.RealtimeMessage",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_messages/{realtime_message}",
+  "plural": "realtimeMessages",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "record",
+  "singular": "realtimeMessage",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "events.sylphx.com/RealtimeMessage"
+}

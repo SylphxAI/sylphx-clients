@@ -1,0 +1,41 @@
+{
+  "name": "sylphx.workflows.v1.AttemptOutcome",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ATTEMPT_OUTCOME_INVOKED",
+      "wire": "invoked"
+    },
+    {
+      "number": 2,
+      "proto_name": "ATTEMPT_OUTCOME_PROTOCOL_ERROR",
+      "wire": "protocol_error"
+    },
+    {
+      "number": 3,
+      "proto_name": "ATTEMPT_OUTCOME_REJECTED",
+      "wire": "rejected"
+    },
+    {
+      "number": 4,
+      "proto_name": "ATTEMPT_OUTCOME_RETRYABLE",
+      "wire": "retryable"
+    },
+    {
+      "number": 5,
+      "proto_name": "ATTEMPT_OUTCOME_UNREACHED",
+      "wire": "unreached"
+    },
+    {
+      "number": 6,
+      "proto_name": "ATTEMPT_OUTCOME_UNKNOWN",
+      "wire": "unknown"
+    },
+    {
+      "number": 7,
+      "proto_name": "ATTEMPT_OUTCOME_UNSIGNED",
+      "wire": "unsigned"
+    }
+  ]
+}

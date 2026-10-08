@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.auth.v1.EndUserState",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "END_USER_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "END_USER_STATE_SUSPENDED",
+      "wire": "suspended"
+    }
+  ]
+}

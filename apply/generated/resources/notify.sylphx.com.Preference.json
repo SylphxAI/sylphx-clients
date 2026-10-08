@@ -1,0 +1,22 @@
+{
+  "collection": "preferences",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Preference",
+  "message": "sylphx.notify.v1.Preference",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}/preferences/{preference}",
+  "plural": "preferences",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "preference",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/Preference"
+}

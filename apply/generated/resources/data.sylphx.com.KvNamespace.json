@@ -1,0 +1,25 @@
+{
+  "collection": "kv_namespaces",
+  "controller": "services/data/controller",
+  "deletion_protection": true,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "KvNamespace",
+  "message": "sylphx.data.v1.KvNamespace",
+  "meters": [
+    "data.storage.bytes",
+    "data.requests"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/kv_namespaces/{kv_namespace}",
+  "plural": "kvNamespaces",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "data",
+  "shape": "spec_status",
+  "singular": "kvNamespace",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "data.sylphx.com/KvNamespace"
+}

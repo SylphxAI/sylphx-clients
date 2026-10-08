@@ -1,0 +1,45 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "billing.billing_accounts.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "billing.billing_accounts.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "billing.billing_accounts.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "billing.billing_accounts.setup_payment_method",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "billing.sylphx.com/BillingAccount"
+    }
+  ]
+}

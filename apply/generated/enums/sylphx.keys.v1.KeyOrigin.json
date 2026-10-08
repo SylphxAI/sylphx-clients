@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.keys.v1.KeyOrigin",
+  "package": "sylphx.keys.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "KEY_ORIGIN_GENERATED",
+      "wire": "generated"
+    },
+    {
+      "number": 2,
+      "proto_name": "KEY_ORIGIN_IMPORTED",
+      "wire": "imported"
+    }
+  ]
+}

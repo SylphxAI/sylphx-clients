@@ -1,0 +1,25 @@
+{
+  "collection": "log_entries",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "LogEntry",
+  "message": "sylphx.observability.v1.LogEntry",
+  "meters": [
+    "observability.ingest_bytes",
+    "observability.retention_mib_days"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/log_entries/{log_entry}",
+  "plural": "logEntries",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "record",
+  "singular": "logEntry",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/LogEntry"
+}

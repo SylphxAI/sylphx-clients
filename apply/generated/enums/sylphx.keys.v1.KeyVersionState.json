@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.keys.v1.KeyVersionState",
+  "package": "sylphx.keys.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "KEY_VERSION_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "KEY_VERSION_STATE_ENABLED",
+      "wire": "enabled"
+    },
+    {
+      "number": 3,
+      "proto_name": "KEY_VERSION_STATE_RETIRED",
+      "wire": "retired"
+    },
+    {
+      "number": 4,
+      "proto_name": "KEY_VERSION_STATE_DESTROY_SCHEDULED",
+      "wire": "destroy_scheduled"
+    },
+    {
+      "number": 5,
+      "proto_name": "KEY_VERSION_STATE_DESTROYED",
+      "wire": "destroyed"
+    }
+  ]
+}

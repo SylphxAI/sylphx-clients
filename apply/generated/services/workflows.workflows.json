@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.workflows.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "workflows.workflows.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "workflow_id",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.workflows.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.workflows.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "workflows.workflows.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "workflows.sylphx.com/Workflow"
+    }
+  ]
+}

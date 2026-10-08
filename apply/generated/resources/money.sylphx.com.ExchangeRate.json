@@ -1,0 +1,22 @@
+{
+  "collection": "exchange_rates",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ExchangeRate",
+  "message": "sylphx.money.v1.ExchangeRate",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/exchange_rates/{exchange_rate}",
+  "plural": "exchangeRates",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "exchangeRate",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/ExchangeRate"
+}

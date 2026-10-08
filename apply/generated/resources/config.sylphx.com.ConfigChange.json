@@ -1,0 +1,22 @@
+{
+  "collection": "config_changes",
+  "controller": "kernel/config/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ConfigChange",
+  "message": "sylphx.config.v1.ConfigChange",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/config_changes/{config_change}",
+  "plural": "configChanges",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "config",
+  "shape": "record",
+  "singular": "configChange",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": false,
+  "type": "config.sylphx.com/ConfigChange"
+}

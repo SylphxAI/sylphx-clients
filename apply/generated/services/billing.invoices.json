@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "billing.invoices.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "billing.invoices.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "billing.sylphx.com/Invoice"
+    }
+  ]
+}

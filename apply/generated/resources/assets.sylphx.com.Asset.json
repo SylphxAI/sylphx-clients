@@ -1,0 +1,22 @@
+{
+  "collection": "assets",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Asset",
+  "message": "sylphx.assets.v1.Asset",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/assets/{asset}",
+  "plural": "assets",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "assets",
+  "shape": "record",
+  "singular": "asset",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "assets.sylphx.com/Asset"
+}

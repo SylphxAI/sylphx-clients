@@ -1,0 +1,22 @@
+{
+  "collection": "source_links",
+  "controller": "services/hosting/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SourceLink",
+  "message": "sylphx.hosting.v1.SourceLink",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/source_links/{source_link}",
+  "plural": "sourceLinks",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "hosting",
+  "shape": "spec_status",
+  "singular": "sourceLink",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "hosting.sylphx.com/SourceLink"
+}

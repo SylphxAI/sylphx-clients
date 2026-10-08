@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.sandboxes.v1.SnapshotState",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SNAPSHOT_STATE_CREATING",
+      "wire": "creating"
+    },
+    {
+      "number": 2,
+      "proto_name": "SNAPSHOT_STATE_READY",
+      "wire": "ready"
+    },
+    {
+      "number": 3,
+      "proto_name": "SNAPSHOT_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 4,
+      "proto_name": "SNAPSHOT_STATE_DELETING",
+      "wire": "deleting"
+    }
+  ]
+}

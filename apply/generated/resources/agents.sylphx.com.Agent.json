@@ -1,0 +1,22 @@
+{
+  "collection": "agents",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Agent",
+  "message": "sylphx.agents.v1.Agent",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agents/{agent}",
+  "plural": "agents",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "spec_status",
+  "singular": "agent",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/Agent"
+}

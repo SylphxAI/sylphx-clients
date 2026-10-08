@@ -1,0 +1,34 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.credit_grants.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.credit_grants.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.credit_grants.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "money.sylphx.com/CreditGrant"
+    }
+  ]
+}

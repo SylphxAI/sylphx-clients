@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.billing.v1.InvoiceState",
+  "package": "sylphx.billing.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "INVOICE_STATE_DRAFT",
+      "wire": "draft"
+    },
+    {
+      "number": 2,
+      "proto_name": "INVOICE_STATE_OPEN",
+      "wire": "open"
+    },
+    {
+      "number": 3,
+      "proto_name": "INVOICE_STATE_PAID",
+      "wire": "paid"
+    },
+    {
+      "number": 4,
+      "proto_name": "INVOICE_STATE_VOID",
+      "wire": "void"
+    },
+    {
+      "number": 5,
+      "proto_name": "INVOICE_STATE_UNCOLLECTIBLE",
+      "wire": "uncollectible"
+    },
+    {
+      "number": 6,
+      "proto_name": "INVOICE_STATE_CREDITED",
+      "wire": "credited"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "sylphx.notify.v1.EmailDomainReceivingMode",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EMAIL_DOMAIN_RECEIVING_MODE_ALL",
+      "wire": "all"
+    }
+  ]
+}

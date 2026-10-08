@@ -1,0 +1,22 @@
+{
+  "collection": "portal_sessions",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "PortalSession",
+  "message": "sylphx.money.v1.PortalSession",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/portal_sessions/{portal_session}",
+  "plural": "portalSessions",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "portalSession",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/PortalSession"
+}

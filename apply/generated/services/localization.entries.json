@@ -1,0 +1,41 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.entries.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "localization.entries.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.entries.pin_translation",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.entries.unpin_translation",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "localization.sylphx.com/CatalogEntry"
+    }
+  ]
+}

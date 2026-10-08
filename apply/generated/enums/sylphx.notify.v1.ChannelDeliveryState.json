@@ -1,0 +1,46 @@
+{
+  "name": "sylphx.notify.v1.ChannelDeliveryState",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CHANNEL_DELIVERY_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "CHANNEL_DELIVERY_STATE_SENT",
+      "wire": "sent"
+    },
+    {
+      "number": 3,
+      "proto_name": "CHANNEL_DELIVERY_STATE_DELIVERED",
+      "wire": "delivered"
+    },
+    {
+      "number": 4,
+      "proto_name": "CHANNEL_DELIVERY_STATE_BOUNCED",
+      "wire": "bounced"
+    },
+    {
+      "number": 5,
+      "proto_name": "CHANNEL_DELIVERY_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 6,
+      "proto_name": "CHANNEL_DELIVERY_STATE_SKIPPED",
+      "wire": "skipped"
+    },
+    {
+      "number": 7,
+      "proto_name": "CHANNEL_DELIVERY_STATE_CAPTURED",
+      "wire": "captured"
+    },
+    {
+      "number": 8,
+      "proto_name": "CHANNEL_DELIVERY_STATE_SUPPRESSED",
+      "wire": "suppressed"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_channels.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "events.realtime_channels.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "realtime_channel_id",
+              "validate_only"
+            ]
+          },
+          "id": "events.realtime_channels.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "events.realtime_channels.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_channels.publish",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_channels.issue_token",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "events.realtime_channels.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "events.sylphx.com/RealtimeChannel"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.artifacts.v1.VerificationState",
+  "package": "sylphx.artifacts.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "VERIFICATION_STATE_UNVERIFIED",
+      "wire": "unverified"
+    },
+    {
+      "number": 2,
+      "proto_name": "VERIFICATION_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 3,
+      "proto_name": "VERIFICATION_STATE_VERIFIED",
+      "wire": "verified"
+    },
+    {
+      "number": 4,
+      "proto_name": "VERIFICATION_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.databases.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "data.databases.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "database_id",
+              "validate_only"
+            ]
+          },
+          "id": "data.databases.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "data.databases.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "data.databases.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.databases.connect",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.databases.rotate_credentials",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.databases.restore",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "data.sylphx.com/Database"
+    }
+  ]
+}

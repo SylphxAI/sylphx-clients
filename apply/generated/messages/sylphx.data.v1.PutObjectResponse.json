@@ -1,0 +1,22 @@
+{
+  "fields": [
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "object",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.data.v1.ObjectRecord"
+      }
+    }
+  ],
+  "name": "sylphx.data.v1.PutObjectResponse",
+  "package": "sylphx.data.v1"
+}

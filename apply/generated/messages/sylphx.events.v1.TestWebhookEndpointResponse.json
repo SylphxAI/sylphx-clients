@@ -1,0 +1,22 @@
+{
+  "fields": [
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "webhook_delivery",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.events.v1.WebhookDelivery"
+      }
+    }
+  ],
+  "name": "sylphx.events.v1.TestWebhookEndpointResponse",
+  "package": "sylphx.events.v1"
+}

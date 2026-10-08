@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.agents.v1.MemorySource",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MEMORY_SOURCE_AGENT",
+      "wire": "agent"
+    },
+    {
+      "number": 2,
+      "proto_name": "MEMORY_SOURCE_API",
+      "wire": "api"
+    },
+    {
+      "number": 3,
+      "proto_name": "MEMORY_SOURCE_IMPORT",
+      "wire": "import"
+    }
+  ]
+}

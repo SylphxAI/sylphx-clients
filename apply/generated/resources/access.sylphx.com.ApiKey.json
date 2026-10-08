@@ -1,0 +1,25 @@
+{
+  "alt_patterns": [
+    "orgs/{org}/api_keys/{api_key}"
+  ],
+  "collection": "api_keys",
+  "controller": "kernel/access/controller",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": true,
+  "kind": "ApiKey",
+  "message": "sylphx.access.v1.ApiKey",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/api_keys/{api_key}",
+  "plural": "apiKeys",
+  "priority_chunk": true,
+  "reconciled": false,
+  "service": "access",
+  "shape": "spec_status",
+  "singular": "apiKey",
+  "stale_bound": "60s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "access.sylphx.com/ApiKey"
+}

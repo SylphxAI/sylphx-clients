@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.observability.v1.ErrorGroupState",
+  "package": "sylphx.observability.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ERROR_GROUP_STATE_UNRESOLVED",
+      "wire": "unresolved"
+    },
+    {
+      "number": 2,
+      "proto_name": "ERROR_GROUP_STATE_ACKNOWLEDGED",
+      "wire": "acknowledged"
+    },
+    {
+      "number": 3,
+      "proto_name": "ERROR_GROUP_STATE_RESOLVED",
+      "wire": "resolved"
+    }
+  ]
+}

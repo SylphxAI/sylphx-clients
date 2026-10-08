@@ -1,0 +1,67 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "network.domains.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "network.domains.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "domain_id",
+              "validate_only"
+            ]
+          },
+          "id": "network.domains.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "network.domains.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "network.domains.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "network.domains.verify",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "network.sylphx.com/Domain"
+    }
+  ]
+}

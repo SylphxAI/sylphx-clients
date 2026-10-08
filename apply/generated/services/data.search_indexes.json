@@ -1,0 +1,74 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.search_indexes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "data.search_indexes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "search_index_id",
+              "validate_only"
+            ]
+          },
+          "id": "data.search_indexes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "data.search_indexes.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "data.search_indexes.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.search_indexes.connect",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.search_indexes.rotate_credentials",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "data.sylphx.com/SearchIndex"
+    }
+  ]
+}

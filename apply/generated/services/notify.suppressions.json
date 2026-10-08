@@ -1,0 +1,49 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.suppressions.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.suppressions.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "suppression_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.suppressions.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.suppressions.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/Suppression"
+    }
+  ]
+}

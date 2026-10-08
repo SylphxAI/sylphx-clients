@@ -1,0 +1,58 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "access.projects.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "access.projects.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "validate_only"
+            ]
+          },
+          "id": "access.projects.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "access.projects.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "access.projects.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "access.sylphx.com/Project"
+    }
+  ]
+}

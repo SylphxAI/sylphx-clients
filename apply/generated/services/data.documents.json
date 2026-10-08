@@ -1,0 +1,39 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.documents.put",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.documents.patch",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.documents.get",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "expected_version"
+            ]
+          },
+          "id": "data.documents.delete",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": ""
+    }
+  ]
+}

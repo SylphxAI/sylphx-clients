@@ -1,0 +1,22 @@
+{
+  "collection": "identities",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Identity",
+  "message": "sylphx.auth.v1.Identity",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/end_users/{end_user}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/end_users/{end_user}/identities/{identity}",
+  "plural": "identities",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "identity",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/Identity"
+}

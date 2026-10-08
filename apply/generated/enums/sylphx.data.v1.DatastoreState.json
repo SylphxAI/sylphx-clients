@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.data.v1.DatastoreState",
+  "package": "sylphx.data.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "DATASTORE_STATE_PROVISIONING",
+      "wire": "provisioning"
+    },
+    {
+      "number": 2,
+      "proto_name": "DATASTORE_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 3,
+      "proto_name": "DATASTORE_STATE_IDLE",
+      "wire": "idle"
+    },
+    {
+      "number": 4,
+      "proto_name": "DATASTORE_STATE_MOVING",
+      "wire": "moving"
+    },
+    {
+      "number": 5,
+      "proto_name": "DATASTORE_STATE_DELETING",
+      "wire": "deleting"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.agents.v1.PolicyDecision",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "POLICY_DECISION_ALLOW",
+      "wire": "allow"
+    },
+    {
+      "number": 2,
+      "proto_name": "POLICY_DECISION_DENY",
+      "wire": "deny"
+    },
+    {
+      "number": 3,
+      "proto_name": "POLICY_DECISION_ASK",
+      "wire": "ask"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.localization.v1.Format",
+  "package": "sylphx.localization.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "FORMAT_SYLPHX_JSON",
+      "wire": "sylphx_json"
+    },
+    {
+      "number": 2,
+      "proto_name": "FORMAT_ICU_JSON",
+      "wire": "icu_json"
+    },
+    {
+      "number": 3,
+      "proto_name": "FORMAT_GETTEXT_PO",
+      "wire": "gettext_po"
+    },
+    {
+      "number": 4,
+      "proto_name": "FORMAT_XLIFF2",
+      "wire": "xliff2"
+    }
+  ]
+}

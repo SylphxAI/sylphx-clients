@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.sandboxes.v1.ControlHolder",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CONTROL_HOLDER_AGENT",
+      "wire": "agent"
+    },
+    {
+      "number": 2,
+      "proto_name": "CONTROL_HOLDER_HUMAN",
+      "wire": "human"
+    }
+  ]
+}

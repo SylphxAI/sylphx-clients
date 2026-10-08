@@ -1,0 +1,30 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.traces.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.traces.write_spans",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.traces.query",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "observability.sylphx.com/Trace"
+    }
+  ]
+}

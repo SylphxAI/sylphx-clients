@@ -1,0 +1,22 @@
+{
+  "collection": "events",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Event",
+  "message": "sylphx.events.v1.Event",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/events/{event}",
+  "plural": "events",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "record",
+  "singular": "event",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "events.sylphx.com/Event"
+}

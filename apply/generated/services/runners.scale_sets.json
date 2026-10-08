@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "runners.scale_sets.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "runners.scale_sets.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "scale_set_id",
+              "validate_only"
+            ]
+          },
+          "id": "runners.scale_sets.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "runners.scale_sets.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "runners.scale_sets.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "runners.sylphx.com/ScaleSet"
+    }
+  ]
+}

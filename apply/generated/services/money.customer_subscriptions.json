@@ -1,0 +1,55 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.customer_subscriptions.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.customer_subscriptions.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.customer_subscriptions.cancel",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.customer_subscriptions.resume",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.customer_subscriptions.update_quantity",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.customer_subscriptions.change_plan",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/CustomerSubscription"
+    }
+  ]
+}

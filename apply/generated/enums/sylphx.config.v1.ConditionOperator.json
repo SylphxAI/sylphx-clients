@@ -1,0 +1,101 @@
+{
+  "name": "sylphx.config.v1.ConditionOperator",
+  "package": "sylphx.config.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CONDITION_OPERATOR_EQUALS",
+      "wire": "equals"
+    },
+    {
+      "number": 2,
+      "proto_name": "CONDITION_OPERATOR_NOT_EQUALS",
+      "wire": "not_equals"
+    },
+    {
+      "number": 3,
+      "proto_name": "CONDITION_OPERATOR_GREATER_THAN",
+      "wire": "greater_than"
+    },
+    {
+      "number": 4,
+      "proto_name": "CONDITION_OPERATOR_GREATER_OR_EQUAL",
+      "wire": "greater_or_equal"
+    },
+    {
+      "number": 5,
+      "proto_name": "CONDITION_OPERATOR_LESS_THAN",
+      "wire": "less_than"
+    },
+    {
+      "number": 6,
+      "proto_name": "CONDITION_OPERATOR_LESS_OR_EQUAL",
+      "wire": "less_or_equal"
+    },
+    {
+      "number": 7,
+      "proto_name": "CONDITION_OPERATOR_CONTAINS",
+      "wire": "contains"
+    },
+    {
+      "number": 8,
+      "proto_name": "CONDITION_OPERATOR_NOT_CONTAINS",
+      "wire": "not_contains"
+    },
+    {
+      "number": 9,
+      "proto_name": "CONDITION_OPERATOR_STARTS_WITH",
+      "wire": "starts_with"
+    },
+    {
+      "number": 10,
+      "proto_name": "CONDITION_OPERATOR_ENDS_WITH",
+      "wire": "ends_with"
+    },
+    {
+      "number": 11,
+      "proto_name": "CONDITION_OPERATOR_IN",
+      "wire": "in"
+    },
+    {
+      "number": 12,
+      "proto_name": "CONDITION_OPERATOR_NOT_IN",
+      "wire": "not_in"
+    },
+    {
+      "number": 13,
+      "proto_name": "CONDITION_OPERATOR_MATCHES",
+      "wire": "matches"
+    },
+    {
+      "number": 14,
+      "proto_name": "CONDITION_OPERATOR_SEMVER_GREATER_THAN",
+      "wire": "semver_greater_than"
+    },
+    {
+      "number": 15,
+      "proto_name": "CONDITION_OPERATOR_SEMVER_GREATER_OR_EQUAL",
+      "wire": "semver_greater_or_equal"
+    },
+    {
+      "number": 16,
+      "proto_name": "CONDITION_OPERATOR_SEMVER_LESS_THAN",
+      "wire": "semver_less_than"
+    },
+    {
+      "number": 17,
+      "proto_name": "CONDITION_OPERATOR_SEMVER_LESS_OR_EQUAL",
+      "wire": "semver_less_or_equal"
+    },
+    {
+      "number": 18,
+      "proto_name": "CONDITION_OPERATOR_IN_SEGMENT",
+      "wire": "in_segment"
+    },
+    {
+      "number": 19,
+      "proto_name": "CONDITION_OPERATOR_NOT_IN_SEGMENT",
+      "wire": "not_in_segment"
+    }
+  ]
+}

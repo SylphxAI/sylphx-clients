@@ -1,0 +1,41 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.store_purchases.verify",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.store_purchases.client_verify",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.store_purchases.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.store_purchases.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "money.sylphx.com/StorePurchase"
+    }
+  ]
+}

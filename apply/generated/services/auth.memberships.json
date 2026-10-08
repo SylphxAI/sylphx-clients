@@ -1,0 +1,59 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.memberships.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.memberships.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "membership_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.memberships.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "auth.memberships.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.memberships.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/Membership"
+    }
+  ]
+}

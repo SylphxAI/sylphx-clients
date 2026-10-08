@@ -1,0 +1,34 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.source_maps.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.source_maps.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "observability.source_maps.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "observability.sylphx.com/SourceMap"
+    }
+  ]
+}

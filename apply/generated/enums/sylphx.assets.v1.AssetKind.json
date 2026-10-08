@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.assets.v1.AssetKind",
+  "package": "sylphx.assets.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ASSET_KIND_IMAGE",
+      "wire": "image"
+    },
+    {
+      "number": 2,
+      "proto_name": "ASSET_KIND_SFX",
+      "wire": "sfx"
+    },
+    {
+      "number": 3,
+      "proto_name": "ASSET_KIND_MUSIC",
+      "wire": "music"
+    },
+    {
+      "number": 4,
+      "proto_name": "ASSET_KIND_VIDEO",
+      "wire": "video"
+    },
+    {
+      "number": 5,
+      "proto_name": "ASSET_KIND_CHARACTER",
+      "wire": "character"
+    },
+    {
+      "number": 6,
+      "proto_name": "ASSET_KIND_VOICE",
+      "wire": "voice"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "collection": "scale_sets",
+  "controller": "services/runners/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "ScaleSet",
+  "message": "sylphx.runners.v1.ScaleSet",
+  "meters": [
+    "runners.minutes"
+  ],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/scale_sets/{scale_set}",
+  "plural": "scaleSets",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "runners",
+  "shape": "spec_status",
+  "singular": "scaleSet",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "runners.sylphx.com/ScaleSet"
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "releases",
+  "controller": "kernel/release/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Release",
+  "message": "sylphx.release.v1.Release",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/releases/{release}",
+  "plural": "releases",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "release",
+  "shape": "spec_status",
+  "singular": "release",
+  "stale_bound": "86400s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "release.sylphx.com/Release"
+}

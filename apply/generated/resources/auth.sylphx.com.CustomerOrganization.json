@@ -1,0 +1,22 @@
+{
+  "collection": "customer_organizations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "CustomerOrganization",
+  "message": "sylphx.auth.v1.CustomerOrganization",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}",
+  "plural": "customerOrganizations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "customerOrganization",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/CustomerOrganization"
+}

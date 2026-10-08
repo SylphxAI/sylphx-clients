@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.runners.v1.RunnerState",
+  "package": "sylphx.runners.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RUNNER_STATE_PROVISIONING",
+      "wire": "provisioning"
+    },
+    {
+      "number": 2,
+      "proto_name": "RUNNER_STATE_IDLE",
+      "wire": "idle"
+    },
+    {
+      "number": 3,
+      "proto_name": "RUNNER_STATE_BUSY",
+      "wire": "busy"
+    },
+    {
+      "number": 4,
+      "proto_name": "RUNNER_STATE_FINISHED",
+      "wire": "finished"
+    },
+    {
+      "number": 5,
+      "proto_name": "RUNNER_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

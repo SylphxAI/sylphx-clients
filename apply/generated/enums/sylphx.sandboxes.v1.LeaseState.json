@@ -1,0 +1,41 @@
+{
+  "name": "sylphx.sandboxes.v1.LeaseState",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "LEASE_STATE_REQUESTED",
+      "wire": "requested"
+    },
+    {
+      "number": 2,
+      "proto_name": "LEASE_STATE_GRANTED",
+      "wire": "granted"
+    },
+    {
+      "number": 3,
+      "proto_name": "LEASE_STATE_READY",
+      "wire": "ready"
+    },
+    {
+      "number": 4,
+      "proto_name": "LEASE_STATE_PAUSED",
+      "wire": "paused"
+    },
+    {
+      "number": 5,
+      "proto_name": "LEASE_STATE_ENDING",
+      "wire": "ending"
+    },
+    {
+      "number": 6,
+      "proto_name": "LEASE_STATE_ENDED",
+      "wire": "ended"
+    },
+    {
+      "number": 7,
+      "proto_name": "LEASE_STATE_REFUSED",
+      "wire": "refused"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agent_versions.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "agents.agent_versions.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/AgentVersion"
+    }
+  ]
+}

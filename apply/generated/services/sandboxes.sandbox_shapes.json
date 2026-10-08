@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "sandboxes.sandbox_shapes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "sandboxes.sandbox_shapes.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "sandboxes.sylphx.com/Shape"
+    }
+  ]
+}

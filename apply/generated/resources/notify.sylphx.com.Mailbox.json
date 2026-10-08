@@ -1,0 +1,22 @@
+{
+  "collection": "mailboxes",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Mailbox",
+  "message": "sylphx.notify.v1.Mailbox",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}",
+  "plural": "mailboxes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "mailbox",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/Mailbox"
+}

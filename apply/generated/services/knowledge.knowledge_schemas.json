@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "knowledge.knowledge_schemas.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "knowledge.knowledge_schemas.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "knowledge_schema_id",
+              "validate_only"
+            ]
+          },
+          "id": "knowledge.knowledge_schemas.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "knowledge.knowledge_schemas.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "knowledge.knowledge_schemas.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "knowledge.sylphx.com/KnowledgeSchema"
+    }
+  ]
+}

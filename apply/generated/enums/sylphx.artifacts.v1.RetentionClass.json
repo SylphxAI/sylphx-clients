@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.artifacts.v1.RetentionClass",
+  "package": "sylphx.artifacts.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RETENTION_CLASS_STANDARD",
+      "wire": "standard"
+    },
+    {
+      "number": 2,
+      "proto_name": "RETENTION_CLASS_REFERENCED",
+      "wire": "referenced"
+    }
+  ]
+}

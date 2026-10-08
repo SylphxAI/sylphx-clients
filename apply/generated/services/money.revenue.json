@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "period",
+              "month",
+              "start_day",
+              "end_day",
+              "group_by",
+              "split",
+              "amount",
+              "currency_code"
+            ]
+          },
+          "id": "money.revenue.get",
+          "kind": "get"
+        }
+      ],
+      "resource_type": "money.sylphx.com/RevenueSummary"
+    }
+  ]
+}

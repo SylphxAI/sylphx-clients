@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mailbox_oauth_apps.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.mailbox_oauth_apps.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "mailbox_oauth_app_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mailbox_oauth_apps.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mailbox_oauth_apps.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mailbox_oauth_apps.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/MailboxOauthApp"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.artifacts.v1.ArtifactKind",
+  "package": "sylphx.artifacts.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ARTIFACT_KIND_IMAGE",
+      "wire": "image"
+    },
+    {
+      "number": 2,
+      "proto_name": "ARTIFACT_KIND_SBOM",
+      "wire": "sbom"
+    },
+    {
+      "number": 3,
+      "proto_name": "ARTIFACT_KIND_PROVENANCE",
+      "wire": "provenance"
+    },
+    {
+      "number": 4,
+      "proto_name": "ARTIFACT_KIND_SIGNATURE",
+      "wire": "signature"
+    },
+    {
+      "number": 5,
+      "proto_name": "ARTIFACT_KIND_BUNDLE",
+      "wire": "bundle"
+    }
+  ]
+}

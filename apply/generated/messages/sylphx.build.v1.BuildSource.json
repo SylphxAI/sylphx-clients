@@ -1,0 +1,63 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "REQUIRED",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": true,
+      "name": "source_link",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "hosting.sylphx.com/SourceLink",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": true,
+      "name": "commit",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "root_directory",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    }
+  ],
+  "name": "sylphx.build.v1.BuildSource",
+  "package": "sylphx.build.v1"
+}

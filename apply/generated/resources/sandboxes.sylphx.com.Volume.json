@@ -1,0 +1,24 @@
+{
+  "collection": "volumes",
+  "controller": "services/sandboxes/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": false,
+  "kind": "Volume",
+  "message": "sylphx.sandboxes.v1.Volume",
+  "meters": [
+    "sandboxes.volume.gib_hours"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/volumes/{volume}",
+  "plural": "volumes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "sandboxes",
+  "shape": "spec_status",
+  "singular": "volume",
+  "stale_bound": "60s",
+  "storage": "service",
+  "terraform": false,
+  "type": "sandboxes.sylphx.com/Volume"
+}

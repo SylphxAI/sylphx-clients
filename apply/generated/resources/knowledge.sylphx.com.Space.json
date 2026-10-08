@@ -1,0 +1,22 @@
+{
+  "collection": "spaces",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Space",
+  "message": "sylphx.knowledge.v1.Space",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/spaces/{space}",
+  "plural": "spaces",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "knowledge",
+  "shape": "spec_status",
+  "singular": "space",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "knowledge.sylphx.com/Space"
+}

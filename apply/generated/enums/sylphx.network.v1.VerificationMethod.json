@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.network.v1.VerificationMethod",
+  "package": "sylphx.network.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "VERIFICATION_METHOD_TXT",
+      "wire": "txt"
+    },
+    {
+      "number": 2,
+      "proto_name": "VERIFICATION_METHOD_CNAME",
+      "wire": "cname"
+    }
+  ]
+}

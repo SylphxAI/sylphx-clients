@@ -1,0 +1,24 @@
+{
+  "collection": "realtime_channels",
+  "controller": "services/events/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "RealtimeChannel",
+  "message": "sylphx.events.v1.RealtimeChannel",
+  "meters": [
+    "events.realtime_connection_seconds"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}",
+  "plural": "realtimeChannels",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "spec_status",
+  "singular": "realtimeChannel",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "events.sylphx.com/RealtimeChannel"
+}

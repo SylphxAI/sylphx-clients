@@ -1,0 +1,22 @@
+{
+  "fields": [
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "fields",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.data.v1.HashField"
+      }
+    }
+  ],
+  "name": "sylphx.data.v1.HashGetFieldsResponse",
+  "package": "sylphx.data.v1"
+}

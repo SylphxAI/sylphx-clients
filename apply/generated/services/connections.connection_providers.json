@@ -1,0 +1,59 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "connections.connection_providers.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "connections.connection_providers.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "connection_provider_id",
+              "validate_only"
+            ]
+          },
+          "id": "connections.connection_providers.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "connections.connection_providers.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "connections.connection_providers.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "connections.sylphx.com/ConnectionProvider"
+    }
+  ]
+}

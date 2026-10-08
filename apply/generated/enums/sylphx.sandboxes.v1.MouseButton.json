@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.sandboxes.v1.MouseButton",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MOUSE_BUTTON_LEFT",
+      "wire": "left"
+    },
+    {
+      "number": 2,
+      "proto_name": "MOUSE_BUTTON_RIGHT",
+      "wire": "right"
+    },
+    {
+      "number": 3,
+      "proto_name": "MOUSE_BUTTON_MIDDLE",
+      "wire": "middle"
+    },
+    {
+      "number": 4,
+      "proto_name": "MOUSE_BUTTON_BACK",
+      "wire": "back"
+    },
+    {
+      "number": 5,
+      "proto_name": "MOUSE_BUTTON_FORWARD",
+      "wire": "forward"
+    }
+  ]
+}

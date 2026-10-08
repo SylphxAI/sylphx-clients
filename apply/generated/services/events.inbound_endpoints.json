@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.inbound_endpoints.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "events.inbound_endpoints.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "inbound_endpoint_id",
+              "validate_only"
+            ]
+          },
+          "id": "events.inbound_endpoints.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "events.inbound_endpoints.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "events.inbound_endpoints.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "events.sylphx.com/InboundEndpoint"
+    }
+  ]
+}

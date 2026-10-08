@@ -1,0 +1,22 @@
+{
+  "collection": "mailbox_connect_links",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "MailboxConnectLink",
+  "message": "sylphx.notify.v1.MailboxConnectLink",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/mailbox_connect_links/{mailbox_connect_link}",
+  "plural": "mailboxConnectLinks",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "mailboxConnectLink",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/MailboxConnectLink"
+}

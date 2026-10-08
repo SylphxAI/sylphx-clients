@@ -1,0 +1,22 @@
+{
+  "collection": "broadcasts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Broadcast",
+  "message": "sylphx.notify.v1.Broadcast",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/broadcasts/{broadcast}",
+  "plural": "broadcasts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "broadcast",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/Broadcast"
+}

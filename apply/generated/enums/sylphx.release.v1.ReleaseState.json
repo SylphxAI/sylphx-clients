@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.release.v1.ReleaseState",
+  "package": "sylphx.release.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RELEASE_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "RELEASE_STATE_ROLLING_OUT",
+      "wire": "rolling_out"
+    },
+    {
+      "number": 3,
+      "proto_name": "RELEASE_STATE_LIVE",
+      "wire": "live"
+    },
+    {
+      "number": 4,
+      "proto_name": "RELEASE_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 5,
+      "proto_name": "RELEASE_STATE_SUPERSEDED",
+      "wire": "superseded"
+    },
+    {
+      "number": 6,
+      "proto_name": "RELEASE_STATE_REJECTED",
+      "wire": "rejected"
+    }
+  ]
+}

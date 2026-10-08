@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.common.v1.OperationVerb",
+  "package": "sylphx.common.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "OPERATION_VERB_CREATE",
+      "wire": "create"
+    },
+    {
+      "number": 2,
+      "proto_name": "OPERATION_VERB_UPDATE",
+      "wire": "update"
+    },
+    {
+      "number": 3,
+      "proto_name": "OPERATION_VERB_DELETE",
+      "wire": "delete"
+    },
+    {
+      "number": 4,
+      "proto_name": "OPERATION_VERB_CUSTOM",
+      "wire": "custom"
+    }
+  ]
+}

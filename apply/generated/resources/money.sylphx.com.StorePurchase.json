@@ -1,0 +1,22 @@
+{
+  "collection": "store_purchases",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "StorePurchase",
+  "message": "sylphx.money.v1.StorePurchase",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/store_purchases/{store_purchase}",
+  "plural": "storePurchases",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "storePurchase",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/StorePurchase"
+}

@@ -1,6 +1,6 @@
-//! The schema registry the offline check and the planner read: the IR that
-//! `sylphx-gen` emits (`contracts/generated/registry.json`), which the
-//! generated clients are built from. Only the parts `apply` needs are decoded.
+//! The schema registry the offline check and the planner read. `sylphx-gen`
+//! emits independent entries under `clients/apply/generated`; the crate build
+//! assembles and embeds them, including in the clients-only mirror.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use serde::Deserialize;
 
 /// The IR this build of the crate was generated with.
-const EMBEDDED: &str = include_str!("../generated/registry.json");
+const EMBEDDED: &str = include_str!(concat!(env!("OUT_DIR"), "/registry.json"));
 
 /// A `null` in the IR (for example the `parent_pattern` of a top-level
 /// Resource) reads as the type's default, like a missing field.
@@ -230,7 +230,7 @@ impl Registry {
     pub fn embedded() -> &'static Registry {
         static REGISTRY: OnceLock<Registry> = OnceLock::new();
         REGISTRY.get_or_init(|| {
-            Registry::from_json(EMBEDDED).expect("contracts/generated/registry.json is valid")
+            Registry::from_json(EMBEDDED).expect("assembled apply registry is valid")
         })
     }
 

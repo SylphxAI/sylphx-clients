@@ -1,0 +1,22 @@
+{
+  "collection": "invitations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Invitation",
+  "message": "sylphx.auth.v1.Invitation",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}/invitations/{invitation}",
+  "plural": "invitations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "invitation",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/Invitation"
+}

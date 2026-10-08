@@ -1,0 +1,20 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.licence_tokens.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "money.sylphx.com/LicenceToken"
+    }
+  ]
+}

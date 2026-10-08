@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.keys.v1.KeyPurpose",
+  "package": "sylphx.keys.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "KEY_PURPOSE_SIGN",
+      "wire": "sign"
+    },
+    {
+      "number": 2,
+      "proto_name": "KEY_PURPOSE_ENCRYPT",
+      "wire": "encrypt"
+    },
+    {
+      "number": 3,
+      "proto_name": "KEY_PURPOSE_MAC",
+      "wire": "mac"
+    }
+  ]
+}

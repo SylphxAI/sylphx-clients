@@ -1,0 +1,46 @@
+{
+  "name": "sylphx.workflows.v1.RunHistoryEventKind",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_RUN_STARTED",
+      "wire": "run_started"
+    },
+    {
+      "number": 2,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_INVOCATION",
+      "wire": "invocation"
+    },
+    {
+      "number": 3,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_STEP_COMPLETED",
+      "wire": "step_completed"
+    },
+    {
+      "number": 4,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_SLEEP_STARTED",
+      "wire": "sleep_started"
+    },
+    {
+      "number": 5,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_SIGNAL_RECEIVED",
+      "wire": "signal_received"
+    },
+    {
+      "number": 6,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_CHILD_STARTED",
+      "wire": "child_started"
+    },
+    {
+      "number": 7,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_CANCEL_REQUESTED",
+      "wire": "cancel_requested"
+    },
+    {
+      "number": 8,
+      "proto_name": "RUN_HISTORY_EVENT_KIND_RUN_CLOSED",
+      "wire": "run_closed"
+    }
+  ]
+}

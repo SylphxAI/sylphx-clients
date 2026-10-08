@@ -1,0 +1,26 @@
+{
+  "collection": "buckets",
+  "controller": "services/data/controller",
+  "deletion_protection": true,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Bucket",
+  "message": "sylphx.data.v1.Bucket",
+  "meters": [
+    "data.storage.bytes",
+    "data.requests",
+    "data.egress.bytes"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}",
+  "plural": "buckets",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "data",
+  "shape": "spec_status",
+  "singular": "bucket",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "data.sylphx.com/Bucket"
+}

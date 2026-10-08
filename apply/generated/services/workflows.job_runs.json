@@ -1,0 +1,56 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "job_run_id",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.job_runs.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.job_runs.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "workflows.job_runs.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.job_runs.cancel",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "wait"
+            ]
+          },
+          "id": "workflows.job_runs.read_logs",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "workflows.sylphx.com/JobRun"
+    }
+  ]
+}

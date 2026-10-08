@@ -1,0 +1,46 @@
+{
+  "name": "sylphx.auth.v1.SessionRevokeReason",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SESSION_REVOKE_REASON_SIGN_OUT",
+      "wire": "sign_out"
+    },
+    {
+      "number": 2,
+      "proto_name": "SESSION_REVOKE_REASON_USER",
+      "wire": "user"
+    },
+    {
+      "number": 3,
+      "proto_name": "SESSION_REVOKE_REASON_ADMIN",
+      "wire": "admin"
+    },
+    {
+      "number": 4,
+      "proto_name": "SESSION_REVOKE_REASON_SESSION_LIMIT",
+      "wire": "session_limit"
+    },
+    {
+      "number": 5,
+      "proto_name": "SESSION_REVOKE_REASON_RECOVERY",
+      "wire": "recovery"
+    },
+    {
+      "number": 6,
+      "proto_name": "SESSION_REVOKE_REASON_SUSPENDED",
+      "wire": "suspended"
+    },
+    {
+      "number": 7,
+      "proto_name": "SESSION_REVOKE_REASON_DELETED",
+      "wire": "deleted"
+    },
+    {
+      "number": 8,
+      "proto_name": "SESSION_REVOKE_REASON_FINGERPRINT",
+      "wire": "fingerprint"
+    }
+  ]
+}

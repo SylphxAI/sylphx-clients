@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.localization.v1.EntryState",
+  "package": "sylphx.localization.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ENTRY_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "ENTRY_STATE_OBSOLETE",
+      "wire": "obsolete"
+    }
+  ]
+}

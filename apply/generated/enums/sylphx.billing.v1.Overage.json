@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.billing.v1.Overage",
+  "package": "sylphx.billing.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "OVERAGE_DENY",
+      "wire": "deny"
+    },
+    {
+      "number": 2,
+      "proto_name": "OVERAGE_BILL",
+      "wire": "bill"
+    },
+    {
+      "number": 3,
+      "proto_name": "OVERAGE_BILL_UNTIL_SPEND_LIMIT",
+      "wire": "bill_until_spend_limit"
+    }
+  ]
+}

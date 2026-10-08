@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.inbound_emails.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.inbound_emails.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/InboundEmail"
+    }
+  ]
+}

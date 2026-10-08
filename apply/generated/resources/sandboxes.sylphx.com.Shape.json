@@ -1,0 +1,22 @@
+{
+  "collection": "sandbox_shapes",
+  "controller": "services/sandboxes/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": false,
+  "kind": "Shape",
+  "message": "sylphx.sandboxes.v1.Shape",
+  "meters": [],
+  "parent_pattern": null,
+  "pattern": "sandbox_shapes/{shape}",
+  "plural": "sandboxShapes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "sandboxes",
+  "shape": "record",
+  "singular": "shape",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "sandboxes.sylphx.com/Shape"
+}

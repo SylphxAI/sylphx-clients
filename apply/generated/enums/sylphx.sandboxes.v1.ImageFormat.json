@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.sandboxes.v1.ImageFormat",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "IMAGE_FORMAT_PNG",
+      "wire": "png"
+    },
+    {
+      "number": 2,
+      "proto_name": "IMAGE_FORMAT_JPEG",
+      "wire": "jpeg"
+    },
+    {
+      "number": 3,
+      "proto_name": "IMAGE_FORMAT_WEBP",
+      "wire": "webp"
+    }
+  ]
+}

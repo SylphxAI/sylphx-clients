@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.sandboxes.v1.ScrollUnit",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SCROLL_UNIT_CLICKS",
+      "wire": "clicks"
+    },
+    {
+      "number": 2,
+      "proto_name": "SCROLL_UNIT_PIXELS",
+      "wire": "pixels"
+    }
+  ]
+}

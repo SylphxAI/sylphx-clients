@@ -1,0 +1,105 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.end_users.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.end_users.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "end_user_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.end_users.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "auth.end_users.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "auth.end_users.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.end_users.suspend",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.end_users.reactivate",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.end_users.unlock",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.end_users.revoke_sessions",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.end_users.attach_external_id",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "namespace",
+              "external_id"
+            ]
+          },
+          "id": "auth.end_users.find",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/EndUser"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.hosting.v1.RolloutWave",
+  "package": "sylphx.hosting.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ROLLOUT_WAVE_CANARY",
+      "wire": "canary"
+    },
+    {
+      "number": 2,
+      "proto_name": "ROLLOUT_WAVE_CELL",
+      "wire": "cell"
+    },
+    {
+      "number": 3,
+      "proto_name": "ROLLOUT_WAVE_REGION",
+      "wire": "region"
+    },
+    {
+      "number": 4,
+      "proto_name": "ROLLOUT_WAVE_ALL",
+      "wire": "all"
+    }
+  ]
+}

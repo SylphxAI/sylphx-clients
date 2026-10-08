@@ -1,0 +1,22 @@
+{
+  "collection": "revenue_facts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "RevenueFact",
+  "message": "sylphx.money.v1.RevenueFact",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/revenue_facts/{revenue_fact}",
+  "plural": "revenueFacts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "revenueFact",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/RevenueFact"
+}

@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "hosting.source_links.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "hosting.source_links.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "source_link_id",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.source_links.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.source_links.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.source_links.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "hosting.sylphx.com/SourceLink"
+    }
+  ]
+}

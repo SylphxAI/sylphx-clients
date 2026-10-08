@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.error_events.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "observability.error_events.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "observability.sylphx.com/ErrorEvent"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "fields": [
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "score",
+      "number": 1,
+      "oneof": null,
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "double"
+      }
+    }
+  ],
+  "name": "sylphx.data.v1.ZSetScoreValueResponse",
+  "package": "sylphx.data.v1"
+}

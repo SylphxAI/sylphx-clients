@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.network.v1.CertificateIssuer",
+  "package": "sylphx.network.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CERTIFICATE_ISSUER_ACME",
+      "wire": "acme"
+    },
+    {
+      "number": 2,
+      "proto_name": "CERTIFICATE_ISSUER_ORIGIN",
+      "wire": "origin"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.notify.v1.MailboxOauthProvider",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MAILBOX_OAUTH_PROVIDER_GOOGLE",
+      "wire": "google"
+    },
+    {
+      "number": 2,
+      "proto_name": "MAILBOX_OAUTH_PROVIDER_MICROSOFT",
+      "wire": "microsoft"
+    }
+  ]
+}

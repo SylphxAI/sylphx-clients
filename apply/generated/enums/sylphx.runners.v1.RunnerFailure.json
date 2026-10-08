@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.runners.v1.RunnerFailure",
+  "package": "sylphx.runners.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RUNNER_FAILURE_NO_CAPACITY",
+      "wire": "no_capacity"
+    },
+    {
+      "number": 2,
+      "proto_name": "RUNNER_FAILURE_CLASS_NOT_OFFERED",
+      "wire": "class_not_offered"
+    },
+    {
+      "number": 3,
+      "proto_name": "RUNNER_FAILURE_CAPABILITY_MISSING",
+      "wire": "capability_missing"
+    },
+    {
+      "number": 4,
+      "proto_name": "RUNNER_FAILURE_BOOT_FAILED",
+      "wire": "boot_failed"
+    }
+  ]
+}

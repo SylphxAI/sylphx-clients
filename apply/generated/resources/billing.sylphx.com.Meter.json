@@ -1,0 +1,22 @@
+{
+  "collection": "meters",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Meter",
+  "message": "sylphx.billing.v1.Meter",
+  "meters": [],
+  "parent_pattern": null,
+  "pattern": "meters/{meter}",
+  "plural": "meters",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "billing",
+  "shape": "record",
+  "singular": "meter",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "billing.sylphx.com/Meter"
+}

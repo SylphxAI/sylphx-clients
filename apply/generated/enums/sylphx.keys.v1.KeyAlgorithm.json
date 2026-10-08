@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.keys.v1.KeyAlgorithm",
+  "package": "sylphx.keys.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "KEY_ALGORITHM_ED25519",
+      "wire": "ed25519"
+    },
+    {
+      "number": 2,
+      "proto_name": "KEY_ALGORITHM_EC_P256_SHA256",
+      "wire": "ec_p256_sha256"
+    },
+    {
+      "number": 3,
+      "proto_name": "KEY_ALGORITHM_RSA_PKCS1_2048_SHA256",
+      "wire": "rsa_pkcs1_2048_sha256"
+    },
+    {
+      "number": 4,
+      "proto_name": "KEY_ALGORITHM_RSA_PSS_3072_SHA256",
+      "wire": "rsa_pss_3072_sha256"
+    },
+    {
+      "number": 5,
+      "proto_name": "KEY_ALGORITHM_AES_256_GCM",
+      "wire": "aes_256_gcm"
+    },
+    {
+      "number": 6,
+      "proto_name": "KEY_ALGORITHM_HMAC_SHA256",
+      "wire": "hmac_sha256"
+    }
+  ]
+}

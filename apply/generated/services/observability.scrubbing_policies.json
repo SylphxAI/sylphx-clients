@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.scrubbing_policies.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "observability.scrubbing_policies.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "observability.sylphx.com/ScrubbingPolicy"
+    }
+  ]
+}

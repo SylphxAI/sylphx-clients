@@ -1,0 +1,22 @@
+{
+  "collection": "licence_tokens",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "LicenceToken",
+  "message": "sylphx.money.v1.LicenceToken",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/licence_tokens/{licence_token}",
+  "plural": "licenceTokens",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "licenceToken",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/LicenceToken"
+}

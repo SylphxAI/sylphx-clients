@@ -1,0 +1,22 @@
+{
+  "collection": "key_versions",
+  "controller": "kernel/keys/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "KeyVersion",
+  "message": "sylphx.keys.v1.KeyVersion",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/keys/{key}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/keys/{key}/key_versions/{key_version}",
+  "plural": "keyVersions",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "keys",
+  "shape": "record",
+  "singular": "keyVersion",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": false,
+  "type": "keys.sylphx.com/KeyVersion"
+}

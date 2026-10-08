@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.notify.v1.BroadcastState",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BROADCAST_STATE_DRAFT",
+      "wire": "draft"
+    },
+    {
+      "number": 2,
+      "proto_name": "BROADCAST_STATE_SCHEDULED",
+      "wire": "scheduled"
+    },
+    {
+      "number": 3,
+      "proto_name": "BROADCAST_STATE_SENDING",
+      "wire": "sending"
+    },
+    {
+      "number": 4,
+      "proto_name": "BROADCAST_STATE_SENT",
+      "wire": "sent"
+    },
+    {
+      "number": 5,
+      "proto_name": "BROADCAST_STATE_CANCELLED",
+      "wire": "cancelled"
+    }
+  ]
+}

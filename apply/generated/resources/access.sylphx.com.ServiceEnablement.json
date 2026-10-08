@@ -1,0 +1,22 @@
+{
+  "collection": "service_enablements",
+  "controller": "kernel/access/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "ServiceEnablement",
+  "message": "sylphx.access.v1.ServiceEnablement",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/service_enablements/{service_enablement}",
+  "plural": "serviceEnablements",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "access",
+  "shape": "spec_status",
+  "singular": "serviceEnablement",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": false,
+  "type": "access.sylphx.com/ServiceEnablement"
+}

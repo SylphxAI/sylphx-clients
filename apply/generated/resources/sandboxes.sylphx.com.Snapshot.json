@@ -1,0 +1,24 @@
+{
+  "collection": "snapshots",
+  "controller": "services/sandboxes/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": false,
+  "kind": "Snapshot",
+  "message": "sylphx.sandboxes.v1.Snapshot",
+  "meters": [
+    "sandboxes.snapshot.gib_hours"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/snapshots/{snapshot}",
+  "plural": "snapshots",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "sandboxes",
+  "shape": "spec_status",
+  "singular": "snapshot",
+  "stale_bound": "60s",
+  "storage": "service",
+  "terraform": false,
+  "type": "sandboxes.sylphx.com/Snapshot"
+}

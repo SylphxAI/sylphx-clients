@@ -1,0 +1,22 @@
+{
+  "collection": "rollouts",
+  "controller": "kernel/release/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Rollout",
+  "message": "sylphx.release.v1.Rollout",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/rollouts/{rollout}",
+  "plural": "rollouts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "release",
+  "shape": "record",
+  "singular": "rollout",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": false,
+  "type": "release.sylphx.com/Rollout"
+}

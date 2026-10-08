@@ -1,0 +1,27 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_meter_prices.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.usage_meter_prices.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "money.sylphx.com/UsageMeterPrice"
+    }
+  ]
+}

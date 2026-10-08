@@ -1,0 +1,56 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "config.config_segments.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "config.config_segments.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "config_segment_id",
+              "validate_only"
+            ]
+          },
+          "id": "config.config_segments.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "config.config_segments.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only"
+            ]
+          },
+          "id": "config.config_segments.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "config.sylphx.com/ConfigSegment"
+    }
+  ]
+}

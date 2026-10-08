@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.assets.v1.ReviewState",
+  "package": "sylphx.assets.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "REVIEW_STATE_UNREVIEWED",
+      "wire": "unreviewed"
+    },
+    {
+      "number": 2,
+      "proto_name": "REVIEW_STATE_APPROVED",
+      "wire": "approved"
+    },
+    {
+      "number": 3,
+      "proto_name": "REVIEW_STATE_REJECTED",
+      "wire": "rejected"
+    },
+    {
+      "number": 4,
+      "proto_name": "REVIEW_STATE_RETIRED",
+      "wire": "retired"
+    }
+  ]
+}

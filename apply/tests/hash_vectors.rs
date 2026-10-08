@@ -1,5 +1,5 @@
 //! The golden vectors of the managed-field hash
-//! (`contracts/fixtures/apply-hash.json`, spec §3): RFC 8785 text, the
+//! (`clients/apply/tests/fixtures/apply-hash.json`, spec §3): RFC 8785 text, the
 //! SHA-256 prefix, and the canonical protojson rendering of managed fields.
 
 use serde_json::{Map, Value};
@@ -9,7 +9,7 @@ use sylphx_apply::Registry;
 fn fixture() -> Value {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../contracts/fixtures/apply-hash.json"
+        "/tests/fixtures/apply-hash.json"
     );
     let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     serde_json::from_str(&text).expect("the fixture is JSON")

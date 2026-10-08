@@ -1,0 +1,24 @@
+{
+  "collection": "error_groups",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ErrorGroup",
+  "message": "sylphx.observability.v1.ErrorGroup",
+  "meters": [
+    "observability.ingest_bytes"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/error_groups/{error_group}",
+  "plural": "errorGroups",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "record",
+  "singular": "errorGroup",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/ErrorGroup"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.money.v1.ProrationBehavior",
+  "package": "sylphx.money.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "PRORATION_BEHAVIOR_CREATE_PRORATIONS",
+      "wire": "create_prorations"
+    },
+    {
+      "number": 2,
+      "proto_name": "PRORATION_BEHAVIOR_NONE",
+      "wire": "none"
+    },
+    {
+      "number": 3,
+      "proto_name": "PRORATION_BEHAVIOR_ALWAYS_INVOICE",
+      "wire": "always_invoice"
+    }
+  ]
+}

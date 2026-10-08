@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "sandboxes.lease_events.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "wait"
+            ]
+          },
+          "id": "sandboxes.lease_events.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "sandboxes.sylphx.com/LeaseEvent"
+    }
+  ]
+}

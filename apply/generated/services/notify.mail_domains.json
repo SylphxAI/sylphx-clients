@@ -1,0 +1,68 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mail_domains.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.mail_domains.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "email_domain_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mail_domains.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mail_domains.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "notify.mail_domains.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mail_domains.verify",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/EmailDomain"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.customer_organizations.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.customer_organizations.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "customer_organization_id",
+              "validate_only",
+              "owner_end_user"
+            ]
+          },
+          "id": "auth.customer_organizations.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.customer_organizations.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "auth.customer_organizations.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/CustomerOrganization"
+    }
+  ]
+}

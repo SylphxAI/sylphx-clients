@@ -1,0 +1,22 @@
+{
+  "collection": "realtime_members",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "RealtimeMember",
+  "message": "sylphx.events.v1.RealtimeMember",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_members/{realtime_member}",
+  "plural": "realtimeMembers",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "record",
+  "singular": "realtimeMember",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "events.sylphx.com/RealtimeMember"
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "webhook_deliveries",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "WebhookDelivery",
+  "message": "sylphx.events.v1.WebhookDelivery",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/webhook_endpoints/{webhook_endpoint}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/webhook_endpoints/{webhook_endpoint}/webhook_deliveries/{webhook_delivery}",
+  "plural": "webhookDeliveries",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "record",
+  "singular": "webhookDelivery",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "events.sylphx.com/WebhookDelivery"
+}

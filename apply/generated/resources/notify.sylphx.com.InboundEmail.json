@@ -1,0 +1,22 @@
+{
+  "collection": "inbound_emails",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "InboundEmail",
+  "message": "sylphx.notify.v1.InboundEmail",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}/inbound_emails/{inbound_email}",
+  "plural": "inboundEmails",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "inboundEmail",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/InboundEmail"
+}

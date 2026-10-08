@@ -1,0 +1,22 @@
+{
+  "collection": "error_events",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ErrorEvent",
+  "message": "sylphx.observability.v1.ErrorEvent",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/error_groups/{error_group}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/error_groups/{error_group}/error_events/{error_event}",
+  "plural": "errorEvents",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "record",
+  "singular": "errorEvent",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/ErrorEvent"
+}

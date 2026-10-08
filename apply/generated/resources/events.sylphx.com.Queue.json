@@ -1,0 +1,22 @@
+{
+  "collection": "queues",
+  "controller": "services/events/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Queue",
+  "message": "sylphx.events.v1.Queue",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/queues/{queue}",
+  "plural": "queues",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "spec_status",
+  "singular": "queue",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "events.sylphx.com/Queue"
+}

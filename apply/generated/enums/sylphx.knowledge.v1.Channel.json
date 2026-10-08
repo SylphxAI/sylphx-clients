@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.knowledge.v1.Channel",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CHANNEL_API",
+      "wire": "api"
+    },
+    {
+      "number": 2,
+      "proto_name": "CHANNEL_TOOL",
+      "wire": "tool"
+    },
+    {
+      "number": 3,
+      "proto_name": "CHANNEL_IMPORT",
+      "wire": "import"
+    },
+    {
+      "number": 4,
+      "proto_name": "CHANNEL_EXTRACTION",
+      "wire": "extraction"
+    }
+  ]
+}

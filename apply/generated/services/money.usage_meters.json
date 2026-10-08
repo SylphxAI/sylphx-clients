@@ -1,0 +1,35 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_meters.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "money.usage_meters.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "money.usage_meters.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "money.sylphx.com/UsageMeter"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "plans",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Plan",
+  "message": "sylphx.billing.v1.Plan",
+  "meters": [],
+  "parent_pattern": null,
+  "pattern": "plans/{plan}",
+  "plural": "plans",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "billing",
+  "shape": "record",
+  "singular": "plan",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "billing.sylphx.com/Plan"
+}

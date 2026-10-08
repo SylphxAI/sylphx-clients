@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mail_routes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.mail_routes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "route_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mail_routes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mail_routes.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mail_routes.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/Route"
+    }
+  ]
+}

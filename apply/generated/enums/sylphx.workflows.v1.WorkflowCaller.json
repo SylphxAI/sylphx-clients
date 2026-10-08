@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.workflows.v1.WorkflowCaller",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "WORKFLOW_CALLER_SERVER",
+      "wire": "server"
+    },
+    {
+      "number": 2,
+      "proto_name": "WORKFLOW_CALLER_USERS",
+      "wire": "users"
+    }
+  ]
+}

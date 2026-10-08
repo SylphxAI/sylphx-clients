@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.localization.v1.TermRule",
+  "package": "sylphx.localization.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "TERM_RULE_TRANSLATE",
+      "wire": "translate"
+    },
+    {
+      "number": 2,
+      "proto_name": "TERM_RULE_KEEP",
+      "wire": "keep"
+    },
+    {
+      "number": 3,
+      "proto_name": "TERM_RULE_FORBIDDEN",
+      "wire": "forbidden"
+    }
+  ]
+}

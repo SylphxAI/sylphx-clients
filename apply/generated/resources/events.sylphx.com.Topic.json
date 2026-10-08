@@ -1,0 +1,24 @@
+{
+  "collection": "topics",
+  "controller": "services/events/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Topic",
+  "message": "sylphx.events.v1.Topic",
+  "meters": [
+    "events.messages"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/topics/{topic}",
+  "plural": "topics",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "spec_status",
+  "singular": "topic",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "events.sylphx.com/Topic"
+}

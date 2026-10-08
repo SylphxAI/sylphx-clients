@@ -1,0 +1,28 @@
+{
+  "collection": "ai_models",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "AiModel",
+  "message": "sylphx.ai.v1.AiModel",
+  "meters": [
+    "ai.tokens",
+    "ai.images",
+    "ai.audio_seconds",
+    "ai.characters",
+    "ai.hosted_tool_calls"
+  ],
+  "parent_pattern": null,
+  "pattern": "ai_models/{ai_model}",
+  "plural": "aiModels",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "ai",
+  "shape": "record",
+  "singular": "aiModel",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "ai.sylphx.com/AiModel"
+}

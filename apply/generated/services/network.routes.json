@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "network.routes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "network.routes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "route_id",
+              "validate_only"
+            ]
+          },
+          "id": "network.routes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "network.routes.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "network.routes.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "network.sylphx.com/Route"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "usage_reservations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UsageReservation",
+  "message": "sylphx.money.v1.UsageReservation",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/usage_reservations/{usage_reservation}",
+  "plural": "usageReservations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "usageReservation",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/UsageReservation"
+}

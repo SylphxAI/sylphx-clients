@@ -1,0 +1,22 @@
+{
+  "collection": "envs",
+  "controller": "kernel/access/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Environment",
+  "message": "sylphx.access.v1.Environment",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "plural": "envs",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "access",
+  "shape": "spec_status",
+  "singular": "environment",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "access.sylphx.com/Environment"
+}

@@ -1,0 +1,29 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.usage_tiers.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "money.usage_tiers.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "money.sylphx.com/UsageTier"
+    }
+  ]
+}

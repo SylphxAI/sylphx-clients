@@ -1,0 +1,25 @@
+{
+  "collection": "egress_identities",
+  "controller": "services/network/controller",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": true,
+  "kind": "EgressIdentity",
+  "message": "sylphx.network.v1.EgressIdentity",
+  "meters": [
+    "network.egress.bytes",
+    "network.egress_identity.hours"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/egress_identities/{egress_identity}",
+  "plural": "egressIdentities",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "network",
+  "shape": "spec_status",
+  "singular": "egressIdentity",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "network.sylphx.com/EgressIdentity"
+}

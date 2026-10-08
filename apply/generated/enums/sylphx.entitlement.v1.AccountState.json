@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.entitlement.v1.AccountState",
+  "package": "sylphx.entitlement.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ACCOUNT_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "ACCOUNT_STATE_PAST_DUE",
+      "wire": "past_due"
+    },
+    {
+      "number": 3,
+      "proto_name": "ACCOUNT_STATE_SUSPENDED",
+      "wire": "suspended"
+    },
+    {
+      "number": 4,
+      "proto_name": "ACCOUNT_STATE_UNCLAIMED",
+      "wire": "unclaimed"
+    }
+  ]
+}

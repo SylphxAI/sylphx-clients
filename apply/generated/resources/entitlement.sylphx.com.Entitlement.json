@@ -1,0 +1,22 @@
+{
+  "collection": "entitlements",
+  "controller": "kernel/billing/entitle",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Entitlement",
+  "message": "sylphx.entitlement.v1.Entitlement",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/entitlements/{entitlement}",
+  "plural": "entitlements",
+  "priority_chunk": true,
+  "reconciled": false,
+  "service": "entitlement",
+  "shape": "spec_status",
+  "singular": "entitlement",
+  "stale_bound": "86400s",
+  "storage": "kernel",
+  "terraform": false,
+  "type": "entitlement.sylphx.com/Entitlement"
+}

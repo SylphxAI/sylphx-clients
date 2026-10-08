@@ -1,0 +1,22 @@
+{
+  "collection": "schedules",
+  "controller": "services/workflows/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Schedule",
+  "message": "sylphx.workflows.v1.Schedule",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/schedules/{schedule}",
+  "plural": "schedules",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "workflows",
+  "shape": "spec_status",
+  "singular": "schedule",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "workflows.sylphx.com/Schedule"
+}

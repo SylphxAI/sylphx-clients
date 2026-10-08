@@ -1,0 +1,22 @@
+{
+  "collection": "oauth_clients",
+  "controller": "services/auth/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "OauthClient",
+  "message": "sylphx.auth.v1.OauthClient",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/oauth_clients/{oauth_client}",
+  "plural": "oauthClients",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "spec_status",
+  "singular": "oauthClient",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "auth.sylphx.com/OauthClient"
+}

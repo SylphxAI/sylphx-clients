@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.billing.v1.InvoiceLineKind",
+  "package": "sylphx.billing.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "INVOICE_LINE_KIND_FEE",
+      "wire": "fee"
+    },
+    {
+      "number": 2,
+      "proto_name": "INVOICE_LINE_KIND_USAGE",
+      "wire": "usage"
+    },
+    {
+      "number": 3,
+      "proto_name": "INVOICE_LINE_KIND_LATE_USAGE",
+      "wire": "late_usage"
+    },
+    {
+      "number": 4,
+      "proto_name": "INVOICE_LINE_KIND_CREDIT",
+      "wire": "credit"
+    },
+    {
+      "number": 5,
+      "proto_name": "INVOICE_LINE_KIND_PRORATION",
+      "wire": "proration"
+    }
+  ]
+}

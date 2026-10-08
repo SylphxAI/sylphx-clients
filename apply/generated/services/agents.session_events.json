@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.session_events.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "wait"
+            ]
+          },
+          "id": "agents.session_events.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/SessionEvent"
+    }
+  ]
+}

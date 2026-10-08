@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.ai.v1.InputModality",
+  "package": "sylphx.ai.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "INPUT_MODALITY_TEXT",
+      "wire": "text"
+    },
+    {
+      "number": 2,
+      "proto_name": "INPUT_MODALITY_IMAGE",
+      "wire": "image"
+    },
+    {
+      "number": 3,
+      "proto_name": "INPUT_MODALITY_AUDIO",
+      "wire": "audio"
+    },
+    {
+      "number": 4,
+      "proto_name": "INPUT_MODALITY_FILE",
+      "wire": "file"
+    },
+    {
+      "number": 5,
+      "proto_name": "INPUT_MODALITY_VIDEO",
+      "wire": "video"
+    }
+  ]
+}

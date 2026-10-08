@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "runners.runners.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "runners.runners.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "runners.sylphx.com/Runner"
+    }
+  ]
+}

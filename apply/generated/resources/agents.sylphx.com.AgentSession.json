@@ -1,0 +1,22 @@
+{
+  "collection": "agent_sessions",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "AgentSession",
+  "message": "sylphx.agents.v1.AgentSession",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+  "plural": "agentSessions",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "record",
+  "singular": "agentSession",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/AgentSession"
+}

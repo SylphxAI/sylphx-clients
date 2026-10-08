@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.access.v1.OrgKind",
+  "package": "sylphx.access.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ORG_KIND_STANDARD",
+      "wire": "standard"
+    },
+    {
+      "number": 2,
+      "proto_name": "ORG_KIND_UNCLAIMED",
+      "wire": "unclaimed"
+    },
+    {
+      "number": 3,
+      "proto_name": "ORG_KIND_PARTNER_SUB",
+      "wire": "partner_sub"
+    }
+  ]
+}

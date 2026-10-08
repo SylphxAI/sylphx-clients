@@ -1,0 +1,22 @@
+{
+  "collection": "budget_leases",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "BudgetLease",
+  "message": "sylphx.billing.v1.BudgetLease",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/budget_leases/{budget_lease}",
+  "plural": "budgetLeases",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "billing",
+  "shape": "record",
+  "singular": "budgetLease",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "billing.sylphx.com/BudgetLease"
+}

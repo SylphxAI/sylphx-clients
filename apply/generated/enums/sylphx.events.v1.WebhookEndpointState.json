@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.events.v1.WebhookEndpointState",
+  "package": "sylphx.events.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "WEBHOOK_ENDPOINT_STATE_ENABLED",
+      "wire": "enabled"
+    },
+    {
+      "number": 2,
+      "proto_name": "WEBHOOK_ENDPOINT_STATE_DISABLED",
+      "wire": "disabled"
+    },
+    {
+      "number": 3,
+      "proto_name": "WEBHOOK_ENDPOINT_STATE_FAILING_DISABLED",
+      "wire": "failing_disabled"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.store_connections.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.store_connections.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "store_connection_id",
+              "validate_only"
+            ]
+          },
+          "id": "money.store_connections.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "money.store_connections.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag"
+            ]
+          },
+          "id": "money.store_connections.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "money.sylphx.com/StoreConnection"
+    }
+  ]
+}

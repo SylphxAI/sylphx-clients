@@ -1,0 +1,49 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "sandboxes.snapshots.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "sandboxes.snapshots.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "snapshot_id",
+              "validate_only"
+            ]
+          },
+          "id": "sandboxes.snapshots.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "sandboxes.snapshots.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "sandboxes.sylphx.com/Snapshot"
+    }
+  ]
+}

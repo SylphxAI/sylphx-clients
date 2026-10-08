@@ -1,0 +1,24 @@
+{
+  "collection": "build_caches",
+  "controller": "services/build/controller",
+  "deletion_protection": false,
+  "fail_mode": "open",
+  "in_snapshot": false,
+  "kind": "BuildCache",
+  "message": "sylphx.build.v1.BuildCache",
+  "meters": [
+    "build.cache_mib_hours"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/build_caches/{build_cache}",
+  "plural": "buildCaches",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "build",
+  "shape": "spec_status",
+  "singular": "buildCache",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "build.sylphx.com/BuildCache"
+}

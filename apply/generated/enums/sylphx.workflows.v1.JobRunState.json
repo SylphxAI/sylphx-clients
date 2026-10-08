@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.workflows.v1.JobRunState",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "JOB_RUN_STATE_QUEUED",
+      "wire": "queued"
+    },
+    {
+      "number": 2,
+      "proto_name": "JOB_RUN_STATE_RUNNING",
+      "wire": "running"
+    },
+    {
+      "number": 3,
+      "proto_name": "JOB_RUN_STATE_SUCCEEDED",
+      "wire": "succeeded"
+    },
+    {
+      "number": 4,
+      "proto_name": "JOB_RUN_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 5,
+      "proto_name": "JOB_RUN_STATE_CANCELLED",
+      "wire": "cancelled"
+    },
+    {
+      "number": 6,
+      "proto_name": "JOB_RUN_STATE_TIMED_OUT",
+      "wire": "timed_out"
+    }
+  ]
+}

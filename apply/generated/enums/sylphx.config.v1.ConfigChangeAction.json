@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.config.v1.ConfigChangeAction",
+  "package": "sylphx.config.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CONFIG_CHANGE_ACTION_CREATE",
+      "wire": "create"
+    },
+    {
+      "number": 2,
+      "proto_name": "CONFIG_CHANGE_ACTION_UPDATE",
+      "wire": "update"
+    },
+    {
+      "number": 3,
+      "proto_name": "CONFIG_CHANGE_ACTION_DELETE",
+      "wire": "delete"
+    }
+  ]
+}

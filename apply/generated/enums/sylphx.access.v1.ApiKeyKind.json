@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.access.v1.ApiKeyKind",
+  "package": "sylphx.access.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "API_KEY_KIND_SECRET",
+      "wire": "secret"
+    },
+    {
+      "number": 2,
+      "proto_name": "API_KEY_KIND_PUBLISHABLE",
+      "wire": "publishable"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "access.api_keys.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "access.api_keys.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "validate_only"
+            ]
+          },
+          "id": "access.api_keys.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "access.api_keys.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only"
+            ]
+          },
+          "id": "access.api_keys.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "access.api_keys.revoke",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "access.api_keys.roll",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "access.sylphx.com/ApiKey"
+    }
+  ]
+}

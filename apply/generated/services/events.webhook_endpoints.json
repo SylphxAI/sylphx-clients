@@ -1,0 +1,82 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.webhook_endpoints.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "events.webhook_endpoints.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "webhook_endpoint_id",
+              "validate_only"
+            ]
+          },
+          "id": "events.webhook_endpoints.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "events.webhook_endpoints.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "events.webhook_endpoints.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.webhook_endpoints.replay",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.webhook_endpoints.rotate_secret",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.webhook_endpoints.test",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "events.sylphx.com/WebhookEndpoint"
+    }
+  ]
+}

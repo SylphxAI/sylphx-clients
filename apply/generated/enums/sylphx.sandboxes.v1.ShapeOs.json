@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.sandboxes.v1.ShapeOs",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SHAPE_OS_LINUX",
+      "wire": "linux"
+    },
+    {
+      "number": 2,
+      "proto_name": "SHAPE_OS_MACOS",
+      "wire": "macos"
+    }
+  ]
+}

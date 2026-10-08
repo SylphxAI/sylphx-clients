@@ -1,0 +1,34 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_events.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.usage_events.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_events.check_standing",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/UsageEvent"
+    }
+  ]
+}

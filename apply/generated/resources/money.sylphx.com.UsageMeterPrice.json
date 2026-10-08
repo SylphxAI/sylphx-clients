@@ -1,0 +1,22 @@
+{
+  "collection": "usage_meter_prices",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UsageMeterPrice",
+  "message": "sylphx.money.v1.UsageMeterPrice",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/usage_meter_prices/{usage_meter_price}",
+  "plural": "usageMeterPrices",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "usageMeterPrice",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/UsageMeterPrice"
+}

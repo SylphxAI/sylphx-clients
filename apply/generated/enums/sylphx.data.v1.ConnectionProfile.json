@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.data.v1.ConnectionProfile",
+  "package": "sylphx.data.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CONNECTION_PROFILE_POOLED",
+      "wire": "pooled"
+    },
+    {
+      "number": 2,
+      "proto_name": "CONNECTION_PROFILE_DIRECT",
+      "wire": "direct"
+    }
+  ]
+}

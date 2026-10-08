@@ -1,0 +1,22 @@
+{
+  "collection": "invoices",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Invoice",
+  "message": "sylphx.billing.v1.Invoice",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/invoices/{invoice}",
+  "plural": "invoices",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "billing",
+  "shape": "record",
+  "singular": "invoice",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "billing.sylphx.com/Invoice"
+}

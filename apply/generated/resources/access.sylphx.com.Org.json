@@ -1,0 +1,22 @@
+{
+  "collection": "orgs",
+  "controller": "kernel/access/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Org",
+  "message": "sylphx.access.v1.Org",
+  "meters": [],
+  "parent_pattern": null,
+  "pattern": "orgs/{org}",
+  "plural": "orgs",
+  "priority_chunk": true,
+  "reconciled": false,
+  "service": "access",
+  "shape": "spec_status",
+  "singular": "org",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "access.sylphx.com/Org"
+}

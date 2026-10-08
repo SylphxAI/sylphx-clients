@@ -1,0 +1,22 @@
+{
+  "collection": "mailbox_oauth_apps",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "MailboxOauthApp",
+  "message": "sylphx.notify.v1.MailboxOauthApp",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/mailbox_oauth_apps/{mailbox_oauth_app}",
+  "plural": "mailboxOauthApps",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "mailboxOauthApp",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/MailboxOauthApp"
+}

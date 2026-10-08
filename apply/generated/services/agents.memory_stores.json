@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.memory_stores.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "agents.memory_stores.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "memory_store_id",
+              "validate_only"
+            ]
+          },
+          "id": "agents.memory_stores.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "agents.memory_stores.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "agents.memory_stores.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/MemoryStore"
+    }
+  ]
+}

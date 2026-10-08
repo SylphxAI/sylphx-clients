@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.glossaries.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "localization.glossaries.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "glossary_id",
+              "validate_only"
+            ]
+          },
+          "id": "localization.glossaries.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "localization.glossaries.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "localization.glossaries.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "localization.sylphx.com/Glossary"
+    }
+  ]
+}

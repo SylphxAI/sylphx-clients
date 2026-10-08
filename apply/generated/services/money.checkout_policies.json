@@ -1,0 +1,27 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.checkout_policies.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "money.checkout_policies.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "money.sylphx.com/CheckoutPolicy"
+    }
+  ]
+}

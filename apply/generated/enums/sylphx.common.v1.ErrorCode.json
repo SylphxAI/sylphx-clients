@@ -1,0 +1,171 @@
+{
+  "name": "sylphx.common.v1.ErrorCode",
+  "package": "sylphx.common.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ERROR_CODE_UNKNOWN_FIELD",
+      "wire": "UNKNOWN_FIELD"
+    },
+    {
+      "number": 2,
+      "proto_name": "ERROR_CODE_INVALID_FIELD",
+      "wire": "INVALID_FIELD"
+    },
+    {
+      "number": 3,
+      "proto_name": "ERROR_CODE_PAGE_TOKEN_MISMATCH",
+      "wire": "PAGE_TOKEN_MISMATCH"
+    },
+    {
+      "number": 4,
+      "proto_name": "ERROR_CODE_IDEMPOTENCY_KEY_REUSED",
+      "wire": "IDEMPOTENCY_KEY_REUSED"
+    },
+    {
+      "number": 5,
+      "proto_name": "ERROR_CODE_IDEMPOTENCY_IN_PROGRESS",
+      "wire": "IDEMPOTENCY_IN_PROGRESS"
+    },
+    {
+      "number": 6,
+      "proto_name": "ERROR_CODE_ETAG_MISMATCH",
+      "wire": "ETAG_MISMATCH"
+    },
+    {
+      "number": 7,
+      "proto_name": "ERROR_CODE_RESOURCE_NOT_FOUND",
+      "wire": "RESOURCE_NOT_FOUND"
+    },
+    {
+      "number": 8,
+      "proto_name": "ERROR_CODE_RESOURCE_ALREADY_EXISTS",
+      "wire": "RESOURCE_ALREADY_EXISTS"
+    },
+    {
+      "number": 9,
+      "proto_name": "ERROR_CODE_UNAUTHENTICATED",
+      "wire": "UNAUTHENTICATED"
+    },
+    {
+      "number": 10,
+      "proto_name": "ERROR_CODE_PERMISSION_DENIED",
+      "wire": "PERMISSION_DENIED"
+    },
+    {
+      "number": 11,
+      "proto_name": "ERROR_CODE_DELETION_PROTECTED",
+      "wire": "DELETION_PROTECTED"
+    },
+    {
+      "number": 12,
+      "proto_name": "ERROR_CODE_RECONCILE_FAILED",
+      "wire": "RECONCILE_FAILED"
+    },
+    {
+      "number": 13,
+      "proto_name": "ERROR_CODE_PLAN_LIMIT_REACHED",
+      "wire": "PLAN_LIMIT_REACHED"
+    },
+    {
+      "number": 14,
+      "proto_name": "ERROR_CODE_SPEND_LIMIT_REACHED",
+      "wire": "SPEND_LIMIT_REACHED"
+    },
+    {
+      "number": 15,
+      "proto_name": "ERROR_CODE_RATE_LIMITED",
+      "wire": "RATE_LIMITED"
+    },
+    {
+      "number": 16,
+      "proto_name": "ERROR_CODE_INVALID_STATE",
+      "wire": "INVALID_STATE"
+    },
+    {
+      "number": 17,
+      "proto_name": "ERROR_CODE_INTERNAL",
+      "wire": "INTERNAL"
+    },
+    {
+      "number": 18,
+      "proto_name": "ERROR_CODE_UNAVAILABLE",
+      "wire": "UNAVAILABLE"
+    },
+    {
+      "number": 19,
+      "proto_name": "ERROR_CODE_UNIMPLEMENTED",
+      "wire": "UNIMPLEMENTED"
+    },
+    {
+      "number": 20,
+      "proto_name": "ERROR_CODE_NOT_YET_PROPAGATED",
+      "wire": "NOT_YET_PROPAGATED"
+    },
+    {
+      "number": 21,
+      "proto_name": "ERROR_CODE_DEADLINE_EXCEEDED",
+      "wire": "DEADLINE_EXCEEDED"
+    },
+    {
+      "number": 22,
+      "proto_name": "ERROR_CODE_NOT_FOUND",
+      "wire": "NOT_FOUND"
+    },
+    {
+      "number": 23,
+      "proto_name": "ERROR_CODE_CONTRACT_SKEW",
+      "wire": "CONTRACT_SKEW"
+    },
+    {
+      "number": 24,
+      "proto_name": "ERROR_CODE_NO_CAPACITY",
+      "wire": "NO_CAPACITY"
+    },
+    {
+      "number": 25,
+      "proto_name": "ERROR_CODE_SHAPE_NOT_OFFERED",
+      "wire": "SHAPE_NOT_OFFERED"
+    },
+    {
+      "number": 26,
+      "proto_name": "ERROR_CODE_STALE_GENERATION",
+      "wire": "STALE_GENERATION"
+    },
+    {
+      "number": 27,
+      "proto_name": "ERROR_CODE_RESOURCE_IN_USE",
+      "wire": "RESOURCE_IN_USE"
+    },
+    {
+      "number": 28,
+      "proto_name": "ERROR_CODE_CONTROL_HELD",
+      "wire": "CONTROL_HELD"
+    },
+    {
+      "number": 29,
+      "proto_name": "ERROR_CODE_CONTROL_HELD_BY_HUMAN",
+      "wire": "CONTROL_HELD_BY_HUMAN"
+    },
+    {
+      "number": 30,
+      "proto_name": "ERROR_CODE_INVALID_ID",
+      "wire": "INVALID_ID"
+    },
+    {
+      "number": 31,
+      "proto_name": "ERROR_CODE_ETAG_CONFLICT",
+      "wire": "ETAG_CONFLICT"
+    },
+    {
+      "number": 32,
+      "proto_name": "ERROR_CODE_VALIDATE_ONLY_NOT_SUPPORTED",
+      "wire": "VALIDATE_ONLY_NOT_SUPPORTED"
+    },
+    {
+      "number": 33,
+      "proto_name": "ERROR_CODE_ID_MOVED",
+      "wire": "ID_MOVED"
+    }
+  ]
+}

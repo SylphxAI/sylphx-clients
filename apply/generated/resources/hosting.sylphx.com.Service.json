@@ -1,0 +1,25 @@
+{
+  "collection": "services",
+  "controller": "services/hosting/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Service",
+  "message": "sylphx.hosting.v1.Service",
+  "meters": [
+    "hosting.instance.seconds",
+    "hosting.requests"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}",
+  "plural": "services",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "hosting",
+  "shape": "spec_status",
+  "singular": "service",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "hosting.sylphx.com/Service"
+}

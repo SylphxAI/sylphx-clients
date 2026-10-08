@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "checkout_session_id"
+            ]
+          },
+          "id": "money.checkout_sessions.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.checkout_sessions.get",
+          "kind": "get"
+        }
+      ],
+      "resource_type": "money.sylphx.com/CheckoutSession"
+    }
+  ]
+}

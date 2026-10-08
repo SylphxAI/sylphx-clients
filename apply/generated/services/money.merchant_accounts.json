@@ -1,0 +1,56 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.merchant_accounts.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "money.merchant_accounts.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.merchant_accounts.connect",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.merchant_accounts.refresh",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.merchant_accounts.disconnect",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "money.merchant_accounts.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "money.sylphx.com/MerchantAccount"
+    }
+  ]
+}

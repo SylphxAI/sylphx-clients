@@ -1,0 +1,22 @@
+{
+  "collection": "subscriptions",
+  "controller": "services/events/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Subscription",
+  "message": "sylphx.events.v1.Subscription",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/subscriptions/{subscription}",
+  "plural": "subscriptions",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "spec_status",
+  "singular": "subscription",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "events.sylphx.com/Subscription"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.localization.v1.PseudoLocale",
+  "package": "sylphx.localization.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "PSEUDO_LOCALE_ACCENTED",
+      "wire": "accented"
+    },
+    {
+      "number": 2,
+      "proto_name": "PSEUDO_LOCALE_BIDI",
+      "wire": "bidi"
+    },
+    {
+      "number": 3,
+      "proto_name": "PSEUDO_LOCALE_WIDE",
+      "wire": "wide"
+    }
+  ]
+}

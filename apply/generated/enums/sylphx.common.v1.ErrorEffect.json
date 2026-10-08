@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.common.v1.ErrorEffect",
+  "package": "sylphx.common.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ERROR_EFFECT_NONE",
+      "wire": "none"
+    },
+    {
+      "number": 2,
+      "proto_name": "ERROR_EFFECT_APPLIED",
+      "wire": "applied"
+    },
+    {
+      "number": 3,
+      "proto_name": "ERROR_EFFECT_UNKNOWN",
+      "wire": "unknown"
+    }
+  ]
+}

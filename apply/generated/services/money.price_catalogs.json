@@ -1,0 +1,34 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.price_catalogs.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "money.price_catalogs.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.price_catalogs.sync",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/PriceCatalog"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "name": "sylphx.notify.v1.MessageState",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MESSAGE_STATE_ACCEPTED",
+      "wire": "accepted"
+    },
+    {
+      "number": 2,
+      "proto_name": "MESSAGE_STATE_SUPPRESSED",
+      "wire": "suppressed"
+    },
+    {
+      "number": 3,
+      "proto_name": "MESSAGE_STATE_DELIVERING",
+      "wire": "delivering"
+    },
+    {
+      "number": 4,
+      "proto_name": "MESSAGE_STATE_DELIVERED",
+      "wire": "delivered"
+    },
+    {
+      "number": 5,
+      "proto_name": "MESSAGE_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 6,
+      "proto_name": "MESSAGE_STATE_CANCELLED",
+      "wire": "cancelled"
+    },
+    {
+      "number": 7,
+      "proto_name": "MESSAGE_STATE_RATE_LIMITED",
+      "wire": "rate_limited"
+    }
+  ]
+}

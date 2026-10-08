@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.hosting.v1.ServiceExposure",
+  "package": "sylphx.hosting.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SERVICE_EXPOSURE_PUBLIC",
+      "wire": "public"
+    },
+    {
+      "number": 2,
+      "proto_name": "SERVICE_EXPOSURE_INTERNAL",
+      "wire": "internal"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.events.v1.DeliveryAttemptOutcome",
+  "package": "sylphx.events.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "DELIVERY_ATTEMPT_OUTCOME_DELIVERED",
+      "wire": "delivered"
+    },
+    {
+      "number": 2,
+      "proto_name": "DELIVERY_ATTEMPT_OUTCOME_RETRYABLE_FAILURE",
+      "wire": "retryable_failure"
+    },
+    {
+      "number": 3,
+      "proto_name": "DELIVERY_ATTEMPT_OUTCOME_TERMINAL_FAILURE",
+      "wire": "terminal_failure"
+    },
+    {
+      "number": 4,
+      "proto_name": "DELIVERY_ATTEMPT_OUTCOME_AMBIGUOUS",
+      "wire": "ambiguous"
+    }
+  ]
+}

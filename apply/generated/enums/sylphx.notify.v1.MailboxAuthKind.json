@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.notify.v1.MailboxAuthKind",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MAILBOX_AUTH_KIND_PASSWORD",
+      "wire": "password"
+    },
+    {
+      "number": 2,
+      "proto_name": "MAILBOX_AUTH_KIND_OAUTH",
+      "wire": "oauth"
+    }
+  ]
+}

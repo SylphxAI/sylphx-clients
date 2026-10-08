@@ -1,0 +1,25 @@
+{
+  "collection": "jobs",
+  "controller": "services/workflows/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Job",
+  "message": "sylphx.workflows.v1.Job",
+  "meters": [
+    "workflows.job.seconds",
+    "workflows.job.run"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/jobs/{job}",
+  "plural": "jobs",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "workflows",
+  "shape": "spec_status",
+  "singular": "job",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "workflows.sylphx.com/Job"
+}

@@ -1,0 +1,74 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "config.config_flags.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "config.config_flags.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "config_flag_id",
+              "validate_only"
+            ]
+          },
+          "id": "config.config_flags.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "config.config_flags.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only"
+            ]
+          },
+          "id": "config.config_flags.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "config.config_flags.evaluate",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "if_none_match"
+            ]
+          },
+          "id": "config.config_flags.snapshot",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "config.sylphx.com/ConfigFlag"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "config_flags",
+  "controller": "kernel/config/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "ConfigFlag",
+  "message": "sylphx.config.v1.ConfigFlag",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/config_flags/{config_flag}",
+  "plural": "configFlags",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "config",
+  "shape": "spec_status",
+  "singular": "configFlag",
+  "stale_bound": "86400s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "config.sylphx.com/ConfigFlag"
+}

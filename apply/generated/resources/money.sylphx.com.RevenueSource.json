@@ -1,0 +1,22 @@
+{
+  "collection": "revenue_sources",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "RevenueSource",
+  "message": "sylphx.money.v1.RevenueSource",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/revenue_sources/{revenue_source}",
+  "plural": "revenueSources",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "spec_status",
+  "singular": "revenueSource",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/RevenueSource"
+}

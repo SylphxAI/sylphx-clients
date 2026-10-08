@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.workflows.v1.JobConcurrency",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "JOB_CONCURRENCY_FORBID",
+      "wire": "forbid"
+    },
+    {
+      "number": 2,
+      "proto_name": "JOB_CONCURRENCY_QUEUE",
+      "wire": "queue"
+    },
+    {
+      "number": 3,
+      "proto_name": "JOB_CONCURRENCY_ALLOW",
+      "wire": "allow"
+    }
+  ]
+}

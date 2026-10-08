@@ -1,0 +1,70 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.builds.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "build.builds.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "build_id",
+              "validate_only"
+            ]
+          },
+          "id": "build.builds.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.builds.cancel",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.builds.run",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "build.builds.build_image",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "wait"
+            ]
+          },
+          "id": "build.builds.read_logs",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "build.sylphx.com/Build"
+    }
+  ]
+}

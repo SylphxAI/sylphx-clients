@@ -1,0 +1,22 @@
+{
+  "collection": "mail_routes",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Route",
+  "message": "sylphx.notify.v1.Route",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/mail_domains/{mail_domain}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/mail_domains/{mail_domain}/mail_routes/{mail_route}",
+  "plural": "routes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "route",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/Route"
+}

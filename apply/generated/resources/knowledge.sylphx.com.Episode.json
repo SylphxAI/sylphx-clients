@@ -1,0 +1,22 @@
+{
+  "collection": "episodes",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Episode",
+  "message": "sylphx.knowledge.v1.Episode",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/spaces/{space}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/episodes/{episode}",
+  "plural": "episodes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "knowledge",
+  "shape": "record",
+  "singular": "episode",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "knowledge.sylphx.com/Episode"
+}

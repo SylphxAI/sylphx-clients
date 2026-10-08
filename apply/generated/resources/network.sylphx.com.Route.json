@@ -1,0 +1,24 @@
+{
+  "collection": "routes",
+  "controller": "services/network/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Route",
+  "message": "sylphx.network.v1.Route",
+  "meters": [
+    "network.custom_hostnames"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/routes/{route}",
+  "plural": "routes",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "network",
+  "shape": "spec_status",
+  "singular": "route",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "network.sylphx.com/Route"
+}

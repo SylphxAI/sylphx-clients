@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.knowledge.v1.EntityLifecycle",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ENTITY_LIFECYCLE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "ENTITY_LIFECYCLE_MERGED",
+      "wire": "merged"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.connections.v1.RepositorySelection",
+  "package": "sylphx.connections.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "REPOSITORY_SELECTION_ALL",
+      "wire": "all"
+    },
+    {
+      "number": 2,
+      "proto_name": "REPOSITORY_SELECTION_SELECTED",
+      "wire": "selected"
+    }
+  ]
+}

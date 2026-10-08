@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.config.v1.ConfigValueType",
+  "package": "sylphx.config.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CONFIG_VALUE_TYPE_BOOL",
+      "wire": "bool"
+    },
+    {
+      "number": 2,
+      "proto_name": "CONFIG_VALUE_TYPE_STRING",
+      "wire": "string"
+    },
+    {
+      "number": 3,
+      "proto_name": "CONFIG_VALUE_TYPE_INT64",
+      "wire": "int64"
+    },
+    {
+      "number": 4,
+      "proto_name": "CONFIG_VALUE_TYPE_DOUBLE",
+      "wire": "double"
+    },
+    {
+      "number": 5,
+      "proto_name": "CONFIG_VALUE_TYPE_JSON",
+      "wire": "json"
+    }
+  ]
+}

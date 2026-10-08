@@ -1,0 +1,59 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "sandboxes.volumes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "sandboxes.volumes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "volume_id",
+              "validate_only"
+            ]
+          },
+          "id": "sandboxes.volumes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "sandboxes.volumes.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "sandboxes.volumes.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "sandboxes.sylphx.com/Volume"
+    }
+  ]
+}

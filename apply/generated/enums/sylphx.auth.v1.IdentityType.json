@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.auth.v1.IdentityType",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "IDENTITY_TYPE_PASSWORD",
+      "wire": "password"
+    },
+    {
+      "number": 2,
+      "proto_name": "IDENTITY_TYPE_EMAIL",
+      "wire": "email"
+    },
+    {
+      "number": 3,
+      "proto_name": "IDENTITY_TYPE_OIDC",
+      "wire": "oidc"
+    },
+    {
+      "number": 4,
+      "proto_name": "IDENTITY_TYPE_DEVICE",
+      "wire": "device"
+    },
+    {
+      "number": 5,
+      "proto_name": "IDENTITY_TYPE_PASSKEY",
+      "wire": "passkey"
+    }
+  ]
+}

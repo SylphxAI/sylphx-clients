@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.knowledge.v1.SpaceKind",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SPACE_KIND_WORKSPACE",
+      "wire": "workspace"
+    },
+    {
+      "number": 2,
+      "proto_name": "SPACE_KIND_PROJECT",
+      "wire": "project"
+    },
+    {
+      "number": 3,
+      "proto_name": "SPACE_KIND_TEAM",
+      "wire": "team"
+    },
+    {
+      "number": 4,
+      "proto_name": "SPACE_KIND_END_USER",
+      "wire": "end_user"
+    },
+    {
+      "number": 5,
+      "proto_name": "SPACE_KIND_AGENT",
+      "wire": "agent"
+    },
+    {
+      "number": 6,
+      "proto_name": "SPACE_KIND_SHARED",
+      "wire": "shared"
+    }
+  ]
+}

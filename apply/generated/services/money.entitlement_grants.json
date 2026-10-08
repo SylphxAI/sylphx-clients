@@ -1,0 +1,43 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.entitlement_grants.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.entitlement_grants.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.entitlement_grants.check",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "entitlement_grant_id"
+            ]
+          },
+          "id": "money.entitlement_grants.create",
+          "kind": "create"
+        }
+      ],
+      "resource_type": "money.sylphx.com/EntitlementGrant"
+    }
+  ]
+}

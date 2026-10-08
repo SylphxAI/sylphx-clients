@@ -1,0 +1,547 @@
+{
+	"description": "Golden vectors for the managed-field hash of `sylphx apply` (docs/specs/one-platform/sylphx-apply.md section 3): RFC 8785 serialisation, SHA-256, first 32 hex characters, and the canonical protojson rendering of managed fields. Read by clients/apply/tests/hash_vectors.rs; every other implementation of the hash (the console) must produce the same values.",
+	"jcs": [
+		{
+			"name": "object members sort, nested",
+			"input_json": "{\"b\":2,\"a\":[1,2,{\"z\":null,\"y\":true}]}",
+			"canonical": "{\"a\":[1,2,{\"y\":true,\"z\":null}],\"b\":2}"
+		},
+		{
+			"name": "non-ASCII is not escaped and sorts by UTF-16",
+			"input_json": "{\"é\":1,\"z\":2,\"a\":3}",
+			"canonical": "{\"a\":3,\"z\":2,\"é\":1}"
+		},
+		{
+			"name": "string escapes",
+			"input_json": "\"a\\\"b\\\\c\\n\\t\\u0001\\u20ac\"",
+			"canonical": "\"a\\\"b\\\\c\\n\\t\\u0001€\""
+		},
+		{
+			"name": "zero",
+			"input_json": "0",
+			"canonical": "0"
+		},
+		{
+			"name": "negative zero",
+			"input_json": "-0",
+			"canonical": "0"
+		},
+		{
+			"name": "integer",
+			"input_json": "42",
+			"canonical": "42"
+		},
+		{
+			"name": "fraction",
+			"input_json": "4.5",
+			"canonical": "4.5"
+		},
+		{
+			"name": "small decimal",
+			"input_json": "0.002",
+			"canonical": "0.002"
+		},
+		{
+			"name": "exponent input",
+			"input_json": "2e-3",
+			"canonical": "0.002"
+		},
+		{
+			"name": "one millionth",
+			"input_json": "0.000001",
+			"canonical": "0.000001"
+		},
+		{
+			"name": "below one millionth",
+			"input_json": "0.0000001",
+			"canonical": "1e-7"
+		},
+		{
+			"name": "smallest double",
+			"input_json": "5e-324",
+			"canonical": "5e-324"
+		},
+		{
+			"name": "largest double",
+			"input_json": "1.7976931348623157e308",
+			"canonical": "1.7976931348623157e+308"
+		},
+		{
+			"name": "1e20",
+			"input_json": "100000000000000000000",
+			"canonical": "100000000000000000000"
+		},
+		{
+			"name": "1e21",
+			"input_json": "1e21",
+			"canonical": "1e+21"
+		},
+		{
+			"name": "above 2^53 rounds to a double",
+			"input_json": "9007199254740993",
+			"canonical": "9007199254740992"
+		},
+		{
+			"name": "long fraction",
+			"input_json": "333333333.33333329",
+			"canonical": "333333333.3333333"
+		},
+		{
+			"name": "empty object",
+			"input_json": "{}",
+			"canonical": "{}"
+		},
+		{
+			"name": "empty array",
+			"input_json": "[]",
+			"canonical": "[]"
+		}
+	],
+	"hash": [
+		{
+			"name": "empty",
+			"managed": {},
+			"canonical": "{}",
+			"hash": "44136fa355b3678a1146ad16f7e8649e"
+		},
+		{
+			"name": "one field",
+			"managed": {
+				"spec.size": "10"
+			},
+			"canonical": "{\"spec.size\":\"10\"}",
+			"hash": "e15fadd4c7edf9b11df880fae5dfc587"
+		},
+		{
+			"name": "fields, labels, display name",
+			"managed": {
+				"spec.size": "10",
+				"spec.mode": "safe",
+				"meta.labels": {
+					"tier": "a",
+					"team": "core"
+				},
+				"meta.display_name": "Plus, monthly"
+			},
+			"canonical": "{\"meta.display_name\":\"Plus, monthly\",\"meta.labels\":{\"team\":\"core\",\"tier\":\"a\"},\"spec.mode\":\"safe\",\"spec.size\":\"10\"}",
+			"hash": "2a8ef2f5c58d7e3e143b9c67916edca8"
+		},
+		{
+			"name": "nested list of messages",
+			"managed": {
+				"spec.products": [
+					{
+						"key": "plus_monthly",
+						"amount": "499"
+					},
+					{
+						"key": "plus_yearly",
+						"amount": "4999"
+					}
+				]
+			},
+			"canonical": "{\"spec.products\":[{\"amount\":\"499\",\"key\":\"plus_monthly\"},{\"amount\":\"4999\",\"key\":\"plus_yearly\"}]}",
+			"hash": "02f8a7b83b3f317a3efaf71c52347ea0"
+		},
+		{
+			"name": "non-ASCII",
+			"managed": {
+				"meta.display_name": "Café ☕"
+			},
+			"canonical": "{\"meta.display_name\":\"Café ☕\"}",
+			"hash": "170ad73ded400579f1ad45bffdd0eb96"
+		},
+		{
+			"name": "numbers",
+			"managed": {
+				"spec.ratio": 0.5,
+				"spec.count": 3,
+				"spec.on": true
+			},
+			"canonical": "{\"spec.count\":3,\"spec.on\":true,\"spec.ratio\":0.5}",
+			"hash": "6a2765416f074a50dc31a2e52de65b61"
+		}
+	],
+	"registry": {
+		"resources": [
+			{
+				"type": "demo.sylphx.com/Thing",
+				"service": "demo",
+				"collection": "things",
+				"message": "demo.Thing",
+				"pattern": "orgs/{org}/projects/{project}/envs/{env}/things/{thing}",
+				"parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+				"shape": "spec_status",
+				"reconciled": true
+			},
+			{
+				"type": "demo.sylphx.com/Settings",
+				"service": "demo",
+				"collection": "settings",
+				"message": "demo.Settings",
+				"pattern": "orgs/{org}/projects/{project}/envs/{env}/settings",
+				"parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+				"shape": "singleton",
+				"reconciled": false
+			}
+		],
+		"messages": [
+			{
+				"name": "demo.Thing",
+				"fields": [
+					{
+						"name": "name",
+						"behaviors": ["IDENTIFIER"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "meta",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "message",
+							"name": "demo.Meta"
+						}
+					},
+					{
+						"name": "spec",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "message",
+							"name": "demo.ThingSpec"
+						}
+					},
+					{
+						"name": "status",
+						"behaviors": ["OUTPUT_ONLY"],
+						"type": {
+							"kind": "message",
+							"name": "demo.Status"
+						}
+					}
+				]
+			},
+			{
+				"name": "demo.ThingSpec",
+				"fields": [
+					{
+						"name": "size",
+						"behaviors": ["REQUIRED"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "int64"
+						}
+					},
+					{
+						"name": "mode",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "enum",
+							"name": "demo.Mode"
+						}
+					},
+					{
+						"name": "note",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "tags",
+						"behaviors": ["OPTIONAL"],
+						"repeated": true,
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "password",
+						"behaviors": ["INPUT_ONLY"],
+						"sensitive": true,
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "token",
+						"behaviors": ["OPTIONAL"],
+						"sensitive": true,
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "limits",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "message",
+							"name": "demo.Limits"
+						}
+					}
+				]
+			},
+			{
+				"name": "demo.Limits",
+				"fields": [
+					{
+						"name": "cpu",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "int32"
+						}
+					},
+					{
+						"name": "ratio",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "double"
+						}
+					}
+				]
+			},
+			{
+				"name": "demo.Settings",
+				"fields": [
+					{
+						"name": "name",
+						"behaviors": ["IDENTIFIER"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "meta",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "message",
+							"name": "demo.Meta"
+						}
+					},
+					{
+						"name": "spec",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "message",
+							"name": "demo.SettingsSpec"
+						}
+					}
+				]
+			},
+			{
+				"name": "demo.SettingsSpec",
+				"fields": [
+					{
+						"name": "currency",
+						"behaviors": ["REQUIRED"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "plans",
+						"behaviors": ["OPTIONAL"],
+						"repeated": true,
+						"type": {
+							"kind": "message",
+							"name": "demo.Plan"
+						}
+					}
+				]
+			},
+			{
+				"name": "demo.Plan",
+				"fields": [
+					{
+						"name": "key",
+						"behaviors": ["REQUIRED"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "string"
+						}
+					},
+					{
+						"name": "amount",
+						"behaviors": ["OPTIONAL"],
+						"type": {
+							"kind": "scalar",
+							"scalar": "int64"
+						}
+					}
+				]
+			},
+			{
+				"name": "demo.Meta",
+				"fields": []
+			},
+			{
+				"name": "demo.Status",
+				"fields": []
+			}
+		],
+		"enums": [
+			{
+				"name": "demo.Mode",
+				"values": [
+					{
+						"number": 1,
+						"wire": "fast"
+					},
+					{
+						"number": 2,
+						"wire": "safe"
+					}
+				]
+			}
+		],
+		"services": [
+			{
+				"collections": [
+					{
+						"resource_type": "demo.sylphx.com/Thing",
+						"methods": [
+							{
+								"id": "demo.things.get",
+								"kind": "get",
+								"http": {
+									"query_params": []
+								}
+							},
+							{
+								"id": "demo.things.list",
+								"kind": "list",
+								"http": {
+									"query_params": ["filter", "page_size", "page_token"]
+								}
+							},
+							{
+								"id": "demo.things.update",
+								"kind": "update",
+								"http": {
+									"query_params": ["update_mask", "allow_missing", "validate_only"]
+								}
+							}
+						]
+					},
+					{
+						"resource_type": "demo.sylphx.com/Settings",
+						"methods": [
+							{
+								"id": "demo.settings.get",
+								"kind": "get",
+								"http": {
+									"query_params": []
+								}
+							},
+							{
+								"id": "demo.settings.update",
+								"kind": "update",
+								"http": {
+									"query_params": ["update_mask", "allow_missing", "validate_only"]
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"kind": "demo.sylphx.com/Thing",
+	"protojson": [
+		{
+			"name": "int64 as strings, enum numbers as names, defaults and unmanaged fields dropped",
+			"resource": {
+				"name": "orgs/o/projects/p/envs/e/things/main",
+				"meta": {
+					"generation": "3",
+					"etag": "\"r7\"",
+					"labels": {
+						"sylphx-managed-by": "apply",
+						"team": "a"
+					},
+					"annotations": {
+						"sylphx-applied": "x",
+						"note": "ignored"
+					},
+					"display_name": "N"
+				},
+				"spec": {
+					"size": 10,
+					"mode": 2,
+					"note": "",
+					"tags": [],
+					"token": "secret",
+					"password": "p",
+					"limits": {
+						"cpu": "3"
+					}
+				},
+				"status": {
+					"observed_generation": "3",
+					"conditions": []
+				}
+			},
+			"managed": {
+				"spec.size": "10",
+				"spec.mode": "safe",
+				"spec.limits": {
+					"cpu": 3
+				},
+				"meta.display_name": "N",
+				"meta.labels": {
+					"team": "a"
+				}
+			},
+			"canonical": "{\"meta.display_name\":\"N\",\"meta.labels\":{\"team\":\"a\"},\"spec.limits\":{\"cpu\":3},\"spec.mode\":\"safe\",\"spec.size\":\"10\"}",
+			"hash": "66367148f4cb7688b4413455fa37ff15"
+		},
+		{
+			"name": "a declaration and the server answer render the same",
+			"resource": {
+				"name": "orgs/o/projects/p/envs/e/things/main",
+				"meta": {
+					"labels": {}
+				},
+				"spec": {
+					"size": "10",
+					"mode": "safe",
+					"tags": ["a", "b"],
+					"limits": {
+						"ratio": 0.25
+					}
+				}
+			},
+			"managed": {
+				"spec.size": "10",
+				"spec.mode": "safe",
+				"spec.tags": ["a", "b"],
+				"spec.limits": {
+					"ratio": 0.25
+				}
+			},
+			"canonical": "{\"spec.limits\":{\"ratio\":0.25},\"spec.mode\":\"safe\",\"spec.size\":\"10\",\"spec.tags\":[\"a\",\"b\"]}",
+			"hash": "856dae0ea5d8df5d4255a26b0ffbee81"
+		},
+		{
+			"name": "nothing set",
+			"resource": {
+				"name": "orgs/o/projects/p/envs/e/things/main",
+				"meta": {},
+				"spec": {}
+			},
+			"managed": {},
+			"canonical": "{}",
+			"hash": "44136fa355b3678a1146ad16f7e8649e"
+		}
+	]
+}

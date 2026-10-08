@@ -1,0 +1,41 @@
+{
+  "name": "sylphx.build.v1.BuildFailure",
+  "package": "sylphx.build.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BUILD_FAILURE_SOURCE_UNAVAILABLE",
+      "wire": "source_unavailable"
+    },
+    {
+      "number": 2,
+      "proto_name": "BUILD_FAILURE_BUILD_ERROR",
+      "wire": "build_error"
+    },
+    {
+      "number": 3,
+      "proto_name": "BUILD_FAILURE_NO_CAPACITY",
+      "wire": "no_capacity"
+    },
+    {
+      "number": 4,
+      "proto_name": "BUILD_FAILURE_CLASS_NOT_OFFERED",
+      "wire": "class_not_offered"
+    },
+    {
+      "number": 5,
+      "proto_name": "BUILD_FAILURE_SIGNING_UNAVAILABLE",
+      "wire": "signing_unavailable"
+    },
+    {
+      "number": 6,
+      "proto_name": "BUILD_FAILURE_TIMEOUT",
+      "wire": "timeout"
+    },
+    {
+      "number": 7,
+      "proto_name": "BUILD_FAILURE_SETUP_FAILED",
+      "wire": "setup_failed"
+    }
+  ]
+}

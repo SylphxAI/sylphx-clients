@@ -1,0 +1,22 @@
+{
+  "collection": "runs",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Run",
+  "message": "sylphx.workflows.v1.Run",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}/runs/{run}",
+  "plural": "runs",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "workflows",
+  "shape": "record",
+  "singular": "run",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "workflows.sylphx.com/Run"
+}

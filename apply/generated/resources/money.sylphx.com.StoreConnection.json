@@ -1,0 +1,22 @@
+{
+  "collection": "store_connections",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "StoreConnection",
+  "message": "sylphx.money.v1.StoreConnection",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/store_connections/{store_connection}",
+  "plural": "storeConnections",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "spec_status",
+  "singular": "storeConnection",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/StoreConnection"
+}

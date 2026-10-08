@@ -1,0 +1,22 @@
+{
+  "collection": "distributed_runs",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "DistributedRun",
+  "message": "sylphx.workflows.v1.DistributedRun",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/distributed_jobs/{distributed_job}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/distributed_jobs/{distributed_job}/distributed_runs/{distributed_run}",
+  "plural": "distributedRuns",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "workflows",
+  "shape": "record",
+  "singular": "distributedRun",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "workflows.sylphx.com/DistributedRun"
+}

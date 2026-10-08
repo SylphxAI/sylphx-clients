@@ -1,0 +1,49 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "hosting.previews.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "hosting.previews.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "preview_id",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.previews.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.previews.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "hosting.sylphx.com/Preview"
+    }
+  ]
+}

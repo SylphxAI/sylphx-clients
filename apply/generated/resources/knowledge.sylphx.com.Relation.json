@@ -1,0 +1,22 @@
+{
+  "collection": "relations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Relation",
+  "message": "sylphx.knowledge.v1.Relation",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/spaces/{space}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/relations/{relation}",
+  "plural": "relations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "knowledge",
+  "shape": "record",
+  "singular": "relation",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "knowledge.sylphx.com/Relation"
+}

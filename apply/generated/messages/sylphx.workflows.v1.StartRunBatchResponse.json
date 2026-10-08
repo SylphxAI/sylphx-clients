@@ -1,0 +1,22 @@
+{
+  "fields": [
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "run",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.workflows.v1.Run"
+      }
+    }
+  ],
+  "name": "sylphx.workflows.v1.StartRunBatchResponse",
+  "package": "sylphx.workflows.v1"
+}

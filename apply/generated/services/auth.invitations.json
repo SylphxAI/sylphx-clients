@@ -1,0 +1,52 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.invitations.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.invitations.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "invitation_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.invitations.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.invitations.revoke",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.invitations.accept",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/Invitation"
+    }
+  ]
+}

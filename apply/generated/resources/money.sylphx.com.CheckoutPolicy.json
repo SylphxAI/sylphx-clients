@@ -1,0 +1,22 @@
+{
+  "collection": "checkout_policies",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "CheckoutPolicy",
+  "message": "sylphx.money.v1.CheckoutPolicy",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/checkout_policies/{checkout_policy}",
+  "plural": "checkoutPolicies",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "singleton",
+  "singular": "checkoutPolicy",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/CheckoutPolicy"
+}

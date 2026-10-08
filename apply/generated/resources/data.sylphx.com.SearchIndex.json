@@ -1,0 +1,25 @@
+{
+  "collection": "search_indexes",
+  "controller": "services/data/controller",
+  "deletion_protection": true,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "SearchIndex",
+  "message": "sylphx.data.v1.SearchIndex",
+  "meters": [
+    "data.storage.bytes",
+    "data.requests"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/search_indexes/{search_index}",
+  "plural": "searchIndexes",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "data",
+  "shape": "spec_status",
+  "singular": "searchIndex",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "data.sylphx.com/SearchIndex"
+}

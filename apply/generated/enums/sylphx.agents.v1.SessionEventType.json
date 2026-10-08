@@ -1,0 +1,71 @@
+{
+  "name": "sylphx.agents.v1.SessionEventType",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SESSION_EVENT_TYPE_USER_MESSAGE",
+      "wire": "user_message"
+    },
+    {
+      "number": 2,
+      "proto_name": "SESSION_EVENT_TYPE_STEER",
+      "wire": "steer"
+    },
+    {
+      "number": 3,
+      "proto_name": "SESSION_EVENT_TYPE_AGENT_MESSAGE",
+      "wire": "agent_message"
+    },
+    {
+      "number": 4,
+      "proto_name": "SESSION_EVENT_TYPE_TOOL_CALL",
+      "wire": "tool_call"
+    },
+    {
+      "number": 5,
+      "proto_name": "SESSION_EVENT_TYPE_TOOL_RESULT",
+      "wire": "tool_result"
+    },
+    {
+      "number": 6,
+      "proto_name": "SESSION_EVENT_TYPE_APPROVAL_REQUESTED",
+      "wire": "approval_requested"
+    },
+    {
+      "number": 7,
+      "proto_name": "SESSION_EVENT_TYPE_APPROVAL_DECIDED",
+      "wire": "approval_decided"
+    },
+    {
+      "number": 8,
+      "proto_name": "SESSION_EVENT_TYPE_STATUS",
+      "wire": "status"
+    },
+    {
+      "number": 9,
+      "proto_name": "SESSION_EVENT_TYPE_COMPACTION",
+      "wire": "compaction"
+    },
+    {
+      "number": 10,
+      "proto_name": "SESSION_EVENT_TYPE_THOUGHT",
+      "wire": "thought"
+    },
+    {
+      "number": 11,
+      "proto_name": "SESSION_EVENT_TYPE_FILE_CHANGE",
+      "wire": "file_change"
+    },
+    {
+      "number": 12,
+      "proto_name": "SESSION_EVENT_TYPE_RESPONSE",
+      "wire": "response"
+    },
+    {
+      "number": 13,
+      "proto_name": "SESSION_EVENT_TYPE_ERROR",
+      "wire": "error"
+    }
+  ]
+}

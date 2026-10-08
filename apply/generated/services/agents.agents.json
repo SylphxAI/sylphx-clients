@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agents.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "agents.agents.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "agent_id",
+              "validate_only"
+            ]
+          },
+          "id": "agents.agents.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "agents.agents.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "agents.agents.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/Agent"
+    }
+  ]
+}

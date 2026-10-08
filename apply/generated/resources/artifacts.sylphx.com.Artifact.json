@@ -1,0 +1,22 @@
+{
+  "collection": "artifacts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Artifact",
+  "message": "sylphx.artifacts.v1.Artifact",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/artifacts/{artifact}",
+  "plural": "artifacts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "artifacts",
+  "shape": "record",
+  "singular": "artifact",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "artifacts.sylphx.com/Artifact"
+}

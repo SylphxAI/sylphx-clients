@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.assets.v1.AssetState",
+  "package": "sylphx.assets.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ASSET_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "ASSET_STATE_READY",
+      "wire": "ready"
+    },
+    {
+      "number": 3,
+      "proto_name": "ASSET_STATE_APPROVED",
+      "wire": "approved"
+    },
+    {
+      "number": 4,
+      "proto_name": "ASSET_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 5,
+      "proto_name": "ASSET_STATE_REFUSED",
+      "wire": "refused"
+    },
+    {
+      "number": 6,
+      "proto_name": "ASSET_STATE_UNSUPPORTED",
+      "wire": "unsupported"
+    }
+  ]
+}

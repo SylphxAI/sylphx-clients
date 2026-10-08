@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.assets.v1.QaSeverity",
+  "package": "sylphx.assets.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "QA_SEVERITY_ERROR",
+      "wire": "error"
+    },
+    {
+      "number": 2,
+      "proto_name": "QA_SEVERITY_WARNING",
+      "wire": "warning"
+    }
+  ]
+}

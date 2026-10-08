@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.build.v1.BuildCacheAccess",
+  "package": "sylphx.build.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BUILD_CACHE_ACCESS_READ",
+      "wire": "read"
+    },
+    {
+      "number": 2,
+      "proto_name": "BUILD_CACHE_ACCESS_READ_WRITE",
+      "wire": "read_write"
+    }
+  ]
+}

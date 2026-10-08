@@ -1,0 +1,23 @@
+{
+  "collection": "revenue",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "RevenueSummary",
+  "message": "sylphx.money.v1.RevenueSummary",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/revenue",
+  "plural": "revenueSummaries",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "singleton",
+  "singleton": true,
+  "singular": "revenueSummary",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/RevenueSummary"
+}

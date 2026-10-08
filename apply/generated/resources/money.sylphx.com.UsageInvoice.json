@@ -1,0 +1,22 @@
+{
+  "collection": "usage_invoices",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UsageInvoice",
+  "message": "sylphx.money.v1.UsageInvoice",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/usage_invoices/{usage_invoice}",
+  "plural": "usageInvoices",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "usageInvoice",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/UsageInvoice"
+}

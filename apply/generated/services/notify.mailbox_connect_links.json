@@ -1,0 +1,38 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.mailbox_connect_links.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.mailbox_connect_links.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "mailbox_connect_link_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.mailbox_connect_links.create",
+          "kind": "create"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/MailboxConnectLink"
+    }
+  ]
+}

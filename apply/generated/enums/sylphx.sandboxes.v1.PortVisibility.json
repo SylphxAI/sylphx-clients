@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.sandboxes.v1.PortVisibility",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "PORT_VISIBILITY_PRIVATE",
+      "wire": "private"
+    },
+    {
+      "number": 2,
+      "proto_name": "PORT_VISIBILITY_PUBLIC",
+      "wire": "public"
+    }
+  ]
+}

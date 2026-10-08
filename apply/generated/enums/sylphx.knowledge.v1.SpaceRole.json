@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.knowledge.v1.SpaceRole",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SPACE_ROLE_READER",
+      "wire": "reader"
+    },
+    {
+      "number": 2,
+      "proto_name": "SPACE_ROLE_WRITER",
+      "wire": "writer"
+    },
+    {
+      "number": 3,
+      "proto_name": "SPACE_ROLE_OWNER",
+      "wire": "owner"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "name": "sylphx.access.v1.RevokeReason",
+  "package": "sylphx.access.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "REVOKE_REASON_USER",
+      "wire": "user"
+    },
+    {
+      "number": 2,
+      "proto_name": "REVOKE_REASON_ROTATION",
+      "wire": "rotation"
+    },
+    {
+      "number": 3,
+      "proto_name": "REVOKE_REASON_LEAKED",
+      "wire": "leaked"
+    },
+    {
+      "number": 4,
+      "proto_name": "REVOKE_REASON_CLAIMED",
+      "wire": "claimed"
+    },
+    {
+      "number": 5,
+      "proto_name": "REVOKE_REASON_CLAIM_EXPIRED",
+      "wire": "claim_expired"
+    },
+    {
+      "number": 6,
+      "proto_name": "REVOKE_REASON_ORG_DELETED",
+      "wire": "org_deleted"
+    },
+    {
+      "number": 7,
+      "proto_name": "REVOKE_REASON_ADMIN",
+      "wire": "admin"
+    },
+    {
+      "number": 8,
+      "proto_name": "REVOKE_REASON_ROLE_CHANGED",
+      "wire": "role_changed"
+    },
+    {
+      "number": 9,
+      "proto_name": "REVOKE_REASON_LOGOUT",
+      "wire": "logout"
+    }
+  ]
+}

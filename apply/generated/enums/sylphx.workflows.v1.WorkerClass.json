@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.workflows.v1.WorkerClass",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "WORKER_CLASS_SCAVENGER",
+      "wire": "scavenger"
+    },
+    {
+      "number": 2,
+      "proto_name": "WORKER_CLASS_STANDARD",
+      "wire": "standard"
+    }
+  ]
+}

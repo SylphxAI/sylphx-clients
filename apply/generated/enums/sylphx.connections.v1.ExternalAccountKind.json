@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.connections.v1.ExternalAccountKind",
+  "package": "sylphx.connections.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EXTERNAL_ACCOUNT_KIND_USER",
+      "wire": "user"
+    },
+    {
+      "number": 2,
+      "proto_name": "EXTERNAL_ACCOUNT_KIND_ORGANIZATION",
+      "wire": "organization"
+    }
+  ]
+}

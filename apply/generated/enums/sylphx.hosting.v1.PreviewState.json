@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.hosting.v1.PreviewState",
+  "package": "sylphx.hosting.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "PREVIEW_STATE_BUILDING",
+      "wire": "building"
+    },
+    {
+      "number": 2,
+      "proto_name": "PREVIEW_STATE_SERVING",
+      "wire": "serving"
+    },
+    {
+      "number": 3,
+      "proto_name": "PREVIEW_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 4,
+      "proto_name": "PREVIEW_STATE_CLOSED",
+      "wire": "closed"
+    }
+  ]
+}

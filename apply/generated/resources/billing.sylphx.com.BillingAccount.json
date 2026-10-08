@@ -1,0 +1,22 @@
+{
+  "collection": "billing_accounts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "BillingAccount",
+  "message": "sylphx.billing.v1.BillingAccount",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/billing_accounts/{billing_account}",
+  "plural": "billingAccounts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "billing",
+  "shape": "spec_status",
+  "singular": "billingAccount",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": true,
+  "type": "billing.sylphx.com/BillingAccount"
+}

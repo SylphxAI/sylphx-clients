@@ -1,0 +1,22 @@
+{
+  "collection": "scrubbing_policies",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ScrubbingPolicy",
+  "message": "sylphx.observability.v1.ScrubbingPolicy",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/scrubbing_policies/{scrubbing_policy}",
+  "plural": "scrubbingPolicies",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "singleton",
+  "singular": "scrubbingPolicy",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/ScrubbingPolicy"
+}

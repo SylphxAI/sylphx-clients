@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.release.v1.RolloutState",
+  "package": "sylphx.release.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ROLLOUT_STATE_WAITING",
+      "wire": "waiting"
+    },
+    {
+      "number": 2,
+      "proto_name": "ROLLOUT_STATE_IN_PROGRESS",
+      "wire": "in_progress"
+    },
+    {
+      "number": 3,
+      "proto_name": "ROLLOUT_STATE_SUCCEEDED",
+      "wire": "succeeded"
+    },
+    {
+      "number": 4,
+      "proto_name": "ROLLOUT_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 5,
+      "proto_name": "ROLLOUT_STATE_SUPERSEDED",
+      "wire": "superseded"
+    }
+  ]
+}

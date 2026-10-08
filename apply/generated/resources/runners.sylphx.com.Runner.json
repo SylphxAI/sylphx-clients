@@ -1,0 +1,22 @@
+{
+  "collection": "runners",
+  "controller": "services/runners/controller",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": false,
+  "kind": "Runner",
+  "message": "sylphx.runners.v1.Runner",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/scale_sets/{scale_set}",
+  "pattern": "orgs/{org}/scale_sets/{scale_set}/runners/{runner}",
+  "plural": "runners",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "runners",
+  "shape": "record",
+  "singular": "runner",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "runners.sylphx.com/Runner"
+}

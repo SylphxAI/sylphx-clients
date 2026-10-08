@@ -1,0 +1,24 @@
+{
+  "collection": "leases",
+  "controller": "services/sandboxes/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Lease",
+  "message": "sylphx.sandboxes.v1.Lease",
+  "meters": [
+    "sandboxes.lease.seconds"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/leases/{lease}",
+  "plural": "leases",
+  "priority_chunk": true,
+  "reconciled": false,
+  "service": "sandboxes",
+  "shape": "spec_status",
+  "singular": "lease",
+  "stale_bound": "60s",
+  "storage": "service",
+  "terraform": false,
+  "type": "sandboxes.sylphx.com/Lease"
+}

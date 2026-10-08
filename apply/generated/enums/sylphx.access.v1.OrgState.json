@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.access.v1.OrgState",
+  "package": "sylphx.access.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ORG_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "ORG_STATE_SUSPENDED",
+      "wire": "suspended"
+    },
+    {
+      "number": 3,
+      "proto_name": "ORG_STATE_DELETING",
+      "wire": "deleting"
+    }
+  ]
+}

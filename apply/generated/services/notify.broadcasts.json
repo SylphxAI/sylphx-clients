@@ -1,0 +1,74 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.broadcasts.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.broadcasts.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "broadcast_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.broadcasts.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.broadcasts.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.broadcasts.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.broadcasts.send",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.broadcasts.cancel",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/Broadcast"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "access.service_enablements.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "access.service_enablements.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "access.service_enablements.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "access.sylphx.com/ServiceEnablement"
+    }
+  ]
+}

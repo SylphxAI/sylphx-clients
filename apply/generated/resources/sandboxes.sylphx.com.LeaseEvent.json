@@ -1,0 +1,22 @@
+{
+  "collection": "lease_events",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "LeaseEvent",
+  "message": "sylphx.sandboxes.v1.LeaseEvent",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/leases/{lease}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/leases/{lease}/lease_events/{lease_event}",
+  "plural": "leaseEvents",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "sandboxes",
+  "shape": "record",
+  "singular": "leaseEvent",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "sandboxes.sylphx.com/LeaseEvent"
+}

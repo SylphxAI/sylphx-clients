@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.billing.v1.BudgetLeaseState",
+  "package": "sylphx.billing.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BUDGET_LEASE_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "BUDGET_LEASE_STATE_RELEASED",
+      "wire": "released"
+    },
+    {
+      "number": 3,
+      "proto_name": "BUDGET_LEASE_STATE_EXPIRED",
+      "wire": "expired"
+    },
+    {
+      "number": 4,
+      "proto_name": "BUDGET_LEASE_STATE_SETTLED",
+      "wire": "settled"
+    },
+    {
+      "number": 5,
+      "proto_name": "BUDGET_LEASE_STATE_REFUSED",
+      "wire": "refused"
+    }
+  ]
+}

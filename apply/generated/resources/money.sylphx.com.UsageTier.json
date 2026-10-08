@@ -1,0 +1,22 @@
+{
+  "collection": "usage_tiers",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UsageTier",
+  "message": "sylphx.money.v1.UsageTier",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/usage_tiers/{usage_tier}",
+  "plural": "usageTiers",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "usageTier",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/UsageTier"
+}

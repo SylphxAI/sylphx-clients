@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.observability.v1.LogSeverity",
+  "package": "sylphx.observability.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "LOG_SEVERITY_TRACE",
+      "wire": "trace"
+    },
+    {
+      "number": 2,
+      "proto_name": "LOG_SEVERITY_DEBUG",
+      "wire": "debug"
+    },
+    {
+      "number": 3,
+      "proto_name": "LOG_SEVERITY_INFO",
+      "wire": "info"
+    },
+    {
+      "number": 4,
+      "proto_name": "LOG_SEVERITY_WARN",
+      "wire": "warn"
+    },
+    {
+      "number": 5,
+      "proto_name": "LOG_SEVERITY_ERROR",
+      "wire": "error"
+    },
+    {
+      "number": 6,
+      "proto_name": "LOG_SEVERITY_FATAL",
+      "wire": "fatal"
+    }
+  ]
+}

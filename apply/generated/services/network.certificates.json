@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "network.certificates.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "network.certificates.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "network.sylphx.com/Certificate"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.sandboxes.v1.StreamRole",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "STREAM_ROLE_VIEWER",
+      "wire": "viewer"
+    },
+    {
+      "number": 2,
+      "proto_name": "STREAM_ROLE_CONTROLLER",
+      "wire": "controller"
+    }
+  ]
+}

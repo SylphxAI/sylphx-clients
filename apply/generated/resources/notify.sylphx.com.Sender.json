@@ -1,0 +1,22 @@
+{
+  "collection": "senders",
+  "controller": "services/notify/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Sender",
+  "message": "sylphx.notify.v1.Sender",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/senders/{sender}",
+  "plural": "senders",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "sender",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "notify.sylphx.com/Sender"
+}

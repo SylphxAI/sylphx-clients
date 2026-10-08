@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.money.v1.FeatureKind",
+  "package": "sylphx.money.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "FEATURE_KIND_BOOLEAN",
+      "wire": "boolean"
+    },
+    {
+      "number": 2,
+      "proto_name": "FEATURE_KIND_LIMIT",
+      "wire": "limit"
+    }
+  ]
+}

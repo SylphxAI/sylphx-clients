@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.agents.v1.SessionState",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SESSION_STATE_IDLE",
+      "wire": "idle"
+    },
+    {
+      "number": 2,
+      "proto_name": "SESSION_STATE_RUNNING",
+      "wire": "running"
+    },
+    {
+      "number": 3,
+      "proto_name": "SESSION_STATE_AWAITING_APPROVAL",
+      "wire": "awaiting_approval"
+    },
+    {
+      "number": 4,
+      "proto_name": "SESSION_STATE_AWAITING_CLIENT",
+      "wire": "awaiting_client"
+    },
+    {
+      "number": 5,
+      "proto_name": "SESSION_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.common.v1.ConditionStatus",
+  "package": "sylphx.common.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CONDITION_STATUS_TRUE",
+      "wire": "true"
+    },
+    {
+      "number": 2,
+      "proto_name": "CONDITION_STATUS_FALSE",
+      "wire": "false"
+    },
+    {
+      "number": 3,
+      "proto_name": "CONDITION_STATUS_UNKNOWN",
+      "wire": "unknown"
+    }
+  ]
+}

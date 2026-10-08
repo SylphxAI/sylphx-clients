@@ -1,0 +1,27 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "config.config_changes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "config.config_changes.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "config.sylphx.com/ConfigChange"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "service_rollouts",
+  "controller": "services/hosting/controller",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": false,
+  "kind": "Rollout",
+  "message": "sylphx.hosting.v1.Rollout",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts/{rollout}",
+  "plural": "serviceRollouts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "hosting",
+  "shape": "spec_status",
+  "singular": "rollout",
+  "stale_bound": "60s",
+  "storage": "service",
+  "terraform": false,
+  "type": "hosting.sylphx.com/Rollout"
+}

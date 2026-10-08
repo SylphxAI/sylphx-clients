@@ -1,0 +1,65 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "broker.trust_policies.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "broker.trust_policies.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "trust_policy_id",
+              "validate_only"
+            ]
+          },
+          "id": "broker.trust_policies.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "broker.trust_policies.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only"
+            ]
+          },
+          "id": "broker.trust_policies.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "broker.trust_policies.exchange_token",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "broker.sylphx.com/TrustPolicy"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.oauth_clients.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.oauth_clients.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "oauth_client_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.oauth_clients.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.oauth_clients.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.oauth_clients.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.oauth_clients.roll_secret",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/OauthClient"
+    }
+  ]
+}

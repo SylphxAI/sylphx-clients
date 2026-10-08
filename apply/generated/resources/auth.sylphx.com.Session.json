@@ -1,0 +1,22 @@
+{
+  "collection": "sessions",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Session",
+  "message": "sylphx.auth.v1.Session",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/end_users/{end_user}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/end_users/{end_user}/sessions/{session}",
+  "plural": "sessions",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "session",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/Session"
+}

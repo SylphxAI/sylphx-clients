@@ -1,0 +1,22 @@
+{
+  "collection": "mail_domains",
+  "controller": "services/notify/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "EmailDomain",
+  "message": "sylphx.notify.v1.EmailDomain",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/mail_domains/{mail_domain}",
+  "plural": "emailDomains",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "emailDomain",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "notify.sylphx.com/EmailDomain"
+}

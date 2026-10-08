@@ -1,0 +1,75 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.catalogs.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "localization.catalogs.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "catalog_id",
+              "validate_only"
+            ]
+          },
+          "id": "localization.catalogs.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "localization.catalogs.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "localization.catalogs.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.catalogs.sync",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "localization.catalogs.export",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "localization.sylphx.com/Catalog"
+    }
+  ]
+}

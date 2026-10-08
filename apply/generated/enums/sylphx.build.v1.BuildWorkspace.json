@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.build.v1.BuildWorkspace",
+  "package": "sylphx.build.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BUILD_WORKSPACE_WARM",
+      "wire": "warm"
+    },
+    {
+      "number": 2,
+      "proto_name": "BUILD_WORKSPACE_COLD",
+      "wire": "cold"
+    }
+  ]
+}

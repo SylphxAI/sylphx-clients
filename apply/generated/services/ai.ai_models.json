@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "ai.ai_models.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "ai.ai_models.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "ai.sylphx.com/AiModel"
+    }
+  ]
+}

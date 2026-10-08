@@ -1,0 +1,59 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.organization_roles.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.organization_roles.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "organization_role_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.organization_roles.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "auth.organization_roles.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.organization_roles.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/OrganizationRole"
+    }
+  ]
+}

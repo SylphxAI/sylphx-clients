@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.billing.v1.UsageGranularity",
+  "package": "sylphx.billing.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "USAGE_GRANULARITY_HOUR",
+      "wire": "hour"
+    },
+    {
+      "number": 2,
+      "proto_name": "USAGE_GRANULARITY_DAY",
+      "wire": "day"
+    },
+    {
+      "number": 3,
+      "proto_name": "USAGE_GRANULARITY_PERIOD",
+      "wire": "period"
+    }
+  ]
+}

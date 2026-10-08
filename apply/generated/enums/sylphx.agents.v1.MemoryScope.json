@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.agents.v1.MemoryScope",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MEMORY_SCOPE_PROJECT",
+      "wire": "project"
+    },
+    {
+      "number": 2,
+      "proto_name": "MEMORY_SCOPE_AGENT",
+      "wire": "agent"
+    },
+    {
+      "number": 3,
+      "proto_name": "MEMORY_SCOPE_END_USER",
+      "wire": "end_user"
+    }
+  ]
+}

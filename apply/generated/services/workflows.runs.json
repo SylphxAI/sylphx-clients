@@ -1,0 +1,76 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.runs.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "workflows.runs.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "run_id",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.runs.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.runs.start_batch",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.runs.signal",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.runs.cancel",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.runs.wait",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "workflows.runs.read_history",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "workflows.sylphx.com/Run"
+    }
+  ]
+}

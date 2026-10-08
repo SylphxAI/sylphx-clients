@@ -1,0 +1,24 @@
+{
+  "collection": "pools",
+  "controller": "services/sandboxes/controller",
+  "deletion_protection": false,
+  "fail_mode": "open",
+  "in_snapshot": true,
+  "kind": "Pool",
+  "message": "sylphx.sandboxes.v1.Pool",
+  "meters": [
+    "sandboxes.pool.warm_seconds"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/pools/{pool}",
+  "plural": "pools",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "sandboxes",
+  "shape": "spec_status",
+  "singular": "pool",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "sandboxes.sylphx.com/Pool"
+}

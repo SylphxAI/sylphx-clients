@@ -1,0 +1,26 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_members.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "events.realtime_members.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "events.sylphx.com/RealtimeMember"
+    }
+  ]
+}

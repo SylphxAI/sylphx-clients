@@ -1,0 +1,37 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_reservations.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_reservations.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_reservations.settle",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.usage_reservations.release",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/UsageReservation"
+    }
+  ]
+}

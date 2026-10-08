@@ -1,0 +1,22 @@
+{
+  "collection": "connection_providers",
+  "controller": "kernel/connections/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ConnectionProvider",
+  "message": "sylphx.connections.v1.ConnectionProvider",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/connection_providers/{connection_provider}",
+  "plural": "connectionProviders",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "connections",
+  "shape": "spec_status",
+  "singular": "connectionProvider",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "connections.sylphx.com/ConnectionProvider"
+}

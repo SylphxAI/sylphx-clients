@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.agents.v1.ApprovalDecision",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "APPROVAL_DECISION_APPROVE",
+      "wire": "approve"
+    },
+    {
+      "number": 2,
+      "proto_name": "APPROVAL_DECISION_REJECT",
+      "wire": "reject"
+    }
+  ]
+}

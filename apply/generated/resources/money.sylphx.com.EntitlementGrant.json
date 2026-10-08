@@ -1,0 +1,22 @@
+{
+  "collection": "entitlement_grants",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "EntitlementGrant",
+  "message": "sylphx.money.v1.EntitlementGrant",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/entitlement_grants/{entitlement_grant}",
+  "plural": "entitlementGrants",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "entitlementGrant",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/EntitlementGrant"
+}

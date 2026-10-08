@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "portal_session_id"
+            ]
+          },
+          "id": "money.portal_sessions.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.portal_sessions.get",
+          "kind": "get"
+        }
+      ],
+      "resource_type": "money.sylphx.com/PortalSession"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.auth.v1.OauthClientType",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "OAUTH_CLIENT_TYPE_CONFIDENTIAL",
+      "wire": "confidential"
+    },
+    {
+      "number": 2,
+      "proto_name": "OAUTH_CLIENT_TYPE_PUBLIC",
+      "wire": "public"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "glossaries",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Glossary",
+  "message": "sylphx.localization.v1.Glossary",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/glossaries/{glossary}",
+  "plural": "glossaries",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "localization",
+  "shape": "spec_status",
+  "singular": "glossary",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "localization.sylphx.com/Glossary"
+}

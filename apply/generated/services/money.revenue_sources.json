@@ -1,0 +1,63 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.revenue_sources.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "money.revenue_sources.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "revenue_source_id",
+              "validate_only"
+            ]
+          },
+          "id": "money.revenue_sources.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "money.revenue_sources.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only"
+            ]
+          },
+          "id": "money.revenue_sources.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.revenue_sources.run",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/RevenueSource"
+    }
+  ]
+}

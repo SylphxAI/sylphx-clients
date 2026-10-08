@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.network.v1.PrivateLinkState",
+  "package": "sylphx.network.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "PRIVATE_LINK_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "PRIVATE_LINK_STATE_ESTABLISHED",
+      "wire": "established"
+    },
+    {
+      "number": 3,
+      "proto_name": "PRIVATE_LINK_STATE_REJECTED",
+      "wire": "rejected"
+    }
+  ]
+}

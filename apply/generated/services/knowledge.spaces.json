@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "knowledge.spaces.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "knowledge.spaces.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "space_id",
+              "validate_only"
+            ]
+          },
+          "id": "knowledge.spaces.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "knowledge.spaces.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "knowledge.spaces.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "knowledge.sylphx.com/Space"
+    }
+  ]
+}

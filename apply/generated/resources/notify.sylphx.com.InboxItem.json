@@ -1,0 +1,22 @@
+{
+  "collection": "inbox_items",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "InboxItem",
+  "message": "sylphx.notify.v1.InboxItem",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}/inbox_items/{inbox_item}",
+  "plural": "inboxItems",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "inboxItem",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/InboxItem"
+}

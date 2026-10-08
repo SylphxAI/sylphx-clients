@@ -1,0 +1,41 @@
+{
+  "name": "sylphx.ai.v1.ModelModality",
+  "package": "sylphx.ai.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MODEL_MODALITY_CHAT",
+      "wire": "chat"
+    },
+    {
+      "number": 2,
+      "proto_name": "MODEL_MODALITY_EMBEDDING",
+      "wire": "embedding"
+    },
+    {
+      "number": 3,
+      "proto_name": "MODEL_MODALITY_IMAGE",
+      "wire": "image"
+    },
+    {
+      "number": 4,
+      "proto_name": "MODEL_MODALITY_SPEECH",
+      "wire": "speech"
+    },
+    {
+      "number": 5,
+      "proto_name": "MODEL_MODALITY_TRANSCRIPTION",
+      "wire": "transcription"
+    },
+    {
+      "number": 6,
+      "proto_name": "MODEL_MODALITY_VIDEO",
+      "wire": "video"
+    },
+    {
+      "number": 7,
+      "proto_name": "MODEL_MODALITY_DECISION",
+      "wire": "decision"
+    }
+  ]
+}

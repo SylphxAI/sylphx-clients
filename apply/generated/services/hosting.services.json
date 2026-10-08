@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "hosting.services.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "hosting.services.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "service_id",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.services.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "hosting.services.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "hosting.services.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "hosting.sylphx.com/Service"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "source_maps",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SourceMap",
+  "message": "sylphx.observability.v1.SourceMap",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/source_maps/{source_map}",
+  "plural": "sourceMaps",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "record",
+  "singular": "sourceMap",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/SourceMap"
+}

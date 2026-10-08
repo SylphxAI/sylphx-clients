@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.auth.v1.InvitationState",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "INVITATION_STATE_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "INVITATION_STATE_ACCEPTED",
+      "wire": "accepted"
+    },
+    {
+      "number": 3,
+      "proto_name": "INVITATION_STATE_REVOKED",
+      "wire": "revoked"
+    },
+    {
+      "number": 4,
+      "proto_name": "INVITATION_STATE_EXPIRED",
+      "wire": "expired"
+    }
+  ]
+}

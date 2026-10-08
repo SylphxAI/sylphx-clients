@@ -1,0 +1,22 @@
+{
+  "collection": "projects",
+  "controller": "kernel/access/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Project",
+  "message": "sylphx.access.v1.Project",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/projects/{project}",
+  "plural": "projects",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "access",
+  "shape": "spec_status",
+  "singular": "project",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "access.sylphx.com/Project"
+}

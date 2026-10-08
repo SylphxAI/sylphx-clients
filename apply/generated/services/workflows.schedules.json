@@ -1,0 +1,74 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.schedules.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "workflows.schedules.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "schedule_id",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.schedules.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.schedules.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "workflows.schedules.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.schedules.pause",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "workflows.schedules.resume",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "workflows.sylphx.com/Schedule"
+    }
+  ]
+}

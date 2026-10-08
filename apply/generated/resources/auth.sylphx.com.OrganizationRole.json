@@ -1,0 +1,22 @@
+{
+  "collection": "organization_roles",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "OrganizationRole",
+  "message": "sylphx.auth.v1.OrganizationRole",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/organization_roles/{organization_role}",
+  "plural": "organizationRoles",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "organizationRole",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/OrganizationRole"
+}

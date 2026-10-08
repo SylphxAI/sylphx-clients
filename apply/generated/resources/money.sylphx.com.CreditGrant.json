@@ -1,0 +1,22 @@
+{
+  "collection": "credit_grants",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "CreditGrant",
+  "message": "sylphx.money.v1.CreditGrant",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/credit_grants/{credit_grant}",
+  "plural": "creditGrants",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "creditGrant",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/CreditGrant"
+}

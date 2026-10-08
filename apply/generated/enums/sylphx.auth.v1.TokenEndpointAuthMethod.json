@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.auth.v1.TokenEndpointAuthMethod",
+  "package": "sylphx.auth.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_NONE",
+      "wire": "none"
+    },
+    {
+      "number": 2,
+      "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_CLIENT_SECRET_BASIC",
+      "wire": "client_secret_basic"
+    },
+    {
+      "number": 3,
+      "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_PRIVATE_KEY_JWT",
+      "wire": "private_key_jwt"
+    }
+  ]
+}

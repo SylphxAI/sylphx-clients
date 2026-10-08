@@ -1,0 +1,22 @@
+{
+  "collection": "job_runs",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "JobRun",
+  "message": "sylphx.workflows.v1.JobRun",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/jobs/{job}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/jobs/{job}/job_runs/{job_run}",
+  "plural": "jobRuns",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "workflows",
+  "shape": "record",
+  "singular": "jobRun",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "workflows.sylphx.com/JobRun"
+}

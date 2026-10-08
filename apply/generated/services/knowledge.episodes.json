@@ -1,0 +1,49 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "knowledge.episodes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "knowledge.episodes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "episode_id",
+              "validate_only",
+              "skip_extraction"
+            ]
+          },
+          "id": "knowledge.episodes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "knowledge.episodes.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "knowledge.sylphx.com/Episode"
+    }
+  ]
+}

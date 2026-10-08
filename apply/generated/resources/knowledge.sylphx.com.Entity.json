@@ -1,0 +1,22 @@
+{
+  "collection": "entities",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Entity",
+  "message": "sylphx.knowledge.v1.Entity",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/entities/{entity}",
+  "plural": "entities",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "knowledge",
+  "shape": "record",
+  "singular": "entity",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "knowledge.sylphx.com/Entity"
+}

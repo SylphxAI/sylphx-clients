@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.knowledge.v1.EpisodeKind",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EPISODE_KIND_NOTE",
+      "wire": "note"
+    },
+    {
+      "number": 2,
+      "proto_name": "EPISODE_KIND_MESSAGE",
+      "wire": "message"
+    },
+    {
+      "number": 3,
+      "proto_name": "EPISODE_KIND_STEP_RESULT",
+      "wire": "step_result"
+    },
+    {
+      "number": 4,
+      "proto_name": "EPISODE_KIND_DOCUMENT_CHUNK",
+      "wire": "document_chunk"
+    },
+    {
+      "number": 5,
+      "proto_name": "EPISODE_KIND_IMPORTED_ROW",
+      "wire": "imported_row"
+    },
+    {
+      "number": 6,
+      "proto_name": "EPISODE_KIND_STRUCTURED",
+      "wire": "structured"
+    }
+  ]
+}

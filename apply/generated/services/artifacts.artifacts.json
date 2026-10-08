@@ -1,0 +1,48 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "artifacts.artifacts.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "artifacts.artifacts.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "artifact_id",
+              "validate_only"
+            ]
+          },
+          "id": "artifacts.artifacts.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "validate_only"
+            ]
+          },
+          "id": "artifacts.artifacts.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "artifacts.sylphx.com/Artifact"
+    }
+  ]
+}

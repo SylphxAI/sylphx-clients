@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.sandboxes.v1.VolumeState",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "VOLUME_STATE_CREATING",
+      "wire": "creating"
+    },
+    {
+      "number": 2,
+      "proto_name": "VOLUME_STATE_AVAILABLE",
+      "wire": "available"
+    },
+    {
+      "number": 3,
+      "proto_name": "VOLUME_STATE_ATTACHED",
+      "wire": "attached"
+    },
+    {
+      "number": 4,
+      "proto_name": "VOLUME_STATE_DELETING",
+      "wire": "deleting"
+    },
+    {
+      "number": 5,
+      "proto_name": "VOLUME_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

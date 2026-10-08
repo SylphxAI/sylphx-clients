@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.knowledge.v1.Extraction",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EXTRACTION_PENDING",
+      "wire": "pending"
+    },
+    {
+      "number": 2,
+      "proto_name": "EXTRACTION_DONE",
+      "wire": "done"
+    },
+    {
+      "number": 3,
+      "proto_name": "EXTRACTION_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 4,
+      "proto_name": "EXTRACTION_SKIPPED",
+      "wire": "skipped"
+    }
+  ]
+}

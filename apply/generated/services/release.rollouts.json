@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "release.rollouts.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "release.rollouts.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "release.sylphx.com/Rollout"
+    }
+  ]
+}

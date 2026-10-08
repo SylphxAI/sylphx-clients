@@ -1,0 +1,60 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "network.egress_identities.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "network.egress_identities.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "egress_identity_id",
+              "validate_only"
+            ]
+          },
+          "id": "network.egress_identities.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "network.egress_identities.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "network.egress_identities.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "network.sylphx.com/EgressIdentity"
+    }
+  ]
+}

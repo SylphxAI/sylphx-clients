@@ -1,0 +1,22 @@
+{
+  "collection": "licence_keys",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "LicenceKey",
+  "message": "sylphx.money.v1.LicenceKey",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/licence_keys/{licence_key}",
+  "plural": "licenceKeys",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "spec_status",
+  "singular": "licenceKey",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/LicenceKey"
+}

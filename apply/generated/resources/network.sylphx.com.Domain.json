@@ -1,0 +1,22 @@
+{
+  "collection": "domains",
+  "controller": "services/network/controller",
+  "deletion_protection": false,
+  "fail_mode": "closed",
+  "in_snapshot": true,
+  "kind": "Domain",
+  "message": "sylphx.network.v1.Domain",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/domains/{domain}",
+  "plural": "domains",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "network",
+  "shape": "spec_status",
+  "singular": "domain",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "network.sylphx.com/Domain"
+}

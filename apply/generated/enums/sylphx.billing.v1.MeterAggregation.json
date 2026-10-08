@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.billing.v1.MeterAggregation",
+  "package": "sylphx.billing.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "METER_AGGREGATION_SUM",
+      "wire": "sum"
+    },
+    {
+      "number": 2,
+      "proto_name": "METER_AGGREGATION_MAX",
+      "wire": "max"
+    },
+    {
+      "number": 3,
+      "proto_name": "METER_AGGREGATION_LAST",
+      "wire": "last"
+    },
+    {
+      "number": 4,
+      "proto_name": "METER_AGGREGATION_UNIQUE_COUNT",
+      "wire": "unique_count"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "collection": "workflows",
+  "controller": "services/workflows/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Workflow",
+  "message": "sylphx.workflows.v1.Workflow",
+  "meters": [
+    "workflows.run.started",
+    "workflows.invocation",
+    "workflows.state.gib_hours"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/workflows/{workflow}",
+  "plural": "workflows",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "workflows",
+  "shape": "spec_status",
+  "singular": "workflow",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "workflows.sylphx.com/Workflow"
+}

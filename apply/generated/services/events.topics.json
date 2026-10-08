@@ -1,0 +1,68 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.topics.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "events.topics.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "topic_id",
+              "validate_only"
+            ]
+          },
+          "id": "events.topics.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "events.topics.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only",
+              "force"
+            ]
+          },
+          "id": "events.topics.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.topics.publish",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "events.sylphx.com/Topic"
+    }
+  ]
+}

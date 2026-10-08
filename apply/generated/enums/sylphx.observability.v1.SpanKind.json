@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.observability.v1.SpanKind",
+  "package": "sylphx.observability.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SPAN_KIND_INTERNAL",
+      "wire": "internal"
+    },
+    {
+      "number": 2,
+      "proto_name": "SPAN_KIND_SERVER",
+      "wire": "server"
+    },
+    {
+      "number": 3,
+      "proto_name": "SPAN_KIND_CLIENT",
+      "wire": "client"
+    },
+    {
+      "number": 4,
+      "proto_name": "SPAN_KIND_PRODUCER",
+      "wire": "producer"
+    },
+    {
+      "number": 5,
+      "proto_name": "SPAN_KIND_CONSUMER",
+      "wire": "consumer"
+    }
+  ]
+}

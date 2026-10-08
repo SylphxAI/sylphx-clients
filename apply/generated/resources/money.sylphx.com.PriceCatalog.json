@@ -1,0 +1,22 @@
+{
+  "collection": "price_catalogs",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "PriceCatalog",
+  "message": "sylphx.money.v1.Catalog",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/price_catalogs/{price_catalog}",
+  "plural": "priceCatalogs",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "singleton",
+  "singular": "priceCatalog",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/PriceCatalog"
+}

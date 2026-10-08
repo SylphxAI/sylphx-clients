@@ -1,0 +1,22 @@
+{
+  "collection": "connections",
+  "controller": "kernel/connections/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Connection",
+  "message": "sylphx.connections.v1.Connection",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/connections/{connection}",
+  "plural": "connections",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "connections",
+  "shape": "spec_status",
+  "singular": "connection",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "connections.sylphx.com/Connection"
+}

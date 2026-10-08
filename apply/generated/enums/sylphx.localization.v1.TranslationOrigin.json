@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.localization.v1.TranslationOrigin",
+  "package": "sylphx.localization.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "TRANSLATION_ORIGIN_AI",
+      "wire": "ai"
+    },
+    {
+      "number": 2,
+      "proto_name": "TRANSLATION_ORIGIN_MEMORY",
+      "wire": "memory"
+    },
+    {
+      "number": 3,
+      "proto_name": "TRANSLATION_ORIGIN_HUMAN",
+      "wire": "human"
+    },
+    {
+      "number": 4,
+      "proto_name": "TRANSLATION_ORIGIN_IMPORTED",
+      "wire": "imported"
+    }
+  ]
+}

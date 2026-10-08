@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.access.v1.EnvironmentMode",
+  "package": "sylphx.access.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ENVIRONMENT_MODE_LIVE",
+      "wire": "live"
+    },
+    {
+      "number": 2,
+      "proto_name": "ENVIRONMENT_MODE_TEST",
+      "wire": "test"
+    }
+  ]
+}

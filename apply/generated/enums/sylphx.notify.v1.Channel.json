@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.notify.v1.Channel",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CHANNEL_EMAIL",
+      "wire": "email"
+    },
+    {
+      "number": 2,
+      "proto_name": "CHANNEL_SMS",
+      "wire": "sms"
+    },
+    {
+      "number": 3,
+      "proto_name": "CHANNEL_PUSH",
+      "wire": "push"
+    },
+    {
+      "number": 4,
+      "proto_name": "CHANNEL_INBOX",
+      "wire": "inbox"
+    }
+  ]
+}

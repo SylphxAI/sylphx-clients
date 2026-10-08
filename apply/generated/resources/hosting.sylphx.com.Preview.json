@@ -1,0 +1,22 @@
+{
+  "collection": "previews",
+  "controller": "services/hosting/controller",
+  "deletion_protection": false,
+  "fail_mode": "stale",
+  "in_snapshot": true,
+  "kind": "Preview",
+  "message": "sylphx.hosting.v1.Preview",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/previews/{preview}",
+  "plural": "previews",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "hosting",
+  "shape": "spec_status",
+  "singular": "preview",
+  "stale_bound": "300s",
+  "storage": "kernel",
+  "terraform": true,
+  "type": "hosting.sylphx.com/Preview"
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "trust_policies",
+  "controller": "kernel/broker/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "TrustPolicy",
+  "message": "sylphx.broker.v1.TrustPolicy",
+  "meters": [],
+  "parent_pattern": "orgs/{org}",
+  "pattern": "orgs/{org}/trust_policies/{trust_policy}",
+  "plural": "trustPolicies",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "broker",
+  "shape": "spec_status",
+  "singular": "trustPolicy",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "broker.sylphx.com/TrustPolicy"
+}

@@ -1,0 +1,45 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.objects.put",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "version"
+            ]
+          },
+          "id": "data.objects.get",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "prefix",
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "data.objects.list",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "expected_version"
+            ]
+          },
+          "id": "data.objects.delete",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": ""
+    }
+  ]
+}

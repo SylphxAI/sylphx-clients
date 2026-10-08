@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.workflows.v1.RunState",
+  "package": "sylphx.workflows.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RUN_STATE_RUNNING",
+      "wire": "running"
+    },
+    {
+      "number": 2,
+      "proto_name": "RUN_STATE_SUCCEEDED",
+      "wire": "succeeded"
+    },
+    {
+      "number": 3,
+      "proto_name": "RUN_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 4,
+      "proto_name": "RUN_STATE_CANCELLED",
+      "wire": "cancelled"
+    },
+    {
+      "number": 5,
+      "proto_name": "RUN_STATE_TIMED_OUT",
+      "wire": "timed_out"
+    }
+  ]
+}

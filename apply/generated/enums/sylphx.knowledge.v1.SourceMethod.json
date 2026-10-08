@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.knowledge.v1.SourceMethod",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SOURCE_METHOD_STATED",
+      "wire": "stated"
+    },
+    {
+      "number": 2,
+      "proto_name": "SOURCE_METHOD_EXTRACTED",
+      "wire": "extracted"
+    },
+    {
+      "number": 3,
+      "proto_name": "SOURCE_METHOD_IMPORTED",
+      "wire": "imported"
+    }
+  ]
+}

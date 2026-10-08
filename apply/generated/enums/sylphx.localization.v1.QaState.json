@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.localization.v1.QaState",
+  "package": "sylphx.localization.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "QA_STATE_PASSED",
+      "wire": "passed"
+    },
+    {
+      "number": 2,
+      "proto_name": "QA_STATE_WARNING",
+      "wire": "warning"
+    },
+    {
+      "number": 3,
+      "proto_name": "QA_STATE_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 4,
+      "proto_name": "QA_STATE_PENDING",
+      "wire": "pending"
+    }
+  ]
+}

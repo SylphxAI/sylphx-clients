@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.assets.v1.QaCheck",
+  "package": "sylphx.assets.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "QA_CHECK_FORMAT",
+      "wire": "format"
+    },
+    {
+      "number": 2,
+      "proto_name": "QA_CHECK_SIZE",
+      "wire": "size"
+    },
+    {
+      "number": 3,
+      "proto_name": "QA_CHECK_CONTENT_CREDENTIALS",
+      "wire": "content_credentials"
+    },
+    {
+      "number": 4,
+      "proto_name": "QA_CHECK_MODERATION",
+      "wire": "moderation"
+    }
+  ]
+}

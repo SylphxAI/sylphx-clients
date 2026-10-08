@@ -1,0 +1,19 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "money.tax_threshold_statuses.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "money.sylphx.com/TaxThresholdStatus"
+    }
+  ]
+}

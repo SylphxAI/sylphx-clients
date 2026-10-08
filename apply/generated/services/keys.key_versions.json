@@ -1,0 +1,35 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "keys.key_versions.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "keys.key_versions.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "keys.key_versions.destroy",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "keys.sylphx.com/KeyVersion"
+    }
+  ]
+}

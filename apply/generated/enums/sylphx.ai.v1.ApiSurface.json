@@ -1,0 +1,41 @@
+{
+  "name": "sylphx.ai.v1.ApiSurface",
+  "package": "sylphx.ai.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "API_SURFACE_RESPONSES",
+      "wire": "responses"
+    },
+    {
+      "number": 2,
+      "proto_name": "API_SURFACE_MESSAGES",
+      "wire": "messages"
+    },
+    {
+      "number": 3,
+      "proto_name": "API_SURFACE_CHAT_COMPLETIONS",
+      "wire": "chat_completions"
+    },
+    {
+      "number": 4,
+      "proto_name": "API_SURFACE_EMBEDDINGS",
+      "wire": "embeddings"
+    },
+    {
+      "number": 5,
+      "proto_name": "API_SURFACE_IMAGES",
+      "wire": "images"
+    },
+    {
+      "number": 6,
+      "proto_name": "API_SURFACE_SPEECH",
+      "wire": "speech"
+    },
+    {
+      "number": 7,
+      "proto_name": "API_SURFACE_TRANSCRIPTION",
+      "wire": "transcription"
+    }
+  ]
+}

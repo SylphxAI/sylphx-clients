@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.money.v1.LicenceTermUnit",
+  "package": "sylphx.money.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "LICENCE_TERM_UNIT_CALENDAR_YEARS",
+      "wire": "calendar_years"
+    },
+    {
+      "number": 2,
+      "proto_name": "LICENCE_TERM_UNIT_CALENDAR_MONTHS",
+      "wire": "calendar_months"
+    },
+    {
+      "number": 3,
+      "proto_name": "LICENCE_TERM_UNIT_DAYS",
+      "wire": "days"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.config.v1.EvaluationReason",
+  "package": "sylphx.config.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EVALUATION_REASON_TARGETING_MATCH",
+      "wire": "targeting_match"
+    },
+    {
+      "number": 2,
+      "proto_name": "EVALUATION_REASON_SPLIT",
+      "wire": "split"
+    },
+    {
+      "number": 3,
+      "proto_name": "EVALUATION_REASON_DEFAULT",
+      "wire": "default"
+    },
+    {
+      "number": 4,
+      "proto_name": "EVALUATION_REASON_DISABLED",
+      "wire": "disabled"
+    },
+    {
+      "number": 5,
+      "proto_name": "EVALUATION_REASON_NOT_FOUND",
+      "wire": "not_found"
+    }
+  ]
+}

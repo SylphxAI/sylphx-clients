@@ -1,0 +1,22 @@
+{
+  "collection": "memories",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Memory",
+  "message": "sylphx.agents.v1.Memory",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}",
+  "plural": "memories",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "record",
+  "singular": "memory",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/Memory"
+}

@@ -1,0 +1,25 @@
+{
+  "collection": "distributed_jobs",
+  "controller": "services/workflows/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "DistributedJob",
+  "message": "sylphx.workflows.v1.DistributedJob",
+  "meters": [
+    "workflows.job_vcpu_seconds",
+    "workflows.job_memory_mib_seconds"
+  ],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/distributed_jobs/{distributed_job}",
+  "plural": "distributedJobs",
+  "priority_chunk": false,
+  "reconciled": true,
+  "service": "workflows",
+  "shape": "spec_status",
+  "singular": "distributedJob",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": true,
+  "type": "workflows.sylphx.com/DistributedJob"
+}
