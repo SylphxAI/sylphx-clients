@@ -18,6 +18,7 @@ mod enable;
 mod events_listen;
 mod names;
 mod output;
+mod porcelain;
 mod token;
 mod tree;
 mod work_runner;
@@ -223,6 +224,7 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(devices::command())
+        .subcommand(porcelain::command())
         .subcommand(work_runner::command())
         .subcommand(
             Command::new("completion")
@@ -519,6 +521,14 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             )
             .await
             .map_err(|e| Failure::Usage(e.to_string()))
+        }
+        porcelain::COMMAND => {
+            let manifest = porcelain::manifest(&cli(tree), tree);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&manifest).expect("a JSON value serializes")
+            );
+            Ok(())
         }
         "completion" => {
             let shell = *sub
