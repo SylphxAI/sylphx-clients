@@ -456,6 +456,40 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "limits": {
+                    "additionalProperties": false,
+                    "description": "Usage limits shared by every key of the project; a key's own limits\nonly tighten them. Unset means no project-level limit.",
+                    "properties": {
+                      "ai_spend": {
+                        "additionalProperties": false,
+                        "description": "Sylphx AI spend.",
+                        "properties": {
+                          "daily_usd_minor": {
+                            "description": "Most spend per calendar day, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "monthly_usd_minor": {
+                            "description": "Most spend per calendar month, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "ai_tokens_per_minute": {
+                        "description": "Sylphx AI tokens per minute, input and output together.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "requests_per_minute": {
+                        "description": "Requests per minute.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "slug": {
                     "description": "Unique within the org.",
                     "type": "string"
@@ -540,6 +574,40 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "limits": {
+                    "additionalProperties": false,
+                    "description": "Usage limits shared by every key of the project; a key's own limits\nonly tighten them. Unset means no project-level limit.",
+                    "properties": {
+                      "ai_spend": {
+                        "additionalProperties": false,
+                        "description": "Sylphx AI spend.",
+                        "properties": {
+                          "daily_usd_minor": {
+                            "description": "Most spend per calendar day, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "monthly_usd_minor": {
+                            "description": "Most spend per calendar month, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "ai_tokens_per_minute": {
+                        "description": "Sylphx AI tokens per minute, input and output together.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "requests_per_minute": {
+                        "description": "Requests per minute.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "slug": {
                     "description": "Unique within the org.",
                     "type": "string"
@@ -1264,6 +1332,40 @@
                     "description": "A free-form label, for example the talent id a key was minted for.",
                     "type": "string"
                   },
+                  "limits": {
+                    "additionalProperties": false,
+                    "description": "Usage limits on this key, on top of its project's and the plan tier's;\nthe tightest one applies. Unset means no key-level limit.",
+                    "properties": {
+                      "ai_spend": {
+                        "additionalProperties": false,
+                        "description": "Sylphx AI spend.",
+                        "properties": {
+                          "daily_usd_minor": {
+                            "description": "Most spend per calendar day, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "monthly_usd_minor": {
+                            "description": "Most spend per calendar month, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "ai_tokens_per_minute": {
+                        "description": "Sylphx AI tokens per minute, input and output together.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "requests_per_minute": {
+                        "description": "Requests per minute.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "scopes": {
                     "description": "Scopes `<service>:<action>`, a subset of the creator's effective scopes.",
                     "items": {
@@ -1376,6 +1478,40 @@
                   "label": {
                     "description": "A free-form label, for example the talent id a key was minted for.",
                     "type": "string"
+                  },
+                  "limits": {
+                    "additionalProperties": false,
+                    "description": "Usage limits on this key, on top of its project's and the plan tier's;\nthe tightest one applies. Unset means no key-level limit.",
+                    "properties": {
+                      "ai_spend": {
+                        "additionalProperties": false,
+                        "description": "Sylphx AI spend.",
+                        "properties": {
+                          "daily_usd_minor": {
+                            "description": "Most spend per calendar day, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "monthly_usd_minor": {
+                            "description": "Most spend per calendar month, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "ai_tokens_per_minute": {
+                        "description": "Sylphx AI tokens per minute, input and output together.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "requests_per_minute": {
+                        "description": "Requests per minute.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
                   },
                   "scopes": {
                     "description": "Scopes `<service>:<action>`, a subset of the creator's effective scopes.",
@@ -32748,6 +32884,85 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets a generation: one Sylphx AI call."
+      },
+      "description": "Gets a generation: one Sylphx AI call.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/generations/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetGeneration.",
+        "properties": {
+          "name": {
+            "description": "The name of the generation to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/Generation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.generations.get",
+      "permission": "observability:read",
+      "tool": "observability_generations_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the environment's Sylphx AI calls, newest first, within the trace retention; filter by `request_model`, `outcome`, `api_key`, `start_time`, `tags.<key>` and the other filterable fields."
+      },
+      "description": "Lists the environment's Sylphx AI calls, newest first, within the trace\nretention; filter by `request_model`, `outcome`, `api_key`, `start_time`,\n`tags.<key>` and the other filterable fields.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/generations",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListGenerations.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels, filterable fields and `tags.<key>`.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields; default `start_time desc`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/Generation"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.generations.list",
+      "permission": "observability:read",
+      "tool": "observability_generations_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an error group."
       },
       "description": "Gets an error group.",
@@ -41411,7 +41626,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@3118f36f16f799965338811e17ed3a9f565a9f136b14c95e9c94a1e21d42ea3e. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@e41a0a82ce4e85b77240402222da97d27f00a4498e6532efca0b4e93288879eb. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"
@@ -41490,6 +41705,40 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "limits": {
+                    "additionalProperties": false,
+                    "description": "Usage limits shared by every key of the project; a key's own limits\nonly tighten them. Unset means no project-level limit.",
+                    "properties": {
+                      "ai_spend": {
+                        "additionalProperties": false,
+                        "description": "Sylphx AI spend.",
+                        "properties": {
+                          "daily_usd_minor": {
+                            "description": "Most spend per calendar day, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          },
+                          "monthly_usd_minor": {
+                            "description": "Most spend per calendar month, in USD cents.",
+                            "format": "int64",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "ai_tokens_per_minute": {
+                        "description": "Sylphx AI tokens per minute, input and output together.",
+                        "format": "int64",
+                        "type": "string"
+                      },
+                      "requests_per_minute": {
+                        "description": "Requests per minute.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "slug": {
                     "description": "Unique within the org.",
                     "type": "string"
@@ -42097,6 +42346,77 @@
       },
       "name": "observability_traces_query",
       "x-sylphx-method": "observability.traces.query"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a generation: one Sylphx AI call."
+      },
+      "description": "Gets a generation: one Sylphx AI call.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of GetGeneration.",
+        "properties": {
+          "name": {
+            "description": "The name of the generation to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/Generation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "name": "observability_generations_get",
+      "x-sylphx-method": "observability.generations.get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the environment's Sylphx AI calls, newest first, within the trace retention; filter by `request_model`, `outcome`, `api_key`, `start_time`, `tags.<key>` and the other filterable fields."
+      },
+      "description": "Lists the environment's Sylphx AI calls, newest first, within the trace\nretention; filter by `request_model`, `outcome`, `api_key`, `start_time`,\n`tags.<key>` and the other filterable fields.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of ListGenerations.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels, filterable fields and `tags.<key>`.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields; default `start_time desc`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/Generation"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "name": "observability_generations_list",
+      "x-sylphx-method": "observability.generations.list"
     },
     {
       "annotations": {

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.observability.v1.GenerationOutcome",
+  "package": "sylphx.observability.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "GENERATION_OUTCOME_SUCCEEDED",
+      "wire": "succeeded"
+    },
+    {
+      "number": 2,
+      "proto_name": "GENERATION_OUTCOME_FAILED",
+      "wire": "failed"
+    },
+    {
+      "number": 3,
+      "proto_name": "GENERATION_OUTCOME_CANCELLED",
+      "wire": "cancelled"
+    }
+  ]
+}

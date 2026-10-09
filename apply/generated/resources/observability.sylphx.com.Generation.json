@@ -1,0 +1,22 @@
+{
+  "collection": "generations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "Generation",
+  "message": "sylphx.observability.v1.Generation",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/generations/{generation}",
+  "plural": "generations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "record",
+  "singular": "generation",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/Generation"
+}
