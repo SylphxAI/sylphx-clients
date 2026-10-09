@@ -1687,11 +1687,19 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     );
 }
 
-/// A workspace that runs out of space before the command starts (the
-/// warm Volume filled up) is not retried as it is: the machine is ended and
-/// the one retry empties the workspace first, then the command runs once.
+/// Reacquiring the full Volume empties it before the command runs once.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_retries_a_full_workspace_once_on_an_emptied_one() {
+    full_workspace_retry("vol-1", "1").await;
+}
+
+/// A healthy Volume acquired while the full one detaches keeps its contents.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_retries_a_full_workspace_without_emptying_a_different_volume() {
+    full_workspace_retry("healthy", "0").await;
+}
+
+async fn full_workspace_retry(retry_volume: &str, empty: &str) {
     let sb = Sandbox::new("ws-full");
     project(&sb.dir);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -1705,7 +1713,11 @@ async fn build_run_retries_a_full_workspace_once_on_an_emptied_one() {
         1,
     ));
     replies.push(ended()); // the full machine is released before the retry
-    replies.extend(attempt_replies(&url, envd_process("", 0)));
+    let mut retry = attempt_replies(&url, envd_process("", 0));
+    let mut lease: Value = serde_json::from_slice(&retry[2].2).unwrap();
+    lease["spec"]["volumes"][0]["volume"] = json!(format!("{ENV}/volumes/{retry_volume}"));
+    retry[2].2 = lease.to_string().into_bytes();
+    replies.extend(retry);
     replies.push(envd_process("built\n", 0));
     replies.push(ended());
     let (_, log) = serve_bytes_on(listener, replies).await;
@@ -1735,7 +1747,7 @@ async fn build_run_retries_a_full_workspace_once_on_an_emptied_one() {
     assert!(
         boots[1]
             .body
-            .contains("\"bootstrap\",\"/workspace\",\"1\",\"1\""),
+            .contains(&format!("\"bootstrap\",\"/workspace\",\"1\",\"{empty}\"")),
         "{}",
         boots[1].body
     );
@@ -1972,7 +1984,7 @@ fn attempt_replies(
             json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
         ),
         json_reply(
-            json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+            json!({"name": lease, "spec": {"volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),

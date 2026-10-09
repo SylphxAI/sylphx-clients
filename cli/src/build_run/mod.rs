@@ -776,7 +776,7 @@ async fn execute(
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
         no_volumes: false,
-        empty_next: AtomicBool::new(false),
+        empty_volume: None,
     };
     let mut retries = Retries::default();
     loop {
@@ -867,9 +867,9 @@ struct Run<'a> {
     /// The region refused a workspace Volume (`SHAPE_NOT_OFFERED`): every
     /// attempt of this run leases a machine without one.
     no_volumes: bool,
-    /// The last attempt ran out of space before its command started: the
-    /// retry empties its workspace first.
-    empty_next: AtomicBool,
+    /// The Volume that ran out of space before the command started. Only
+    /// that workspace is emptied if the retry acquires it again.
+    empty_volume: Option<String>,
 }
 
 /// A ready machine with its workspace.
@@ -878,6 +878,22 @@ struct Machine {
     warm_volume: bool,
     /// Whether a Volume is mounted at [`WS`] (else the machine's own disk).
     volume: bool,
+}
+
+impl Machine {
+    fn workspace_volume(&self) -> Option<&str> {
+        self.lease
+            .spec
+            .as_ref()?
+            .volumes
+            .iter()
+            .find(|mount| mount.mount_path == WS)
+            .map(|mount| mount.volume.as_str())
+    }
+
+    fn empty_workspace(&self, empty_volume: Option<&str>) -> bool {
+        empty_volume.is_some() && empty_volume == self.workspace_volume()
+    }
 }
 
 impl Run<'_> {
@@ -914,12 +930,12 @@ impl Run<'_> {
         let (cache, store) = self.cache().await;
         let warm = match self.sync(&guest, &m, store.as_ref()).await {
             Ok(w) => w,
-            Err(e) if workspace_full(e.text()) => return self.out_of_space(&name).await,
+            Err(e) if workspace_full(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
         let git_env = match self.send_git_deps(&guest).await {
             Ok(e) => e,
-            Err(e) if out_of_space(e.text()) => return self.out_of_space(&name).await,
+            Err(e) if out_of_space(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
         // An image build needs no Rust toolchain.
@@ -927,7 +943,7 @@ impl Run<'_> {
             if let Err(a) = self.provision(&guest, &name, &cache).await {
                 if matches!(&a, Attempt::Done(Outcome::Platform { reason, .. }) if out_of_space(reason))
                 {
-                    return self.out_of_space(&name).await;
+                    return self.out_of_space(&m).await;
                 }
                 return a;
             }
@@ -1114,10 +1130,11 @@ impl Run<'_> {
     }
 
     /// The workspace ran out of space before the command started: end this
-    /// machine and retry once on an emptied workspace (a fresh one in all
-    /// but its Volume). A second time is 125, as any loss before the start.
-    async fn out_of_space(&self, name: &str) -> Attempt {
-        self.empty_next.store(true, Ordering::Relaxed);
+    /// machine and retry once, emptying only the failed Volume if it is
+    /// acquired again. A second time is 125, as any loss before the start.
+    async fn out_of_space(&mut self, m: &Machine) -> Attempt {
+        self.empty_volume = m.workspace_volume().map(str::to_owned);
+        let name = &m.lease.name;
         self.held.with(|h| {
             h.proc = None;
             h.lease = None;
@@ -1517,7 +1534,7 @@ impl Run<'_> {
     ) -> Result<bool, Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
-        let empty = self.empty_next.swap(false, Ordering::Relaxed);
+        let empty = m.empty_workspace(self.empty_volume.as_deref());
         let (code, out, err) = g
             .run(
                 "root",
@@ -2189,6 +2206,39 @@ mod tests {
     use sylphx_build_lease::BUILD_PACKAGES;
 
     const VOL: &str = "orgs/org_a/projects/prj_b/envs/env_c/volumes/vol-2zqbvdtx";
+
+    fn workspace_machine(volume: Option<&str>) -> Machine {
+        let mut spec = sbx::LeaseSpec::default();
+        if let Some(volume) = volume {
+            let mut mount = sbx::VolumeMount::default();
+            mount.volume = volume.into();
+            mount.mount_path = WS.into();
+            spec.volumes.push(mount);
+        }
+        let mut lease = sbx::Lease::default();
+        lease.spec = Some(spec);
+        Machine {
+            lease,
+            warm_volume: volume.is_some(),
+            volume: volume.is_some(),
+        }
+    }
+
+    #[test]
+    fn a_full_workspace_does_not_empty_a_different_warm_volume() {
+        // The full Volume is still detaching; acquisition picks a healthy one.
+        let empty_volume = Some(VOL);
+        let healthy = workspace_machine(Some("volumes/healthy"));
+        assert!(!healthy.empty_workspace(empty_volume));
+        assert!(workspace_machine(Some(VOL)).empty_workspace(empty_volume));
+    }
+
+    #[test]
+    fn a_fresh_machine_disk_does_not_need_the_failed_workspace_emptied() {
+        assert!(!workspace_machine(None).empty_workspace(Some(VOL)));
+        assert!(!workspace_machine(None).empty_workspace(None));
+        assert!(!workspace_machine(Some(VOL)).empty_workspace(None));
+    }
 
     #[test]
     fn a_failed_bootstrap_retries_before_the_command_starts() {
