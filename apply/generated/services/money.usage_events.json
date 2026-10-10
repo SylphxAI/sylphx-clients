@@ -11,6 +11,13 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "money.usage_events.batch_ingest",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "page_size",
               "page_token",
