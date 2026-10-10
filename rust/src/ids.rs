@@ -436,8 +436,8 @@ pub const PRF: Prefix = Prefix::new("prf", "Preference", "notify", Some("prefere
 pub const RCP: Prefix = Prefix::new("rcp", "Recipient", "notify", Some("recipients"));
 /// Sender (`snd`, notify).
 pub const SND: Prefix = Prefix::new("snd", "Sender", "notify", Some("senders"));
-/// SendingDomain (`sdm`, notify).
-pub const SDM: Prefix = Prefix::new("sdm", "SendingDomain", "notify", Some("sending_domains"));
+/// EmailDomain (`sdm`, notify).
+pub const SDM: Prefix = Prefix::new("sdm", "EmailDomain", "notify", Some("mail_domains"));
 /// Suppression (`sup`, notify).
 pub const SUP: Prefix = Prefix::new("sup", "Suppression", "notify", Some("suppressions"));
 /// Template (`tmpl`, notify).

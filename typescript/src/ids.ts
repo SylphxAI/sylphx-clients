@@ -103,7 +103,7 @@ export const PREFIXES = [
 	{ prefix: 'prf', entity: 'Preference', service: 'notify', collection: 'preferences' },
 	{ prefix: 'rcp', entity: 'Recipient', service: 'notify', collection: 'recipients' },
 	{ prefix: 'snd', entity: 'Sender', service: 'notify', collection: 'senders' },
-	{ prefix: 'sdm', entity: 'SendingDomain', service: 'notify', collection: 'sending_domains' },
+	{ prefix: 'sdm', entity: 'EmailDomain', service: 'notify', collection: 'mail_domains' },
 	{ prefix: 'sup', entity: 'Suppression', service: 'notify', collection: 'suppressions' },
 	{ prefix: 'tmpl', entity: 'Template', service: 'notify', collection: 'templates' },
 	{ prefix: 'eev', entity: 'ErrorEvent', service: 'observability', collection: 'error_events' },
