@@ -4452,7 +4452,7 @@
         "readOnlyHint": true,
         "title": "Gets an artifact."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an artifact.",
+      "description": "Gets an artifact.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/artifacts/*}",
       "input_schema": {
@@ -4473,7 +4473,6 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.get",
       "permission": "artifacts:read",
-      "served": false,
       "tool": "artifacts_artifacts_get"
     },
     {
@@ -4484,7 +4483,7 @@
         "readOnlyHint": true,
         "title": "Lists a project's artifacts; filter by `digest`, `kind`, or `subject`."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a project's artifacts; filter by `digest`, `kind`, or `subject`.",
+      "description": "Lists a project's artifacts; filter by `digest`, `kind`, or `subject`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/artifacts",
       "input_schema": {
@@ -4522,7 +4521,6 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.list",
       "permission": "artifacts:read",
-      "served": false,
       "tool": "artifacts_artifacts_list"
     },
     {
@@ -4533,7 +4531,7 @@
         "readOnlyHint": false,
         "title": "Registers an artifact whose bytes were pushed by digest; verification runs after."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Registers an artifact whose bytes were pushed by digest; verification runs after.",
+      "description": "Registers an artifact whose bytes were pushed by digest; verification runs after.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*}/artifacts",
       "input_schema": {
@@ -4655,7 +4653,6 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.create",
       "permission": "artifacts:write",
-      "served": false,
       "tool": "artifacts_artifacts_create"
     },
     {
@@ -4666,7 +4663,7 @@
         "readOnlyHint": false,
         "title": "Deletes an artifact; fails while a Release references it or a legal hold is active."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an artifact; fails while a Release references it or a legal hold is active.",
+      "description": "Deletes an artifact; fails while a Release references it or a legal hold is active.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/artifacts/*}",
       "input_schema": {
@@ -4701,7 +4698,6 @@
       "long_running": false,
       "method_id": "artifacts.artifacts.delete",
       "permission": "artifacts:write",
-      "served": false,
       "tool": "artifacts_artifacts_delete"
     },
     {
