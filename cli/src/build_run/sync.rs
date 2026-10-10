@@ -260,7 +260,9 @@ pub fn lists(tree: &Tree, plan: &Plan, filled: &BTreeSet<String>) -> Lists {
 /// from what they replace; files the sync does not touch keep their times,
 /// which is what lets cargo reuse its fingerprints. The tree's `.git` (the
 /// guest's own repository) is never swept, so a warm run only stages what
-/// changed; a full sync replaces the tree, `.git` included.
+/// changed. Files left by a build but absent from the next input manifest
+/// are swept, even on a no-change warm sync; `target` remains the cache.
+/// A full sync replaces the tree, `.git` included.
 pub const APPLY: &str = r#"set -eu
 export LC_ALL=C
 W=$1 FULL=$2 FILL=${3:-0}
@@ -277,6 +279,26 @@ if [ -s "$S/remove" ]; then
   (cd "$T" && xargs -0 rm -rf -- < "$S/remove")
   find "$T" -mindepth 1 -depth -type d -empty ! -path "$T/.git" ! -path "$T/.git/*" -delete
 fi
+awk -v D="$S/drop" -v AT=73 'BEGIN { while ((getline l < D) > 0) d[l] = 1 } !(substr($0, AT) in d)' "$S/manifest.old" > "$S/manifest.next"
+cat "$S/add" >> "$S/manifest.next"
+if [ "$FILL" = 1 ]; then cat "$S/fill/ok" >> "$S/manifest.next"; fi
+# A build may create source files the sync manifest has never seen. Mirror
+# the input tree, not just the previous manifest's deletions; only the guest
+# repository and the target cache link belong to the guest rather than input.
+(cd "$T" && find . \( -path './.git' -o -path './target' \) -prune -o ! -type d -print0) |
+  awk -v M="$S/manifest.next" 'BEGIN {
+    while ((getline l < M) > 0) keep[substr(l, 73)] = 1
+    close(M); RS = "\0"
+  } {
+    p = substr($0, 3); escaped = ""
+    for (i = 1; i <= length(p); i++) {
+      c = substr(p, i, 1)
+      escaped = escaped (c == "\\" ? "\\\\" : c == "\n" ? "\\n" : c)
+    }
+    if (!(escaped in keep)) printf "%s%c", p, 0
+  }' > "$S/remove"
+(cd "$T" && xargs -0 rm -f -- < "$S/remove")
+find "$T" -mindepth 1 -depth -type d -empty ! -path "$T/.git" ! -path "$T/.git/*" -delete
 for f in "$S"/in-*.tar.gz; do
   [ -e "$f" ] || continue
   tar -xzmf "$f" -C "$T"
@@ -286,9 +308,6 @@ if [ "$FILL" = 1 ]; then
   (cd "$S/fill/tree" && tar -cf - .) | tar -xmf - -C "$T"
 fi
 if [ ! -e "$T/target" ] && [ ! -L "$T/target" ]; then ln -s ../target "$T/target"; fi
-awk -v D="$S/drop" -v AT=73 'BEGIN { while ((getline l < D) > 0) d[l] = 1 } !(substr($0, AT) in d)' "$S/manifest.old" > "$S/manifest.next"
-cat "$S/add" >> "$S/manifest.next"
-if [ "$FILL" = 1 ]; then cat "$S/fill/ok" >> "$S/manifest.next"; fi
 mv -f "$S/manifest.next" "$S/manifest"
 rm -rf "$S/manifest.old" "$S/drop" "$S/add" "$S/remove" "$S/fill"
 "#;
@@ -1185,6 +1204,57 @@ mod tests {
         assert!(!ws.0.join("tree/dir").exists(), "emptied directories go");
         assert!(g.join("refs/heads").is_dir(), "the git dir stays whole");
         assert!(g.join("HEAD").is_file());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_warm_sync_removes_files_missing_from_the_manifest() {
+        let src = Scratch::new("src-strays");
+        let ws = Scratch::new("ws-strays");
+        let root = &src.0;
+        git(root, &["init", "-q"]);
+        write(root, "keep.rs", "keep\n");
+        write(root, "odd\\name\n.rs", "odd\n");
+        let mut cache = StatCache::default();
+        let local = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
+        assert!(apply(&ws.0, root, &local, &plan(&local, None), 1));
+        let tree = ws.0.join("tree");
+        let before = mtime(&tree.join("keep.rs"));
+        for dir in ["api", "cli"] {
+            for n in 0..6 {
+                write(
+                    &tree,
+                    &format!("web/content/docs/{dir}/mailbox_{n}.md"),
+                    "stale",
+                );
+            }
+        }
+        write(&tree, "stray\\name\n.rs", "stale");
+        std::os::unix::fs::symlink("keep.rs", tree.join("stray-link")).unwrap();
+        write(&ws.0.join("target"), "cached", "cache");
+        let p = plan(&local, remote(&ws.0).as_ref());
+        assert_eq!(
+            p,
+            Plan::default(),
+            "the manifest does not know about strays"
+        );
+        assert!(apply(&ws.0, root, &local, &p, 0));
+        assert!(
+            !tree.join("web").exists(),
+            "all twelve stale docs are removed"
+        );
+        assert!(!tree.join("stray\\name\n.rs").exists());
+        assert!(std::fs::symlink_metadata(tree.join("stray-link")).is_err());
+        assert!(tree.join("odd\\name\n.rs").exists());
+        assert_eq!(mtime(&tree.join("keep.rs")), before);
+        assert_eq!(
+            std::fs::read_to_string(tree.join("target/cached")).unwrap(),
+            "cache"
+        );
+        assert!(
+            apply(&ws.0, root, &local, &p, 0),
+            "a repeated sync is harmless"
+        );
     }
 
     /// A sync interrupted after the manifest was moved aside leaves no
