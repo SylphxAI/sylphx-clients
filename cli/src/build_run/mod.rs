@@ -30,6 +30,7 @@
 //! started.
 
 mod git_deps;
+mod history;
 mod image;
 mod remote;
 mod store;
@@ -137,6 +138,8 @@ pub fn command() -> Command {
             .help("Do not use the shared build cache (no token is minted)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
             .help("Internet host the run may reach (repeatable); without it only the in-cell build cache and its crates and npm mirrors"))
+        .arg(Arg::new("source-history").long("source-history").value_name("REF")
+            .help("Send HEAD and REF's full Git history offline (e.g. origin/main); keep synced local changes"))
         .arg(Arg::new("fresh").long("fresh").action(ArgAction::SetTrue)
             .help("Start from an empty workspace: no synced tree, no target/ or sccache"))
         .arg(Arg::new("dry-run").long("dry-run").action(ArgAction::SetTrue)
@@ -144,7 +147,7 @@ pub fn command() -> Command {
         .arg(Arg::new("quiet").long("quiet").short('q').action(ArgAction::SetTrue)
             .help("No `sylphx:` progress lines on stderr"))
         .arg(Arg::new("no-tree").long("no-tree").action(ArgAction::SetTrue)
-            .conflicts_with_all(["path", "artifact", "out", "env", "region", "fresh", "no-cache", "dry-run"])
+            .conflicts_with_all(["path", "artifact", "out", "env", "region", "fresh", "no-cache", "dry-run", "source-history"])
             .help("Run on the Build service with no input tree: the run is a Build record, its output streams back from its log"))
         .arg(Arg::new("no-wait").long("no-wait").action(ArgAction::SetTrue).requires("no-tree")
             .help("Create the Build and print it without waiting; read the output later with `sylphx build logs`"))
@@ -203,6 +206,7 @@ pub struct Opts {
     env: BTreeMap<String, String>,
     allow_hosts: Vec<String>,
     fresh: bool,
+    source_history: Option<String>,
     no_cache: bool,
     dry_run: bool,
     quiet: bool,
@@ -341,6 +345,7 @@ impl Opts {
             env,
             allow_hosts: sh.allow_hosts,
             fresh: m.get_flag("fresh"),
+            source_history: m.get_one::<String>("source-history").cloned(),
             no_cache: m.get_flag("no-cache"),
             dry_run: m.get_flag("dry-run"),
             quiet: m.get_flag("quiet"),
@@ -368,6 +373,7 @@ impl Opts {
             env: BTreeMap::new(),
             allow_hosts: sh.allow_hosts,
             fresh: false,
+            source_history: None,
             no_cache: false,
             dry_run: false,
             quiet: m.get_flag("quiet"),
@@ -947,6 +953,9 @@ impl Run<'_> {
                 }
                 return a;
             }
+        }
+        if let Err(e) = self.send_source_history(&guest).await {
+            return self.lost_or(&name, e).await;
         }
         let shape = format!("build-{}", self.o.size);
         let warned = !warned_before && self.cache_warned.load(Ordering::Relaxed);
@@ -1763,6 +1772,35 @@ impl Run<'_> {
         Ok(git_deps::env(&deps, WS))
     }
 
+    async fn send_source_history(&self, g: &Guest) -> Result<(), Fault> {
+        let Some(base) = &self.o.source_history else {
+            return Ok(());
+        };
+        let (reference, bundle) = history::prepare(&self.o.root, base).map_err(Fault::Other)?;
+        g.upload(&format!("{WS}/.sylphx/source.bundle"), USER, &bundle)
+            .await?;
+        let args = argv(&[
+            "/bin/sh",
+            "-c",
+            history::APPLY,
+            "source-history",
+            WS,
+            &reference,
+        ]);
+        let (code, _, err) = g.run(USER, &args, &BTreeMap::new()).await?;
+        if code != 0 {
+            return Err(Fault::Other(format!(
+                "installing source history: {}",
+                String::from_utf8_lossy(&err).trim()
+            )));
+        }
+        self.add(|s| s.bytes_up += bundle.len() as u64);
+        self.out.event(
+            json!({"type": "source_history", "reference": reference, "bytes_up": bundle.len()}),
+        );
+        Ok(())
+    }
+
     /// Runs the command, streaming its output; `None` when `--timeout` hit.
     /// A broken stream is reattached to the running command; the error says
     /// whether the command had started when the run lost it.
@@ -1800,6 +1838,11 @@ impl Run<'_> {
         }
         env.extend(git_env);
         env.extend(self.o.env.clone());
+        if self.o.source_history.is_some() {
+            env.insert("SYLPHX_BUILD_SOURCE_HISTORY".into(), "1".into());
+        } else {
+            env.remove("SYLPHX_BUILD_SOURCE_HISTORY");
+        }
         let mut p = g
             .start(USER, &args, "", &env)
             .await
@@ -2838,6 +2881,23 @@ esac
             "true\nsylphx build run of 0123abc\nb.txt\ncrate/a.txt\n"
         );
         assert!(!err.contains("warning"), "{err}");
+    }
+
+    #[test]
+    fn source_history_run_keeps_the_imported_head_and_dirty_files() {
+        let w = Ws::new("source-history-run");
+        w.file("tree/file", "base\n");
+        let (code, head, err) = w.run(".", SYS_PATH, &[], "git rev-parse HEAD");
+        assert_eq!(code, 0, "{err}");
+        w.file("tree/file", "dirty\n");
+        let (code, out, err) = w.run(
+            ".",
+            SYS_PATH,
+            &[("SYLPHX_BUILD_SOURCE_HISTORY", "1")],
+            "git rev-parse HEAD && git diff --name-only && cat file",
+        );
+        assert_eq!(code, 0, "{err}");
+        assert_eq!(out, format!("{head}file\ndirty\n"));
     }
 
     #[test]

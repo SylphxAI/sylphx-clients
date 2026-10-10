@@ -151,7 +151,11 @@ fi
 /// `sylphx: warning:` line and the command still runs.
 macro_rules! git_tree {
     () => {
-        r#"if command -v git >/dev/null 2>&1; then
+        r#"if [ "${SYLPHX_BUILD_SOURCE_HISTORY:-}" = 1 ]; then
+  # The CLI installed exact source commits and the index without checkout.
+  # Do not replace HEAD with the ordinary parentless sync snapshot.
+  :
+elif command -v git >/dev/null 2>&1; then
   TO=
   if command -v timeout >/dev/null 2>&1; then TO="timeout 300"; fi
   if ! $TO sh -c '
