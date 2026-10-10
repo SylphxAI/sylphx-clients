@@ -21,7 +21,10 @@
 //! arrive and the build goes on.
 //!
 //! A dependency this machine cannot fetch stops the run before any machine is
-//! leased: exit 125, not retryable, naming the URL and the commit.
+//! leased: exit 125, not retryable, naming the URL and the commit. A lock
+//! naming the `ssh://` spelling of a GitHub repository that this machine has
+//! no ssh key for is retried over `https://` ([`fetch_urls`]), where its
+//! credential helper does work.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -114,10 +117,35 @@ pub fn locked(root: &Path, tree: &Tree, rel: &str) -> Result<Vec<Dep>, String> {
     Ok(all.into_iter().collect())
 }
 
+/// The spellings of `url` to fetch, in order: the URL itself, then, for an
+/// `ssh://` GitHub URL, its `https://` equivalent.
+///
+/// A `Cargo.lock` names its source URL as the `Cargo.toml` spelled it, and a
+/// `[patch]` that keeps one dependency in the graph uses the ssh spelling to be a
+/// different source from the https dependency (Cargo refuses a same-URL
+/// patch). The calling machine's credentials, though, are often https only
+/// (the desk authenticates `github.com` through a credential helper, with no
+/// ssh key on the account), so an ssh spelling that machine cannot serve used
+/// to fail the run. GitHub serves both spellings of the same repository, so a
+/// machine without ssh retries the https one; one with ssh still uses it.
+/// Only the mirror stays keyed on the URL, never on a spelling tried here.
+fn fetch_urls(url: &str) -> Vec<String> {
+    let mut urls = vec![url.to_string()];
+    if let Some(rest) = url.strip_prefix("ssh://") {
+        if let Some((user_host, path)) = rest.split_once('/') {
+            let host = user_host.rsplit('@').next().unwrap_or(user_host);
+            if host.eq_ignore_ascii_case("github.com") && !path.is_empty() {
+                urls.push(format!("https://github.com/{path}"));
+            }
+        }
+    }
+    urls
+}
+
 /// The tarball of `dep` (one bare repository, `repo.git`, holding the commit
 /// as `refs/commit/<rev>` with depth 1), made once in `cache` and kept: a
 /// commit never changes. Fetches with this machine's git and its credentials,
-/// never prompting.
+/// never prompting ([`fetch_urls`] lists the spellings tried).
 pub fn pack(cache: &Path, dep: &Dep) -> Result<PathBuf, String> {
     let out = cache.join(format!("{}.tgz", dep.name()));
     if out.is_file() {
@@ -149,24 +177,37 @@ pub fn pack(cache: &Path, dep: &Dep) -> Result<PathBuf, String> {
             .arg("--bare")
             .arg(&repo))
         .map_err(|e| fail("git init", e))?;
-        run(Command::new("git")
-            .env("GIT_TERMINAL_PROMPT", "0")
-            .arg("-C")
-            .arg(&repo)
-            .args([
-                "-c",
-                "http.lowSpeedLimit=1000",
-                "-c",
-                "http.lowSpeedTime=60",
-                "fetch",
-                "-q",
-                "--depth",
-                "1",
-                "--",
-            ])
-            .arg(&dep.url)
-            .arg(format!("+{0}:refs/commit/{0}", dep.rev)))
-        .map_err(|e| fail("fetching it", e))?;
+        let mut last = String::new();
+        let mut fetched = false;
+        for url in fetch_urls(&dep.url) {
+            let one = run(Command::new("git")
+                .env("GIT_TERMINAL_PROMPT", "0")
+                .arg("-C")
+                .arg(&repo)
+                .args([
+                    "-c",
+                    "http.lowSpeedLimit=1000",
+                    "-c",
+                    "http.lowSpeedTime=60",
+                    "fetch",
+                    "-q",
+                    "--depth",
+                    "1",
+                    "--",
+                ])
+                .arg(&url)
+                .arg(format!("+{0}:refs/commit/{0}", dep.rev)));
+            match one {
+                Ok(()) => {
+                    fetched = true;
+                    break;
+                }
+                Err(e) => last = e,
+            }
+        }
+        if !fetched {
+            return Err(fail("fetching it", last));
+        }
         let part = work.join("repo.tgz");
         run(Command::new("tar")
             .arg("-czf")
@@ -359,6 +400,31 @@ source = "git+https://github.com/o/short?rev=abc#abc"
         assert_eq!(revs("services/auth"), ["a", "b"]);
         assert_eq!(revs("."), ["a"]);
         assert_eq!(revs("kernel/hands/src"), ["a", "c"]);
+    }
+
+    #[test]
+    fn an_ssh_github_url_is_also_tried_over_https() {
+        // A `[patch]` spelling: this machine has no ssh key, and
+        // its credential helper serves github.com over https.
+        assert_eq!(
+            fetch_urls("ssh://git@github.com/acme/engine"),
+            [
+                "ssh://git@github.com/acme/engine",
+                "https://github.com/acme/engine",
+            ]
+        );
+        // Every other URL keeps its one spelling, so nothing else changes.
+        for url in [
+            "https://github.com/acme/engine",
+            "http://github.com/acme/engine",
+            "git://github.com/acme/engine",
+            "file:///srv/engine",
+            "ssh://git@gitlab.com/o/r",
+            "ssh://git@github.com",
+            "ssh://git@github.com/",
+        ] {
+            assert_eq!(fetch_urls(url), [url], "{url}");
+        }
     }
 
     #[test]
