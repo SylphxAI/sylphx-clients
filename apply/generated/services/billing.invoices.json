@@ -11,6 +11,13 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "billing.invoices.record_payment",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "page_size",
               "page_token",

@@ -7236,17 +7236,34 @@
             "description": "Where invoices and payment notices are sent.",
             "type": "string"
           },
+          "credit_limit": {
+            "$ref": "#/components/schemas/sylphx.billing.v1.Money",
+            "description": "The reviewed invoice receivable limit, USD. Unset/null on approved invoice\nterms means unlimited and never suspended. Finite limits retain net-term\ndunning. Writing requires billing:terms:approve; a self cap is separate."
+          },
+          "invoice_terms_approved": {
+            "description": "Credit approval is an ordinary account setting, not a company flag.\nWriting this field requires billing:terms:approve in addition to admin.",
+            "type": "boolean"
+          },
+          "invoice_terms_days": {
+            "description": "Net days from finalization, 1..365. Changes require billing:terms:approve\nand affect only newly finalized invoices, never frozen history.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "payment_method": {
+            "description": "Collection choice: `card` (default), or `invoice` with approved net terms.",
+            "type": "string"
+          },
           "plan": {
-            "description": "The plan to be on, for example `plans/pro`. A change takes effect at\nonce; an upgrade to Pro is prorated by day and requires a payment method.",
+            "description": "The public plan, for example `plans/pro`. Card accounts activate Pro by\npayment; approved invoice accounts may select it without a card.",
             "type": "string",
             "x-sylphx-resource-reference": "billing.sylphx.com/Plan"
           },
           "spend_limit": {
             "$ref": "#/components/schemas/sylphx.billing.v1.Money",
-            "description": "The monthly spend limit on usage past the included amounts. Unset means\nthe default (USD 200) unless `unlimited_spend` is set."
+            "description": "The customer's monthly cap on usage past included amounts. A lower cap\nis always enforced independently of the seller's reviewed credit limit."
           },
           "unlimited_spend": {
-            "description": "No spend limit; requires a verified payment method.",
+            "description": "Clears the self spend cap; never lifts a tier or reviewed credit limit.",
             "type": "boolean"
           }
         },
@@ -7560,7 +7577,7 @@
           },
           "amount_paid": {
             "$ref": "#/components/schemas/sylphx.billing.v1.Money",
-            "description": "What has been paid, confirmed by provider readback.",
+            "description": "What has been paid, confirmed by provider readback or authorized settlement.",
             "readOnly": true
           },
           "completeness": {
@@ -7633,6 +7650,14 @@
             "readOnly": true,
             "type": "string"
           },
+          "settlements": {
+            "description": "Immutable authorized external payment records, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.billing.v1.InvoiceSettlement"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
           "state": {
             "$ref": "#/components/schemas/sylphx.billing.v1.InvoiceState",
             "description": "The invoice's lifecycle state.",
@@ -7666,7 +7691,7 @@
         "properties": {
           "amount": {
             "$ref": "#/components/schemas/sylphx.billing.v1.Money",
-            "description": "The line amount, rounded half-even to minor units.",
+            "description": "The line amount in minor units. Project usage lines share the half-even\nrounded org price total; deterministic residual allocation conserves it.",
             "readOnly": true
           },
           "description": {
@@ -7698,6 +7723,12 @@
             "readOnly": true,
             "type": "integer"
           },
+          "project": {
+            "description": "The project whose usage this line rates. Empty for org-level lines and\nhistorical invoices without recorded project attribution. Included\nallowances are pooled per org and price, never duplicated per project.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/Project"
+          },
           "quantity": {
             "description": "The rated quantity, in the meter's base unit.",
             "format": "int64",
@@ -7708,6 +7739,11 @@
             "description": "The service the line belongs to; empty for the plan fee.",
             "readOnly": true,
             "type": "string"
+          },
+          "shadow_cost": {
+            "$ref": "#/components/schemas/sylphx.billing.v1.Money",
+            "description": "Sylphx's cost to serve this usage, not charged to the customer. Unset\nwhen no shadow price was recorded. Project costs conserve the rounded\norg COGS total per price by the same deterministic allocation.",
+            "readOnly": true
           },
           "tier": {
             "description": "The price tier, from 1.",
@@ -7733,6 +7769,43 @@
           "proration"
         ],
         "type": "string"
+      },
+      "sylphx.billing.v1.InvoiceSettlement": {
+        "description": "InvoiceSettlement is an immutable full payment recorded by a seller operator\nwith platform-only billing:payments:record. Internal settlement is noncash.",
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/sylphx.billing.v1.Money",
+            "description": "The exact full outstanding amount settled.",
+            "readOnly": true
+          },
+          "payment_id": {
+            "description": "Deterministic identity of the recorded payment.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "payment_method": {
+            "description": "card, invoice, or internal_settlement.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "record_time": {
+            "description": "When Billing recorded the payment.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recorder": {
+            "description": "Principal from the verified seller Access grant, never supplied by the request.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "settlement_reference": {
+            "description": "External provider, bank or internal journal reference.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "sylphx.billing.v1.InvoiceState": {
         "description": "InvoiceState is the lifecycle state of an Invoice.",
@@ -8463,6 +8536,35 @@
         "required": [
           "numerator",
           "denominator"
+        ],
+        "type": "object"
+      },
+      "sylphx.billing.v1.RecordInvoicePaymentRequest": {
+        "description": "A seller-verified external settlement, never a customer's payment assertion.",
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/sylphx.billing.v1.Money",
+            "description": "Positive exact full outstanding balance in USD integer minor units."
+          },
+          "name": {
+            "description": "The invoice to settle in full.",
+            "type": "string",
+            "x-sylphx-resource-reference": "billing.sylphx.com/Invoice"
+          },
+          "payment_method": {
+            "description": "card or invoice debits cash; internal_settlement debits a dedicated\nnoncash journal account, never cash or promotional/customer credit.",
+            "type": "string"
+          },
+          "settlement_reference": {
+            "description": "Bank/provider/journal reference, 1..200 bytes, unique per org and method.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "payment_method",
+          "settlement_reference",
+          "amount"
         ],
         "type": "object"
       },
@@ -39674,7 +39776,7 @@
     "description": "One API for every Sylphx service. Generated from contracts/; do not edit.",
     "title": "Sylphx API",
     "version": "v1",
-    "x-sylphx-generated": "@generated by sylphx-gen 0.1.0 from contracts@f99a9bda63ea35002f40ef41b07b570c1c970750996f232cbfb0ed12313637ab. Do not edit."
+    "x-sylphx-generated": "@generated by sylphx-gen 0.1.0 from contracts@1972458fb9febe78624009fbbfcea3896e3f965ce8a5b63a9b52e58fe080977e. Do not edit."
   },
   "openapi": "3.1.0",
   "paths": {
@@ -45565,6 +45667,115 @@
         ],
         "x-sylphx-method": "billing.invoices.get",
         "x-sylphx-permission": "billing:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/invoices/{invoice}:recordPayment": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nA seller operator records an externally verified full invoice payment.\nThe platform-only scope cannot be granted by customer owners/admins.\nThe invoice name identifies the customer, not the seller. References are\nimmutable and idempotent per org and method; conflicting reuse is refused.",
+        "operationId": "billing_invoices_record_payment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invoice",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "amount": {
+                    "$ref": "#/components/schemas/sylphx.billing.v1.Money",
+                    "description": "Positive exact full outstanding balance in USD integer minor units."
+                  },
+                  "payment_method": {
+                    "description": "card or invoice debits cash; internal_settlement debits a dedicated\nnoncash journal account, never cash or promotional/customer credit.",
+                    "type": "string"
+                  },
+                  "settlement_reference": {
+                    "description": "Bank/provider/journal reference, 1..200 bytes, unique per org and method.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payment_method",
+                  "settlement_reference",
+                  "amount"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.billing.v1.Invoice"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "A seller operator records an externally verified full invoice payment. The platform-only scope cannot be granted by customer owners/admins. The invoice name identifies the customer, not the seller. References are immutable and idempotent per org and method; conflicting reuse is refused.",
+        "tags": [
+          "billing"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "billing.invoices.record_payment",
+        "x-sylphx-permission": "billing:payments:record",
         "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
