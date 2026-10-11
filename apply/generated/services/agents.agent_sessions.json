@@ -4,6 +4,20 @@
       "methods": [
         {
           "http": {
+            "query_params": []
+          },
+          "id": "agents.agent_sessions.invoke_tool",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agent_sessions.tool_catalog",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "agent_session_id",
               "validate_only"

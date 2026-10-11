@@ -1690,6 +1690,165 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Captures an existing grant for one session and purpose; never issues a key."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Captures an existing grant for one session and purpose; never issues a key.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/agents:capture-credential",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Caller-owned grant capture; only opaque metadata is returned.",
+        "properties": {
+          "allowed_tools": {
+            "description": "Pinned tool names allowed to inject this credential.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "credential": {
+            "description": "The existing caller-owned credential, stored encrypted and never logged.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "expires_at": {
+            "description": "The issuer-provided expiry of the captured credential.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment in which the caller holds the existing grant.",
+            "type": "string"
+          },
+          "purpose": {
+            "description": "execution, completion, or runtime; runtime handles never enter the guest.",
+            "type": "string"
+          },
+          "session": {
+            "description": "The prospective or existing session to bind this handle to.",
+            "type": "string"
+          },
+          "turn": {
+            "description": "The turn allowed to use the execution credential.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "session",
+          "turn",
+          "credential",
+          "expires_at",
+          "allowed_tools",
+          "purpose"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.capture_credential",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agents_capture_credential"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Rotates the captured value under the same handle with generation fencing."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Rotates the captured value under the same handle with generation fencing.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/agents:rotate-credential",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request to rotate a captured credential without changing its handle.",
+        "properties": {
+          "credential": {
+            "description": "The replacement issuer-provided credential, stored encrypted.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "expires_at": {
+            "description": "The issuer-provided expiry of the replacement credential.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "generation": {
+            "description": "The current handle generation; stale rotations are refused.",
+            "format": "int64",
+            "type": "string"
+          },
+          "handle": {
+            "description": "The opaque handle whose captured credential is being replaced.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "parent": {
+            "description": "The environment that owns the captured handle.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "handle",
+          "generation",
+          "credential",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.rotate_credential",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agents_rotate_credential"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Revokes one captured handle. Repeating the revocation is harmless."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Revokes one captured handle. Repeating the revocation is harmless.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/agents:revoke-credential",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request to revoke a captured credential handle.",
+        "properties": {
+          "handle": {
+            "description": "The opaque handle to revoke; repeated revocation is harmless.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "parent": {
+            "description": "The environment that owns the captured handle.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "handle"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.revoke_credential",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agents_revoke_credential"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -1972,7 +2131,8 @@
                             },
                             "handle": {
                               "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
-                              "type": "string"
+                              "type": "string",
+                              "x-sylphx-sensitive": true
                             },
                             "placement": {
                               "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
@@ -2182,7 +2342,8 @@
                                 },
                                 "handle": {
                                   "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
-                                  "type": "string"
+                                  "type": "string",
+                                  "x-sylphx-sensitive": true
                                 },
                                 "placement": {
                                   "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
@@ -2471,7 +2632,8 @@
                             },
                             "handle": {
                               "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
-                              "type": "string"
+                              "type": "string",
+                              "x-sylphx-sensitive": true
                             },
                             "placement": {
                               "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
@@ -2681,7 +2843,8 @@
                                 },
                                 "handle": {
                                   "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
-                                  "type": "string"
+                                  "type": "string",
+                                  "x-sylphx-sensitive": true
                                 },
                                 "placement": {
                                   "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
@@ -2821,6 +2984,345 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Atomically admits a pinned task session, initial event and pending turn."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Atomically admits a pinned task session, initial event and pending turn.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agents/*}:run",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Immutable task-attempt input; the caller pins its own task/profile context.",
+        "properties": {
+          "agent_session_id": {
+            "description": "The stable session identifier; reusing it for another attempt is refused.",
+            "type": "string"
+          },
+          "agent_version": {
+            "description": "The immutable agent version pinned for this task attempt.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
+          },
+          "completion": {
+            "additionalProperties": false,
+            "description": "The pinned tool call used by the runtime to deliver the terminal result.",
+            "properties": {
+              "arguments": {
+                "additionalProperties": true,
+                "description": "Immutable literal tool input, excluding credentials and mapped result fields.",
+                "type": "object"
+              },
+              "result_fields": {
+                "additionalProperties": {
+                  "description": "Runtime-produced fields mapped into an authorized completion tool call.",
+                  "enum": [
+                    "text",
+                    "done",
+                    "next",
+                    "where",
+                    "outcome"
+                  ],
+                  "type": "string"
+                },
+                "description": "Destination argument names mapped to runtime-produced result selectors.",
+                "type": "object"
+              },
+              "tool": {
+                "description": "The authorized tool name in the pinned agent version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "tool"
+            ],
+            "type": "object"
+          },
+          "credentials": {
+            "additionalProperties": {
+              "additionalProperties": false,
+              "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+              "properties": {
+                "connection": {
+                  "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                  "type": "string",
+                  "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                },
+                "end_user_provider": {
+                  "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                  "type": "string"
+                },
+                "handle": {
+                  "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                  "type": "string",
+                  "x-sylphx-sensitive": true
+                },
+                "placement": {
+                  "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                  "type": "string"
+                },
+                "secret": {
+                  "description": "A Kernel Secret of this environment, by name.",
+                  "type": "string",
+                  "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                }
+              },
+              "type": "object"
+            },
+            "description": "Captured credential bindings by alias; credentials never enter context.",
+            "type": "object"
+          },
+          "environment": {
+            "additionalProperties": false,
+            "description": "The requested fresh lease, with a finite TTL and supported harness.",
+            "properties": {
+              "budget": {
+                "additionalProperties": false,
+                "description": "The lease's CPU and cost ceiling, separate from model and tool spend.",
+                "properties": {
+                  "max_cost_micros": {
+                    "description": "End COST_BUDGET once the shape's list price times wall seconds reaches\nthis many millionths of a US dollar.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "max_cpu_seconds": {
+                    "description": "End CPU_BUDGET after this many vCPU-seconds of guest CPU time.",
+                    "format": "int64",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "egress": {
+                "additionalProperties": false,
+                "description": "The lease's outbound policy, using the Sandboxes network contract.",
+                "properties": {
+                  "allowed_cidrs": {
+                    "description": "Public CIDRs reachable when `egress` is ALLOWLIST.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "allowed_domains": {
+                    "description": "Hosts reachable when `egress` is ALLOWLIST: exact names or one leading\n`*.` wildcard label, for example `api.openai.com`, `*.github.com`.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "egress": {
+                    "description": "Default ALLOW.",
+                    "enum": [
+                      "allow",
+                      "deny",
+                      "allowlist"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "idle_standby": {
+                "description": "Put the environment in standby after this long idle, 1m to 24h; default\n10m.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string"
+              },
+              "repo": {
+                "additionalProperties": false,
+                "description": "The repository to prepare inside the fresh lease, if any.",
+                "properties": {
+                  "revision": {
+                    "description": "The commit or ref to check out; empty uses the repository's default branch.",
+                    "type": "string"
+                  },
+                  "uri": {
+                    "description": "The repository URI. Access uses the session's bound credential handles.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "uri"
+                ],
+                "type": "object"
+              },
+              "shape": {
+                "description": "A Sylphx Sandboxes shape; empty gives sessions no environment.",
+                "type": "string"
+              },
+              "template": {
+                "description": "The Sandboxes image: `template:<name>` or an artifact image by digest,\npassed unchanged to the lease's `image` field.",
+                "type": "string"
+              },
+              "ttl": {
+                "description": "The lease's maximum wall time, passed to Sandboxes as `ttl`. The lease\nis released when the session ends even if this bound has not been reached.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "message": {
+            "additionalProperties": false,
+            "description": "The initial task message appended atomically with session acceptance.",
+            "properties": {
+              "parts": {
+                "description": "The content, in order; 1 to 64 parts.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "A ContentPart is one piece of a message.",
+                  "properties": {
+                    "file": {
+                      "additionalProperties": false,
+                      "description": "A file, by Sylphx Data object URL or an https URL.",
+                      "properties": {
+                        "filename": {
+                          "description": "Its display name.",
+                          "type": "string"
+                        },
+                        "media_type": {
+                          "description": "Its media type, for example `image/png`.",
+                          "type": "string"
+                        },
+                        "uri": {
+                          "description": "Where the file is.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "uri"
+                      ],
+                      "type": "object"
+                    },
+                    "text": {
+                      "description": "Text.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "parts"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "The name of the agent to run under the caller's environment grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          },
+          "profiles": {
+            "description": "Granted profile mounts for the fresh session lease.",
+            "items": {
+              "additionalProperties": false,
+              "description": "ProfileMount attaches a platform Profile by name, never its sign-in values.",
+              "properties": {
+                "mode": {
+                  "description": "`read_only` (default) or `write_back`. Only a write_back grant saves\nchanges at session end while its lease still answers; empty is read_only.",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "`orgs/{org}/projects/{project}/envs/{env}/profiles/{profile}`.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "renewal": {
+            "additionalProperties": false,
+            "description": "Optional pinned grant-renewal call, owned by the runtime after acceptance.",
+            "properties": {
+              "arguments": {
+                "additionalProperties": true,
+                "description": "Immutable literal renewal-tool input, with credential injection by the gateway.",
+                "type": "object"
+              },
+              "cancel_field": {
+                "description": "JSON pointers into the tool response; no domain-specific field names.",
+                "type": "string"
+              },
+              "credential_expiries": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Matching aliases to issuer-returned RFC3339 expiry response pointers.",
+                "type": "object"
+              },
+              "credential_updates": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Credential binding alias to a response JSON pointer for its replacement.",
+                "type": "object"
+              },
+              "idempotency_argument": {
+                "description": "Top-level argument receiving a stable per-tick runtime idempotency key.\nOmit this argument from literal input; retries reuse it, later ticks change it.",
+                "type": "string"
+              },
+              "interval": {
+                "description": "Positive interval, from five seconds to five minutes.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string"
+              },
+              "reason_field": {
+                "description": "A response JSON pointer selecting the cancellation reason.",
+                "type": "string"
+              },
+              "tool": {
+                "description": "The authorized renewal tool name in the pinned agent version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "tool",
+              "interval"
+            ],
+            "type": "object"
+          },
+          "runtime_credential_handle": {
+            "description": "Same-session handle to a caller-owned scoped Access credential. Runtime only,\nnever installed in the guest or sent to the model.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "task_ref": {
+            "description": "Caller-owned opaque reference, not interpreted by Agents.",
+            "type": "string"
+          },
+          "workspace_knowledge": {
+            "additionalProperties": true,
+            "description": "Opaque, claim-pinned workspace knowledge, including its rendered instruction.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "agent_version",
+          "agent_session_id",
+          "message",
+          "environment",
+          "completion",
+          "runtime_credential_handle"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agents.run",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agents_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -2901,6 +3403,90 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Guest execution capability authentication, not an Access management key. Preserve any JSON tool result, including scalars and arrays."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Guest execution capability authentication, not an Access management key.\nPreserve any JSON tool result, including scalars and arrays.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:invoke-tool",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request to execute one pinned tool through the session gateway.",
+        "properties": {
+          "arguments": {
+            "additionalProperties": true,
+            "description": "The tool input, validated against its pinned input schema.",
+            "type": "object"
+          },
+          "name": {
+            "description": "The name of the session whose pinned tools are used.",
+            "type": "string"
+          },
+          "op_id": {
+            "description": "The stable operation identifier, reused for idempotent tool-call retries.",
+            "type": "string"
+          },
+          "tool": {
+            "description": "The tool name in the session's pinned agent version.",
+            "type": "string"
+          },
+          "turn": {
+            "description": "The live turn whose execution capability authorizes the call.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "turn",
+          "tool",
+          "arguments",
+          "op_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.invoke_tool",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_invoke_tool"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "The immutable pinned HTTP-tool catalog exposed to the guest's MCP bridge."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). The immutable pinned HTTP-tool catalog exposed to the guest's MCP bridge.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:tool-catalog",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request for the tools available to a session execution capability.",
+        "properties": {
+          "name": {
+            "description": "The name of the session whose pinned tool catalog is requested.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.tool_catalog",
+      "permission": "agents:sessions",
+      "served": false,
+      "tool": "agents_agent_sessions_tool_catalog"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Starts a session of an agent, pinned to its current version unless `agent_version` names another. Requires a secret key until end-user ownership is implemented. The session starts idle; `:send` starts its first turn."
       },
       "description": "Not available yet (answers 501 UNIMPLEMENTED). Starts a session of an agent, pinned to its current version unless\n`agent_version` names another. Requires a secret key until end-user\nownership is implemented. The session starts idle; `:send` starts its\nfirst turn.",
@@ -2942,7 +3528,8 @@
                     },
                     "handle": {
                       "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
-                      "type": "string"
+                      "type": "string",
+                      "x-sylphx-sensitive": true
                     },
                     "placement": {
                       "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
@@ -41711,7 +42298,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@e664fe65409be842d8cfe92158f1f0e2a807b853c23c59c21071742348bcaf56. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@f99a9bda63ea35002f40ef41b07b570c1c970750996f232cbfb0ed12313637ab. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"

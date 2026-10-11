@@ -6,6 +6,27 @@
           "http": {
             "query_params": []
           },
+          "id": "agents.agents.capture_credential",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agents.rotate_credential",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agents.revoke_credential",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "agents.agents.get",
           "kind": "get"
         },
@@ -53,6 +74,13 @@
           },
           "id": "agents.agents.delete",
           "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agents.run",
+          "kind": "custom"
         }
       ],
       "resource_type": "agents.sylphx.com/Agent"

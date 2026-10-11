@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.agents.v1.ResultField",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "RESULT_FIELD_TEXT",
+      "wire": "text"
+    },
+    {
+      "number": 2,
+      "proto_name": "RESULT_FIELD_DONE",
+      "wire": "done"
+    },
+    {
+      "number": 3,
+      "proto_name": "RESULT_FIELD_NEXT",
+      "wire": "next"
+    },
+    {
+      "number": 4,
+      "proto_name": "RESULT_FIELD_WHERE",
+      "wire": "where"
+    },
+    {
+      "number": 5,
+      "proto_name": "RESULT_FIELD_OUTCOME",
+      "wire": "outcome"
+    }
+  ]
+}
