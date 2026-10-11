@@ -19,7 +19,7 @@ sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
 eval "$(sylphx build cache env)"      # point local sccache and Turbo at the project's shared build cache
-sylphx build run --region gra --queue-timeout 120s -- cargo check   # in region gra, or exit 125 after 2 min
+sylphx build run --size standard -- cargo check   # home region; keep the default 30m cold-fallback wait
 sylphx events listen --forward localhost:3000/hook   # a topic's events, signed like a webhook, to a local URL
 sylphx data docs search --index docs rate limits    # Markdown docs in a search index: path:line hits
 sylphx mcp                            # the MCP server over stdio

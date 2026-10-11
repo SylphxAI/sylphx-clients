@@ -78,8 +78,8 @@ const USER: &str = "user";
 const SIZES: [&str; 3] = ["standard", "large", "xlarge"];
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 const MAX_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
-/// How long a run waits for a machine before it answers 125 (retryable),
-/// unless `--queue-timeout` says otherwise.
+/// The machine wait includes a cold boot and trying another Volume when a
+/// warm workspace's node is busy; retain 30m unless the caller overrides it.
 const DEFAULT_QUEUE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 /// A Volume reaches available within this, or the run gives up on it.
 const VOLUME_WAIT: Duration = Duration::from_secs(300);
@@ -116,7 +116,7 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=1 on persistent workspaces without automatically enabling sccache; ephemeral machines use CARGO_INCREMENTAL=0 with sccache. CARGO_PROFILE_DEV_DEBUG=0 in both cases. --env overrides these defaults.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --region gra --queue-timeout 120s -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=1 on persistent workspaces without automatically enabling sccache; ephemeral machines use CARGO_INCREMENTAL=0 with sccache. CARGO_PROFILE_DEV_DEBUG=0 in both cases. --env overrides these defaults.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nA warm workspace is not necessarily a booted machine. Keep the default 30m machine wait for cold fallback; an explicit --queue-timeout replaces that budget.\n\nExample: sylphx build run --size standard -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -3843,6 +3843,34 @@ esac
         let help = command().render_long_help().to_string();
         assert!(help.contains("--region"), "{help}");
         assert!(help.contains("--queue-timeout"), "{help}");
+        assert!(help.contains("default 30m"), "{help}");
+        assert!(
+            help.contains("Example: sylphx build run --size standard -- cargo test"),
+            "{help}"
+        );
+        assert!(!help.contains("--queue-timeout 120s"), "{help}");
+    }
+
+    #[test]
+    fn the_default_queue_budget_covers_measured_cold_fallback() {
+        let tree = GitTree::new();
+        let o = parse(&["sylphx", "build", "run", tree.path(), "--", "true"]).unwrap();
+        assert_eq!(o.queue_timeout, Duration::from_secs(1800));
+        // The incident sample's nearest-rank p99 was 225.128s to READY;
+        // volume-pinned requeues made the longest caller wait over 450s.
+        assert!(o.queue_timeout > Duration::from_secs(455));
+        let explicit = parse(&[
+            "sylphx",
+            "build",
+            "run",
+            "--queue-timeout",
+            "120s",
+            tree.path(),
+            "--",
+            "true",
+        ])
+        .unwrap();
+        assert_eq!(explicit.queue_timeout, Duration::from_secs(120));
     }
 
     #[test]
