@@ -49,7 +49,8 @@ pub fn wire(d: Duration) -> String {
 pub struct LeaseParams<'a> {
     /// `standard`, `large` or `xlarge`: the lease shape is `build-<size>`.
     pub size: &'a str,
-    /// The region, or "" for the home region.
+    /// The explicit region, or "" for automatic placement without a volume
+    /// (with a volume, "" retains the home-region binding).
     pub region: &'a str,
     /// The command's time limit; the lease lives this plus [`TTL_SLACK`].
     pub timeout: Duration,

@@ -119,7 +119,7 @@ pub fn command() -> Command {
         .arg(Arg::new("timeout").long("timeout").value_name("DURATION")
             .help("Wall-clock limit for the build (default 60m, at most 6h)"))
         .arg(Arg::new("region").long("region").value_name("REGION")
-            .help("Region to build in (default: the project's home region); each region keeps its own warm workspaces"))
+            .help("Region to pin the build to (default: automatic Build placement); explicit regions keep their own warm workspaces"))
         .arg(Arg::new("queue-timeout").long("queue-timeout").value_name("DURATION")
             .help("Longest wait for a build machine before exiting 125, retryable (default 30m, at most 6h)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)

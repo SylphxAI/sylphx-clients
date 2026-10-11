@@ -1418,10 +1418,10 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     let replies = vec![
         json_reply(json!({"volumes": []})),
         json_reply(
-            json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
+            json!({"name": format!("{ENV}/volumes/vol-1"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "hk"}}, "spec": {"region": "hk"}, "status": {"state": "available"}}),
         ),
         json_reply(
-            json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+            json!({"name": lease, "spec": {"region": "hk", "volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),
@@ -1438,7 +1438,16 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     let out = run(
         &sb,
         &url,
-        &["build", "run", "--no-cache", "--", "cargo", "test"],
+        &[
+            "build",
+            "run",
+            "--region",
+            "hk",
+            "--no-cache",
+            "--",
+            "cargo",
+            "test",
+        ],
     )
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
@@ -1453,6 +1462,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     );
     assert!(err.contains("cold workspace"), "{err}");
     assert!(err.contains("sylphx: exit 3 in"), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
 
     let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
@@ -1600,11 +1610,12 @@ async fn build_run_region_routes_the_lease_and_its_workspace() {
             200,
             json!({"volumes": [{"name": format!("{ENV}/volumes/home-1"),
                 "meta": {"labels": {"purpose": "build-workspace", "build-repo": "any"}},
+                "spec": {"region": "hk"},
                 "status": {"state": "available"}}]}),
         ),
         (
             200,
-            json!({"name": format!("{ENV}/volumes/vol-gra"), "status": {"state": "available"}}),
+            json!({"name": format!("{ENV}/volumes/vol-gra"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "gra"}}, "spec": {"region": "gra"}, "status": {"state": "available"}}),
         ),
     ];
     // NO_CAPACITY is retryable: the SDK retries it itself before the run
@@ -1652,25 +1663,14 @@ async fn build_run_region_routes_the_lease_and_its_workspace() {
     assert!(last["error"].as_str().unwrap().contains("gra"), "{last}");
 }
 
-/// No --region: the request names no region and the pool is the home pool,
-/// exactly as before regions existed.
+/// No --region: send an unpinned ephemeral lease directly, without listing,
+/// creating or mounting any home-region workspace.
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_without_region_stays_in_the_home_region() {
+async fn build_run_without_region_requests_automatic_ephemeral_placement() {
     let sb = Sandbox::new("build-run-home");
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
     let (url, log) = serve(vec![
-        // An available gra workspace of another pool.
-        (
-            200,
-            json!({"volumes": [{"name": format!("{ENV}/volumes/gra-1"),
-                "meta": {"labels": {"purpose": "build-workspace", "build-repo": "any", "build-region": "gra"}},
-                "status": {"state": "available"}}]}),
-        ),
-        (
-            200,
-            json!({"name": format!("{ENV}/volumes/vol-home"), "status": {"state": "available"}}),
-        ),
         (
             400,
             json!({"code": "SHAPE_NOT_OFFERED", "status": 400, "detail": "shape `build-large` is not offered", "retryable": false}),
@@ -1680,10 +1680,9 @@ async fn build_run_without_region_stays_in_the_home_region() {
     let out = run(&sb, &url, &["build", "run", "-o", "json", "--", "true"]).await;
     assert_eq!(out.status.code(), Some(125));
     let seen = log.lock();
-    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
-    assert!(vol["spec"].get("region").is_none(), "{vol}");
-    assert!(vol["meta"]["labels"].get("build-region").is_none(), "{vol}");
-    let lease: Value = serde_json::from_str(&seen[2].body).unwrap();
+    assert_eq!(seen.len(), 1, "no workspace API calls");
+    assert!(seen[0].line.starts_with(&format!("POST /v1/{ENV}/leases")));
+    let lease: Value = serde_json::from_str(&seen[0].body).unwrap();
     assert!(
         lease["spec"]
             .get("region")
@@ -1691,12 +1690,227 @@ async fn build_run_without_region_stays_in_the_home_region() {
         "{lease}"
     );
     assert!(
-        lease["spec"]["volumes"][0]["volume"]
-            .as_str()
-            .unwrap()
-            .ends_with("/volumes/vol-home"),
-        "{lease}"
+        lease["spec"]
+            .get("volumes")
+            .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())),
+        "automatic placement must not bind a home-region PVC: {lease}"
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_automatic_placement_executes_in_the_selected_fr_cell() {
+    let sb = Sandbox::new("build-run-auto-gra");
+    git_init(&sb.dir);
+    std::fs::write(sb.dir.join("main.rs"), "fn main() {}\n").unwrap();
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
+    let lease = format!("{ENV}/leases/l1");
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let replies = vec![
+        json_reply(
+            json!({"name": lease, "spec": {"region": "gra"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+        ),
+        json_reply(json!({"token": "h.p.s", "generation": 1})),
+        envd_process("", 0),
+        (404, "text/plain", b"file not found".to_vec()),
+        json_reply(json!({})),
+        json_reply(json!({})),
+        envd_process("", 0),
+        envd_process("", 0),
+        envd_process("automatic FR command\n", 0),
+        json_reply(json!({"name": lease, "status": {"state": "ending"}})),
+    ];
+    let (url, log) = serve_bytes_on(listener, replies).await;
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--no-cache",
+            "--",
+            "cargo",
+            "check",
+        ],
+    )
+    .await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let events: Vec<Value> = stdout
+        .lines()
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+    let running = events.iter().find(|e| e["type"] == "running").unwrap();
+    assert_eq!(running["region"], "gra");
+    assert_eq!(running["volume"], false);
+    let seen = log.lock();
+    assert!(seen[0].line.starts_with(&format!("POST /v1/{ENV}/leases")));
+    assert!(!seen.iter().any(|s| s.line.contains("/volumes")));
+    let created: Value = serde_json::from_str(&seen[0].body).unwrap();
+    assert!(created["spec"]
+        .get("region")
+        .is_none_or(|r| r.as_str() == Some("")));
+    assert!(created["spec"]
+        .get("volumes")
+        .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())));
+    assert!(seen[8].body.contains(r#""/workspace",".","1","cargo""#));
+    assert!(seen[9].line.contains(":release"));
+    for request in seen.iter().skip(2).take(7) {
+        let headers = request.head.to_ascii_lowercase();
+        assert!(headers.contains("x-access-token: h.p.s"));
+        assert!(!headers.contains("sylphx_sk_test"));
+    }
+}
+
+/// Acceptance fixes the Cell before READY, not only after a machine boots.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_automatic_retry_keeps_the_cell_of_a_lost_pending_lease() {
+    automatic_placement_retry("gra", true).await;
+}
+
+/// A stream fault during bootstrap may retry the machine, never its placement.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_automatic_retry_keeps_the_cell_after_a_precommand_stream_fault() {
+    automatic_placement_retry("gra", false).await;
+}
+
+/// Empty canonical region is an accepted home Cell, not unselected placement.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_automatic_retry_pins_a_legacy_empty_accepted_region_to_home() {
+    automatic_placement_retry("", true).await;
+}
+
+async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
+    let sb = Sandbox::new(&format!("auto-retry-{accepted_region}-{pending}"));
+    project(&sb.dir);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let first = format!("{ENV}/leases/first");
+    let second = format!("{ENV}/leases/second");
+    let retry_region = if accepted_region.is_empty() {
+        "hk"
+    } else {
+        accepted_region
+    };
+    let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
+    let mut replies = vec![json_reply(json!({
+        "name": first,
+        "spec": {"region": accepted_region},
+        "status": {"state": if pending { "granted" } else { "ready" },
+            "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}
+    }))];
+    if !pending {
+        replies.push(json_reply(json!({"token": "h.p.s", "generation": 1})));
+        replies.push(envd_broken()); // bootstrap breaks before the user's command
+    }
+    // No spec in the loss response: affinity must already come from CreateLease.
+    replies.push(json_reply(json!({"name": first,
+        "status": {"state": "ended", "endReason": "machine_lost"}})));
+    replies.extend([
+        json_reply(json!({"name": second, "spec": {"region": retry_region},
+            "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}})),
+        json_reply(json!({"token": "h.p.t", "generation": 1})),
+        envd_process("", 0),
+        (404, "text/plain", b"file not found".to_vec()),
+        json_reply(json!({})),
+        json_reply(json!({})),
+        envd_process("", 0),
+        envd_process("", 0),
+        envd_process("built once\n", 0),
+        json_reply(json!({"name": second, "status": {"state": "ending"}})),
+    ]);
+    let (_, log) = serve_bytes_on(listener, replies).await;
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--no-cache",
+            "--",
+            "cargo",
+            "check",
+        ],
+    )
+    .await;
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "{stderr}");
+    let events: Vec<Value> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(
+        events
+            .iter()
+            .filter(|e| e["type"] == "queued" && e["retry"] == true)
+            .count(),
+        1
+    );
+    let running = events.iter().find(|e| e["type"] == "running").unwrap();
+    assert_eq!(running["region"], retry_region);
+    assert_eq!(running["volume"], false);
+    assert_eq!(running["workspace"], "cold");
+    assert_eq!(events.last().unwrap()["exit_code"], 0);
+    let seen = log.lock();
+    assert!(
+        !seen.iter().any(|s| s.line.contains("/volumes")),
+        "automatic retries must stay ephemeral"
+    );
+    let creates: Vec<Value> = seen
+        .iter()
+        .filter(|s| s.line.starts_with(&format!("POST /v1/{ENV}/leases ")))
+        .map(|s| serde_json::from_str(&s.body).unwrap())
+        .collect();
+    assert_eq!(creates.len(), 2, "one initial lease and one retry");
+    assert!(creates[0]["spec"]
+        .get("region")
+        .is_none_or(|r| r.as_str() == Some("")));
+    assert_eq!(
+        creates[1]["spec"]["region"], retry_region,
+        "the retry must pin the accepted Cell"
+    );
+    for lease in &creates {
+        assert!(
+            lease["spec"]
+                .get("volumes")
+                .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())),
+            "{lease}"
+        );
+    }
+    assert!(seen
+        .iter()
+        .any(|s| s.line.starts_with(&format!("GET /v1/{first} "))));
+    let commands: Vec<_> = seen
+        .iter()
+        .filter(|s| s.body.contains("\"cargo\""))
+        .collect();
+    assert_eq!(
+        commands.len(),
+        1,
+        "the lost attempt never started the command"
+    );
+    assert!(
+        commands[0].body.contains(r#""/workspace",".","1","cargo""#),
+        "no Volume means no local sccache"
+    );
+    assert_eq!(
+        seen.iter().filter(|s| s.line.contains(":release")).count(),
+        1
+    );
+    assert!(seen
+        .last()
+        .unwrap()
+        .line
+        .contains(&format!("/{second}:release")));
 }
 
 /// A region with no Cell (or not offered yet) refuses the workspace and then
@@ -1861,13 +2075,23 @@ async fn build_run_exits_125_when_the_toolchain_cannot_be_installed() {
     let out = run(
         &sb,
         &url,
-        &["build", "run", "--no-cache", "--", "cargo", "build"],
+        &[
+            "build",
+            "run",
+            "--region",
+            "hk",
+            "--no-cache",
+            "--",
+            "cargo",
+            "build",
+        ],
     )
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(125), "{err}");
     assert!(err.contains("Connection timed out"), "{err}");
     assert!(err.contains("[retryable]"), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
     let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     assert_eq!(lines.len(), 11, "the command is never started: {lines:?}");
@@ -1893,7 +2117,16 @@ async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
     let out = run(
         &sb,
         &url,
-        &["build", "run", "--no-cache", "--", "cargo", "test"],
+        &[
+            "build",
+            "run",
+            "--region",
+            "hk",
+            "--no-cache",
+            "--",
+            "cargo",
+            "test",
+        ],
     )
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
@@ -1901,6 +2134,7 @@ async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
     assert_eq!(String::from_utf8_lossy(&out.stdout), "after the break\n");
     assert!(err.contains("reattached to the running command"), "{err}");
     assert!(!err.contains("retrying"), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
     let seen = log.lock();
     let start = seen
         .iter()
@@ -1976,6 +2210,8 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
         &[
             "build",
             "run",
+            "--region",
+            "hk",
             "-o",
             "json",
             "--no-cache",
@@ -1999,6 +2235,7 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     assert_eq!(result["outcome"], "lost");
     assert_eq!(result["exit_code"], 137);
     assert_eq!(result["retryable"], true);
+    assert_regional_workspace_requests(&log, "hk");
     let seen = log.lock();
     assert_eq!(
         seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
@@ -2034,6 +2271,9 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
     ));
     replies.push(ended()); // the full machine is released before the retry
     let mut retry = attempt_replies(&url, envd_process("", 0));
+    let mut volume: Value = serde_json::from_slice(&retry[1].2).unwrap();
+    volume["name"] = json!(format!("{ENV}/volumes/{retry_volume}"));
+    retry[1].2 = volume.to_string().into_bytes();
     let mut lease: Value = serde_json::from_slice(&retry[2].2).unwrap();
     lease["spec"]["volumes"][0]["volume"] = json!(format!("{ENV}/volumes/{retry_volume}"));
     retry[2].2 = lease.to_string().into_bytes();
@@ -2044,14 +2284,34 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
     let out = run(
         &sb,
         &url,
-        &["build", "run", "--no-cache", "--", "cargo", "test"],
+        &[
+            "build",
+            "run",
+            "--region",
+            "hk",
+            "--no-cache",
+            "--",
+            "cargo",
+            "test",
+        ],
     )
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{err}");
     assert_eq!(String::from_utf8_lossy(&out.stdout), "built\n");
     assert!(err.contains("ran out of space; retrying once"), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
     let seen = log.lock();
+    let leases: Vec<Value> = seen
+        .iter()
+        .filter(|s| s.line.starts_with(&format!("POST /v1/{ENV}/leases ")))
+        .map(|s| serde_json::from_str(&s.body).unwrap())
+        .collect();
+    assert_eq!(leases.len(), 2);
+    assert_eq!(
+        leases[1]["spec"]["volumes"][0]["volume"],
+        format!("{ENV}/volumes/{retry_volume}")
+    );
     let boots: Vec<_> = seen
         .iter()
         .filter(|s| s.body.contains("\"bootstrap\""))
@@ -2089,12 +2349,12 @@ async fn build_run_queue_timeout_releases_and_exits_125() {
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
     let lease = format!("{ENV}/leases/l1");
-    let queued = json!({"name": lease, "status": {"state": "granted"}});
+    let queued = json!({"name": lease, "spec": {"region": "gra", "volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "granted"}});
     let (url, log) = serve(vec![
         (200, json!({"volumes": []})),
         (
             200,
-            json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
+            json!({"name": format!("{ENV}/volumes/vol-1"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "gra"}}, "spec": {"region": "gra"}, "status": {"state": "available"}}),
         ),
         (200, queued.clone()),
         (200, queued.clone()),
@@ -2134,6 +2394,7 @@ async fn build_run_queue_timeout_releases_and_exits_125() {
         last["error"].as_str().unwrap().contains("--queue-timeout"),
         "{last}"
     );
+    assert_regional_workspace_requests(&log, "gra");
     let seen = log.lock();
     assert!(
         seen.iter().any(|s| s.line.contains(":release")),
@@ -2301,10 +2562,10 @@ fn attempt_replies(
     vec![
         json_reply(json!({"volumes": []})),
         json_reply(
-            json!({"name": format!("{ENV}/volumes/vol-1"), "status": {"state": "available"}}),
+            json!({"name": format!("{ENV}/volumes/vol-1"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "hk"}}, "spec": {"region": "hk"}, "status": {"state": "available"}}),
         ),
         json_reply(
-            json!({"name": lease, "spec": {"volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+            json!({"name": lease, "spec": {"region": "hk", "volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),
@@ -2351,6 +2612,39 @@ fn started_env(log: &Log) -> Value {
     v["process"]["envs"].clone()
 }
 
+/// Warm fixtures must exercise explicitly regional requests, not automatic placement.
+fn assert_regional_workspace_requests(log: &Log, region: &str) {
+    let seen = log.lock();
+    let mut volumes = 0;
+    let mut leases = 0;
+    for request in seen.iter() {
+        if request
+            .line
+            .starts_with(&format!("POST /v1/{ENV}/volumes "))
+        {
+            let body: Value = serde_json::from_str(&request.body).unwrap();
+            assert_eq!(body["spec"]["region"], region, "{body}");
+            assert_eq!(body["meta"]["labels"]["build-region"], region, "{body}");
+            volumes += 1;
+        } else if request.line.starts_with(&format!("POST /v1/{ENV}/leases ")) {
+            let body: Value = serde_json::from_str(&request.body).unwrap();
+            assert_eq!(body["spec"]["region"], region, "{body}");
+            let mount = &body["spec"]["volumes"][0];
+            assert_eq!(
+                mount["mount_path"].as_str().or(mount["mountPath"].as_str()),
+                Some("/workspace"),
+                "{body}"
+            );
+            leases += 1;
+        }
+    }
+    assert!(volumes > 0, "the fixture must request a regional workspace");
+    assert!(
+        leases > 0,
+        "the fixture must lease a machine with that workspace"
+    );
+}
+
 fn sylphx_lines(stderr: &str) -> Vec<&str> {
     stderr
         .lines()
@@ -2375,6 +2669,8 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
         &[
             "build",
             "run",
+            "--region",
+            "hk",
             "-o",
             "json",
             "--timeout",
@@ -2392,6 +2688,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
     let err = String::from_utf8_lossy(&out.stderr);
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(out.status.code(), Some(0), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
     // The mint: the key as a bearer, and the run's access, network and life.
     let seen = clog.lock();
     assert_eq!(seen.len(), 1);
@@ -2435,17 +2732,27 @@ async fn build_run_caps_the_token_life_at_the_longest_run() {
     let sb = Sandbox::new("cache-ttl");
     project(&sb.dir);
     let (cache, clog) = serve(vec![(200, cache_reply())]).await;
-    let (url, _log) = build_stub(vec![envd_process("", 0), ended()]).await;
+    let (url, log) = build_stub(vec![envd_process("", 0), ended()]).await;
     let out = run_with(
         &sb,
         &url,
-        &["build", "run", "--timeout", "6h", "--", "make"],
+        &[
+            "build",
+            "run",
+            "--region",
+            "hk",
+            "--timeout",
+            "6h",
+            "--",
+            "make",
+        ],
         |c| {
             c.env("SYLPHX_BUILD_CACHE_URL", &cache);
         },
     )
     .await;
     assert_eq!(out.status.code(), Some(0));
+    assert_regional_workspace_requests(&log, "hk");
     let body: Value = serde_json::from_str(&clog.lock()[0].body).unwrap();
     assert_eq!(body["ttl_seconds"], 22500);
 }
@@ -2491,12 +2798,18 @@ async fn build_run_builds_without_the_cache_when_it_cannot_be_minted() {
         let sb = Sandbox::new(&format!("cache-fail-{name}"));
         project(&sb.dir);
         let (url, log) = build_stub(vec![envd_process("ok\n", 0), ended()]).await;
-        let out = run_with(&sb, &url, &["build", "run", "--", "make"], |c| {
-            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
-        })
+        let out = run_with(
+            &sb,
+            &url,
+            &["build", "run", "--region", "hk", "--", "make"],
+            |c| {
+                c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+            },
+        )
         .await;
         let err = String::from_utf8_lossy(&out.stderr);
         assert_eq!(out.status.code(), Some(0), "{name}: {err}");
+        assert_regional_workspace_requests(&log, "hk");
         assert_eq!(String::from_utf8_lossy(&out.stdout), "ok\n", "{name}");
         let warn: Vec<&str> = err.lines().filter(|l| l.contains("build cache")).collect();
         assert_eq!(
@@ -2521,7 +2834,7 @@ async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
     let out = run_with(
         &sb,
         &url,
-        &["build", "run", "--no-cache", "--", "make"],
+        &["build", "run", "--region", "hk", "--no-cache", "--", "make"],
         |c| {
             c.env("SYLPHX_BUILD_CACHE_URL", &cache);
         },
@@ -2529,6 +2842,7 @@ async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
     assert!(clog.lock().is_empty(), "no token was asked for");
     assert!(!err.contains("build cache"), "{err}");
     assert_eq!(sylphx_lines(&err).len(), 3, "{err}");
@@ -2543,24 +2857,30 @@ async fn build_run_errors_never_carry_the_token() {
     project(&sb.dir);
     let (cache, _) = serve(vec![(200, cache_reply())]).await;
     let echo = format!("boom {CACHE_TOKEN}").into_bytes();
-    let (url, _log) = build_stub(vec![
+    let (url, log) = build_stub(vec![
         (500, "text/plain", echo),
         (
             200,
             "application/json",
-            json!({"name": format!("{ENV}/leases/l1"), "status": {"state": "ready"}})
+            json!({"name": format!("{ENV}/leases/l1"), "spec": {"region": "hk"}, "status": {"state": "ready"}})
                 .to_string()
                 .into_bytes(),
         ),
         ended(),
     ])
     .await;
-    let out = run_with(&sb, &url, &["build", "run", "--", "make"], |c| {
-        c.env("SYLPHX_BUILD_CACHE_URL", &cache);
-    })
+    let out = run_with(
+        &sb,
+        &url,
+        &["build", "run", "--region", "hk", "--", "make"],
+        |c| {
+            c.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(125), "{err}");
+    assert_regional_workspace_requests(&log, "hk");
     assert!(err.contains("sylphx: error:"), "{err}");
     assert!(!err.contains(CACHE_TOKEN), "{err}");
 }

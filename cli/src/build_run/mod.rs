@@ -3,11 +3,11 @@
 //! build execution ADR, section 1). The output streams back, the exit code is
 //! the command's own, and named outputs are copied back.
 //!
-//! A run takes a warm workspace (a Sandboxes Volume from a pool per project
-//! and repository), leases a `build-<size>` machine with it mounted at
-//! [`WS`], sends only the files that differ from the workspace's manifest
-//! ([`sync`]), runs the command next to the warm `target/`, and always
-//! releases the lease. Before the command starts, a preempted or lost
+//! An automatic run leases an ephemeral `build-<size>` machine in any
+//! configured, admitting Cell. An explicitly regional run can take a warm
+//! workspace (a Sandboxes Volume per project and repository) mounted at
+//! [`WS`], sending only files that differ from its manifest ([`sync`]). Every
+//! run releases the lease. Before the command starts, a preempted or lost
 //! machine, or a broken stream, is retried once after a short backoff, and
 //! anything that fails (the machine, the sync, the toolchain install) is a
 //! platform failure, 125. Once the command has started it is never run
@@ -15,8 +15,11 @@
 //! reattached to the running command (`Guest::reattach`), and a machine lost
 //! under it ends the run with 137, as a killed process.
 //!
-//! `--region` runs in that region's Cell, with that region's warm workspaces
-//! (a Volume lives in one Cell); no `--region` is the project's home region.
+//! `--region` pins the run to that Cell and its local warm workspaces (a
+//! Volume lives in one Cell). Without it, the API selects Build capacity;
+//! the workspace is ephemeral, so it cannot pin demand to a home-region PVC.
+//! Once a lease is accepted, every internal retry stays in its returned Cell,
+//! including a lease lost before READY; automatic runs remain ephemeral.
 //! A region whose Cell offers no Volumes refuses the workspace at once
 //! (`SHAPE_NOT_OFFERED`); the run then leases the machine with no Volume and
 //! builds on its own disk: a cold workspace that ends with the lease, with
@@ -127,7 +130,7 @@ pub fn command() -> Command {
         .arg(Arg::new("timeout").long("timeout").value_name("DURATION")
             .help("Wall-clock limit for the command (default 60m, at most 6h)"))
         .arg(Arg::new("region").long("region").value_name("REGION")
-            .help("Region to run in (default: the project's home region); each region keeps its own warm workspaces"))
+            .help("Region to pin the run to (default: automatic Build placement); explicit regions keep their own warm workspaces"))
         .arg(Arg::new("queue-timeout").long("queue-timeout").value_name("DURATION")
             .help("Longest wait for a build machine before exiting 125, retryable (default 30m, at most 6h)"))
         .arg(Arg::new("artifact").long("artifact").value_name("GLOB").action(ArgAction::Append)
@@ -794,7 +797,8 @@ async fn execute(
         key,
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
-        no_volumes: false,
+        no_volumes: o.region.is_none(),
+        accepted_region: None,
         empty_volume: None,
     };
     let mut retries = Retries::default();
@@ -883,9 +887,12 @@ struct Run<'a> {
     /// One warning per run: the build cache unavailable, or the build store
     /// not taking the sync.
     cache_warned: AtomicBool,
-    /// The region refused a workspace Volume (`SHAPE_NOT_OFFERED`): every
-    /// attempt of this run leases a machine without one.
+    /// Automatic placement, or the explicit region refused a workspace
+    /// Volume: every attempt leases an ephemeral machine without a PVC.
     no_volumes: bool,
+    /// The first accepted lease's canonical region, even before READY.
+    /// `None` is unselected; `Some("")` is the legacy home-Cell spelling.
+    accepted_region: Option<String>,
     /// The Volume that ran out of space before the command started. Only
     /// that workspace is emptied if the retry acquires it again.
     empty_volume: Option<String>,
@@ -916,9 +923,14 @@ impl Machine {
 }
 
 impl Run<'_> {
-    /// The region asked for, or "" for the home region.
+    /// The accepted Cell, otherwise the explicit region or automatic placement.
     fn region(&self) -> &str {
-        self.o.region.as_deref().unwrap_or("")
+        match self.accepted_region.as_deref() {
+            // An empty CreateLease region would select automatically again.
+            Some("") => "hk",
+            Some(region) => region,
+            None => self.o.region.as_deref().unwrap_or(""),
+        }
     }
 
     /// " in region `<r>`" when a region was asked for.
@@ -985,7 +997,7 @@ impl Run<'_> {
             ));
         }
         self.out.event(
-            json!({"type": "running", "lease": name, "size": self.o.size, "region": self.region(), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume, "cache": !cache.is_empty()}),
+            json!({"type": "running", "lease": name, "size": self.o.size, "region": m.lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume, "cache": !cache.is_empty()}),
         );
         if let Err(e) = self.send_auth(&guest).await {
             return self.lost_or(&name, e).await;
@@ -1283,7 +1295,7 @@ impl Run<'_> {
             Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
         };
         self.out.event(
-            json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": self.region(), "volume": false}),
+            json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "volume": false}),
         );
         match self.ready(lease, None, deadline).await? {
             Some(l) => Ok(Machine {
@@ -1461,7 +1473,7 @@ impl Run<'_> {
 
     /// Creates the build lease, with `volume` at [`WS`] or, without one, on
     /// the machine's own disk.
-    async fn lease(&self, volume: Option<&str>) -> Result<sbx::Lease, LeaseErr> {
+    async fn lease(&mut self, volume: Option<&str>) -> Result<sbx::Lease, LeaseErr> {
         let domains = lease_domains(self.o);
         let req = lease_request(
             &self.parent,
@@ -1475,6 +1487,9 @@ impl Run<'_> {
         );
         match self.client.sandboxes().leases().create(req).await {
             Ok(l) => {
+                if self.accepted_region.is_none() {
+                    self.accepted_region = l.spec.as_ref().map(|s| s.region.clone());
+                }
                 self.held.with(|h| h.lease = Some(l.name.clone()));
                 Ok(l)
             }
@@ -3630,7 +3645,10 @@ esac
         assert_eq!(o.command, ["cargo", "test", "-p", "x"]);
         assert_eq!(o.size, "large");
         assert_eq!(o.timeout, DEFAULT_TIMEOUT);
-        assert_eq!(o.region, None, "no --region: the home region");
+        assert_eq!(
+            o.region, None,
+            "no --region: automatic ephemeral Build placement"
+        );
         assert_eq!(o.queue_timeout, DEFAULT_QUEUE_TIMEOUT);
         assert!(!o.json);
         let o = parse(&[
