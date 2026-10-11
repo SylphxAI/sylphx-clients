@@ -8,15 +8,39 @@ Everything a customer or an app uses to call Sylphx, generated from one schema
 | Path | Package | Registry | Hand-written |
 | --- | --- | --- | --- |
 | `rust/` | `sylphx` | crates.io | `Cargo.toml`, `README.md`, `tests/` (`src/` is generated) |
+| `resource-codec/` | `sylphx-resource-codec` | crates.io | the native Root registry index, router, schema validator and problem types; `generated/` is generated |
+| `workload/` | `sylphx-workload` | crates.io | the shared SPIFFE Workload API client and customer workload identity constructor |
+| `apply/` | `sylphx-apply` | crates.io | apply orchestration; `generated/` is generated |
 | `typescript/` | `@sylphx/sdk` | npm (dist-tag `next` until the Access cutover) | `package.json`, `tsconfig*.json`, `README.md`, `test/` (`src/` is generated) |
 | `next/` | `@sylphx/next` | npm (dist-tag `next`) | everything: a Next.js cache handler for ISR and `'use cache'` on Sylphx KV and Buckets; it is not generated and calls the SDK |
 
-`generated/` and `src/` of every client are `sylphx-gen` output: never edit
-them; change `contracts/` or the generator, then `cargo run -- generate` in
-`tools/sylphx-gen`. CI fails when the committed tree differs from the
-generator's output.
+The SDK `rust/src/` and TypeScript `src/`, and each client's `generated/`
+directory, are `sylphx-gen` output: never edit them; change `contracts/` or
+the generator, then `cargo run -- generate` in `tools/sylphx-gen`. The native
+`resource-codec/src/` and `workload/src/` implementations are hand-written
+and shared with the platform. CI rejects stale generated output.
 
-Releases: `.github/workflows/release-clients.yml` on a `clients-v*` tag
-publishes each client whose manifest version is not on its registry yet, and
-reads it back. Bump the version in the client's manifest in the same PR as
-the change it ships.
+Releases: `.github/workflows/release-clients.yml` on a `clients-v*` tag verifies
+the clients, then fast-forwards and tags the public mirror. Its Release
+workflow publishes each client whose manifest version is not on its registry
+yet, and reads it back. Rust dependencies are published before consumers:
+`sylphx`, `sylphx-resource-codec`, `sylphx-workload`, `sylphx-apply`,
+`sylphx-mcp`, `sylphx-build-lease`, then `sylphx-cli`. Bump the changed client's
+manifest version in the shipping PR; SDK versions are independent of the CLI.
+Published tags remain immutable. A publication repair ships with the next
+release; the frozen workflow does not offer a per-crate publishing mode.
+
+The public codec exposes `ir`, `route`, `schema` and `problem`: the Resource API
+front links this same implementation. `Index::embedded()` uses the release's
+generated registry and OpenAPI documents, with no private server dependency.
+
+For workload proof, depend on `sylphx-workload` with `default-features = false`
+and `features = ["workload"]` (the feature is also enabled by default). Its
+`workload::fetch_jwt_svid(audience, identity, timeout)` and
+`workload::validate_jwt_svid(token, audience, timeout)` call the actual SPIRE
+Workload API Unix socket. Without the feature, `customer_workload` is
+dependency-free: `spiffe_id(trust_domain, namespace, service_account)` names
+the accepted deployment identity; `parse` pins its local trust domain.
+Constructing or parsing a name is not identity proof or tenant authorization;
+parse an SVID's identity only after cryptographic validation.
+

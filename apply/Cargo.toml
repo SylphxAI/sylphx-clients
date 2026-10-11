@@ -9,7 +9,6 @@ rust-version.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository = "https://github.com/SylphxAI/sylphx-clients"
-publish = false
 
 [dependencies]
 sylphx = { path = "../rust", version = "0.3.0" }
