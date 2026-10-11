@@ -26,6 +26,17 @@ fn active(exp: i64) -> Value {
            "exp": exp, "iat": now(), "sub": "user_1", "iss": ISS, "aud": RES})
 }
 
+/// Whole seconds between `now()` and unix second `exp`.
+///
+/// `now()` and the introspection check both truncate to whole seconds, so a
+/// wait of this many seconds spans exactly `exp - now()` clock ticks. A wait
+/// rounded up instead starts from an arbitrary sub-second offset, and can then
+/// overshoot `exp` before the first read: at `exp = now() + 1` that lost the
+/// token before the cache could be exercised.
+fn whole_seconds_until(exp: i64) -> u64 {
+    (exp - now()).max(1) as u64
+}
+
 struct Fake {
     url: String,
     hits: Arc<AtomicUsize>,
@@ -336,12 +347,20 @@ async fn cache_hits_ttl_and_exp() {
     r.authenticate(Some("Bearer t")).await.unwrap();
     assert_eq!(fake.hits(), 2);
 
-    // a token expiring in 1 s is cached for at most 1 s, and never past exp
-    *fake.body.lock().unwrap() = active(now() + 1).to_string();
+    // A token with 3 s left is cached for 3 s: still a hit inside that budget
+    // (served from the cache, no new introspection), and a miss once exp has
+    // passed.
+    let short_exp = now() + 3;
+    *fake.body.lock().unwrap() = active(short_exp).to_string();
     let r = rs(&fake.url, Duration::from_secs(30));
     let before = fake.hits();
     r.authenticate(Some("Bearer short")).await.unwrap();
-    tokio::time::sleep(Duration::from_millis(2100)).await;
+    assert_eq!(fake.hits(), before + 1, "the first read introspects once");
+    r.authenticate(Some("Bearer short")).await.unwrap();
+    assert_eq!(fake.hits(), before + 1, "the second read is a cache hit");
+    // Anchored to the whole-second boundary `short_exp` was minted against, so
+    // the wait ends after exp but before the margin elapses.
+    tokio::time::sleep(Duration::from_secs(whole_seconds_until(short_exp))).await;
     assert!(r.authenticate(Some("Bearer short")).await.is_err());
     assert_eq!(fake.hits(), before + 2);
 }
