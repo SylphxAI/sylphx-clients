@@ -368,7 +368,13 @@ pub async fn run(creds: Option<Resolved>, m: &ArgMatches, format: Format) -> Res
         return fail(125, "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY=sylphx_sk_…");
     };
     let client = context::client_for(&creds).map_err(Failure::Usage)?;
-    let project = match project_of(&client, em.get_one::<String>("project")).await {
+    let project = match project_of(
+        &client,
+        em.get_one::<String>("project"),
+        em.try_get_one::<String>("org").ok().flatten().cloned(),
+    )
+    .await
+    {
         Ok(p) => p,
         Err(Failure::Usage(e)) => return Err(Failure::Usage(e)),
         Err(Failure::Api(e)) => {
@@ -411,8 +417,16 @@ fn fail(code: u8, msg: &str) -> Result<(), Failure> {
 }
 
 /// `--project` (an id, a slug, or a name), else the linked or the key's.
-async fn project_of(client: &sylphx::Client, arg: Option<&String>) -> Result<String, Failure> {
-    let mut defaults = Defaults { client, link: None };
+async fn project_of(
+    client: &sylphx::Client,
+    arg: Option<&String>,
+    org: Option<String>,
+) -> Result<String, Failure> {
+    let mut defaults = Defaults {
+        client,
+        link: None,
+        org,
+    };
     let name = match arg {
         Some(p) if p.starts_with("prj_") => return Ok(p.clone()),
         Some(p) if p.starts_with("orgs/") => p.clone(),

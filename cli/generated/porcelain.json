@@ -40,6 +40,9 @@
     "mcp": [
       "setup"
     ],
+    "org": [
+      "use"
+    ],
     "token": [],
     "whoami": [],
     "work": [

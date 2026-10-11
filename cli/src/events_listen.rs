@@ -243,6 +243,7 @@ async fn target(
     client: &Client,
     topic: &str,
     env: Option<&str>,
+    org: Option<&str>,
 ) -> Result<(String, String), Failure> {
     if topic.starts_with("orgs/") {
         let full = names::resolve(client, topic).await?;
@@ -252,7 +253,7 @@ async fn target(
             .ok_or_else(|| Failure::Usage(format!("`{topic}` is not orgs/…/envs/…/topics/…")))?;
         return Ok((env, full));
     }
-    let env = devices::parent_env(client, env)
+    let env = devices::parent_env(client, env, org)
         .await
         .map_err(Failure::Usage)?;
     let topic = format!("{env}/topics/{topic}");
@@ -295,6 +296,10 @@ pub async fn run(client: &Client, m: &ArgMatches, json: bool) -> Result<(), Fail
         client,
         topic,
         m.get_one::<String>("env").map(String::as_str),
+        m.try_get_one::<String>("org")
+            .ok()
+            .flatten()
+            .map(String::as_str),
     )
     .await?;
     let id = run_id()?;

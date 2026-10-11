@@ -31,6 +31,7 @@ pub async fn run(
     m: &ArgMatches,
     api_key: Option<String>,
     base_url: Option<String>,
+    org: Option<&str>,
     format: Format,
 ) -> Result<(), Failure> {
     let path = m.get_one::<String>("manifest").expect("default");
@@ -60,7 +61,7 @@ pub async fn run(
         }
         return Ok(());
     }
-    let client = context::client(api_key, base_url)
+    let client = context::client(api_key, base_url, org)
         .await
         .map_err(Failure::Refused)?
         .ok_or_else(|| Failure::Refused("not signed in: run `sylphx login`".into()))?;
@@ -69,8 +70,9 @@ pub async fn run(
         source: m.get_one::<String>("source").expect("default").clone(),
         force: m.get_flag("force"),
         timeout: Duration::from_secs(*m.get_one::<u64>("timeout").expect("default")),
-        env: context::default_link(
+        env: context::default_link_for(
             &std::env::current_dir().map_err(|e| Failure::Refused(e.to_string()))?,
+            org,
         )
         .map_err(Failure::Refused)?
         .map(|link| link.env),

@@ -5,11 +5,14 @@ small hand-written porcelain on the generated Rust SDK.
 
 ```sh
 curl -fsSL https://github.com/SylphxAI/sylphx-clients/releases/latest/download/install.sh | sh   # or: npm i -g @sylphx/cli · cargo install sylphx-cli
-sylphx login                          # approve at sylphx.com/device; the org key goes to the OS keychain
-                                      #   (your role's scopes, follows role changes, expires in 30 days; `sylphx logout` revokes it)
+sylphx login                          # approve selected orgs at sylphx.com/device; one role-scoped key per org
+                                      #   keys go to the OS keychain (or an explicitly chosen 0600 file), never stdout
 sylphx login --api-key -              # agents and CI: an Access key on stdin (or SYLPHX_API_KEY)
 sylphx token --scope hosting:deploy   # one short-lived token (15 min) for one scope, on stdout only
-sylphx logout                         # revokes the key and forgets it
+sylphx org use acme                   # active org when no --org, resource name, or linked context selects another
+sylphx whoami --org beta              # use beta's stored credential for this command only
+sylphx logout                         # revoke and forget the selected org; keep other org logins
+sylphx logout --all                   # revoke and forget every stored credential
 sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx/project.json)
 sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
@@ -23,6 +26,17 @@ sylphx mcp                            # the MCP server over stdio
 sylphx mcp setup                      # register it with Claude Code, Codex, Cursor, VS Code, …
 ```
 
+- Login needs no organization up front: select one, several, or all memberships
+  in the browser. `sylphx login --org acme` locks approval to that organization.
+  The CLI stores every issued key separately; there is no cross-tenant key.
+  Commands choose credentials by `--org` (slug, id, or `orgs/{id}`), a full
+  resource name, `SYLPHX_ENVIRONMENT` / the nearest project link, then the active
+  org set by `sylphx org use <slug>`. Switching active org does not rewrite a
+  checkout's link; specify the project/environment when working in another org.
+  `--key` / `--api-key` and `SYLPHX_API_KEY` still override stored credentials.
+  Existing single-key credentials files and keychain entries remain readable.
+  Re-login merges approved org credentials without deleting other orgs;
+  `logout --org <slug>` removes just that org, while `logout --all` removes all.
 - `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]`: flags
   are the spec fields in dotted kebab-case (`--spec.compute-units`);
   `--from-file` takes a whole request; `--output table|json|yaml|name`.

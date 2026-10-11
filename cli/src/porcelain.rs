@@ -105,6 +105,7 @@ mod tests {
         let c = &m["commands"];
         // Top-level porcelain, with its subcommands.
         assert!(c["login"].is_array());
+        assert_eq!(c["org"], json!(["use"]));
         assert!(c["help"].is_array());
         assert!(c["devices"].as_array().is_some_and(|d| !d.is_empty()));
         // Hand-written commands mounted on generated services.

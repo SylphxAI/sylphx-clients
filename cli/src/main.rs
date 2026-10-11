@@ -74,8 +74,15 @@ fn cli(tree: &Tree) -> Command {
         .arg(global(
             Arg::new("api-key")
                 .long("api-key")
+                .visible_alias("key")
                 .value_name("KEY")
                 .help("A Sylphx Access key; defaults to SYLPHX_API_KEY, then `sylphx login`"),
+        ))
+        .arg(global(
+            Arg::new("org")
+                .long("org")
+                .value_name("ORG")
+                .help("Use this organization's credential; with login, lock browser approval to this org"),
         ))
         .arg(global(
             Arg::new("base-url")
@@ -119,12 +126,6 @@ fn cli(tree: &Tree) -> Command {
                         .help("Read an Access key from standard input (same as --api-key -)"),
                 )
                 .arg(
-                    Arg::new("org")
-                        .long("org")
-                        .value_name("ORG")
-                        .help("Organization (id or slug) when your account is in several"),
-                )
-                .arg(
                     Arg::new("no-verify")
                         .long("no-verify")
                         .action(ArgAction::SetTrue)
@@ -150,7 +151,17 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(apply::command())
-        .subcommand(Command::new("logout").about("Revoke the stored key and forget it"))
+        .subcommand(Command::new("logout").about("Revoke and forget the selected org credential (--all: every stored credential)"))
+        .subcommand(
+            Command::new("org")
+                .about("Choose the active organization for commands without an explicit or linked org")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("use")
+                        .about("Use an organization already approved by sylphx login")
+                        .arg(Arg::new("slug").required(true).value_name("SLUG")),
+                ),
+        )
         .subcommand(
             Command::new("whoami").about("Show the caller: principal, org, project, env, scopes"),
         )
@@ -158,12 +169,6 @@ fn cli(tree: &Tree) -> Command {
             Command::new("link")
                 .visible_alias("init")
                 .about("Link this directory to an org, project, and env (.sylphx/project.json)")
-                .arg(
-                    Arg::new("org")
-                        .long("org")
-                        .value_name("NAME")
-                        .help("orgs/{org}"),
-                )
                 .arg(
                     Arg::new("project")
                         .long("project")
@@ -379,8 +384,12 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
     )?;
     let api_key = m.get_one::<String>("api-key").cloned();
     let base_url = m.get_one::<String>("base-url").cloned();
+    let org = m
+        .get_one::<String>("org")
+        .map(String::as_str)
+        .or_else(|| command_org(m));
     let client = || async {
-        context::client(api_key.clone(), base_url.clone())
+        context::client(api_key.clone(), base_url.clone(), org)
             .await?
             .ok_or_else(|| {
                 Failure::Usage(
@@ -392,7 +401,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
     };
     let (name, sub) = m.subcommand().expect("subcommand_required");
     match name {
-        "apply" => apply::run(sub, api_key, base_url, format).await,
+        "apply" => apply::run(sub, api_key, base_url, org, format).await,
         "login" => {
             login(
                 api_key.clone(),
@@ -406,29 +415,71 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "token" => {
             let scope = sub.get_one::<String>("scope").expect("required");
-            let t = token::token(scope, api_key.clone(), base_url.clone())
+            let t = token::token(scope, api_key.clone(), base_url.clone(), org)
                 .await
                 .map_err(Failure::Refused)?;
             println!("{t}");
             Ok(())
         }
+        "org" => {
+            let (_, use_) = sub.subcommand().expect("subcommand_required");
+            let slug = use_.get_one::<String>("slug").expect("required");
+            context::use_org(slug).map_err(Failure::Usage)?;
+            println!("Active organization: {slug}.");
+            Ok(())
+        }
         "logout" => {
             let creds = context::load_credentials();
-            if let Some(key) = context::stored_key(&creds) {
-                let url = base_url.clone().or(creds.base_url.clone());
-                if key.starts_with("sylphx_sk_") {
-                    if let Err(e) = auth::revoke_self(&auth::api_root(url.as_deref()), &key).await {
-                        eprintln!("warning: could not revoke the key server-side ({e}); revoke it in Settings → API keys");
+            let all = m.get_flag("all");
+            let legacy = org.is_none() && creds.active_org.is_none() && creds.store.is_some();
+            let selected = if all || legacy {
+                None
+            } else {
+                let linked = std::env::current_dir()
+                    .ok()
+                    .and_then(|cwd| context::default_link(&cwd).ok().flatten());
+                context::selected_org(
+                    &creds,
+                    org.or_else(|| linked.as_ref().and_then(|l| l.at(1))),
+                )
+                .map(|o| o.id.clone())
+            };
+            let mut keys = Vec::new();
+            for entry in &creds.orgs {
+                if all || selected.as_deref() == Some(&entry.id) {
+                    if let Some(key) = context::org_key(&creds, entry) {
+                        keys.push(key);
                     }
                 }
             }
-            match context::forget(&creds)? {
-                Some(p) => println!(
-                    "Logged out: the key is revoked and removed ({}).",
-                    p.display()
-                ),
-                None => println!("Not logged in."),
+            if all || legacy || creds.orgs.is_empty() {
+                if let Some(key) = context::stored_key(&creds) {
+                    keys.push(key);
+                }
             }
+            let url = base_url
+                .clone()
+                .or_else(|| std::env::var("SYLPHX_BASE_URL").ok())
+                .or(creds.base_url.clone());
+            for key in &keys {
+                if key.starts_with("sylphx_sk_") {
+                    if let Err(e) = auth::revoke_self(&auth::api_root(url.as_deref()), key).await {
+                        eprintln!("warning: could not revoke a key server-side ({e}); revoke it in Settings → API keys");
+                    }
+                }
+            }
+            if all || creds.orgs.is_empty() {
+                context::forget(&creds)?;
+            } else if legacy {
+                context::forget_legacy(&creds)?;
+            } else if let Some(id) = selected {
+                context::forget_org(&creds, &id)?;
+            } else {
+                return Err(Failure::Usage(
+                    "no stored credential for the selected organization".into(),
+                ));
+            }
+            println!("Logged out: stored credentials removed; server revocation attempted.");
             Ok(())
         }
         "whoami" => {
@@ -448,7 +499,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "link" => link(&client().await?, sub).await,
         "devices" => devices::run(&client().await?, sub).await,
-        "work" => work_runner::run(api_key.clone(), sub, format == Format::Json).await,
+        "work" => work_runner::run(api_key.clone(), org, sub, format == Format::Json).await,
         "api" => {
             let method = sub.get_one::<String>("method").expect("required").clone();
             let path = sub.get_one::<String>("path").expect("required").clone();
@@ -518,7 +569,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 .map_err(|e| Failure::Usage(e.to_string()))
         }
         "mcp" => {
-            let c = context::client(api_key.clone(), base_url.clone()).await?;
+            let c = context::client(api_key.clone(), base_url.clone(), org).await?;
             sylphx_mcp::serve_stdio(
                 sylphx_mcp::Server::new(c).with_docs(sylphx_mcp::docs::DocsIndex::from_env()),
             )
@@ -543,7 +594,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "build" if sub.subcommand_name() == Some("run") => {
             let (_, rm) = sub.subcommand().expect("checked");
-            let key = context::resolve(api_key.clone(), base_url.clone()).map(|r| r.key);
+            let key = context::resolve(api_key.clone(), base_url.clone(), org).map(|r| r.key);
             build_run::run(client().await, key, rm).await
         }
         "build" if sub.subcommand_name() == Some("logs") => {
@@ -552,12 +603,12 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "build" if sub.subcommand_name() == Some("image") => {
             let (_, im) = sub.subcommand().expect("checked");
-            let key = context::resolve(api_key.clone(), base_url.clone()).map(|r| r.key);
+            let key = context::resolve(api_key.clone(), base_url.clone(), org).map(|r| r.key);
             build_run::run_image(client().await, key, im).await
         }
         "build" if sub.subcommand_name() == Some("cache") => {
             let (_, cm) = sub.subcommand().expect("checked");
-            let creds = context::resolve(api_key.clone(), base_url.clone());
+            let creds = context::resolve(api_key.clone(), base_url.clone(), org);
             build_cache::run(creds, cm, format).await
         }
         "ai" if sub.subcommand_name() == Some("top") => {
@@ -593,11 +644,30 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 method.method.as_str(),
                 "workflows.schedules.list" | "workflows.schedules.get"
             ) {
-                return compute_schedules(api_key, base_url, method, &mm, format).await;
+                return compute_schedules(api_key, base_url, org, method, &mm, format).await;
             }
             generated(&client().await?, method, &mm, m, format).await
         }
     }
+}
+
+/// A full resource name also selects its organization credential.
+fn command_org(matches: &ArgMatches) -> Option<&str> {
+    if let Some((_, sub)) = matches.subcommand() {
+        if let Some(org) = command_org(sub) {
+            return Some(org);
+        }
+    }
+    for id in matches.ids() {
+        if let Some(values) = matches.get_raw(id.as_str()) {
+            for value in values {
+                if let Some(name) = value.to_str().filter(|v| v.starts_with("orgs/")) {
+                    return Some(name);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// `sylphx workflows schedules list|get`: the schedules a manifest declares
@@ -608,6 +678,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
 async fn compute_schedules(
     api_key: Option<String>,
     base_url: Option<String>,
+    org: Option<&str>,
     method: &MethodCmd,
     mm: &ArgMatches,
     format: Format,
@@ -622,11 +693,14 @@ async fn compute_schedules(
                 .filter(|u| !u.is_empty())
         })
         .unwrap_or_else(|| "https://api.compute.sylphx.com".to_string());
-    let client = context::client(api_key, Some(url)).await?.ok_or_else(|| {
-        Failure::Usage(
-            "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY".into(),
-        )
-    })?;
+    let client = context::client(api_key, Some(url), org)
+        .await?
+        .ok_or_else(|| {
+            Failure::Usage(
+                "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY"
+                    .into(),
+            )
+        })?;
     let (path, query) = if method.verb == "get" {
         let id = mm.get_one::<String>("__positional").ok_or_else(|| {
             Failure::Usage("name the schedule: sylphx workflows schedules get <id>".into())
@@ -675,7 +749,13 @@ async fn auth_enable(
     format: Format,
 ) -> Result<(), Failure> {
     let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    let link = match context::default_link(&cwd).map_err(Failure::Usage)? {
+    let org = sub
+        .try_get_one::<String>("org")
+        .ok()
+        .flatten()
+        .map(String::as_str)
+        .or_else(|| command_org(sub));
+    let link = match context::default_link_for(&cwd, org).map_err(Failure::Usage)? {
         Some(l) => l,
         None => Link::from_whoami(&client.invoke("access.whoami", json!({})).await?),
     };
@@ -755,6 +835,13 @@ async fn login(
     no_verify: bool,
     store_file: bool,
 ) -> Result<(), Failure> {
+    let base_url = base_url
+        .or_else(|| {
+            std::env::var("SYLPHX_BASE_URL")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+        })
+        .or_else(|| context::load_credentials().base_url);
     // Where the key will be kept is settled before a key is read or issued:
     // a device key minted and then dropped would be a live key nobody holds.
     context::check_key_store(base_url.as_deref(), store_file).map_err(Failure::Usage)?;
@@ -774,91 +861,108 @@ async fn login(
         api_key
     };
     let issued_here = key.is_none();
-    let mut active_after = std::time::Duration::ZERO;
-    let (key, key_name) = match key {
+    let (keys, active_after) = match key {
         Some(k) if k.is_empty() => return Err(Failure::Usage("no key on stdin".into())),
         Some(k) => {
             if !k.starts_with("sylphx_sk_") && !k.starts_with("sylphx_pk_") {
                 eprintln!("warning: an Access key starts with sylphx_sk_ (secret) or sylphx_pk_ (publishable)");
             }
-            (k, None)
-        }
-        None => {
-            let api = auth::api_root(base_url.as_deref());
-            let issued = auth::device_login(&api, org).await?;
-            eprintln!("Approved in {}.", issued.org_slug);
-            active_after = issued.active_after;
             (
-                issued.api_key,
-                Some(issued.key_name).filter(|n| !n.is_empty()),
+                vec![auth::IssuedKey {
+                    api_key: k,
+                    org_id: String::new(),
+                    org_slug: String::new(),
+                    key_name: String::new(),
+                }],
+                std::time::Duration::ZERO,
             )
         }
+        None => {
+            let issued = auth::device_login(&auth::api_root(base_url.as_deref()), org).await?;
+            for key in &issued.keys {
+                eprintln!("Approved in {}.", key.org_slug);
+            }
+            (issued.keys, issued.active_after)
+        }
     };
-    let (path, in_keychain) = context::store_key(base_url.clone(), &key, key_name, store_file)?;
+    // Device-issued keys must survive temporary verification failures. Supplied
+    // keys are verified before storage, so a rejected key cannot erase a login.
+    let stored = if issued_here {
+        Some(context::store_keys(base_url.clone(), &keys, store_file)?)
+    } else {
+        None
+    };
+    if !no_verify {
+        tokio::time::sleep(active_after).await;
+    }
+    let mut principal = None;
+    let mut unconfirmed = false;
+    if !no_verify {
+        for key in &keys {
+            match verify_login_key(&key.api_key, base_url.clone(), issued_here).await {
+                Ok(me) => {
+                    principal = me["principal"]
+                        .as_str()
+                        .or_else(|| me["email"].as_str())
+                        .or_else(|| me["user"]["email"].as_str())
+                        .map(str::to_string)
+                        .or(principal);
+                }
+                Err((e, transient)) if issued_here || transient => {
+                    unconfirmed = true;
+                    eprintln!("A key could not be confirmed yet ({e}). Run `sylphx whoami` in a minute; there is no need to sign in again.");
+                }
+                Err((e, _)) => return Err(e.into()),
+            }
+        }
+    }
+    let (path, in_keychain) = match stored {
+        Some(stored) => stored,
+        None => context::store_key(base_url, &keys[0].api_key, None, store_file)?,
+    };
     let where_ = if in_keychain {
         "the OS keychain".to_string()
     } else {
         eprintln!(
-            "note: no OS keychain here; the key is in {} (mode 0600)",
+            "note: no OS keychain here; credentials are in {} (mode 0600)",
             path.display()
         );
         path.display().to_string()
     };
-    if no_verify {
-        println!("Credential stored in {where_}.");
-        return Ok(());
+    if no_verify || unconfirmed {
+        println!("Credentials stored in {where_}.");
+    } else {
+        println!(
+            "Signed in as {} (key stored in {where_}).",
+            principal.as_deref().unwrap_or("?")
+        );
     }
-    let client = context::client(Some(key.clone()), base_url.clone())
-        .await?
-        .expect("a credential was stored");
-    // A key Access issued seconds ago may not be verifiable yet
-    // (`key_not_yet_propagated`); network and server errors are transient too.
-    // Retry those for about 15 s. The stored key is kept unless Sylphx
-    // definitely rejects a key the user supplied.
-    // Access says when a key it just issued verifies (`active_after_ms`).
-    tokio::time::sleep(active_after).await;
+    Ok(())
+}
+
+async fn verify_login_key(
+    key: &str,
+    base_url: Option<String>,
+    issued_here: bool,
+) -> Result<Value, (Error, bool)> {
+    let client = context::client_for(
+        &context::resolve(Some(key.to_string()), base_url, None)
+            .expect("an explicit credential resolves"),
+    )
+    .map_err(|e| (Error::Transport(e), false))?;
     let mut waits = [500u64, 1000, 2000, 4000, 8000].into_iter();
-    let outcome = loop {
+    loop {
         match client.invoke("access.whoami", json!({})).await {
-            // A key issued seconds ago that a replica has not loaded yet
-            // answers `unknown_key` once the propagation window has passed.
             Err(e) if transient_whoami(&e) || (issued_here && unknown_key(&e)) => {
                 match waits.next() {
                     Some(ms) => tokio::time::sleep(std::time::Duration::from_millis(ms)).await,
-                    None => break Err((e, true)),
+                    None => return Err((e, true)),
                 }
             }
-            Err(e) => break Err((e, false)),
-            Ok(me) => break Ok(me),
-        }
-    };
-    match outcome {
-        Ok(me) => println!(
-            "Signed in as {} (key stored in {where_}).",
-            me["principal"]
-                .as_str()
-                .or_else(|| me["email"].as_str())
-                .or_else(|| me["user"]["email"].as_str())
-                .unwrap_or("?"),
-        ),
-        Err((e, _)) if issued_here => {
-            eprintln!(
-                "The key is stored in {where_}, but Sylphx could not confirm it yet ({e}). \
-                 Run `sylphx whoami` in a minute; there is no need to sign in again."
-            );
-        }
-        Err((e, true)) => {
-            eprintln!(
-                "The key is stored in {where_}, but Sylphx could not confirm it yet ({e}). \
-                 Run `sylphx whoami` in a minute."
-            );
-        }
-        Err((e, false)) => {
-            let _ = context::forget(&context::load_credentials());
-            return Err(e.into());
+            Err(e) => return Err((e, false)),
+            Ok(me) => return Ok(me),
         }
     }
-    Ok(())
 }
 
 fn unknown_key(e: &Error) -> bool {
@@ -941,6 +1045,7 @@ fn read_json_arg(s: &str) -> Result<Value, String> {
 struct Defaults<'c> {
     client: &'c Client,
     link: Option<Link>,
+    org: Option<String>,
 }
 
 impl Defaults<'_> {
@@ -950,10 +1055,16 @@ impl Defaults<'_> {
         })?;
         if self.link.is_none() {
             let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-            self.link = Some(match context::default_link(&cwd).map_err(Failure::Usage)? {
-                Some(l) => l,
-                None => Link::from_whoami(&self.client.invoke("access.whoami", json!({})).await?),
-            });
+            self.link = Some(
+                match context::default_link_for(&cwd, self.org.as_deref())
+                    .map_err(Failure::Usage)?
+                {
+                    Some(l) => l,
+                    None => {
+                        Link::from_whoami(&self.client.invoke("access.whoami", json!({})).await?)
+                    }
+                },
+            );
         }
         self.link
             .as_ref()
@@ -1016,7 +1127,11 @@ async fn generated(
         }
         None => Map::new(),
     };
-    let mut defaults = Defaults { client, link: None };
+    let mut defaults = Defaults {
+        client,
+        link: None,
+        org: root.get_one::<String>("org").cloned(),
+    };
 
     if let Some(p) = &method.positional {
         let given = mm.get_one::<String>("__positional").cloned();

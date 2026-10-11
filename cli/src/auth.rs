@@ -2,9 +2,9 @@
 //! (access-and-keys.md §7.1, RFC 8628). The CLI asks
 //! `POST /v1/access/device/authorize`, the human approves at
 //! `https://sylphx.com/device` on their console session, and the poll at
-//! `POST /v1/access/device/token` returns an org-wide Access key bound to
-//! their role in that org. The key is the one credential; there is no
-//! separate session.
+//! `POST /v1/access/device/token` returns one org-wide Access key per
+//! approved organization, bound to the user's role there. There is no
+//! separate session or cross-tenant key.
 
 use std::time::Duration;
 
@@ -73,14 +73,18 @@ pub fn host_label() -> String {
     out.chars().take(64).collect()
 }
 
-/// The key a device approval issued.
+/// One organization credential issued by a device approval.
 #[derive(Debug, Clone)]
-pub struct Issued {
+pub struct IssuedKey {
     pub api_key: String,
+    pub org_id: String,
     pub org_slug: String,
     pub key_name: String,
-    /// How long after issue Access expects the key to verify
-    /// (`active_after_ms`, capped at 10 s).
+}
+
+pub struct Issued {
+    pub keys: Vec<IssuedKey>,
+    /// How long after issue Access expects the keys to verify (capped at 10 s).
     pub active_after: Duration,
 }
 
@@ -91,8 +95,8 @@ fn error_code(v: &Value) -> &str {
         .unwrap_or("error")
 }
 
-/// Starts the grant, prints where to approve, and polls until the key is
-/// issued, the human denies, or the code expires.
+/// Starts the grant, prints where to approve, and polls until all approved keys
+/// are issued, the human denies, or the code expires.
 pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, String> {
     let http = http()?;
     let mut body = json!({ "client": "sylphx-cli", "host": host_label() });
@@ -154,14 +158,25 @@ pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, Stri
         let ok = r.status().is_success();
         let v: Value = r.json().await.unwrap_or(Value::Null);
         if ok {
-            let api_key = v["api_key"]
-                .as_str()
-                .ok_or("no api_key in the answer")?
-                .to_string();
+            let keys = v["keys"]
+                .as_array()
+                .filter(|keys| !keys.is_empty())
+                .ok_or("no keys in the answer")?
+                .iter()
+                .map(|key| {
+                    let field = |value: &Value| {
+                        value.as_str().filter(|s| !s.is_empty()).map(str::to_string)
+                    };
+                    Ok(IssuedKey {
+                        api_key: field(&key["api_key"]).ok_or("no api_key in the answer")?,
+                        org_id: field(&key["org"]["id"]).ok_or("no org id in the answer")?,
+                        org_slug: field(&key["org"]["slug"]).ok_or("no org slug in the answer")?,
+                        key_name: field(&key["key"]["name"]).ok_or("no key name in the answer")?,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?;
             return Ok(Issued {
-                api_key,
-                org_slug: v["org"]["slug"].as_str().unwrap_or_default().to_string(),
-                key_name: v["key"]["name"].as_str().unwrap_or_default().to_string(),
+                keys,
                 active_after: Duration::from_millis(
                     v["active_after_ms"].as_u64().unwrap_or(0).min(10_000),
                 ),

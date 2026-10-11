@@ -219,13 +219,14 @@ pub async fn token(
     scope: &str,
     api_key: Option<String>,
     base_url: Option<String>,
+    org: Option<&str>,
 ) -> Result<String, String> {
     if !scope_shape_ok(scope) {
         return Err(format!(
             "`{scope}` is not a scope: expected <service>:<action>, e.g. hosting:deploy"
         ));
     }
-    let cred = context::resolve(api_key, base_url).ok_or(
+    let cred = context::resolve(api_key, base_url, org).ok_or(
         "not signed in: run `sylphx login`, or set SYLPHX_API_KEY (a key from the CI exchange)",
     )?;
     let at = now();

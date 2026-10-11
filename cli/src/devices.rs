@@ -124,6 +124,7 @@ pub async fn run(client: &Client, matches: &ArgMatches) -> Result<(), Failure> {
 struct Opts {
     app: PathBuf,
     env: Option<String>,
+    org: Option<String>,
     model: String,
     os_version: String,
     ttl: Duration,
@@ -154,6 +155,7 @@ impl Opts {
         Ok(Self {
             app,
             env: m.get_one::<String>("env").cloned(),
+            org: m.try_get_one::<String>("org").ok().flatten().cloned(),
             model: m.get_one::<String>("model").cloned().unwrap_or_default(),
             os_version: m
                 .get_one::<String>("os-version")
@@ -271,7 +273,7 @@ impl Run<'_> {
     async fn go(&mut self) -> Result<(), String> {
         std::fs::create_dir_all(&self.o.out)
             .map_err(|e| format!("{}: {e}", self.o.out.display()))?;
-        let parent = parent_env(self.client, self.o.env.as_deref()).await?;
+        let parent = parent_env(self.client, self.o.env.as_deref(), self.o.org.as_deref()).await?;
 
         let t = Instant::now();
         let lease = self.create(&parent).await?;
@@ -602,13 +604,21 @@ impl Run<'_> {
 
 /// The environment the lease is created in: `--env`, else the linked env, else
 /// the key's scope — as a generated command resolves a lease's parent.
-pub(crate) async fn parent_env(client: &Client, arg: Option<&str>) -> Result<String, String> {
+pub(crate) async fn parent_env(
+    client: &Client,
+    arg: Option<&str>,
+    org: Option<&str>,
+) -> Result<String, String> {
     if let Some(v) = arg {
         let full = if v.starts_with("orgs/") {
             v.to_string()
         } else {
             // A slug or an id hangs below the linked project, else the key's.
-            let mut defaults = crate::Defaults { client, link: None };
+            let mut defaults = crate::Defaults {
+                client,
+                link: None,
+                org: org.map(str::to_string),
+            };
             let project = defaults
                 .at("orgs/{org}/projects/{project}")
                 .await
@@ -617,7 +627,11 @@ pub(crate) async fn parent_env(client: &Client, arg: Option<&str>) -> Result<Str
         };
         return names::resolve(client, &full).await.map_err(why_failure);
     }
-    let mut defaults = crate::Defaults { client, link: None };
+    let mut defaults = crate::Defaults {
+        client,
+        link: None,
+        org: org.map(str::to_string),
+    };
     defaults
         .at("orgs/{org}/projects/{project}/envs/{env}")
         .await

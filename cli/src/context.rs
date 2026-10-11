@@ -25,6 +25,132 @@ pub struct Credentials {
     /// The key's Resource name, for `whoami` and the console's key list.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key_name: Option<String>,
+    /// Device-login keys, each restricted to one organization.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orgs: Vec<OrgCredential>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_org: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrgCredential {
+    pub id: String,
+    pub slug: String,
+    pub key_name: String,
+    pub store: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+}
+
+fn org_entry(base_url: Option<&str>, id: &str) -> Option<keyring::Entry> {
+    if std::env::var_os("SYLPHX_NO_KEYCHAIN").is_some() {
+        return None;
+    }
+    keyring::Entry::new(
+        KEYCHAIN_SERVICE,
+        &format!("{}#{id}", keychain_account(base_url)),
+    )
+    .ok()
+}
+
+pub fn org_key(c: &Credentials, org: &OrgCredential) -> Option<String> {
+    if org.store == "keychain" {
+        org_entry(c.base_url.as_deref(), &org.id).and_then(|e| e.get_password().ok())
+    } else {
+        org.api_key.clone()
+    }
+}
+
+fn org_id(value: &str) -> &str {
+    value
+        .strip_prefix("orgs/")
+        .unwrap_or(value)
+        .split('/')
+        .next()
+        .unwrap_or(value)
+}
+
+pub fn selected_org<'a>(c: &'a Credentials, org: Option<&str>) -> Option<&'a OrgCredential> {
+    let selected = org.or(c.active_org.as_deref());
+    match selected {
+        Some(value) => c
+            .orgs
+            .iter()
+            .find(|o| o.id == org_id(value) || o.slug == org_id(value)),
+        None => c.orgs.first(),
+    }
+}
+
+pub fn use_org(slug: &str) -> Result<(), String> {
+    let mut c = load_credentials();
+    let org = selected_org(&c, Some(slug)).ok_or_else(|| {
+        format!("no stored credential for {slug}; run `sylphx login` and approve that org")
+    })?;
+    c.active_org = Some(org.id.clone());
+    save_credentials(&c)?;
+    Ok(())
+}
+
+/// Merge every approved organization without discarding other stored logins.
+pub fn store_keys(
+    base_url: Option<String>,
+    keys: &[crate::auth::IssuedKey],
+    store_file: bool,
+) -> Result<(PathBuf, bool), String> {
+    let mut c = load_credentials();
+    c.base_url = base_url.or(c.base_url);
+    let mut all_keychain = true;
+    for key in keys {
+        let in_keychain = org_entry(c.base_url.as_deref(), &key.org_id)
+            .is_some_and(|e| e.set_password(&key.api_key).is_ok());
+        if !in_keychain && !file_store_allowed(store_file) {
+            return Err(
+                "the OS keychain refused a key; use --store-file or SYLPHX_CONFIG_DIR".into(),
+            );
+        }
+        all_keychain &= in_keychain;
+        let credential = OrgCredential {
+            id: key.org_id.clone(),
+            slug: key.org_slug.clone(),
+            key_name: key.key_name.clone(),
+            store: if in_keychain { "keychain" } else { "file" }.into(),
+            api_key: (!in_keychain).then(|| key.api_key.clone()),
+        };
+        if let Some(existing) = c.orgs.iter_mut().find(|o| o.id == key.org_id) {
+            *existing = credential;
+        } else {
+            c.orgs.push(credential);
+        }
+    }
+    if c.active_org.is_none() {
+        c.active_org = keys.first().map(|k| k.org_id.clone());
+    }
+    Ok((save_credentials(&c)?, all_keychain))
+}
+
+/// Forget just one org; a selected logout must not erase sibling credentials.
+pub fn forget_org(c: &Credentials, id: &str) -> Result<(), String> {
+    let mut remaining = c.clone();
+    if let Some(org) = c.orgs.iter().find(|o| o.id == id) {
+        if org.store == "keychain" {
+            if let Some(entry) = org_entry(c.base_url.as_deref(), id) {
+                let _ = entry.delete_credential();
+            }
+        }
+    }
+    remaining.orgs.retain(|o| o.id != id);
+    if remaining.active_org.as_deref() == Some(id) {
+        remaining.active_org = remaining.orgs.first().map(|o| o.id.clone());
+    }
+    if let Some(dir) = config_dir() {
+        let _ = std::fs::remove_dir_all(dir.join(crate::token::CACHE_DIR));
+    }
+    if remaining.orgs.is_empty() && remaining.api_key.is_none() && remaining.store.is_none() {
+        forget(&remaining)?;
+    } else {
+        save_credentials(&remaining)?;
+    }
+    Ok(())
 }
 
 const KEYCHAIN_SERVICE: &str = "sylphx";
@@ -80,6 +206,8 @@ pub fn store_key(
     key_name: Option<String>,
     store_file: bool,
 ) -> Result<(PathBuf, bool), String> {
+    let mut creds = load_credentials();
+    let base_url = base_url.or(creds.base_url.clone());
     let in_keychain = keychain_entry(base_url.as_deref())
         .map(|e| e.set_password(key).is_ok())
         .unwrap_or(false);
@@ -88,16 +216,17 @@ pub fn store_key(
             .err()
             .unwrap_or_else(|| "the OS keychain refused the key".into()));
     }
-    let creds = Credentials {
-        api_key: (!in_keychain).then(|| key.to_string()),
-        base_url,
-        store: Some(if in_keychain { "keychain" } else { "file" }.into()),
-        key_name,
-    };
+    creds.api_key = (!in_keychain).then(|| key.to_string());
+    creds.base_url = base_url.or(creds.base_url);
+    creds.store = Some(if in_keychain { "keychain" } else { "file" }.into());
+    creds.key_name = key_name;
+    // No active org means the separately supplied/legacy key is the default.
+    // `org use` or the next device login selects scoped credentials again.
+    creds.active_org = None;
     Ok((save_credentials(&creds)?, in_keychain))
 }
 
-/// The stored key, wherever it is.
+/// The separately supplied or old single-login key, wherever it is.
 pub fn stored_key(c: &Credentials) -> Option<String> {
     match c.store.as_deref() {
         Some("keychain") => {
@@ -107,8 +236,34 @@ pub fn stored_key(c: &Credentials) -> Option<String> {
     }
 }
 
-/// Removes the stored key and the credentials file.
+/// Remove the separately supplied/legacy key without losing scoped logins.
+pub fn forget_legacy(c: &Credentials) -> Result<(), String> {
+    if c.store.as_deref() == Some("keychain") {
+        if let Some(e) = keychain_entry(c.base_url.as_deref()) {
+            let _ = e.delete_credential();
+        }
+    }
+    let mut remaining = c.clone();
+    remaining.api_key = None;
+    remaining.store = None;
+    remaining.key_name = None;
+    remaining.active_org = remaining.orgs.first().map(|o| o.id.clone());
+    if let Some(dir) = config_dir() {
+        let _ = std::fs::remove_dir_all(dir.join(crate::token::CACHE_DIR));
+    }
+    save_credentials(&remaining)?;
+    Ok(())
+}
+
+/// Removes every stored credential, token cache, and the credentials file.
 pub fn forget(c: &Credentials) -> Result<Option<PathBuf>, String> {
+    for org in &c.orgs {
+        if org.store == "keychain" {
+            if let Some(e) = org_entry(c.base_url.as_deref(), &org.id) {
+                let _ = e.delete_credential();
+            }
+        }
+    }
     if c.store.as_deref() == Some("keychain") {
         if let Some(e) = keychain_entry(c.base_url.as_deref()) {
             let _ = e.delete_credential();
@@ -253,6 +408,19 @@ pub fn default_link(start: &Path) -> Result<Option<Link>, String> {
     }
 }
 
+/// Keep a linked environment only when it belongs to the command's org.
+pub fn default_link_for(start: &Path, org: Option<&str>) -> Result<Option<Link>, String> {
+    let link = default_link(start)?;
+    let Some(selected) = org else {
+        return Ok(link);
+    };
+    let credentials = load_credentials();
+    let selected = selected_org(&credentials, Some(selected))
+        .map(|o| o.id.as_str())
+        .unwrap_or_else(|| org_id(selected));
+    Ok(link.filter(|l| l.org.is_empty() || org_id(&l.org) == selected))
+}
+
 /// The nearest `.sylphx/project.json` at or above `start` that names an org,
 /// project or env.
 ///
@@ -295,9 +463,14 @@ pub struct Resolved {
     pub explicit: bool,
 }
 
-/// Resolves the credential and base URL: `--api-key`, then `SYLPHX_API_KEY`,
-/// then the stored key.
-pub fn resolve(api_key: Option<String>, base_url: Option<String>) -> Option<Resolved> {
+/// Explicit credentials override stored logins. Otherwise choose `--org`,
+/// the linked/environment org, then the active organization. Legacy single-key
+/// credentials keep their original behavior until a device login replaces them.
+pub fn resolve(
+    api_key: Option<String>,
+    base_url: Option<String>,
+    org: Option<&str>,
+) -> Option<Resolved> {
     let stored = load_credentials();
     let base_url = base_url
         .or_else(|| {
@@ -312,7 +485,22 @@ pub fn resolve(api_key: Option<String>, base_url: Option<String>) -> Option<Reso
             .filter(|k| !k.is_empty())
     });
     let explicit = given.is_some();
-    let key = given.or_else(|| stored_key(&stored))?;
+    let key = given.or_else(|| {
+        if stored.orgs.is_empty()
+            || (org.is_none() && stored.active_org.is_none() && stored.store.is_some())
+        {
+            return stored_key(&stored);
+        }
+        let link = if org.is_none() {
+            std::env::current_dir()
+                .ok()
+                .and_then(|cwd| default_link(&cwd).ok().flatten())
+        } else {
+            None
+        };
+        let selected = selected_org(&stored, org.or_else(|| link.as_ref().and_then(|l| l.at(1))))?;
+        org_key(&stored, selected)
+    })?;
     Some(Resolved {
         key,
         base_url,
@@ -339,8 +527,9 @@ pub fn client_for(r: &Resolved) -> Result<Client, String> {
 pub async fn client(
     api_key: Option<String>,
     base_url: Option<String>,
+    org: Option<&str>,
 ) -> Result<Option<Client>, String> {
-    resolve(api_key, base_url)
+    resolve(api_key, base_url, org)
         .map(|r| client_for(&r))
         .transpose()
 }

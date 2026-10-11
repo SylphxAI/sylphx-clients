@@ -111,13 +111,18 @@ enum Ended {
     Interrupted,
 }
 
-pub async fn run(api_key: Option<String>, m: &ArgMatches, json_out: bool) -> Result<(), Failure> {
+pub async fn run(
+    api_key: Option<String>,
+    org: Option<&str>,
+    m: &ArgMatches,
+    json_out: bool,
+) -> Result<(), Failure> {
     let Some(("runner", m)) = m.subcommand() else {
         return Err(Failure::Usage(
             "give a subcommand: `sylphx work runner --label <label> -- <command>`".into(),
         ));
     };
-    let key = context::resolve(api_key, None)
+    let key = context::resolve(api_key, None, org)
         .ok_or_else(|| {
             Failure::Usage(
                 "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY or --api-key"

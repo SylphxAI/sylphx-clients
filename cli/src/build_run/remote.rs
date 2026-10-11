@@ -49,8 +49,12 @@ fn api(what: &str, e: &sylphx::Error) -> Outcome {
 /// `orgs/{org}/projects/{project}`: the linked project, else the key's. A
 /// Build belongs to a project, so an org-wide or project-wide key runs one
 /// (a key pinned to one environment cannot write a project's resources).
-pub(super) async fn project(client: &Client) -> Result<String, Outcome> {
-    let mut defaults = crate::Defaults { client, link: None };
+pub(super) async fn project(client: &Client, org: Option<&str>) -> Result<String, Outcome> {
+    let mut defaults = crate::Defaults {
+        client,
+        link: None,
+        org: org.map(str::to_string),
+    };
     defaults
         .at("orgs/{org}/projects/{project}")
         .await
@@ -77,7 +81,7 @@ async fn create_and_follow(
     out: &Out,
     created: &Mutex<Option<String>>,
 ) -> Result<Ended, Outcome> {
-    let parent = project(client).await?;
+    let parent = project(client, o.org.as_deref()).await?;
     let mut target = bld::CommandTarget::default();
     target.argv = o.command.clone();
     let mut spec = bld::BuildSpec::default();

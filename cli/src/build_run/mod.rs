@@ -173,7 +173,15 @@ pub async fn logs(client: Result<Client, Failure>, m: &ArgMatches) -> Result<(),
     let name = if arg.starts_with("orgs/") {
         arg
     } else {
-        let project = match remote::project(&client).await {
+        let project = match remote::project(
+            &client,
+            m.try_get_one::<String>("org")
+                .ok()
+                .flatten()
+                .map(String::as_str),
+        )
+        .await
+        {
             Ok(p) => p,
             Err(Outcome::Platform { reason, .. }) => return Err(Failure::Usage(reason)),
             Err(_) => return Err(Failure::Exit(EXIT_PLATFORM)),
@@ -206,6 +214,7 @@ pub struct Opts {
     artifacts: Vec<String>,
     out: Option<PathBuf>,
     env: BTreeMap<String, String>,
+    org: Option<String>,
     allow_hosts: Vec<String>,
     fresh: bool,
     source_history: Option<String>,
@@ -332,6 +341,7 @@ impl Opts {
             env.insert(k.to_string(), v.to_string());
         }
         Ok(Self {
+            org: m.try_get_one::<String>("org").ok().flatten().cloned(),
             root: sh.root,
             rel: sh.rel,
             command,
@@ -363,6 +373,7 @@ impl Opts {
         let sh = Shared::parse(m, false)?;
         let image = image::Image::parse(m)?;
         Ok(Self {
+            org: m.try_get_one::<String>("org").ok().flatten().cloned(),
             command: image.argv(&sh.rel),
             root: sh.root,
             rel: sh.rel,
@@ -743,7 +754,7 @@ async fn execute(
     held: &Held,
     stats: &Mutex<Stats>,
 ) -> Outcome {
-    let parent = match parent_env(client, None).await {
+    let parent = match parent_env(client, None, o.org.as_deref()).await {
         Ok(p) => p,
         Err(e) => return Outcome::platform(e, false),
     };

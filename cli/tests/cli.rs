@@ -4,10 +4,11 @@
 //! `sylphx mcp` speaks MCP over stdio, and `sylphx build run` drives a lease
 //! and its guest end to end.
 
+use parking_lot::Mutex;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -130,7 +131,7 @@ async fn serve_bytes_on(
                 }
             };
             let line = head.lines().next().unwrap_or_default().to_string();
-            seen.lock().unwrap().push(Seen {
+            seen.lock().push(Seen {
                 line,
                 head,
                 body: body_in,
@@ -174,6 +175,8 @@ impl Sandbox {
             .env("SYLPHX_API_KEY", "sylphx_sk_test")
             .env("SYLPHX_BUILD_CACHE_URL", "http://127.0.0.1:9")
             .env("SYLPHX_CONFIG_DIR", self.dir.join("config"))
+            .env("SYLPHX_NO_KEYCHAIN", "1")
+            .env("SYLPHX_NO_BROWSER", "1")
             .env_remove("SYLPHX_ENVIRONMENT")
             .stdin(Stdio::null());
         c
@@ -218,7 +221,7 @@ async fn a_link_file_in_another_shape_never_shadows_the_key_scope() {
         err.contains("warning: ignoring") && err.contains(".sylphx/project.json"),
         "{err}"
     );
-    let log = log.lock().unwrap().clone();
+    let log = log.lock().clone();
     assert!(
         log[0].line.starts_with("GET /v1/whoami "),
         "{}",
@@ -263,7 +266,7 @@ async fn create_takes_the_id_and_the_linked_env_and_waits() {
     );
     let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(printed, db);
-    let log = log.lock().unwrap().clone();
+    let log = log.lock().clone();
     assert!(
         log[0]
             .line
@@ -314,7 +317,7 @@ async fn update_reads_the_etag_and_sends_a_mask_of_the_set_flags() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), key);
-    let log = log.lock().unwrap().clone();
+    let log = log.lock().clone();
     assert!(log[0].line.starts_with(&format!("GET /v1/{key} ")));
     assert!(
         log[1]
@@ -341,10 +344,7 @@ async fn a_destructive_call_needs_yes_without_a_terminal() {
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("--yes"));
     assert!(
-        log.lock()
-            .unwrap()
-            .iter()
-            .all(|s| !s.line.starts_with("POST")),
+        log.lock().iter().all(|s| !s.line.starts_with("POST")),
         "nothing was revoked"
     );
 }
@@ -389,7 +389,7 @@ async fn list_defaults_to_the_linked_env_and_prints_a_table() {
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.starts_with("NAME"), "{text}");
     assert!(text.contains("databases/main  true"));
-    assert!(log.lock().unwrap()[0]
+    assert!(log.lock()[0]
         .line
         .starts_with(&format!("GET /v1/{ENV}/databases?page_size=10 ")));
 }
@@ -418,7 +418,7 @@ async fn revenue_summary_reads_the_linked_orgs_revenue() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert!(String::from_utf8_lossy(&out.stdout).contains("1500"));
-    let line = log.lock().unwrap()[0].line.clone();
+    let line = log.lock()[0].line.clone();
     assert!(line.starts_with("GET /v1/orgs/org_a/revenue?"), "{line}");
     assert!(
         line.contains("period=mtd") && line.contains("split=source"),
@@ -441,7 +441,7 @@ async fn sylphx_env_overrides_the_link_file() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert!(
         seen[0]
             .line
@@ -473,7 +473,7 @@ async fn sylphx_env_of_another_shape_is_a_usage_error_and_calls_nothing() {
             "{bad}: {err}"
         );
     }
-    assert!(log.lock().unwrap().is_empty());
+    assert!(log.lock().is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -501,7 +501,7 @@ async fn login_with_an_empty_stdin_starts_the_device_flow() {
         "{err}"
     );
     assert!(err.contains("denied"), "{err}");
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert!(seen[0]
         .line
         .starts_with("POST /v1/access/device/authorize "));
@@ -524,7 +524,7 @@ async fn login_keeps_polling_through_a_transient_server_error() {
         (503, json!({"code": "UNAVAILABLE"})),
         (
             200,
-            json!({"api_key": "sylphx_sk_test_issued", "org": {"slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}, "active_after_ms": 300}),
+            json!({"keys": [{"api_key": "sylphx_sk_test_issued", "org": {"id": "org_a", "slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}}], "active_after_ms": 300}),
         ),
     ])
     .await;
@@ -537,7 +537,7 @@ async fn login_keeps_polling_through_a_transient_server_error() {
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(out.status.success(), "{err}");
     assert!(err.contains("Approved in acme"), "{err}");
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert_eq!(seen.len(), 3);
     assert!(seen[1].line.starts_with("POST /v1/access/device/token "));
     assert!(seen[2].line.starts_with("POST /v1/access/device/token "));
@@ -552,9 +552,279 @@ fn device_replies() -> Vec<(u16, Value)> {
         ),
         (
             200,
-            json!({"api_key": "sylphx_sk_test_issued", "org": {"slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}, "active_after_ms": 300}),
+            json!({"keys": [{"api_key": "sylphx_sk_test_issued", "org": {"id": "org_a", "slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}}], "active_after_ms": 300}),
         ),
     ]
+}
+
+fn two_org_replies() -> Vec<(u16, Value)> {
+    let mut replies = device_replies();
+    replies[1].1 = json!({"keys": [
+        {"api_key": "sylphx_sk_org_a", "key": {"name": "orgs/org_a/api_keys/cli_a"}, "org": {"id": "org_a", "slug": "acme"}},
+        {"api_key": "sylphx_sk_org_b", "key": {"name": "orgs/org_b/api_keys/cli_b"}, "org": {"id": "org_b", "slug": "beta"}}
+    ], "active_after_ms": 0});
+    replies
+}
+
+async fn run_stored(sb: &Sandbox, url: &str, args: &[&str]) -> std::process::Output {
+    let mut c = sb.cmd(url, args);
+    c.env_remove("SYLPHX_API_KEY");
+    tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap()
+}
+
+fn assert_success(out: &std::process::Output) {
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn device_login_stores_all_keys_and_selects_org_per_command() {
+    let mut replies = two_org_replies();
+    replies.extend((0..7).map(|_| (200, whoami_reply())));
+    replies.push((
+        200,
+        json!({"name": "orgs/org_b/projects/prj_b/envs/env_b/databases/db_x"}),
+    ));
+    let (url, log) = serve(replies).await;
+    let sb = Sandbox::new("login-two-orgs");
+    let login = run_stored(&sb, &url, &["login"]).await;
+    assert_success(&login);
+    for stream in [&login.stdout, &login.stderr] {
+        assert!(
+            !String::from_utf8_lossy(stream).contains("sylphx_sk_org_"),
+            "a login secret was printed"
+        );
+    }
+    let creds: Value = serde_json::from_str(
+        &std::fs::read_to_string(sb.dir.join("config/credentials.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(creds["orgs"].as_array().unwrap().len(), 2);
+    assert_eq!(creds["orgs"][0]["api_key"], "sylphx_sk_org_a");
+    assert_eq!(creds["orgs"][1]["api_key"], "sylphx_sk_org_b");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(sb.dir.join("config/credentials.json"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+    }
+    assert_success(&run_stored(&sb, &url, &["whoami", "--org", "beta"]).await);
+    assert_success(&run_stored(&sb, &url, &["whoami"]).await);
+    let mut c = sb.cmd(&url, &["whoami"]);
+    c.env_remove("SYLPHX_API_KEY")
+        .env("SYLPHX_ENVIRONMENT", "orgs/org_b/projects/prj_b/envs/env_b");
+    assert_success(
+        &tokio::task::spawn_blocking(move || c.output().unwrap())
+            .await
+            .unwrap(),
+    );
+    std::fs::remove_file(sb.dir.join(".sylphx/project.json")).unwrap();
+    assert_success(&run_stored(&sb, &url, &["org", "use", "beta"]).await);
+    assert_success(&run_stored(&sb, &url, &["whoami"]).await);
+    assert_success(&run_stored(&sb, &url, &["whoami", "--org", "orgs/org_a"]).await);
+    assert_success(
+        &run_stored(
+            &sb,
+            &url,
+            &[
+                "data",
+                "databases",
+                "get",
+                "orgs/org_b/projects/prj_b/envs/env_b/databases/db_x",
+            ],
+        )
+        .await,
+    );
+    let seen = log.lock();
+    let body: Value = serde_json::from_str(&seen[0].body).unwrap();
+    assert!(
+        body.get("org").is_none(),
+        "login without --org must not lock selection"
+    );
+    for (request, key) in seen[2..].iter().zip([
+        "sylphx_sk_org_a",
+        "sylphx_sk_org_b",
+        "sylphx_sk_org_b",
+        "sylphx_sk_org_a",
+        "sylphx_sk_org_b",
+        "sylphx_sk_org_b",
+        "sylphx_sk_org_a",
+        "sylphx_sk_org_b",
+    ]) {
+        assert!(
+            request
+                .head
+                .to_ascii_lowercase()
+                .contains(&format!("authorization: bearer {key}")),
+            "{}",
+            request.head
+        );
+    }
+    assert_eq!(seen.len(), 10);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn fixed_org_relogin_replaces_only_that_org_credential() {
+    let mut replies = two_org_replies();
+    replies.extend(device_replies());
+    let (url, log) = serve(replies).await;
+    let sb = Sandbox::new("relogin-one-org");
+    assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+    assert_success(&run_stored(&sb, &url, &["login", "--org", "acme", "--no-verify"]).await);
+    let creds: Value = serde_json::from_str(
+        &std::fs::read_to_string(sb.dir.join("config/credentials.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(creds["orgs"].as_array().unwrap().len(), 2);
+    assert_eq!(creds["orgs"][0]["api_key"], "sylphx_sk_test_issued");
+    assert_eq!(creds["orgs"][1]["api_key"], "sylphx_sk_org_b");
+    let seen = log.lock();
+    let requested: Value = serde_json::from_str(&seen[2].body).unwrap();
+    assert_eq!(requested["org"], "acme");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn logout_selected_org_preserves_other_keys_and_all_revokes_the_rest() {
+    let mut replies = two_org_replies();
+    replies.extend([
+        (200, json!({"ok": true})),
+        (200, whoami_reply()),
+        (200, json!({"ok": true})),
+    ]);
+    let (url, log) = serve(replies).await;
+    let sb = Sandbox::new("logout-two-orgs");
+    assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+    assert_success(&run_stored(&sb, &url, &["logout", "--org", "acme"]).await);
+    let path = sb.dir.join("config/credentials.json");
+    let creds: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(creds["orgs"].as_array().unwrap().len(), 1);
+    assert_eq!(creds["orgs"][0]["api_key"], "sylphx_sk_org_b");
+    assert_eq!(creds["active_org"], "org_b");
+    assert_success(&run_stored(&sb, &url, &["whoami", "--org", "beta"]).await);
+    assert_success(&run_stored(&sb, &url, &["logout", "--all"]).await);
+    assert!(!path.exists());
+    let seen = log.lock();
+    assert!(seen[2]
+        .line
+        .starts_with("POST /v1/access/keys/self:revoke "));
+    assert!(seen[2].head.contains("Bearer sylphx_sk_org_a"));
+    assert!(seen[3].head.contains("Bearer sylphx_sk_org_b"));
+    assert!(seen[4]
+        .line
+        .starts_with("POST /v1/access/keys/self:revoke "));
+    assert!(seen[4].head.contains("Bearer sylphx_sk_org_b"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn supplied_login_and_logout_preserve_scoped_org_credentials() {
+    let mut replies = two_org_replies();
+    replies.extend([
+        (200, whoami_reply()),
+        (200, whoami_reply()),
+        (200, json!({"ok": true})),
+        (200, json!({"ok": true})),
+        (200, json!({"ok": true})),
+    ]);
+    let (url, log) = serve(replies).await;
+    let sb = Sandbox::new("supplied-login-orgs");
+    assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+    assert_success(
+        &run_stored(
+            &sb,
+            &url,
+            &["login", "--key", "sylphx_sk_supplied", "--no-verify"],
+        )
+        .await,
+    );
+    assert_success(&run_stored(&sb, &url, &["whoami"]).await);
+    assert_success(&run_stored(&sb, &url, &["whoami", "--org", "beta"]).await);
+    assert_success(&run_stored(&sb, &url, &["logout"]).await);
+    let path = sb.dir.join("config/credentials.json");
+    let creds: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(creds["orgs"].as_array().unwrap().len(), 2);
+    assert!(creds.get("api_key").is_none());
+    assert_success(&run_stored(&sb, &url, &["logout", "--all"]).await);
+    assert!(!path.exists());
+    let seen = log.lock();
+    for (request, key) in seen[2..].iter().zip([
+        "sylphx_sk_supplied",
+        "sylphx_sk_org_b",
+        "sylphx_sk_supplied",
+        "sylphx_sk_org_a",
+        "sylphx_sk_org_b",
+    ]) {
+        assert!(request.head.contains(&format!("Bearer {key}")));
+    }
+    assert_eq!(seen.len(), 7);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn explicit_credentials_override_org_and_legacy_file_credentials_still_work() {
+    let (url, log) = serve(vec![(200, whoami_reply()); 3]).await;
+    let sb = Sandbox::new("legacy-org-credentials");
+    std::fs::create_dir_all(sb.dir.join("config")).unwrap();
+    let path = sb.dir.join("config/credentials.json");
+    std::fs::write(&path, json!({"api_key": "sylphx_sk_legacy", "store": "file", "base_url": url, "key_name": "orgs/org_a/api_keys/old"}).to_string()).unwrap();
+    assert_success(&run_stored(&sb, &url, &["whoami"]).await);
+    let mut creds: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    creds["orgs"] = json!([{"id": "org_b", "slug": "beta", "store": "file", "key_name": "orgs/org_b/api_keys/cli", "api_key": "sylphx_sk_org_b"}]);
+    creds["active_org"] = json!("org_b");
+    std::fs::write(&path, creds.to_string()).unwrap();
+    assert_success(&run(&sb, &url, &["whoami", "--org", "beta"]).await);
+    assert_success(
+        &run(
+            &sb,
+            &url,
+            &["whoami", "--org", "beta", "--key", "sylphx_sk_explicit"],
+        )
+        .await,
+    );
+    let seen = log.lock();
+    assert!(seen[0].head.contains("Bearer sylphx_sk_legacy"));
+    assert!(seen[1].head.contains("Bearer sylphx_sk_test"));
+    assert!(seen[2].head.contains("Bearer sylphx_sk_explicit"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn missing_org_and_rejected_supplied_login_never_discard_other_credentials() {
+    let mut replies = two_org_replies();
+    replies.push((401, json!({"code": "UNAUTHENTICATED", "status": 401, "detail": "invalid credential", "retryable": false})));
+    let (url, log) = serve(replies).await;
+    let sb = Sandbox::new("org-credentials-retained");
+    assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+    let path = sb.dir.join("config/credentials.json");
+    let before = std::fs::read(&path).unwrap();
+    assert!(!run_stored(&sb, &url, &["whoami", "--org", "absent"])
+        .await
+        .status
+        .success());
+    assert!(!run_stored(&sb, &url, &["org", "use", "absent"])
+        .await
+        .status
+        .success());
+    assert!(!run_stored(&sb, &url, &["logout", "--org", "absent"])
+        .await
+        .status
+        .success());
+    assert!(
+        !run_stored(&sb, &url, &["login", "--api-key", "sylphx_sk_invalid"])
+            .await
+            .status
+            .success()
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert_eq!(log.lock().len(), 3);
 }
 
 fn not_yet() -> (u16, Value) {
@@ -592,7 +862,7 @@ async fn login_waits_for_a_fresh_key_to_propagate() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert!(stdout.contains("Signed in as principal_kyle"), "{stdout}");
-    assert_eq!(log.lock().unwrap().len(), 5);
+    assert_eq!(log.lock().len(), 5);
     let creds = std::fs::read_to_string(sb.dir.join("config/credentials.json")).unwrap_or_default();
     assert!(creds.contains("sylphx_sk_test_issued"), "{creds}");
 }
@@ -645,7 +915,7 @@ async fn login_refuses_the_shared_default_store_without_a_keychain() {
         );
     }
     assert!(!shared.exists(), "nothing written to the shared default");
-    assert!(log.lock().unwrap().is_empty(), "no device grant started");
+    assert!(log.lock().is_empty(), "no device grant started");
 }
 
 /// `--store-file` keeps the key in the default directory; `SYLPHX_CONFIG_DIR`
@@ -791,7 +1061,7 @@ async fn token_prints_only_a_minted_key_scoped_to_one_scope() {
     );
     assert_eq!(String::from_utf8_lossy(&out.stdout), "sylphx_sk_child_1\n");
     assert!(!String::from_utf8_lossy(&out.stderr).contains("sylphx_sk_child_1"));
-    let log = log.lock().unwrap().clone();
+    let log = log.lock().clone();
     assert!(log[1]
         .line
         .starts_with(&format!("POST /v1/{ENV}/api_keys ")));
@@ -818,11 +1088,7 @@ async fn token_is_cached_until_shortly_before_it_expires() {
     let first = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
     let second = run(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
     assert_eq!(first.stdout, second.stdout);
-    assert_eq!(
-        log.lock().unwrap().len(),
-        2,
-        "the second call made no request"
-    );
+    assert_eq!(log.lock().len(), 2, "the second call made no request");
     let dir = sb.dir.join("config/token-cache");
     let files: Vec<_> = std::fs::read_dir(&dir).unwrap().flatten().collect();
     assert_eq!(files.len(), 1);
@@ -843,7 +1109,7 @@ async fn token_is_cached_until_shortly_before_it_expires() {
         String::from_utf8_lossy(&other.stdout),
         "sylphx_sk_child_ai\n"
     );
-    assert_eq!(log2.lock().unwrap().len(), 2);
+    assert_eq!(log2.lock().len(), 2);
 
     // Within 2 minutes of expiry the cache is not used.
     let path = dir
@@ -869,7 +1135,7 @@ async fn token_is_cached_until_shortly_before_it_expires() {
         String::from_utf8_lossy(&again.stdout),
         "sylphx_sk_child_2\n"
     );
-    assert_eq!(log3.lock().unwrap().len(), 2);
+    assert_eq!(log3.lock().len(), 2);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -974,7 +1240,7 @@ async fn token_from_an_api_key_that_cannot_mint_prints_it_only_if_short_lived() 
     let sb = Sandbox::new("token-ci-other");
     let out = run(&sb, &url, &["token", "--scope", "ai:inference"]).await;
     assert!(!out.status.success() && out.stdout.is_empty());
-    assert_eq!(log.lock().unwrap().len(), 2);
+    assert_eq!(log.lock().len(), 2);
 }
 
 /// Enable Auth binds Sylphx Auth into the linked environment's identity slot
@@ -998,7 +1264,7 @@ async fn auth_enable_binds_the_linked_environment_and_prints_the_instance() {
     );
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("org-1"), "{text}");
-    let log = log.lock().unwrap().clone();
+    let log = log.lock().clone();
     assert!(
         log[0]
             .line
@@ -1033,7 +1299,7 @@ async fn auth_status_reads_the_identity_bindings_back() {
     let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(printed["enabled"], true, "{printed}");
     assert_eq!(printed["bindings"][0]["organizationId"], "org-1");
-    assert!(log.lock().unwrap()[0]
+    assert!(log.lock()[0]
         .line
         .starts_with("GET /v1/projects/prj_a/composition/bindings "));
 }
@@ -1065,7 +1331,7 @@ async fn workflows_schedules_read_the_served_compute_route() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert!(
         seen[0].line.starts_with("GET /v1/schedules "),
         "{}",
@@ -1188,7 +1454,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     assert!(err.contains("cold workspace"), "{err}");
     assert!(err.contains("sylphx: exit 3 in"), "{err}");
 
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     assert!(
         lines[0].starts_with(&format!("GET /v1/{ENV}/volumes")),
@@ -1363,7 +1629,7 @@ async fn build_run_region_routes_the_lease_and_its_workspace() {
         ],
     )
     .await;
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     assert!(
         lines[1].starts_with(&format!("POST /v1/{ENV}/volumes")),
@@ -1413,7 +1679,7 @@ async fn build_run_without_region_stays_in_the_home_region() {
     .await;
     let out = run(&sb, &url, &["build", "run", "-o", "json", "--", "true"]).await;
     assert_eq!(out.status.code(), Some(125));
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
     assert!(vol["spec"].get("region").is_none(), "{vol}");
     assert!(vol["meta"]["labels"].get("build-region").is_none(), "{vol}");
@@ -1470,7 +1736,7 @@ async fn build_run_region_not_offered_exits_125() {
             .contains("no Sandboxes Cell"),
         "{last}"
     );
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert_eq!(seen.len(), 3, "no retry, no wait");
     assert!(seen[2].line.starts_with(&format!("POST /v1/{ENV}/leases")));
 }
@@ -1541,7 +1807,7 @@ async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
     assert_eq!(last["type"], "result");
     assert_eq!(last["exit_code"], 0, "{last}");
 
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     // Exactly one workspace request, refused; no second one, no poll of it.
     assert_eq!(
@@ -1602,7 +1868,7 @@ async fn build_run_exits_125_when_the_toolchain_cannot_be_installed() {
     assert_eq!(out.status.code(), Some(125), "{err}");
     assert!(err.contains("Connection timed out"), "{err}");
     assert!(err.contains("[retryable]"), "{err}");
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     assert_eq!(lines.len(), 11, "the command is never started: {lines:?}");
     assert!(lines[10].contains(":release"), "{lines:?}");
@@ -1635,7 +1901,7 @@ async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
     assert_eq!(String::from_utf8_lossy(&out.stdout), "after the break\n");
     assert!(err.contains("reattached to the running command"), "{err}");
     assert!(!err.contains("retrying"), "{err}");
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let start = seen
         .iter()
         .find(|s| s.body.contains("\"cargo\""))
@@ -1733,7 +1999,7 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     assert_eq!(result["outcome"], "lost");
     assert_eq!(result["exit_code"], 137);
     assert_eq!(result["retryable"], true);
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert_eq!(
         seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
         1,
@@ -1754,7 +2020,7 @@ async fn build_run_retries_a_full_workspace_without_emptying_a_different_volume(
 }
 
 async fn full_workspace_retry(retry_volume: &str, empty: &str) {
-    let sb = Sandbox::new("ws-full");
+    let sb = Sandbox::new(&format!("ws-full-{retry_volume}"));
     project(&sb.dir);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -1785,7 +2051,7 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
     assert_eq!(out.status.code(), Some(0), "{err}");
     assert_eq!(String::from_utf8_lossy(&out.stdout), "built\n");
     assert!(err.contains("ran out of space; retrying once"), "{err}");
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let boots: Vec<_> = seen
         .iter()
         .filter(|s| s.body.contains("\"bootstrap\""))
@@ -1868,7 +2134,7 @@ async fn build_run_queue_timeout_releases_and_exits_125() {
         last["error"].as_str().unwrap().contains("--queue-timeout"),
         "{last}"
     );
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert!(
         seen.iter().any(|s| s.line.contains(":release")),
         "the queued lease is released"
@@ -1922,7 +2188,7 @@ async fn ai_top_once_reads_the_operator_seats_and_shows_red_lines() {
         "{text}"
     );
     assert!(!text.contains('\x1b'), "no colour off a terminal");
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     assert!(
         seen[0].line.starts_with("GET /v1/operator/seats "),
         "{}",
@@ -2075,7 +2341,7 @@ fn ended() -> (u16, &'static str, Vec<u8>) {
 
 /// The environment the command was started with (the 11th call).
 fn started_env(log: &Log) -> Value {
-    let seen = log.lock().unwrap();
+    let seen = log.lock();
     let start = &seen[10];
     assert!(start.line.starts_with("POST /process.Process/Start"));
     let text = &start.body;
@@ -2127,7 +2393,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(out.status.code(), Some(0), "{err}");
     // The mint: the key as a bearer, and the run's access, network and life.
-    let seen = clog.lock().unwrap();
+    let seen = clog.lock();
     assert_eq!(seen.len(), 1);
     assert!(
         seen[0].line.starts_with("POST /v1/tokens"),
@@ -2180,7 +2446,7 @@ async fn build_run_caps_the_token_life_at_the_longest_run() {
     )
     .await;
     assert_eq!(out.status.code(), Some(0));
-    let body: Value = serde_json::from_str(&clog.lock().unwrap()[0].body).unwrap();
+    let body: Value = serde_json::from_str(&clog.lock()[0].body).unwrap();
     assert_eq!(body["ttl_seconds"], 22500);
 }
 
@@ -2263,7 +2529,7 @@ async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{err}");
-    assert!(clog.lock().unwrap().is_empty(), "no token was asked for");
+    assert!(clog.lock().is_empty(), "no token was asked for");
     assert!(!err.contains("build cache"), "{err}");
     assert_eq!(sylphx_lines(&err).len(), 3, "{err}");
     assert_eq!(started_env(&log), json!({}));
@@ -2346,7 +2612,7 @@ async fn build_cache_env_prints_shell_exports_from_a_read_token() {
         String::from_utf8_lossy(&echoed.stdout),
         "it's $HOME `x` \"y\""
     );
-    let seen = clog.lock().unwrap();
+    let seen = clog.lock();
     assert_eq!(seen.len(), 1);
     let body: Value = serde_json::from_str(&seen[0].body).unwrap();
     assert_eq!(
@@ -2415,7 +2681,7 @@ async fn build_cache_env_json_is_the_env_object_and_takes_a_project() {
     assert_eq!(out.status.code(), Some(0));
     let v: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(v, cache_reply()["env"]);
-    let body: Value = serde_json::from_str(&clog.lock().unwrap()[0].body).unwrap();
+    let body: Value = serde_json::from_str(&clog.lock()[0].body).unwrap();
     assert_eq!(body["project"], "prj_other");
 }
 
@@ -2476,7 +2742,7 @@ async fn build_cache_env_needs_a_project_and_a_key() {
     .await;
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("no project"));
-    assert!(clog.lock().unwrap().is_empty());
+    assert!(clog.lock().is_empty());
     // Signed out: a platform failure, as for `build run`.
     let out = run_with(&sb, "http://127.0.0.1:9", &["build", "cache", "env"], |c| {
         c.env_remove("SYLPHX_API_KEY");
@@ -2542,7 +2808,7 @@ async fn events_listen_relays_a_published_event_signed_to_the_local_url() {
     );
 
     // The receiver got the CloudEvent, signed under the secret.
-    let got = received.lock().unwrap()[0].clone();
+    let got = received.lock()[0].clone();
     assert!(got.line.starts_with("POST /hook "), "{}", got.line);
     let header = |name: &str| {
         got.head
@@ -2577,7 +2843,7 @@ async fn events_listen_relays_a_published_event_signed_to_the_local_url() {
     );
 
     // The listener's own calls, in order.
-    let log = log.lock().unwrap().clone();
+    let log = log.lock().clone();
     let lines: Vec<&str> = log.iter().map(|s| s.line.as_str()).collect();
     assert!(
         lines[0].starts_with(&format!("POST /v1/{ENV}/queues?queue_id=listen-")),
