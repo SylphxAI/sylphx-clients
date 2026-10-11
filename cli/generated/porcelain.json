@@ -4,6 +4,7 @@
       "top"
     ],
     "api": [],
+    "apply": [],
     "auth": [
       "enable",
       "status"

@@ -36,6 +36,17 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
 - Mutations wait for their Operation (`--no-wait` to skip); `--dry-run` sets
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
+- `sylphx apply` reads `sylphx.toml` (or `--manifest PATH`, including a Release's
+  `declarations.json`) and uses the shared Resource planner and writer.
+  `--offline` checks without a key or network; `--dry-run` plans without
+  writing; `-o json` prints the Resource actions and unsettled names.
+  `--detailed-exitcode` returns 0 for no changes, 2 for changes, and 1 for
+  errors. `--timeout SECONDS` defaults to 600 per Resource. `--release ID`
+  and `--source REPO@SHA:PATH` record provenance; a Release run also writes
+  its compact JSON result to `/dev/termination-log`. `--force` allows a
+  standalone run to write a Resource managed by a Release. Eligible kinds
+  are listed in `clients/apply/declarable.toml`; this list remains empty
+  until each kind's writer cutover is complete.
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
 - `sylphx data docs sync|search|read` keeps a Markdown tree in one of the
   environment's search indexes. `sync [GLOB…] --index ID --revision REV`

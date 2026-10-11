@@ -13,6 +13,60 @@ use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
+#[tokio::test]
+async fn apply_offline_refuses_an_undeclarable_kind_without_a_backend() {
+    let sb = Sandbox::new("apply-offline-refused");
+    std::fs::write(
+        sb.dir.join("sylphx.toml"),
+        "[[resource]]\nkind = 'hosting.sylphx.com/Service'\nname = 'main'\n",
+    )
+    .unwrap();
+    let out = run(
+        &sb,
+        "http://127.0.0.1:1",
+        &["apply", "--offline", "--detailed-exitcode"],
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("hosting.sylphx.com/Service"), "{err}");
+    assert!(err.contains("is written by `[[services]]`"), "{err}");
+}
+
+#[tokio::test]
+async fn apply_json_empty_manifest_has_no_changes_and_errors_exit_one() {
+    let sb = Sandbox::new("apply-empty");
+    std::fs::write(sb.dir.join("declarations.json"), "{}").unwrap();
+    let out = run(
+        &sb,
+        "http://127.0.0.1:1",
+        &[
+            "apply",
+            "--manifest",
+            "declarations.json",
+            "--detailed-exitcode",
+            "-o",
+            "json",
+        ],
+    )
+    .await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(printed["resources"], json!([]));
+    let out = run(
+        &sb,
+        "http://127.0.0.1:1",
+        &["apply", "--manifest", "missing.json", "--detailed-exitcode"],
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(1));
+}
+
 const ENV: &str = "orgs/org_a/projects/prj_a/envs/env_a";
 
 #[derive(Debug, Clone)]

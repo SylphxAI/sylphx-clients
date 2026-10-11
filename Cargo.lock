@@ -2369,6 +2369,7 @@ dependencies = [
  "serde_yaml_ng",
  "sha2",
  "sylphx",
+ "sylphx-apply",
  "sylphx-build-lease",
  "sylphx-mcp",
  "tokio",

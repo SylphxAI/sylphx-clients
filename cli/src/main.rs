@@ -8,6 +8,7 @@
 
 mod ai_top;
 mod ai_top_run;
+mod apply;
 mod auth;
 mod build_cache;
 mod build_run;
@@ -148,6 +149,7 @@ fn cli(tree: &Tree) -> Command {
                         .help("A registered scope, e.g. hosting:deploy or ai:inference"),
                 ),
         )
+        .subcommand(apply::command())
         .subcommand(Command::new("logout").about("Revoke the stored key and forget it"))
         .subcommand(
             Command::new("whoami").about("Show the caller: principal, org, project, env, scopes"),
@@ -390,6 +392,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
     };
     let (name, sub) = m.subcommand().expect("subcommand_required");
     match name {
+        "apply" => apply::run(sub, api_key, base_url, format).await,
         "login" => {
             login(
                 api_key.clone(),
