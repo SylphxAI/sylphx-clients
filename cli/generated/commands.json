@@ -2423,6 +2423,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
               },
+              "served": false,
               "summary": "Answers a tool call waiting for approval; the turn continues.",
               "verb": "decide-approval"
             },
@@ -2459,6 +2460,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
               },
+              "served": false,
               "summary": "Returns the result of a client tool call; the turn continues.",
               "verb": "submit-tool-result"
             }
@@ -2545,6 +2547,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
+              "served": false,
               "summary": "Gets a memory store.",
               "verb": "get"
             },
@@ -2587,6 +2590,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
+              "served": false,
               "summary": "Lists memory stores.",
               "verb": "list"
             },
@@ -2668,6 +2672,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "memory_store",
+              "served": false,
               "summary": "Creates a memory store.",
               "verb": "create"
             },
@@ -2748,6 +2753,7 @@
               },
               "resource_field": "memory_store",
               "sends_etag": true,
+              "served": false,
               "summary": "Updates a memory store.",
               "update_mask": "from-flags",
               "verb": "update"
@@ -2793,6 +2799,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
+              "served": false,
               "summary": "Deletes a memory store. A store an agent names is refused with `RESOURCE_IN_USE`; a store with memories is refused with `INVALID_STATE` unless `force` is set, which deletes them too.",
               "verb": "delete"
             }
@@ -2815,6 +2822,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}"
               },
+              "served": false,
               "summary": "Gets a memory.",
               "verb": "get"
             },
@@ -2851,6 +2859,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
+              "served": false,
               "summary": "Lists a store's memories, newest first. With a publishable key, only the caller's end user's memories.",
               "verb": "list"
             },
@@ -2921,6 +2930,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "memory",
+              "served": false,
               "summary": "Writes a memory.",
               "verb": "create"
             },
@@ -2972,6 +2982,7 @@
               },
               "resource_field": "memory",
               "sends_etag": true,
+              "served": false,
               "summary": "Changes a memory's content.",
               "update_mask": "from-flags",
               "verb": "update"
@@ -3011,6 +3022,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}"
               },
+              "served": false,
               "summary": "Deletes a memory. An end user may delete their own.",
               "verb": "delete"
             },
@@ -3058,6 +3070,7 @@
                 "field": "parent",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
+              "served": false,
               "summary": "Recalls the memories that best match a query, by hybrid full-text and vector search. With a publishable key, only the caller's end user's memories. A read with a request body, like a query.",
               "verb": "search"
             }
@@ -3069,7 +3082,6 @@
       "commands": [],
       "display_name": "Sylphx Agents",
       "noun": "agents",
-      "served": false,
       "stage": "preview"
     },
     {

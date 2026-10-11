@@ -69,6 +69,9 @@ pub struct MethodCmd {
     pub verb: String,
     pub method: String,
     pub summary: String,
+    /// Individual availability within a partially served service.
+    #[serde(default = "served_default")]
+    pub served: bool,
     pub http: String,
     pub effect: String,
     pub positional: Option<Positional>,
@@ -151,6 +154,9 @@ pub fn method_command(m: &MethodCmd) -> Command {
     let mut about = m.summary.clone();
     if about.is_empty() {
         about = m.method.clone();
+    }
+    if !m.served {
+        about = format!("Not available yet (answers 501 UNIMPLEMENTED). {about}");
     }
     let mut cmd = Command::new(m.verb.clone())
         .about(about)
@@ -470,6 +476,36 @@ mod tests {
         let m = cmd.try_get_matches_from(argv).expect("parses");
         let (service, sub) = m.subcommand().expect("service");
         find(&load(), service, sub).map(|(c, _)| c.method.clone())
+    }
+
+    #[test]
+    fn individual_method_help_marks_only_unavailable_commands() {
+        let tree = load();
+        let agents = tree.services.iter().find(|s| s.noun == "agents").unwrap();
+        assert!(agents.served);
+        for collection in &agents.collections {
+            for method in &collection.commands {
+                let help = method_command(method).render_long_help().to_string();
+                assert_eq!(
+                    help.contains("Not available yet"),
+                    !method.served,
+                    "{}",
+                    method.method
+                );
+            }
+        }
+        let memories = agents
+            .collections
+            .iter()
+            .find(|c| c.collection == "memories")
+            .unwrap();
+        assert!(memories.commands.iter().all(|m| !m.served));
+        let management = agents
+            .collections
+            .iter()
+            .find(|c| c.collection == "agents")
+            .unwrap();
+        assert!(management.commands.iter().all(|m| m.served));
     }
 
     /// `MethodPolicy.porcelain` mounts each short command under the same

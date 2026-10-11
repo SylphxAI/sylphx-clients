@@ -49896,7 +49896,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists sessions, newest first. With a publishable key, only the caller's\nend user's sessions.",
+        "description": "Lists sessions, newest first. With a publishable key, only the caller's\nend user's sessions.",
         "operationId": "agents_agent_sessions_list",
         "parameters": [
           {
@@ -49992,11 +49992,10 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.list",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nStarts a session of an agent, pinned to its current version unless\n`agent_version` names another. Requires a secret key until end-user\nownership is implemented. The session starts idle; `:send` starts its\nfirst turn.",
+        "description": "Starts a session of an agent, pinned to its current version unless\n`agent_version` names another. Requires a secret key until end-user\nownership is implemented. The session starts idle; `:send` starts its\nfirst turn.",
         "operationId": "agents_agent_sessions_create",
         "parameters": [
           {
@@ -50109,13 +50108,12 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.create",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}": {
       "delete": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a session and its events. A session whose turn is running is\nrefused with `INVALID_STATE` unless `force` is set, which interrupts it\nfirst.",
+        "description": "Deletes a session and its events. A session whose turn is running is\nrefused with `INVALID_STATE` unless `force` is set, which interrupts it\nfirst.",
         "operationId": "agents_agent_sessions_delete",
         "parameters": [
           {
@@ -50242,11 +50240,10 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.delete",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a session.",
+        "description": "Gets a session.",
         "operationId": "agents_agent_sessions_get",
         "parameters": [
           {
@@ -50321,13 +50318,12 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.get",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/session_events": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists a session's events in sequence order. To follow a session, call\nagain with the filter `sequence > N`, N the last sequence read; `wait`\nholds the call open until a newer event is appended or the wait ends.",
+        "description": "Lists a session's events in sequence order. To follow a session, call\nagain with the filter `sequence > N`, N the last sequence read; `wait`\nholds the call open until a newer event is appended or the wait ends.",
         "operationId": "agents_session_events_list",
         "parameters": [
           {
@@ -50445,13 +50441,12 @@
         ],
         "x-sylphx-method": "agents.session_events.list",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/session_events/{session_event}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a session event.",
+        "description": "Gets a session event.",
         "operationId": "agents_session_events_get",
         "parameters": [
           {
@@ -50534,7 +50529,6 @@
         ],
         "x-sylphx-method": "agents.session_events.get",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -50669,7 +50663,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:interrupt": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nStops the running turn at its current step. Calls already made keep\ntheir results; the session becomes idle. A no-op on an idle session.",
+        "description": "Stops the running turn at its current step. Calls already made keep\ntheir results; the session becomes idle. A no-op on an idle session.",
         "operationId": "agents_agent_sessions_interrupt",
         "parameters": [
           {
@@ -50776,13 +50770,12 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.interrupt",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:invoke-tool": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGuest execution capability authentication, not an Access management key.\nPreserve any JSON tool result, including scalars and arrays.",
+        "description": "Guest execution capability authentication, not an Access management key.\nPreserve any JSON tool result, including scalars and arrays.",
         "operationId": "agents_agent_sessions_invoke_tool",
         "parameters": [
           {
@@ -50896,13 +50889,12 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.invoke_tool",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:send": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nSends a user message. On an idle or failed session it starts a new turn;\nwhile a turn runs it is refused with `INVALID_STATE` (use `:steer`).\nThe same `Idempotency-Key` returns the same event.",
+        "description": "Sends a user message. On an idle or failed session it starts a new turn;\nwhile a turn runs it is refused with `INVALID_STATE` (use `:steer`).\nThe same `Idempotency-Key` returns the same event.",
         "operationId": "agents_agent_sessions_send",
         "parameters": [
           {
@@ -51016,13 +51008,12 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.send",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:steer": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nSends a message into the running turn; the agent reads it at its next\nstep. On an idle session it is the same as `:send`.",
+        "description": "Sends a message into the running turn; the agent reads it at its next\nstep. On an idle session it is the same as `:send`.",
         "operationId": "agents_agent_sessions_steer",
         "parameters": [
           {
@@ -51132,7 +51123,6 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.steer",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -51262,7 +51252,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:tool-catalog": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nThe immutable pinned HTTP-tool catalog exposed to the guest's MCP bridge.",
+        "description": "The immutable pinned HTTP-tool catalog exposed to the guest's MCP bridge.",
         "operationId": "agents_agent_sessions_tool_catalog",
         "parameters": [
           {
@@ -51337,13 +51327,12 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.tool_catalog",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists agents.",
+        "description": "Lists agents.",
         "operationId": "agents_agents_list",
         "parameters": [
           {
@@ -51448,11 +51437,10 @@
         ],
         "x-sylphx-method": "agents.agents.list",
         "x-sylphx-permission": "agents:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates an agent and its version 1.",
+        "description": "Creates an agent and its version 1.",
         "operationId": "agents_agents_create",
         "parameters": [
           {
@@ -51564,13 +51552,12 @@
         ],
         "x-sylphx-method": "agents.agents.create",
         "x-sylphx-permission": "agents:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents/{agent}": {
       "delete": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes an agent and its versions. An agent with sessions is refused\nwith `INVALID_STATE` unless `force` is set, which deletes them too.",
+        "description": "Deletes an agent and its versions. An agent with sessions is refused\nwith `INVALID_STATE` unless `force` is set, which deletes them too.",
         "operationId": "agents_agents_delete",
         "parameters": [
           {
@@ -51697,11 +51684,10 @@
         ],
         "x-sylphx-method": "agents.agents.delete",
         "x-sylphx-permission": "agents:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an agent.",
+        "description": "Gets an agent.",
         "operationId": "agents_agents_get",
         "parameters": [
           {
@@ -51776,11 +51762,10 @@
         ],
         "x-sylphx-method": "agents.agents.get",
         "x-sylphx-permission": "agents:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates an agent. A change to `spec` mints the next AgentVersion;\nsessions already started keep the version they pinned.",
+        "description": "Updates an agent. A change to `spec` mints the next AgentVersion;\nsessions already started keep the version they pinned.",
         "operationId": "agents_agents_update",
         "parameters": [
           {
@@ -51910,13 +51895,12 @@
         ],
         "x-sylphx-method": "agents.agents.update",
         "x-sylphx-permission": "agents:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents/{agent}/agent_versions": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an agent's versions, newest first.",
+        "description": "Lists an agent's versions, newest first.",
         "operationId": "agents_agent_versions_list",
         "parameters": [
           {
@@ -52020,13 +52004,12 @@
         ],
         "x-sylphx-method": "agents.agent_versions.list",
         "x-sylphx-permission": "agents:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents/{agent}/agent_versions/{agent_version}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an agent version.",
+        "description": "Gets an agent version.",
         "operationId": "agents_agent_versions_get",
         "parameters": [
           {
@@ -52109,13 +52092,12 @@
         ],
         "x-sylphx-method": "agents.agent_versions.get",
         "x-sylphx-permission": "agents:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents/{agent}:run": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nAtomically admits a pinned task session, initial event and pending turn.",
+        "description": "Atomically admits a pinned task session, initial event and pending turn.",
         "operationId": "agents_agents_run",
         "parameters": [
           {
@@ -52280,13 +52262,12 @@
         ],
         "x-sylphx-method": "agents.agents.run",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents:capture-credential": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCaptures an existing grant for one session and purpose; never issues a key.",
+        "description": "Captures an existing grant for one session and purpose; never issues a key.",
         "operationId": "agents_agents_capture_credential",
         "parameters": [
           {
@@ -52406,13 +52387,12 @@
         ],
         "x-sylphx-method": "agents.agents.capture_credential",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents:revoke-credential": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRevokes one captured handle. Repeating the revocation is harmless.",
+        "description": "Revokes one captured handle. Repeating the revocation is harmless.",
         "operationId": "agents_agents_revoke_credential",
         "parameters": [
           {
@@ -52502,13 +52482,12 @@
         ],
         "x-sylphx-method": "agents.agents.revoke_credential",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agents:rotate-credential": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRotates the captured value under the same handle with generation fencing.",
+        "description": "Rotates the captured value under the same handle with generation fencing.",
         "operationId": "agents_agents_rotate_credential",
         "parameters": [
           {
@@ -52616,7 +52595,6 @@
         ],
         "x-sylphx-method": "agents.agents.rotate_credential",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

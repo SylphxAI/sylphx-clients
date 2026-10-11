@@ -123504,6 +123504,7 @@
               "request": "sylphx.agents.v1.DecideAgentSessionApprovalRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.SessionEvent",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "decide_approval"
@@ -123547,6 +123548,7 @@
               "request": "sylphx.agents.v1.SubmitAgentSessionToolResultRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.SessionEvent",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "submit_tool_result"
@@ -123686,6 +123688,7 @@
               "request": "sylphx.agents.v1.GetMemoryStoreRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.MemoryStore",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -123734,6 +123737,7 @@
               "request": "sylphx.agents.v1.ListMemoryStoresRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.ListMemoryStoresResponse",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -123781,6 +123785,7 @@
               "request": "sylphx.agents.v1.CreateMemoryStoreRequest",
               "resource_field": "memory_store",
               "response": "sylphx.agents.v1.MemoryStore",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "create"
@@ -123829,6 +123834,7 @@
               "request": "sylphx.agents.v1.UpdateMemoryStoreRequest",
               "resource_field": "memory_store",
               "response": "sylphx.agents.v1.MemoryStore",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "update"
@@ -123878,6 +123884,7 @@
               "request": "sylphx.agents.v1.DeleteMemoryStoreRequest",
               "resource_field": null,
               "response": "google.protobuf.Empty",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "delete"
@@ -123923,6 +123930,7 @@
               "request": "sylphx.agents.v1.GetMemoryRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.Memory",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -123971,6 +123979,7 @@
               "request": "sylphx.agents.v1.ListMemoriesRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.ListMemoriesResponse",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -124018,6 +124027,7 @@
               "request": "sylphx.agents.v1.CreateMemoryRequest",
               "resource_field": "memory",
               "response": "sylphx.agents.v1.Memory",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "create"
@@ -124065,6 +124075,7 @@
               "request": "sylphx.agents.v1.UpdateMemoryRequest",
               "resource_field": "memory",
               "response": "sylphx.agents.v1.Memory",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "update"
@@ -124112,6 +124123,7 @@
               "request": "sylphx.agents.v1.DeleteMemoryRequest",
               "resource_field": null,
               "response": "google.protobuf.Empty",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "delete"
@@ -124152,6 +124164,7 @@
               "request": "sylphx.agents.v1.SearchMemoriesRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.SearchMemoriesResponse",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "search"
@@ -124169,7 +124182,6 @@
       "proto_services": [
         "sylphx.agents.v1.AgentsService"
       ],
-      "served": false,
       "stage": "preview"
     },
     {
