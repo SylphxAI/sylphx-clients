@@ -52,7 +52,9 @@ use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
-use sylphx_build_lease::pool::{free_warm, in_pool, lru_free, vstate, REGION_LABEL, VOLUME_CLASS};
+use sylphx_build_lease::pool::{
+    free_warm as free_workspaces, in_pool, lru_free, vstate, REGION_LABEL, VOLUME_CLASS,
+};
 use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
 use sylphx_build_lease::{
     allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
@@ -1185,7 +1187,7 @@ impl Run<'_> {
             let pool = self.pool().await.map_err(Attempt::Done)?;
             // Cache capacity is admitted by the Cell's storage resources,
             // not a per-repository workspace count in the client.
-            let free = free_warm(&pool, &mut full, true);
+            let free = free_warm(&pool, &mut full, true, &self.o.size);
             let mut leased = None;
             let mut warm_name = None;
             for v in free {
@@ -2179,6 +2181,57 @@ fn scrub(outcome: Outcome, secrets: &[String]) -> Outcome {
         },
         Outcome::Lost(reason) => Outcome::Lost(build_cache::scrub(&reason, secrets)),
         other => other,
+    }
+}
+
+/// Free workspaces ordered by matching build-machine readiness. The shared
+/// pool selector excludes unavailable workspaces and nodes already found
+/// full; its least-recently-used order is retained within each readiness class.
+fn free_warm<'a>(
+    pool: &'a [sbx::Volume],
+    full: &mut HashSet<String>,
+    room: bool,
+    size: &str,
+) -> Vec<&'a sbx::Volume> {
+    let mut free = free_workspaces(pool, full, room);
+    free.sort_unstable_by(|a, b| {
+        machine_rank(a, size)
+            .cmp(&machine_rank(b, size))
+            .then_with(|| {
+                a.meta
+                    .as_ref()
+                    .map_or("", |m| m.update_time.as_str())
+                    .cmp(b.meta.as_ref().map_or("", |m| m.update_time.as_str()))
+            })
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    free
+}
+
+/// The annotation the platform sets on a build workspace while a build
+/// machine is booted (`warm`) or booting (`booting`) on it.
+const MACHINE_ANNOTATION: &str = "sandboxes.sylphx.com/build-machine";
+/// The build shape of the waiting machine, written alongside its state.
+const MACHINE_SHAPE_ANNOTATION: &str = "sandboxes.sylphx.com/build-machine-shape";
+
+/// 0 for a matching booted machine, 1 for a matching booting one, 2 otherwise.
+/// Marks are only a preference: the Cell still checks the lease's exact fit.
+fn machine_rank(v: &sbx::Volume, size: &str) -> u8 {
+    let Some(meta) = &v.meta else {
+        return 2;
+    };
+    if meta
+        .annotations
+        .get(MACHINE_SHAPE_ANNOTATION)
+        .and_then(|shape| shape.strip_prefix("build-"))
+        != Some(size)
+    {
+        return 2;
+    }
+    match meta.annotations.get(MACHINE_ANNOTATION).map(String::as_str) {
+        Some("warm") => 0,
+        Some("booting") => 1,
+        _ => 2,
     }
 }
 
@@ -3623,6 +3676,153 @@ esac
         assert_eq!(o.region.as_deref(), Some("gra"));
         assert_eq!(o.queue_timeout, Duration::from_secs(120));
         assert_eq!(o.timeout, Duration::from_secs(3600));
+    }
+
+    /// A run takes a free warm workspace whose node has room: one whose
+    /// node had none is skipped while another free warm workspace or room
+    /// for a fresh one remains, and is waited on again only when neither
+    /// does.
+    #[test]
+    fn a_run_skips_a_warm_workspace_whose_node_is_full() {
+        fn vol(name: &str, state: sbx::VolumeState) -> sbx::Volume {
+            let mut v = sbx::Volume::default();
+            v.name = name.into();
+            let mut st = sbx::VolumeStatus::default();
+            st.state = Some(state);
+            v.status = Some(st);
+            let mut meta = sylphx::common::ResourceMeta::default();
+            meta.annotations
+                .insert(MACHINE_ANNOTATION.into(), "warm".into());
+            meta.annotations
+                .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-standard".into());
+            v.meta = Some(meta);
+            v
+        }
+        let pool = vec![
+            vol("v-b", sbx::VolumeState::Available),
+            vol("v-a", sbx::VolumeState::Available),
+            vol("v-c", sbx::VolumeState::Attached),
+            vol("v-d", sbx::VolumeState::Creating),
+            vol("v-e", sbx::VolumeState::Deleting),
+            vol("v-f", sbx::VolumeState::Failed),
+            vol("v-g", sbx::VolumeState::Unknown(String::new())),
+        ];
+        let names = |f: Vec<&sbx::Volume>| f.iter().map(|v| v.name.clone()).collect::<Vec<_>>();
+        let mut full = HashSet::new();
+        // Free ones only, in a stable order.
+        assert_eq!(
+            names(free_warm(&pool, &mut full, true, "standard")),
+            ["v-a", "v-b"]
+        );
+        // v-a's node had no room: v-b is next.
+        full.insert("v-a".to_string());
+        assert_eq!(
+            names(free_warm(&pool, &mut full, true, "standard")),
+            ["v-b"]
+        );
+        // Both full, room for a fresh workspace: none of them; the run
+        // takes a fresh one.
+        full.insert("v-b".to_string());
+        assert!(free_warm(&pool, &mut full, true, "standard").is_empty());
+        assert_eq!(full.len(), 2);
+        // Both full and no room for a fresh one: wait on the warm ones again.
+        assert_eq!(
+            names(free_warm(&pool, &mut full, false, "standard")),
+            ["v-a", "v-b"]
+        );
+        assert!(full.is_empty());
+    }
+
+    /// A matching booted machine wins over a booting one, then cold;
+    /// within each class main's least-recently-used order remains intact.
+    #[test]
+    fn a_run_takes_the_workspace_whose_machine_is_booted_first() {
+        fn vol(name: &str, machine: Option<&str>, used: &str) -> sbx::Volume {
+            let mut v = sbx::Volume::default();
+            v.name = name.into();
+            let mut st = sbx::VolumeStatus::default();
+            st.state = Some(sbx::VolumeState::Available);
+            v.status = Some(st);
+            let mut meta = sylphx::common::ResourceMeta::default();
+            meta.update_time = used.into();
+            if let Some(m) = machine {
+                meta.annotations.insert(MACHINE_ANNOTATION.into(), m.into());
+                meta.annotations
+                    .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-standard".into());
+            }
+            v.meta = Some(meta);
+            v
+        }
+        let mut pool = vec![
+            vol("v-a", Some("booting"), "2026-10-06T10:00:00.000Z"),
+            vol("v-b", None, "2026-10-06T09:00:00.000Z"),
+            vol("v-c", Some("warm"), "2026-10-06T12:00:00.000Z"),
+            vol("v-d", Some("warm"), "2026-10-06T11:00:00.000Z"),
+            vol("v-e", Some("warm"), "2026-10-06T11:00:00.000Z"),
+            vol("v-f", Some("booting"), "2026-10-06T08:00:00.000Z"),
+            vol("v-g", None, "2026-10-06T07:00:00.000Z"),
+            vol("v-h", Some("warm"), "2026-10-06T06:00:00.000Z"),
+            vol("v-i", Some("warm"), "2026-10-06T05:00:00.000Z"),
+        ];
+        pool[7]
+            .meta
+            .as_mut()
+            .unwrap()
+            .annotations
+            .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-large".into());
+        pool[8]
+            .meta
+            .as_mut()
+            .unwrap()
+            .annotations
+            .remove(MACHINE_SHAPE_ANNOTATION);
+        let names = |f: Vec<&sbx::Volume>| f.iter().map(|v| v.name.clone()).collect::<Vec<_>>();
+        assert_eq!(
+            names(free_warm(&pool, &mut HashSet::new(), true, "standard")),
+            ["v-d", "v-e", "v-c", "v-f", "v-a", "v-i", "v-h", "v-g", "v-b"]
+        );
+    }
+
+    #[test]
+    fn machine_marks_only_prioritize_the_requested_build_shape() {
+        let mut v = sbx::Volume::default();
+        let mut meta = sylphx::common::ResourceMeta::default();
+        meta.annotations
+            .insert(MACHINE_ANNOTATION.into(), "warm".into());
+        v.meta = Some(meta);
+        // Older or incomplete marks have no shape and do not get priority.
+        assert_eq!(machine_rank(&v, "standard"), 2);
+        for size in SIZES {
+            v.meta
+                .as_mut()
+                .unwrap()
+                .annotations
+                .insert(MACHINE_SHAPE_ANNOTATION.into(), format!("build-{size}"));
+            for requested in SIZES {
+                assert_eq!(
+                    machine_rank(&v, requested),
+                    if size == requested { 0 } else { 2 }
+                );
+            }
+        }
+        v.meta
+            .as_mut()
+            .unwrap()
+            .annotations
+            .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-standard".into());
+        v.meta
+            .as_mut()
+            .unwrap()
+            .annotations
+            .insert(MACHINE_ANNOTATION.into(), "booting".into());
+        assert_eq!(machine_rank(&v, "standard"), 1);
+        assert_eq!(machine_rank(&v, "large"), 2);
+        v.meta
+            .as_mut()
+            .unwrap()
+            .annotations
+            .insert(MACHINE_ANNOTATION.into(), "unknown".into());
+        assert_eq!(machine_rank(&v, "standard"), 2);
     }
 
     /// A caller sends --region only when `build run --help` lists both
