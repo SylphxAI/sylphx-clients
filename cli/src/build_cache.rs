@@ -26,6 +26,10 @@ use crate::{Defaults, Failure};
 /// Where the gateway is, unless `SYLPHX_BUILD_CACHE_URL` says otherwise.
 pub const DEFAULT_URL: &str = "https://build-cache.sylphx.net";
 const URL_ENV: &str = "SYLPHX_BUILD_CACHE_URL";
+/// The cache's DE Cell is exposed by Sandboxes as the canonical region `hk`
+/// (`sandboxes-api::config::DEFAULT_REGION`). Its cluster-local route is not
+/// reachable from other Cells. Keep this aligned with the cache deployment.
+const CLUSTER_REGION: &str = "hk";
 /// A cache that does not answer this fast only slows the build: give up.
 const MINT_TIMEOUT: Duration = Duration::from_secs(5);
 /// The longest token the gateway mints (a 6 h run and 15 minutes of slack).
@@ -45,9 +49,9 @@ pub enum Access {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Network {
-    /// The run's machine inside the platform.
+    /// A lease in the cache gateway's own Cell.
     Cluster,
-    /// A developer machine.
+    /// A developer machine or a lease outside the gateway's Cell.
     Public,
 }
 
@@ -86,12 +90,20 @@ pub fn local_request(project: String) -> Request {
     }
 }
 
-/// The request for a run of `timeout` on a build machine.
-pub fn run_request(project: String, timeout: Duration) -> Request {
+/// The request for a run on the accepted lease, not its requested region or
+/// project home. Unknown placement cannot establish cluster-local reachability.
+pub fn run_request(
+    project: String,
+    timeout: Duration,
+    lease: &sylphx::sandboxes::Lease,
+) -> Request {
     Request {
         project,
         access: Access::Write,
-        network: Network::Cluster,
+        network: match lease.spec.as_ref().map(|s| s.region.as_str()) {
+            Some(CLUSTER_REGION) => Network::Cluster,
+            _ => Network::Public,
+        },
         ttl_seconds: run_ttl_seconds(timeout),
     }
 }
@@ -503,7 +515,11 @@ mod tests {
 
     #[test]
     fn the_request_is_the_gateways_body() {
-        let r = run_request("prj_a".into(), Duration::from_secs(60));
+        let mut lease = sylphx::sandboxes::Lease::default();
+        let mut spec = sylphx::sandboxes::LeaseSpec::default();
+        spec.region = CLUSTER_REGION.into();
+        lease.spec = Some(spec);
+        let r = run_request("prj_a".into(), Duration::from_secs(60), &lease);
         assert_eq!(
             r.body(),
             json!({"project": "prj_a", "access": "write", "ttl_seconds": 960, "network": "cluster"})
@@ -511,6 +527,41 @@ mod tests {
         assert_eq!(
             local_request("prj_a".into()).body(),
             json!({"project": "prj_a", "access": "read", "ttl_seconds": 43200, "network": "public"})
+        );
+    }
+
+    #[test]
+    fn run_network_uses_actual_returned_placement() {
+        // The API projects persisted placed-region authority over the stored
+        // request spec, including legacy empty automatic home specs. Empty
+        // request -> actual hk is local; empty request -> gra is public.
+        // Neither explicit requests nor a project home override that answer.
+        for (requested, returned, expected) in [
+            ("hk", "hk", Network::Cluster),
+            ("", "hk", Network::Cluster),
+            ("gra", "gra", Network::Public),
+            ("", "gra", Network::Public),
+            ("hk", "gra", Network::Public),
+            ("gra", "hk", Network::Cluster),
+            ("hk", "", Network::Public),
+            ("", "unknown", Network::Public),
+        ] {
+            let mut lease = sylphx::sandboxes::Lease::default();
+            let mut spec = sylphx::sandboxes::LeaseSpec::default();
+            spec.region = requested.into();
+            lease.spec = Some(spec);
+            // The API's accepted placement replaces the request's region.
+            lease.spec.as_mut().unwrap().region = returned.into();
+            let req = run_request("prj_a".into(), Duration::from_secs(60), &lease);
+            assert_eq!(req.network, expected, "{requested:?} -> {returned:?}");
+            assert_eq!(req.project, "prj_a");
+            assert_eq!(req.access, Access::Write);
+            assert_eq!(req.ttl_seconds, 960);
+        }
+        let lease = sylphx::sandboxes::Lease::default();
+        assert_eq!(
+            run_request("prj_a".into(), Duration::from_secs(60), &lease).network,
+            Network::Public
         );
     }
 

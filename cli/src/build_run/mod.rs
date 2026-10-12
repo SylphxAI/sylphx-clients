@@ -913,7 +913,7 @@ impl Run<'_> {
         let mut minted = Instant::now();
         let warned_before = self.cache_warned.load(Ordering::Relaxed);
         // Minted before the sync: the build store takes the sync's files.
-        let (cache, store) = self.cache().await;
+        let (cache, store) = self.cache(&m.lease).await;
         match self.sync(&guest, store.as_ref()).await {
             Ok(()) => {}
             Err(e) if workspace_full(e.text()) => return self.out_of_space(&m).await,
@@ -991,13 +991,13 @@ impl Run<'_> {
     /// with `--no-cache`, and when no token
     /// can be had (a cache that is missing only slows the build). The build
     /// store, when the token reaches it, takes the sync's files.
-    async fn cache(&self) -> (BTreeMap<String, String>, Option<store::Store>) {
+    async fn cache(&self, lease: &sbx::Lease) -> (BTreeMap<String, String>, Option<store::Store>) {
         if self.o.no_cache {
             return (BTreeMap::new(), None);
         }
         let minted = match (self.key, build_cache::project_id(&self.parent)) {
             (Some(key), Some(project)) => {
-                let req = build_cache::run_request(project, self.o.timeout);
+                let req = build_cache::run_request(project, self.o.timeout, lease);
                 build_cache::mint(&self.cache_url, key, &req).await
             }
             (None, _) => Err(build_cache::MintError::NoProject("not signed in".into())),
@@ -1009,11 +1009,11 @@ impl Run<'_> {
             Ok(m) => {
                 self.held.with(|h| h.secrets.extend(m.secrets()));
                 // The gateway as the build machine reaches it.
-                let cluster = m.env.get("TURBO_API").cloned().unwrap_or_default();
+                let guest_base = m.env.get("TURBO_API").cloned().unwrap_or_default();
                 let st = m.token.as_deref().and_then(|t| {
                     store::Store::new(
                         &self.cache_url,
-                        &cluster,
+                        &guest_base,
                         m.cache.as_deref().unwrap_or(""),
                         t,
                     )
