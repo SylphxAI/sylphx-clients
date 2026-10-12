@@ -1280,6 +1280,41 @@ async fn auth_enable_binds_the_linked_environment_and_prints_the_instance() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn auth_enable_preserves_a_real_cell_bearing_environment_name() {
+    let env = "orgs/org_fs01afbdccgn8xdk1ghj5y47w0vtph/projects/prj_fs016wck3akrzep3zkwbv3dt0k9hgr/envs/env_fs01y448d2kqbb8ntphzf61k85wthw";
+    let (url, log) = serve(vec![(
+        200,
+        json!({"status": "active", "providerId": "sylphx-auth",
+               "config": {"organizationId": "org-1"}}),
+    )])
+    .await;
+    let sb = Sandbox::new("auth-enable-canonical-env");
+    std::fs::write(
+        sb.dir.join(".sylphx/project.json"),
+        json!({"org": "orgs/org_fs01afbdccgn8xdk1ghj5y47w0vtph",
+               "project": "orgs/org_fs01afbdccgn8xdk1ghj5y47w0vtph/projects/prj_fs016wck3akrzep3zkwbv3dt0k9hgr",
+               "env": env}).to_string(),
+    ).unwrap();
+    let out = run(&sb, &url, &["auth", "enable", "--env", env]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stdout).contains("org-1"));
+    let requests = log.lock();
+    assert_eq!(requests.len(), 1);
+    assert!(requests[0]
+        .line
+        .starts_with("PUT /v1/projects/prj_fs016wck3akrzep3zkwbv3dt0k9hgr/composition/bindings "));
+    assert_eq!(
+        serde_json::from_str::<Value>(&requests[0].body).unwrap(),
+        json!({"capabilityId": "identity", "slot": "identity",
+               "providerId": "sylphx-auth", "environmentId": "env_fs01y448d2kqbb8ntphzf61k85wthw"})
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn auth_status_reads_the_identity_bindings_back() {
     let (url, log) = serve(vec![(
         200,
