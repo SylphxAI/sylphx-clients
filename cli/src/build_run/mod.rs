@@ -796,6 +796,15 @@ async fn execute(
             Err(e) => return Outcome::platform(e, false),
         }
     };
+    // Bundling can take longer than a machine's idle window. Do it once,
+    // while interruptible and before any lease, then borrow it on each guest.
+    let source_history = match o.source_history.as_deref() {
+        Some(base) => match history::prepare(&o.root, base).await {
+            Ok(history) => Some(history),
+            Err(e) => return Outcome::platform(e, false),
+        },
+        None => None,
+    };
     let repo = sync::repo_key(&o.root);
     let mut run = Run {
         client,
@@ -807,6 +816,7 @@ async fn execute(
         repo,
         tree,
         git_deps,
+        source_history,
         key,
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
@@ -894,6 +904,8 @@ struct Run<'a> {
     tree: sync::Tree,
     /// The tree's locked git dependencies and their tarballs on this machine.
     git_deps: Vec<(git_deps::Dep, PathBuf)>,
+    /// HEAD and the requested ref, bundled once before acquiring any lease.
+    source_history: Option<(String, Vec<u8>)>,
     /// The caller's key, for minting the cache token.
     key: Option<&'a str>,
     cache_url: String,
@@ -1807,11 +1819,10 @@ impl Run<'_> {
     }
 
     async fn send_source_history(&self, g: &Guest) -> Result<(), Fault> {
-        let Some(base) = &self.o.source_history else {
+        let Some((reference, bundle)) = &self.source_history else {
             return Ok(());
         };
-        let (reference, bundle) = history::prepare(&self.o.root, base).map_err(Fault::Other)?;
-        g.upload(&format!("{WS}/.sylphx/source.bundle"), USER, &bundle)
+        g.upload(&format!("{WS}/.sylphx/source.bundle"), USER, bundle)
             .await?;
         let args = argv(&[
             "/bin/sh",
@@ -1819,7 +1830,7 @@ impl Run<'_> {
             history::APPLY,
             "source-history",
             WS,
-            &reference,
+            reference,
         ]);
         let (code, _, err) = g.run(USER, &args, &BTreeMap::new()).await?;
         if code != 0 {
@@ -2512,6 +2523,240 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    /// Run in a separate test process so Git tracing and CLI context are scoped
+    /// to this invocation, without changing other tests' environment or cwd.
+    #[tokio::test]
+    #[ignore = "subprocess entry point for the history ordering tests"]
+    async fn source_history_order_child() {
+        let root = std::env::var_os("SYLPHX_TEST_HISTORY_ROOT")
+            .expect("history ordering test must supply its scratch tree");
+        let root = PathBuf::from(root);
+        let base = std::env::var("SYLPHX_TEST_HISTORY_BASE").unwrap();
+        let mut opts = parse(&[
+            "sylphx",
+            "build",
+            "run",
+            root.to_str().unwrap(),
+            "--source-history",
+            &base,
+            "--",
+            "true",
+        ])
+        .unwrap();
+        opts.dry_run = std::env::var_os("SYLPHX_TEST_HISTORY_DRY_RUN").is_some();
+        let client = Client::new(
+            sylphx::HttpTransport::builder()
+                .base_url(std::env::var("SYLPHX_TEST_HISTORY_API").unwrap())
+                .build()
+                .unwrap(),
+        );
+        let dry_run = opts.dry_run;
+        let result = run_opts(Ok(client), None, opts).await;
+        if dry_run {
+            assert!(result.is_ok());
+        } else {
+            assert!(matches!(result, Err(Failure::Exit(EXIT_PLATFORM))));
+        }
+    }
+
+    fn bundle_starts(trace: &Path) -> Vec<Value> {
+        std::fs::read_to_string(trace)
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+            .filter(|event| {
+                event["event"] == "start"
+                    && event["argv"].as_array().is_some_and(|args| {
+                        args.windows(2)
+                            .any(|pair| pair[0] == "bundle" && pair[1] == "create")
+                    })
+            })
+            .collect()
+    }
+
+    async fn history_before_acquire(base: &str, dry_run: bool, expect_attempts: usize) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let tree = GitTree::new();
+        let git = |args: &[&str]| {
+            let output = std::process::Command::new("git")
+                .current_dir(&tree.0)
+                .args([
+                    "-c",
+                    "user.name=test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                ])
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        };
+        std::fs::write(tree.0.join("file"), "committed\n").unwrap();
+        git(&["add", "file"]);
+        git(&["commit", "-qm", "source"]);
+        git(&["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        std::fs::write(tree.0.join("file"), "dirty\n").unwrap();
+        let trace = tree.0.join(".git/source-history-trace.jsonl");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let starts_at_acquire = std::sync::Arc::new(parking_lot::Mutex::new(Vec::new()));
+        let seen = starts_at_acquire.clone();
+        let source = tree.0.clone();
+        let traced = trace.clone();
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                let mut chunk = [0; 8192];
+                loop {
+                    let n = socket.read(&mut chunk).await.unwrap();
+                    assert_ne!(n, 0);
+                    request.extend_from_slice(&chunk[..n]);
+                    if let Some(end) = request.windows(4).position(|w| w == b"\r\n\r\n") {
+                        let headers = String::from_utf8_lossy(&request[..end]);
+                        let length = headers
+                            .lines()
+                            .find_map(|line| {
+                                line.to_ascii_lowercase()
+                                    .strip_prefix("content-length:")
+                                    .map(|n| n.trim().parse::<usize>().unwrap())
+                            })
+                            .unwrap_or(0);
+                        if request.len() >= end + 4 + length {
+                            break;
+                        }
+                    }
+                }
+                let request = String::from_utf8_lossy(&request);
+                let line = request.lines().next().unwrap();
+                let (status, body) = if line.starts_with("POST ") && line.contains("/leases ") {
+                    let starts = bundle_starts(&traced);
+                    let events = std::fs::read_to_string(&traced).unwrap_or_default();
+                    let completed = starts
+                        .iter()
+                        .filter(|start| {
+                            events.lines().any(|line| {
+                                serde_json::from_str::<Value>(line).is_ok_and(|event| {
+                                    event["event"] == "exit"
+                                        && event["sid"] == start["sid"]
+                                        && event["code"] == 0
+                                })
+                            })
+                        })
+                        .count();
+                    seen.lock().push(completed);
+                    // Any attempted re-preparation after this acquisition must
+                    // fail: only the already-built bundle can be reused.
+                    let reference = source.join(".git/refs/remotes/origin/main");
+                    if reference.exists() {
+                        std::fs::remove_file(reference).unwrap();
+                    }
+                    (
+                        200,
+                        json!({"name": "orgs/org_a/projects/prj_a/envs/env_a/leases/l1",
+                        "status": {"state": "ended", "endReason": "machine_lost"}}),
+                    )
+                } else if line.starts_with("GET ") && line.contains("/volumes") {
+                    (200, json!({"volumes": []}))
+                } else if line.starts_with("POST ") && line.contains("/volumes ") {
+                    (
+                        422,
+                        json!({"code": "SHAPE_NOT_OFFERED", "status": 422,
+                        "detail": "no workspace Volumes", "retryable": false}),
+                    )
+                } else {
+                    panic!("unexpected API request: {line}");
+                };
+                let body = body.to_string();
+                socket.write_all(format!(
+                    "HTTP/1.1 {status} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len(),
+                ).as_bytes()).await.unwrap();
+                socket.shutdown().await.unwrap();
+            }
+        });
+        let mut child = tokio::process::Command::new(std::env::current_exe().unwrap());
+        child
+            .args([
+                "--exact",
+                "build_run::tests::source_history_order_child",
+                "--ignored",
+                "--nocapture",
+            ])
+            .current_dir(&tree.0)
+            .env("SYLPHX_TEST_HISTORY_ROOT", &tree.0)
+            .env("SYLPHX_TEST_HISTORY_BASE", base)
+            .env("SYLPHX_TEST_HISTORY_API", url)
+            .env(
+                crate::context::ENV_VAR,
+                "orgs/org_a/projects/prj_a/envs/env_a",
+            )
+            .env("GIT_TRACE2_EVENT", &trace)
+            .env_remove("SYLPHX_TEST_HISTORY_DRY_RUN")
+            .kill_on_drop(true);
+        if dry_run {
+            child.env("SYLPHX_TEST_HISTORY_DRY_RUN", "1");
+        }
+        let result = tokio::time::timeout(Duration::from_secs(30), child.output()).await;
+        server.abort();
+        let output = result.unwrap().unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        if expect_attempts == 0 && !dry_run {
+            assert!(String::from_utf8_lossy(&output.stderr).contains("preparing source history"));
+        }
+        assert_eq!(*starts_at_acquire.lock(), vec![1; expect_attempts]);
+        assert_eq!(
+            bundle_starts(&trace).len(),
+            usize::from(expect_attempts > 0)
+        );
+        assert_eq!(
+            std::fs::read_to_string(tree.0.join("file")).unwrap(),
+            "dirty\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn source_history_finishes_before_acquire_and_is_not_reprepared_on_retry() {
+        history_before_acquire("origin/main", false, 2).await;
+    }
+
+    #[tokio::test]
+    async fn source_history_failure_never_acquires_a_lease() {
+        history_before_acquire("origin/missing", false, 0).await;
+    }
+
+    #[tokio::test]
+    async fn dry_run_does_not_prepare_source_history_or_acquire() {
+        history_before_acquire("origin/missing", true, 0).await;
+    }
+
+    #[test]
+    fn source_history_is_rejected_for_no_tree_runs() {
+        assert!(parse(&[
+            "sylphx",
+            "build",
+            "run",
+            "--no-tree",
+            "--source-history",
+            "origin/main",
+            "--",
+            "true",
+        ])
+        .is_err());
     }
 
     /// Runs [`RUN`] the way the guest does (`sh -c RUN … -- <command>`) in a

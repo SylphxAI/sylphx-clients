@@ -1,35 +1,71 @@
 //! Optional offline source history for checks that compare HEAD with a base ref.
 use std::path::Path;
-use std::process::Command;
+use std::process::Stdio;
 
-pub fn prepare(root: &Path, base: &str) -> Result<(String, Vec<u8>), String> {
-    let run = |args: &[&str]| {
-        let out = Command::new("git")
-            .current_dir(root)
-            .args(args)
-            .output()
-            .map_err(|e| format!("preparing source history: {e}"))?;
-        if !out.status.success() {
-            return Err(format!(
-                "preparing source history: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            ));
+/// Git may spawn pack-objects while bundling. Cancel that whole process group,
+/// not just its parent, when Ctrl-C drops the preparation future.
+#[cfg(unix)]
+struct GitGroup(Option<libc::pid_t>);
+
+#[cfg(unix)]
+impl Drop for GitGroup {
+    fn drop(&mut self) {
+        if let Some(pid) = self.0 {
+            // SAFETY: the child owns this group (`process_group(0)` at spawn).
+            unsafe {
+                libc::kill(-pid, libc::SIGKILL);
+            }
         }
-        Ok(out.stdout)
-    };
-    let reference = String::from_utf8(run(&[
-        "rev-parse",
-        "--symbolic-full-name",
-        "--verify",
-        base,
-    ])?)
+    }
+}
+
+async fn run(root: &Path, args: &[&str]) -> Result<Vec<u8>, String> {
+    let mut command = tokio::process::Command::new("git");
+    command
+        .current_dir(root)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    #[cfg(unix)]
+    command.process_group(0);
+    let child = command
+        .spawn()
+        .map_err(|e| format!("preparing source history: {e}"))?;
+    #[cfg(unix)]
+    let mut group = GitGroup(child.id().map(|pid| pid as libc::pid_t));
+    let out = child.wait_with_output().await;
+    #[cfg(unix)]
+    if out.is_ok() {
+        // Git has joined its helpers and was reaped; do not signal a reused pid.
+        group.0 = None;
+    }
+    let out = out.map_err(|e| format!("preparing source history: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "preparing source history: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(out.stdout)
+}
+
+pub async fn prepare(root: &Path, base: &str) -> Result<(String, Vec<u8>), String> {
+    let reference = String::from_utf8(
+        run(
+            root,
+            &["rev-parse", "--symbolic-full-name", "--verify", base],
+        )
+        .await?,
+    )
     .map_err(|e| e.to_string())?
     .trim()
     .to_string();
     if !reference.starts_with("refs/") {
         return Err("--source-history needs a named local ref, such as origin/main".into());
     }
-    let bundle = run(&["bundle", "create", "-", "HEAD", &reference])?;
+    let bundle = run(root, &["bundle", "create", "-", "HEAD", &reference]).await?;
     Ok((reference, bundle))
 }
 
@@ -49,6 +85,7 @@ mod tests {
     use super::*;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct Scratch(PathBuf);
@@ -93,8 +130,8 @@ mod tests {
         String::from_utf8(o.stdout).unwrap().trim().into()
     }
 
-    #[test]
-    fn offline_history_preserves_commits_merge_base_and_dirty_files_on_warm_sync() {
+    #[tokio::test]
+    async fn offline_history_preserves_commits_merge_base_and_dirty_files_on_warm_sync() {
         let s = Scratch::new();
         let src = s.0.join("src");
         let ws = s.0.join("ws");
@@ -111,7 +148,7 @@ mod tests {
             fs::write(src.join("file"), content).unwrap();
             git(&src, &["commit", "-qam", "change"]);
             let head = git(&src, &["rev-parse", "HEAD"]);
-            let (reference, bundle) = prepare(&src, "origin/main").unwrap();
+            let (reference, bundle) = prepare(&src, "origin/main").await.unwrap();
             assert_eq!(reference, "refs/remotes/origin/main");
             fs::write(ws.join(".sylphx/source.bundle"), bundle).unwrap();
             fs::write(ws.join("tree/file"), "dirty\n").unwrap();
@@ -136,5 +173,41 @@ mod tests {
                 "local\n"
             );
         }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn dropping_local_git_work_cancels_helpers_without_blocking_the_runtime() {
+        use std::time::Duration;
+
+        let s = Scratch::new();
+        let args = [
+            "-c",
+            "alias.history-wait=!echo started > started; sleep 1; echo survived > survived",
+            "history-wait",
+        ];
+        let mut work = Box::pin(run(&s.0, &args));
+        // This timer and file observation run on the same single-threaded
+        // runtime as Git preparation: synchronous output() would block them.
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                tokio::select! {
+                    result = &mut work => panic!("Git ended before cancellation: {result:?}"),
+                    _ = tokio::time::sleep(Duration::from_millis(10)) => {
+                        if s.0.join("started").exists() {
+                            break;
+                        }
+                    }
+                }
+            }
+        })
+        .await
+        .unwrap();
+        drop(work);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        assert!(
+            !s.0.join("survived").exists(),
+            "Git's helper outlived cancellation"
+        );
     }
 }
