@@ -3,11 +3,11 @@
 //! build execution ADR, section 1). The output streams back, the exit code is
 //! the command's own, and named outputs are copied back.
 //!
-//! An automatic run leases an ephemeral `build-<size>` machine in any
-//! configured, admitting Cell. An explicitly regional run can take a warm
-//! workspace (a Sandboxes Volume per project and repository) mounted at
-//! [`WS`], sending only files that differ from its manifest ([`sync`]). Every
-//! run releases the lease. Before the command starts, a preempted or lost
+//! Every run leases a `build-<size>` machine with a cold workspace at [`WS`].
+//! The workspace is created only after admission, belongs to the lease's
+//! workload, and is reclaimed when the lease ends. Scoped remote build caches
+//! reuse build outputs without retaining a local workspace.
+//! Every run releases the lease. Before the command starts, a preempted or lost
 //! machine, or a broken stream, is retried once after a short backoff, and
 //! anything that fails (the machine, the sync, the toolchain install) is a
 //! platform failure, 125. Once the command has started it is never run
@@ -15,15 +15,10 @@
 //! reattached to the running command (`Guest::reattach`), and a machine lost
 //! under it ends the run with 137, as a killed process.
 //!
-//! `--region` pins the run to that Cell and its local warm workspaces (a
-//! Volume lives in one Cell). Without it, the API selects Build capacity;
-//! the workspace is ephemeral, so it cannot pin demand to a home-region PVC.
+//! `--region` pins placement to that Cell; otherwise the API selects Build
+//! capacity. Neither path creates or reserves a persistent workspace Volume.
 //! Once a lease is accepted, every internal retry stays in its returned Cell,
-//! including a lease lost before READY; automatic runs remain ephemeral.
-//! A region whose Cell offers no Volumes refuses the workspace at once
-//! (`SHAPE_NOT_OFFERED`); the run then leases the machine with no Volume and
-//! builds on its own disk: a cold workspace that ends with the lease, with
-//! no local sccache (only a remote build cache the machine is given).
+//! including a lease lost before READY.
 //! `--queue-timeout` bounds the wait for a machine: past it the run answers
 //! 125, retryable, so a caller can try another region.
 //!
@@ -39,8 +34,8 @@ mod remote;
 mod store;
 mod sync;
 
-use std::collections::{BTreeMap, HashSet};
-use std::io::{Read, Write};
+use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -49,15 +44,12 @@ use std::time::{Duration, Instant};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{json, Value};
 use sylphx::sandboxes as sbx;
-use sylphx::{Client, HttpRequest};
+use sylphx::Client;
 
 use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
-use sylphx_build_lease::pool::{
-    free_warm as free_workspaces, in_pool, lru_free, vstate, REGION_LABEL, VOLUME_CLASS,
-};
 use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
 use sylphx_build_lease::{
     allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
@@ -81,43 +73,13 @@ const USER: &str = "user";
 const SIZES: [&str; 3] = ["standard", "large", "xlarge"];
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 const MAX_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
-/// The machine wait includes a cold boot and trying another Volume when a
-/// warm workspace's node is busy; retain 30m unless the caller overrides it.
+/// The machine wait includes admission and a cold boot; retain 30m unless
+/// the caller overrides it.
 const DEFAULT_QUEUE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
-/// A Volume reaches available within this, or the run gives up on it.
-const VOLUME_WAIT: Duration = Duration::from_secs(300);
-/// A warm workspace pins the run to its node; past this the run takes a
-/// fresh workspace on any node instead (a cold build, never a failed one).
-const PIN_WAIT: Duration = Duration::from_secs(120);
-const POLL: Duration = Duration::from_secs(2);
-const POOL_POLL: Duration = Duration::from_secs(10);
 /// A data-plane call this often keeps a silent command from idling out.
 const KEEPALIVE: Duration = Duration::from_secs(60);
 /// Renew the lease token well before it expires.
 const TOKEN_RENEW: Duration = Duration::from_secs(45 * 60);
-/// After evicting a workspace, how often and how long a create that is still
-/// refused `NO_CAPACITY` waits for the quota to free the evicted claim's room.
-const EVICT_WAITS: u32 = 3;
-const EVICT_WAIT: Duration = Duration::from_secs(5);
-/// Conservative default for new warm workspaces. The 2026-10-12 sbx-leases
-/// snapshot mapped at most 48.42 GiB per Volume; 64 GiB leaves headroom.
-/// Existing workspaces and explicitly sized customer Volumes keep their size.
-const VOLUME_GIB: i32 = 64;
-const POOL_PURPOSE: &str = "build-workspace";
-/// The pool's scope label: one pool per (environment, repository).
-const POOL_SCOPE: &str = "build-repo";
-
-fn workspace_volume_request(repo: &str, region: Option<&str>) -> Value {
-    let mut body = json!({
-        "meta": {"labels": {"purpose": POOL_PURPOSE, "build-repo": repo}},
-        "spec": {"sizeGib": VOLUME_GIB, "storageClass": VOLUME_CLASS},
-    });
-    if let Some(region) = region {
-        body["meta"]["labels"][REGION_LABEL] = json!(region);
-        body["spec"]["region"] = json!(region);
-    }
-    body
-}
 
 /// The lease's egress allow-list: for an image build [`image::allowed_domains`]
 /// (no internet package host), otherwise [`allowed_domains`] (the
@@ -132,7 +94,7 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Only files that differ from the warm workspace are sent; target/, the Cargo registry, sccache and toolchains stay warm on it. In a region that offers no workspace Volumes the run builds cold on the machine's own disk. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=1 on persistent workspaces without automatically enabling sccache; ephemeral machines use CARGO_INCREMENTAL=0 with sccache. CARGO_PROFILE_DEV_DEBUG=0 in both cases. --env overrides these defaults.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nA warm workspace is not necessarily a booted machine. Keep the default 30m machine wait for cold fallback; an explicit --queue-timeout replaces that budget.\n\nExample: sylphx build run --size standard -- cargo test -p sylphx-cli")
+        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree intent; each lease's workspace is already fresh.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nKeep the default 30m machine wait for admission and cold boot; an explicit --queue-timeout replaces that budget.\n\nExample: sylphx build run --size standard -- cargo test -p sylphx-cli")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -143,7 +105,7 @@ pub fn command() -> Command {
         .arg(Arg::new("timeout").long("timeout").value_name("DURATION")
             .help("Wall-clock limit for the command (default 60m, at most 6h)"))
         .arg(Arg::new("region").long("region").value_name("REGION")
-            .help("Region to pin the run to (default: automatic Build placement); explicit regions keep their own warm workspaces"))
+            .help("Region to pin the run to (default: automatic Build placement); workspace lifetime always follows the lease"))
         .arg(Arg::new("queue-timeout").long("queue-timeout").value_name("DURATION")
             .help("Longest wait for a build machine before exiting 125, retryable (default 30m, at most 6h)"))
         .arg(Arg::new("artifact").long("artifact").value_name("GLOB").action(ArgAction::Append)
@@ -527,7 +489,6 @@ impl Held {
 /// The counters of the `result` event.
 #[derive(Default)]
 struct Stats {
-    warm: bool,
     bytes_up: u64,
     bytes_down: u64,
     artifacts: usize,
@@ -664,7 +625,7 @@ fn result_event(outcome: &Outcome, s: &Stats, ms: u64) -> Value {
         "outcome": outcome.name(),
         "retryable": matches!(outcome, Outcome::Platform { retryable: true, .. } | Outcome::Lost(_)),
         "duration_ms": ms,
-        "workspace": if s.warm { "warm" } else { "cold" },
+        "workspace": "cold",
         "bytes_up": s.bytes_up,
         "bytes_down": s.bytes_down,
         "from_store": s.from_store,
@@ -722,7 +683,7 @@ fn dry_run(o: &Opts, out: &Out) -> Result<(), Failure> {
     out.event(json!({"type": "sync", "dry_run": true, "full": true, "files": plan.upload.len(), "bytes": bytes, "removed": 0}));
     if !o.json {
         println!(
-            "{} files, {} to send to a cold workspace; a warm one gets only the changed files",
+            "{} files, {} to send to a cold lease-owned workspace",
             plan.upload.len(),
             human(bytes)
         );
@@ -774,8 +735,7 @@ async fn execute(
         Ok(p) => p,
         Err(e) => return Outcome::platform(e, false),
     };
-    // The tree is hashed once; a retry after a preemption diffs it again
-    // against whatever the workspace holds then.
+    // The tree is hashed once and reused on a fresh workspace after a retry.
     let files = match sync::file_set(&o.root) {
         Ok(f) => f,
         Err(e) => return Outcome::platform(format!("listing the work tree: {e}"), false),
@@ -805,7 +765,6 @@ async fn execute(
         },
         None => None,
     };
-    let repo = sync::repo_key(&o.root);
     let mut run = Run {
         client,
         o,
@@ -813,16 +772,13 @@ async fn execute(
         held,
         stats,
         parent,
-        repo,
         tree,
         git_deps,
         source_history,
         key,
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
-        no_volumes: o.region.is_none(),
         accepted_region: None,
-        empty_volume: None,
     };
     let mut retries = Retries::default();
     loop {
@@ -900,7 +856,6 @@ struct Run<'a> {
     held: &'a Held,
     stats: &'a Mutex<Stats>,
     parent: String,
-    repo: String,
     tree: sync::Tree,
     /// The tree's locked git dependencies and their tarballs on this machine.
     git_deps: Vec<(git_deps::Dep, PathBuf)>,
@@ -912,39 +867,14 @@ struct Run<'a> {
     /// One warning per run: the build cache unavailable, or the build store
     /// not taking the sync.
     cache_warned: AtomicBool,
-    /// Automatic placement, or the explicit region refused a workspace
-    /// Volume: every attempt leases an ephemeral machine without a PVC.
-    no_volumes: bool,
     /// The first accepted lease's canonical region, even before READY.
     /// `None` is unselected; `Some("")` is the legacy home-Cell spelling.
     accepted_region: Option<String>,
-    /// The Volume that ran out of space before the command started. Only
-    /// that workspace is emptied if the retry acquires it again.
-    empty_volume: Option<String>,
 }
 
 /// A ready machine with its workspace.
 struct Machine {
     lease: sbx::Lease,
-    warm_volume: bool,
-    /// Whether a Volume is mounted at [`WS`] (else the machine's own disk).
-    volume: bool,
-}
-
-impl Machine {
-    fn workspace_volume(&self) -> Option<&str> {
-        self.lease
-            .spec
-            .as_ref()?
-            .volumes
-            .iter()
-            .find(|mount| mount.mount_path == WS)
-            .map(|mount| mount.volume.as_str())
-    }
-
-    fn empty_workspace(&self, empty_volume: Option<&str>) -> bool {
-        empty_volume.is_some() && empty_volume == self.workspace_volume()
-    }
 }
 
 impl Run<'_> {
@@ -984,11 +914,11 @@ impl Run<'_> {
         let warned_before = self.cache_warned.load(Ordering::Relaxed);
         // Minted before the sync: the build store takes the sync's files.
         let (cache, store) = self.cache().await;
-        let warm = match self.sync(&guest, &m, store.as_ref()).await {
-            Ok(w) => w,
+        match self.sync(&guest, store.as_ref()).await {
+            Ok(()) => {}
             Err(e) if workspace_full(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
-        };
+        }
         let git_env = match self.send_git_deps(&guest).await {
             Ok(e) => e,
             Err(e) if out_of_space(e.text()) => return self.out_of_space(&m).await,
@@ -1012,23 +942,18 @@ impl Run<'_> {
         // At most three `sylphx:` lines: a warning takes the place of this one.
         if !warned {
             self.out.progress(&format!(
-                "running on {shape}, {} workspace{}",
-                if warm { "warm" } else { "cold" },
-                if m.volume {
-                    String::new()
-                } else {
-                    format!(" on its own disk (no Volumes{})", self.where_())
-                }
+                "running on {shape}, cold lease-owned workspace{}",
+                self.where_()
             ));
         }
         self.out.event(
-            json!({"type": "running", "lease": name, "size": self.o.size, "region": m.lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "workspace": if warm { "warm" } else { "cold" }, "volume": m.volume, "cache": !cache.is_empty()}),
+            json!({"type": "running", "lease": name, "size": self.o.size, "region": m.lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "workspace": "cold", "volume": false, "cache": !cache.is_empty()}),
         );
         if let Err(e) = self.send_auth(&guest).await {
             return self.lost_or(&name, e).await;
         }
         let ran = self
-            .exec(&mut guest, &mut minted, &name, m.volume, cache, git_env)
+            .exec(&mut guest, &mut minted, &name, cache, git_env)
             .await;
         // The credentials are gone before anything else is asked of the
         // machine, whatever the build's end.
@@ -1188,11 +1113,9 @@ impl Run<'_> {
         }
     }
 
-    /// The workspace ran out of space before the command started: end this
-    /// machine and retry once, emptying only the failed Volume if it is
-    /// acquired again. A second time is 125, as any loss before the start.
+    /// Retry once before the command starts on another fresh lease-owned
+    /// workspace. A second failure is 125, as any loss before the start.
     async fn out_of_space(&mut self, m: &Machine) -> Attempt {
-        self.empty_volume = m.workspace_volume().map(str::to_owned);
         let name = &m.lease.name;
         self.held.with(|h| {
             h.proc = None;
@@ -1219,279 +1142,21 @@ impl Run<'_> {
         Attempt::Done(Outcome::Lost(reason))
     }
 
-    /// A ready lease of `build-<size>` with a workspace from the pool, or,
-    /// where the region offers no Volumes, on the machine's own disk.
+    /// Lease first; the workload creates its cold workspace only after
+    /// admission. Explicit regions pin placement, never a workspace Volume.
     async fn acquire(&mut self) -> Result<Machine, Attempt> {
         let deadline = Instant::now() + self.o.queue_timeout;
-        let mut queued = false;
-        // Warm workspaces whose node had no room for this run within
-        // PIN_WAIT: the run tries the other free warm ones before it takes
-        // a fresh, cold workspace.
-        let mut full: HashSet<String> = HashSet::new();
-        loop {
-            if self.no_volumes {
-                return self.acquire_without_volume(deadline).await;
-            }
-            let pool = self.pool().await.map_err(Attempt::Done)?;
-            // Cache capacity is admitted by the Cell's storage resources,
-            // not a per-repository workspace count in the client.
-            let free = free_warm(&pool, &mut full, true, &self.o.size);
-            let mut leased = None;
-            let mut warm_name = None;
-            for v in free {
-                match self.lease(Some(&v.name)).await {
-                    Ok(l) => {
-                        leased = Some((l, true));
-                        warm_name = Some(v.name.clone());
-                        break;
-                    }
-                    Err(LeaseErr::InUse | LeaseErr::Gone) => continue,
-                    Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
-                }
-            }
-            if leased.is_none() {
-                let Some(vol) = self.new_volume(deadline).await.map_err(Attempt::Done)? else {
-                    self.no_volumes = true;
-                    continue;
-                };
-                match self.lease(Some(&vol)).await {
-                    Ok(l) => leased = Some((l, false)),
-                    // Taken or evicted meanwhile: the next pass looks again.
-                    Err(LeaseErr::InUse | LeaseErr::Gone) => {}
-                    Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
-                }
-            }
-            let Some((lease, warm_volume)) = leased else {
-                if Instant::now() >= deadline {
-                    return Err(Attempt::Done(Outcome::platform(
-                        format!(
-                            "every warm workspace{} stayed busy past --queue-timeout",
-                            self.where_()
-                        ),
-                        true,
-                    )));
-                }
-                if !queued {
-                    queued = true;
-                    self.out.progress("waiting for a free workspace");
-                }
-                tokio::time::sleep(POOL_POLL).await;
-                continue;
-            };
-            self.out
-                .event(json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": self.region()}));
-            // A warm workspace pins the run to its node; let the Cell admit
-            // a fresh workspace elsewhere if this node stays busy.
-            let pin = warm_volume.then_some(PIN_WAIT);
-            match self.ready(lease, pin, deadline).await? {
-                Some(l) => {
-                    return Ok(Machine {
-                        lease: l,
-                        warm_volume,
-                        volume: true,
-                    })
-                }
-                // The warm workspace's node has no room: the next pass
-                // tries another free warm workspace, and takes a fresh one
-                // only when none is left.
-                None => {
-                    self.out
-                        .progress("the warm workspace's node is busy; trying another workspace");
-                    if let Some(v) = &warm_name {
-                        full.insert(v.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    /// A ready lease with no Volume: the region's Cell offers none, so the
-    /// workspace is the machine's own disk, created with it and gone with
-    /// it. Nothing is created that could outlive the run.
-    async fn acquire_without_volume(&mut self, deadline: Instant) -> Result<Machine, Attempt> {
-        let lease = match self.lease(None).await {
-            Ok(l) => l,
-            Err(LeaseErr::InUse | LeaseErr::Gone) => {
-                return Err(Attempt::Done(Outcome::platform(
-                    "the build machine was refused: in use",
-                    true,
-                )))
-            }
-            Err(LeaseErr::Fatal(o)) => return Err(Attempt::Done(o)),
-        };
+        let lease = self.lease().await.map_err(Attempt::Done)?;
         self.out.event(
             json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "volume": false}),
         );
-        match self.ready(lease, None, deadline).await? {
-            Some(l) => Ok(Machine {
-                lease: l,
-                warm_volume: false,
-                volume: false,
-            }),
-            // Without a pin, `ready` answers a lease or an outcome.
-            None => Err(Attempt::Done(Outcome::platform(
-                format!(
-                    "no build machine{} within --queue-timeout {}s",
-                    self.where_(),
-                    self.o.queue_timeout.as_secs()
-                ),
-                true,
-            ))),
-        }
-    }
-
-    /// Deletes the least recently used free workspace of any repository in
-    /// this environment and region, to make room for a new one. False when
-    /// none is free. A workspace a run takes meanwhile is not deleted: the
-    /// api deletes only an unattached volume, atomically.
-    async fn evict_lru(&self) -> Result<bool, Outcome> {
-        let mut req = sbx::ListVolumesRequest::default();
-        req.parent = self.parent.clone();
-        let all = self
-            .client
-            .sandboxes()
-            .volumes()
-            .list_all(req)
+        self.ready(lease, deadline)
             .await
-            .map_err(|e| api("listing workspaces", &e))?;
-        let Some(victim) = lru_free(&all, POOL_PURPOSE, self.o.region.as_deref(), |_| true) else {
-            return Ok(false);
-        };
-        let mut del = sbx::DeleteVolumeRequest::default();
-        del.name = victim.name.clone();
-        del.allow_missing = true;
-        match self.client.sandboxes().volumes().delete(del).await {
-            Ok(_) => {
-                self.out.progress(&format!(
-                    "the region's workspaces are full; removed the least recently used one ({})",
-                    victim.name
-                ));
-                Ok(true)
-            }
-            // Taken by a run meanwhile: the retried create says if room is left.
-            Err(sylphx::Error::Api { code, .. }) if code.as_str() == "RESOURCE_IN_USE" => Ok(true),
-            Err(e) => Err(api("removing a workspace", &e)),
-        }
+            .map(|lease| Machine { lease })
     }
 
-    /// The pool: this project's (environment's) workspaces of this repository.
-    async fn pool(&self) -> Result<Vec<sbx::Volume>, Outcome> {
-        let mut req = sbx::ListVolumesRequest::default();
-        req.parent = self.parent.clone();
-        let all = self
-            .client
-            .sandboxes()
-            .volumes()
-            .list_all(req)
-            .await
-            .map_err(|e| api("listing workspaces", &e))?;
-        Ok(all
-            .into_iter()
-            .filter(|v| {
-                in_pool(
-                    v,
-                    POOL_PURPOSE,
-                    POOL_SCOPE,
-                    &self.repo,
-                    self.o.region.as_deref(),
-                )
-            })
-            .collect())
-    }
-
-    /// A new pool workspace, once it is available (by `deadline` at the
-    /// latest, the run's wait for a machine). `None` when the region offers
-    /// no Volumes: the API refuses with `SHAPE_NOT_OFFERED` before creating
-    /// anything, so no workspace is left behind.
-    async fn new_volume(&self, deadline: Instant) -> Result<Option<String>, Outcome> {
-        let body = workspace_volume_request(&self.repo, self.o.region.as_deref());
-        // The region's room for workspaces is a cache: when it is full, the
-        // least recently used free workspace (any repository's) gives way,
-        // once, and the create is tried again.
-        let mut evicted = false;
-        let mut waits = 0;
-        let v: sbx::Volume = loop {
-            match self
-                .client
-                .call(HttpRequest {
-                    method: "POST",
-                    path: format!("/v1/{}/volumes", self.parent),
-                    query: vec![],
-                    body: Some(body.clone()),
-                    mutation: true,
-                    origin: None,
-                    effect_ids: false,
-                })
-                .await
-            {
-                Ok(v) => break v,
-                Err(sylphx::Error::Api { code, .. }) if code.as_str() == "SHAPE_NOT_OFFERED" => {
-                    return Ok(None)
-                }
-                // The quota frees an evicted claim's room a moment after its
-                // delete: a few short waits before the run gives up.
-                Err(sylphx::Error::Api { code, .. })
-                    if code.as_str() == "NO_CAPACITY" && evicted && waits < EVICT_WAITS =>
-                {
-                    waits += 1;
-                    tokio::time::sleep(EVICT_WAIT).await;
-                }
-                Err(sylphx::Error::Api { code, .. })
-                    if code.as_str() == "NO_CAPACITY" && !evicted =>
-                {
-                    evicted = true;
-                    if !self.evict_lru().await? {
-                        return Err(Outcome::platform(
-                            format!(
-                                "no room for another workspace{} and every workspace is in use",
-                                self.where_()
-                            ),
-                            true,
-                        ));
-                    }
-                }
-                Err(e) => return Err(api("creating a workspace", &e)),
-            }
-        };
-        let deadline = deadline.min(Instant::now() + VOLUME_WAIT);
-        let mut v = v;
-        loop {
-            match vstate(&v) {
-                sbx::VolumeState::Available => return Ok(Some(v.name)),
-                sbx::VolumeState::Failed => {
-                    return Err(Outcome::platform(
-                        format!("the workspace {} failed to provision", v.name),
-                        true,
-                    ))
-                }
-                _ => {}
-            }
-            if Instant::now() >= deadline {
-                return Err(Outcome::platform(
-                    format!(
-                        "the workspace {}{} was not ready in time",
-                        v.name,
-                        self.where_()
-                    ),
-                    true,
-                ));
-            }
-            tokio::time::sleep(POLL).await;
-            let mut get = sbx::GetVolumeRequest::default();
-            get.name = v.name.clone();
-            v = self
-                .client
-                .sandboxes()
-                .volumes()
-                .get(get)
-                .await
-                .map_err(|e| api("reading the workspace", &e))?;
-        }
-    }
-
-    /// Creates the build lease, with `volume` at [`WS`] or, without one, on
-    /// the machine's own disk.
-    async fn lease(&mut self, volume: Option<&str>) -> Result<sbx::Lease, LeaseErr> {
+    /// Create a Build lease with no pre-created or attached workspace Volume.
+    async fn lease(&mut self) -> Result<sbx::Lease, Outcome> {
         let domains = lease_domains(self.o);
         let req = lease_request(
             &self.parent,
@@ -1500,44 +1165,28 @@ impl Run<'_> {
                 region: self.region(),
                 timeout: self.o.timeout,
                 domains: &domains,
-                volume,
             },
         );
-        match self.client.sandboxes().leases().create(req).await {
-            Ok(l) => {
-                if self.accepted_region.is_none() {
-                    self.accepted_region = l.spec.as_ref().map(|s| s.region.clone());
-                }
-                self.held.with(|h| h.lease = Some(l.name.clone()));
-                Ok(l)
-            }
-            Err(e) => {
-                let refusal = match &e {
-                    sylphx::Error::Api { code, detail, .. } => {
-                        lease_refusal(code.as_str(), detail, volume)
-                    }
-                    _ => None,
-                };
-                Err(refusal
-                    .unwrap_or_else(|| LeaseErr::Fatal(api("creating the build machine", &e))))
-            }
+        let lease = self
+            .client
+            .sandboxes()
+            .leases()
+            .create(req)
+            .await
+            .map_err(|e| api("creating the build machine", &e))?;
+        if self.accepted_region.is_none() {
+            self.accepted_region = lease.spec.as_ref().map(|s| s.region.clone());
         }
+        self.held.with(|h| h.lease = Some(lease.name.clone()));
+        Ok(lease)
     }
 
-    /// Waits for READY. With `pin`, gives up after that long (and releases
-    /// the lease) so the caller can take a fresh workspace.
-    async fn ready(
-        &self,
-        lease: sbx::Lease,
-        pin: Option<Duration>,
-        deadline: Instant,
-    ) -> Result<Option<sbx::Lease>, Attempt> {
-        match wait_ready(self.client, lease, pin, deadline).await {
-            Ready::Ready(l) => Ok(Some(*l)),
-            Ready::PinExpired => {
-                self.held.with(|h| h.lease = None);
-                Ok(None)
-            }
+    /// Wait for admission and READY within the caller's queue budget.
+    async fn ready(&self, lease: sbx::Lease, deadline: Instant) -> Result<sbx::Lease, Attempt> {
+        match wait_ready(self.client, lease, None, deadline).await {
+            Ready::Ready(l) => Ok(*l),
+            // No workspace node pin is requested by this caller.
+            Ready::PinExpired => unreachable!("volume-free Build leases have no node pin"),
             Ready::QueueTimeout => {
                 self.held.with(|h| h.lease = None);
                 Err(Attempt::Done(Outcome::platform(
@@ -1579,29 +1228,15 @@ impl Run<'_> {
         sylphx_build_lease::guest(self.client, lease).await
     }
 
-    /// Brings the workspace's tree to this tree; answers whether it was warm
-    /// (a trusted manifest, so only the diff was sent).
-    async fn sync(
-        &self,
-        g: &Guest,
-        m: &Machine,
-        store: Option<&store::Store>,
-    ) -> Result<bool, Fault> {
+    /// Copy the current tree into a fresh workspace. Full/cold syncs retain
+    /// the direct compressed tarball path rather than one fetch per file.
+    async fn sync(&self, g: &Guest, store: Option<&store::Store>) -> Result<(), Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
-        let empty = m.empty_workspace(self.empty_volume.as_deref());
-        let (code, out, err) = g
+        let (code, _, err) = g
             .run(
                 "root",
-                &argv(&[
-                    "/bin/sh",
-                    "-c",
-                    BOOTSTRAP,
-                    "bootstrap",
-                    WS,
-                    if m.volume { "1" } else { "0" },
-                    if empty { "1" } else { "0" },
-                ]),
+                &argv(&["/bin/sh", "-c", BOOTSTRAP, "bootstrap", WS, "0", "0"]),
                 &none,
             )
             .await?;
@@ -1611,31 +1246,9 @@ impl Run<'_> {
                 String::from_utf8_lossy(&err).trim()
             )));
         }
-        match String::from_utf8_lossy(&out).trim() {
-            "pruned" => self.out.progress(
-                "the workspace was short of space; removed its target/ (sccache refills it)",
-            ),
-            "emptied" if !empty => self
-                .out
-                .progress("the workspace was short of space; emptied it (a cold build)"),
-            _ => {}
-        }
-        let remote = if self.o.fresh {
-            None
-        } else {
-            match g
-                .download(&format!("{WS}/.sylphx/manifest.gz"), USER)
-                .await?
-            {
-                Some(gz) => {
-                    self.add(|s| s.bytes_down += gz.len() as u64);
-                    gunzip(&gz).and_then(|t| sync::parse(&t))
-                }
-                None => None,
-            }
-        };
-        let warm = remote.is_some();
-        let plan = sync::plan(&self.tree, remote.as_ref());
+        // The admitted workload owns a newly created workspace: no previous
+        // lease's manifest or build state is available, even with --region.
+        let plan = sync::plan(&self.tree, None);
         let bytes = plan.upload_bytes(&self.tree);
         let mut up = 0u64;
         let filled = match store {
@@ -1695,7 +1308,6 @@ impl Run<'_> {
         }
         self.add(|st| {
             st.bytes_up += up;
-            st.warm = warm;
             st.from_store = filled.len();
         });
         let full = match (self.o.fresh, plan.full) {
@@ -1749,11 +1361,10 @@ impl Run<'_> {
             "bytes_up": up,
             "from_store": filled.len(),
             "duration_ms": t.elapsed().as_millis() as u64,
-            "workspace": if warm { "warm" } else { "cold" },
-            "new_volume": m.volume && !m.warm_volume,
-            "volume": m.volume,
+            "workspace": "cold",
+            "volume": false,
         }));
-        Ok(warm)
+        Ok(())
     }
 
     /// Puts the git dependencies the workspace lacks into its mirrors
@@ -1854,7 +1465,6 @@ impl Run<'_> {
         g: &mut Guest,
         minted: &mut Instant,
         lease: &str,
-        volume: bool,
         cache: BTreeMap<String, String>,
         git_env: BTreeMap<String, String>,
     ) -> Result<Option<i32>, ExecFault> {
@@ -1865,7 +1475,7 @@ impl Run<'_> {
             "sylphx-run".into(),
             WS.into(),
             self.rel().to_string(),
-            if volume { "0" } else { "1" }.into(),
+            "1".into(),
         ];
         args.extend(self.o.command.iter().cloned());
         // The command's own `--env` wins over the cache's and ours.
@@ -2151,35 +1761,6 @@ mkdir -m 700 "$1"
     }
 }
 
-#[derive(Debug)]
-enum LeaseErr {
-    /// The workspace is attached to another lease.
-    InUse,
-    /// The workspace was deleted after it was picked: another run evicted
-    /// it to make room (`evict_lru` takes any repository's free workspace).
-    /// The run tries the next workspace, as for [`LeaseErr::InUse`].
-    Gone,
-    Fatal(Outcome),
-}
-
-/// The lease refusals a run recovers from by taking another workspace;
-/// `None` for every other error, which ends the run. A workspace that is
-/// gone (404) or being deleted (400 `INVALID_STATE`) counts only when the
-/// error names the workspace `volume`, so a missing environment or project
-/// still fails at once.
-fn lease_refusal(code: &str, detail: &str, volume: Option<&str>) -> Option<LeaseErr> {
-    if code.contains("IN_USE") {
-        return Some(LeaseErr::InUse);
-    }
-    let id = volume?.rsplit('/').next().filter(|id| !id.is_empty())?;
-    let names_it = detail
-        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '_'))
-        .any(|w| w == id);
-    let gone = code == "RESOURCE_NOT_FOUND"
-        || (code == "INVALID_STATE" && detail.ends_with("is deleting."));
-    (gone && names_it).then_some(LeaseErr::Gone)
-}
-
 /// The locked git dependencies a command run in `rel` can use, each packed
 /// on this machine ([`git_deps::pack`]); the first that cannot be fetched is
 /// the error.
@@ -2227,57 +1808,6 @@ fn scrub(outcome: Outcome, secrets: &[String]) -> Outcome {
     }
 }
 
-/// Free workspaces ordered by matching build-machine readiness. The shared
-/// pool selector excludes unavailable workspaces and nodes already found
-/// full; its least-recently-used order is retained within each readiness class.
-fn free_warm<'a>(
-    pool: &'a [sbx::Volume],
-    full: &mut HashSet<String>,
-    room: bool,
-    size: &str,
-) -> Vec<&'a sbx::Volume> {
-    let mut free = free_workspaces(pool, full, room);
-    free.sort_unstable_by(|a, b| {
-        machine_rank(a, size)
-            .cmp(&machine_rank(b, size))
-            .then_with(|| {
-                a.meta
-                    .as_ref()
-                    .map_or("", |m| m.update_time.as_str())
-                    .cmp(b.meta.as_ref().map_or("", |m| m.update_time.as_str()))
-            })
-            .then_with(|| a.name.cmp(&b.name))
-    });
-    free
-}
-
-/// The annotation the platform sets on a build workspace while a build
-/// machine is booted (`warm`) or booting (`booting`) on it.
-const MACHINE_ANNOTATION: &str = "sandboxes.sylphx.com/build-machine";
-/// The build shape of the waiting machine, written alongside its state.
-const MACHINE_SHAPE_ANNOTATION: &str = "sandboxes.sylphx.com/build-machine-shape";
-
-/// 0 for a matching booted machine, 1 for a matching booting one, 2 otherwise.
-/// Marks are only a preference: the Cell still checks the lease's exact fit.
-fn machine_rank(v: &sbx::Volume, size: &str) -> u8 {
-    let Some(meta) = &v.meta else {
-        return 2;
-    };
-    if meta
-        .annotations
-        .get(MACHINE_SHAPE_ANNOTATION)
-        .and_then(|shape| shape.strip_prefix("build-"))
-        != Some(size)
-    {
-        return 2;
-    }
-    match meta.annotations.get(MACHINE_ANNOTATION).map(String::as_str) {
-        Some("warm") => 0,
-        Some("booting") => 1,
-        _ => 2,
-    }
-}
-
 /// A failure text that says a disk was full: ENOSPC from a guest tool, or
 /// envd's 507 for an upload it could not finish ("not enough disk space
 /// available", "not enough inodes available").
@@ -2305,14 +1835,6 @@ fn workspace_full(text: &str) -> bool {
 
 fn argv(a: &[&str]) -> Vec<String> {
     a.iter().map(|s| s.to_string()).collect()
-}
-
-fn gunzip(b: &[u8]) -> Option<String> {
-    let mut s = String::new();
-    flate2::read::GzDecoder::new(b)
-        .read_to_string(&mut s)
-        .ok()?;
-    Some(s)
 }
 
 /// One `sha256sum` line: the digest and the path. Escaped lines (a path with
@@ -2344,54 +1866,6 @@ mod tests {
     use super::*;
     use sylphx_build_lease::BUILD_PACKAGES;
 
-    const VOL: &str = "orgs/org_a/projects/prj_b/envs/env_c/volumes/vol-2zqbvdtx";
-
-    #[test]
-    fn new_workspace_request_reserves_64_gib_in_the_requested_region() {
-        for region in [None, Some("gra")] {
-            let body = workspace_volume_request("SylphxAI/cloud", region);
-            assert_eq!(body["spec"]["sizeGib"], 64);
-            assert_eq!(body["spec"]["storageClass"], VOLUME_CLASS);
-            assert_eq!(body["meta"]["labels"]["purpose"], POOL_PURPOSE);
-            assert_eq!(body["meta"]["labels"]["build-repo"], "SylphxAI/cloud");
-            assert_eq!(body["spec"]["region"].as_str(), region);
-            assert_eq!(body["meta"]["labels"][REGION_LABEL].as_str(), region);
-        }
-    }
-
-    fn workspace_machine(volume: Option<&str>) -> Machine {
-        let mut spec = sbx::LeaseSpec::default();
-        if let Some(volume) = volume {
-            let mut mount = sbx::VolumeMount::default();
-            mount.volume = volume.into();
-            mount.mount_path = WS.into();
-            spec.volumes.push(mount);
-        }
-        let mut lease = sbx::Lease::default();
-        lease.spec = Some(spec);
-        Machine {
-            lease,
-            warm_volume: volume.is_some(),
-            volume: volume.is_some(),
-        }
-    }
-
-    #[test]
-    fn a_full_workspace_does_not_empty_a_different_warm_volume() {
-        // The full Volume is still detaching; acquisition picks a healthy one.
-        let empty_volume = Some(VOL);
-        let healthy = workspace_machine(Some("volumes/healthy"));
-        assert!(!healthy.empty_workspace(empty_volume));
-        assert!(workspace_machine(Some(VOL)).empty_workspace(empty_volume));
-    }
-
-    #[test]
-    fn a_fresh_machine_disk_does_not_need_the_failed_workspace_emptied() {
-        assert!(!workspace_machine(None).empty_workspace(Some(VOL)));
-        assert!(!workspace_machine(None).empty_workspace(None));
-        assert!(!workspace_machine(Some(VOL)).empty_workspace(None));
-    }
-
     #[test]
     fn a_failed_bootstrap_retries_before_the_command_starts() {
         assert!(workspace_full(
@@ -2409,67 +1883,6 @@ mod tests {
             Step::Done(outcome) => assert_eq!(outcome.code(), 125),
             Step::Again { .. } => panic!("a bootstrap failure must not retry indefinitely"),
         }
-    }
-
-    #[test]
-    fn an_evicted_workspace_is_retried_not_fatal() {
-        // The 2026-10-07 failure: the picked workspace was deleted by
-        // another run's eviction before the lease was created.
-        let detail = format!("{VOL} does not exist");
-        assert!(matches!(
-            lease_refusal("RESOURCE_NOT_FOUND", &detail, Some(VOL)),
-            Some(LeaseErr::Gone)
-        ));
-        assert!(matches!(
-            lease_refusal(
-                "RESOURCE_NOT_FOUND",
-                "volumes/vol-2zqbvdtx does not exist",
-                Some("vol-2zqbvdtx")
-            ),
-            Some(LeaseErr::Gone)
-        ));
-    }
-
-    #[test]
-    fn a_workspace_being_deleted_is_retried() {
-        let detail = format!("{VOL} is deleting.");
-        assert!(matches!(
-            lease_refusal("INVALID_STATE", &detail, Some(VOL)),
-            Some(LeaseErr::Gone)
-        ));
-        let other = format!("{VOL} is attached elsewhere.");
-        assert!(lease_refusal("INVALID_STATE", &other, Some(VOL)).is_none());
-    }
-
-    #[test]
-    fn a_404_that_does_not_name_the_workspace_still_fails() {
-        let env_missing = "orgs/org_a/projects/prj_b/envs/env_c does not exist";
-        assert!(lease_refusal("RESOURCE_NOT_FOUND", env_missing, Some(VOL)).is_none());
-        assert!(lease_refusal(
-            "RESOURCE_NOT_FOUND",
-            "volumes/vol-2zqbvdtxy does not exist",
-            Some(VOL)
-        )
-        .is_none());
-        assert!(lease_refusal("RESOURCE_NOT_FOUND", env_missing, None).is_none());
-        assert!(lease_refusal(
-            "PERMISSION_DENIED",
-            &format!("{VOL} does not exist"),
-            Some(VOL)
-        )
-        .is_none());
-    }
-
-    #[test]
-    fn a_workspace_in_use_is_retried() {
-        assert!(matches!(
-            lease_refusal("RESOURCE_IN_USE", "", Some(VOL)),
-            Some(LeaseErr::InUse)
-        ));
-        assert!(matches!(
-            lease_refusal("RESOURCE_IN_USE", "", None),
-            Some(LeaseErr::InUse)
-        ));
     }
 
     fn parse(args: &[&str]) -> Result<Opts, String> {
@@ -2576,8 +1989,173 @@ mod tests {
             .collect()
     }
 
+    /// The local HTTP fixture used by acquisition and source-history tests.
+    async fn read_http_request(socket: &mut tokio::net::TcpStream) -> (String, Value) {
+        use tokio::io::AsyncReadExt;
+        let mut request = Vec::new();
+        let mut chunk = [0; 8192];
+        loop {
+            let n = socket.read(&mut chunk).await.unwrap();
+            assert_ne!(n, 0);
+            request.extend_from_slice(&chunk[..n]);
+            if let Some(end) = request.windows(4).position(|w| w == b"\r\n\r\n") {
+                let headers = String::from_utf8_lossy(&request[..end]);
+                let length = headers
+                    .lines()
+                    .find_map(|line| {
+                        line.to_ascii_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(|n| n.trim().parse::<usize>().unwrap())
+                    })
+                    .unwrap_or(0);
+                if request.len() >= end + 4 + length {
+                    let line = headers.lines().next().unwrap().to_string();
+                    let body = if length == 0 {
+                        Value::Null
+                    } else {
+                        serde_json::from_slice(&request[end + 4..end + 4 + length]).unwrap()
+                    };
+                    return (line, body);
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn queued_run_and_image_leases_never_reserve_volumes_and_keep_region_binding() {
+        use tokio::io::AsyncWriteExt;
+        for image_build in [false, true] {
+            for region in [None, Some("hk")] {
+                let tree = GitTree::new();
+                let mut args = vec![
+                    "sylphx",
+                    "build",
+                    if image_build { "image" } else { "run" },
+                    tree.path(),
+                ];
+                if let Some(region) = region {
+                    args.extend(["--region", region]);
+                }
+                if !image_build {
+                    args.extend(["--fresh", "--", "true"]);
+                }
+                let root = Command::new("sylphx")
+                    .arg(
+                        Arg::new("output")
+                            .long("output")
+                            .short('o')
+                            .global(true)
+                            .default_value("table"),
+                    )
+                    .subcommand(
+                        Command::new("build")
+                            .subcommand(command())
+                            .subcommand(image_command()),
+                    );
+                let matches = root.try_get_matches_from(args).unwrap();
+                let (_, build) = matches.subcommand().unwrap();
+                let (subcommand, matches) = build.subcommand().unwrap();
+                let opts = if subcommand == "image" {
+                    Opts::parse_image(matches)
+                } else {
+                    Opts::parse(matches)
+                }
+                .unwrap();
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                let url = format!("http://{}", listener.local_addr().unwrap());
+                let accepted = region.unwrap_or("gra");
+                let server = tokio::spawn(async move {
+                    // Only lease POST/GET is allowed. Any list/create/attach
+                    // Volume request, including while queued, fails this fixture.
+                    for attempt in 0..2 {
+                        for create in [true, false] {
+                            let (mut socket, _) = listener.accept().await.unwrap();
+                            let (line, body) = read_http_request(&mut socket).await;
+                            if create {
+                                assert!(
+                                    line.starts_with("POST ") && line.contains("/leases "),
+                                    "{line}"
+                                );
+                                let wanted = if attempt == 0 {
+                                    region.unwrap_or("")
+                                } else {
+                                    accepted
+                                };
+                                if wanted.is_empty() {
+                                    assert!(
+                                        body["spec"]
+                                            .get("region")
+                                            .is_none_or(|r| r.as_str() == Some("")),
+                                        "{body}"
+                                    );
+                                } else {
+                                    assert_eq!(body["spec"]["region"], wanted, "{body}");
+                                }
+                                assert!(
+                                    body["spec"]
+                                        .get("volumes")
+                                        .is_none_or(|v| v.as_array().is_some_and(Vec::is_empty)),
+                                    "{body}"
+                                );
+                                assert_eq!(body["spec"]["shape"], "build-large");
+                            } else {
+                                assert!(
+                                    line.starts_with("GET ") && line.contains("/leases/l1 "),
+                                    "{line}"
+                                );
+                            }
+                            let response = json!({
+                                "name": "orgs/org_a/projects/prj_a/envs/env_a/leases/l1",
+                                "spec": {"region": accepted},
+                                "status": if create { json!({"state": "queued"}) } else { json!({"state": "ended", "endReason": "machine_lost"}) },
+                            }).to_string();
+                            socket.write_all(format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{response}", response.len()).as_bytes()).await.unwrap();
+                            socket.shutdown().await.unwrap();
+                        }
+                    }
+                });
+                let client = Client::new(
+                    sylphx::HttpTransport::builder()
+                        .base_url(url)
+                        .build()
+                        .unwrap(),
+                );
+                let out = Out {
+                    json: false,
+                    quiet: true,
+                };
+                let held = Held::default();
+                let stats = Mutex::new(Stats::default());
+                let mut run = Run {
+                    client: &client,
+                    o: &opts,
+                    out: &out,
+                    held: &held,
+                    stats: &stats,
+                    parent: "orgs/org_a/projects/prj_a/envs/env_a".into(),
+                    tree: BTreeMap::new(),
+                    git_deps: Vec::new(),
+                    source_history: None,
+                    key: None,
+                    cache_url: String::new(),
+                    cache_warned: AtomicBool::new(false),
+                    accepted_region: None,
+                };
+                for _ in 0..2 {
+                    let acquired = tokio::time::timeout(Duration::from_secs(10), run.acquire())
+                        .await
+                        .unwrap();
+                    assert!(matches!(acquired, Err(Attempt::Lost(_))));
+                    assert_eq!(run.accepted_region.as_deref(), Some(accepted));
+                    assert_eq!(run.region(), accepted);
+                }
+                server.await.unwrap();
+            }
+        }
+    }
+
     async fn history_before_acquire(base: &str, dry_run: bool, expect_attempts: usize) {
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::io::AsyncWriteExt;
 
         let tree = GitTree::new();
         let git = |args: &[&str]| {
@@ -2615,29 +2193,7 @@ mod tests {
         let server = tokio::spawn(async move {
             loop {
                 let (mut socket, _) = listener.accept().await.unwrap();
-                let mut request = Vec::new();
-                let mut chunk = [0; 8192];
-                loop {
-                    let n = socket.read(&mut chunk).await.unwrap();
-                    assert_ne!(n, 0);
-                    request.extend_from_slice(&chunk[..n]);
-                    if let Some(end) = request.windows(4).position(|w| w == b"\r\n\r\n") {
-                        let headers = String::from_utf8_lossy(&request[..end]);
-                        let length = headers
-                            .lines()
-                            .find_map(|line| {
-                                line.to_ascii_lowercase()
-                                    .strip_prefix("content-length:")
-                                    .map(|n| n.trim().parse::<usize>().unwrap())
-                            })
-                            .unwrap_or(0);
-                        if request.len() >= end + 4 + length {
-                            break;
-                        }
-                    }
-                }
-                let request = String::from_utf8_lossy(&request);
-                let line = request.lines().next().unwrap();
+                let (line, _) = read_http_request(&mut socket).await;
                 let (status, body) = if line.starts_with("POST ") && line.contains("/leases ") {
                     let starts = bundle_starts(&traced);
                     let events = std::fs::read_to_string(&traced).unwrap_or_default();
@@ -2664,14 +2220,6 @@ mod tests {
                         200,
                         json!({"name": "orgs/org_a/projects/prj_a/envs/env_a/leases/l1",
                         "status": {"state": "ended", "endReason": "machine_lost"}}),
-                    )
-                } else if line.starts_with("GET ") && line.contains("/volumes") {
-                    (200, json!({"volumes": []}))
-                } else if line.starts_with("POST ") && line.contains("/volumes ") {
-                    (
-                        422,
-                        json!({"code": "SHAPE_NOT_OFFERED", "status": 422,
-                        "detail": "no workspace Volumes", "retryable": false}),
                     )
                 } else {
                     panic!("unexpected API request: {line}");
@@ -2778,17 +2326,6 @@ mod tests {
         cmd: &str,
         env: &[(&str, &str)],
     ) -> (String, String) {
-        run_prelude_disk(ok_home, mirror, mirror_up, cmd, env, "0")
-    }
-
-    fn run_prelude_disk(
-        ok_home: &str,
-        mirror: Option<&str>,
-        mirror_up: bool,
-        cmd: &str,
-        env: &[(&str, &str)],
-        ephemeral: &str,
-    ) -> (String, String) {
         let base = std::env::temp_dir().join(format!(
             "sylphx-build-run-{}-{}",
             std::process::id(),
@@ -2831,7 +2368,7 @@ mod tests {
         let mut c = std::process::Command::new("sh");
         c.args(["-c", RUN, "sylphx-run"])
             .arg(&ws)
-            .args(["crate", ephemeral, "sh", "-c", cmd])
+            .args(["crate", "1", "sh", "-c", cmd])
             .env_clear()
             .env("PATH", format!("{}:/usr/bin:/bin", bin.display()));
         if let Some(m) = mirror {
@@ -2865,25 +2402,16 @@ mod tests {
     }
 
     #[test]
-    fn persistent_targets_use_incremental_and_ephemeral_targets_use_sccache() {
+    fn lease_owned_targets_use_sccache_without_incremental_by_default() {
         let show = "echo \"${CARGO_INCREMENTAL}:${RUSTC_WRAPPER:-}\"";
         let (out, _) = run_prelude_env("/opt/rustup", None, false, show, &[]);
-        assert_eq!(out, "1:\n");
-        let (out, _) = run_prelude_disk(
-            "/opt/rustup",
-            None,
-            false,
-            show,
-            &[("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache")],
-            "1",
-        );
-        assert_eq!(out, "0:sccache\n");
+        assert_eq!(out, "0:\n");
         let (out, _) = run_prelude_env(
             "/opt/rustup",
             None,
             false,
             show,
-            &[("CARGO_INCREMENTAL", "0")],
+            &[("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache")],
         );
         assert_eq!(out, "0:sccache\n");
     }
@@ -3297,28 +2825,6 @@ esac
         assert!(!w.0.join("tree/.git").exists());
     }
 
-    /// A fake `df -Pk <dir>` for a 100 GiB Volume whose free space is 10 GiB
-    /// while `target/` exists and 12 GiB while `sccache/` does (each
-    /// independently short of 15 GiB); with both gone, 90 GiB.
-    fn full_workspace_df(w: &Ws, sccache_full: bool) -> String {
-        let script = format!(
-            "#!/bin/sh\nd=$2\nfree=94371840\n[ -e \"$d/target\" ] && free=10485760\n{}echo 'Filesystem 1024-blocks Used Available Capacity Mounted'\necho \"/dev/vdb 104857600 0 $free 0% $d\"\n",
-            if sccache_full {
-                "[ -e \"$d/sccache\" ] && free=12582912\n"
-            } else {
-                ""
-            }
-        );
-        w.file("fakedf/df", &script);
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(
-            w.0.join("fakedf/df"),
-            std::fs::Permissions::from_mode(0o755),
-        )
-        .unwrap();
-        format!("{}:{SYS_PATH}", w.0.join("fakedf").display())
-    }
-
     fn bootstrap(w: &Ws, path: &str, args: &[&str]) -> (i32, String, String) {
         let out = std::process::Command::new("/bin/sh")
             .args(["-c", BOOTSTRAP, "bootstrap"])
@@ -3336,82 +2842,6 @@ esac
     }
 
     #[test]
-    fn a_nearly_full_workspace_loses_its_target_and_keeps_its_tree() {
-        let w = Ws::new("ws-prune");
-        w.file("ws/target/debug/big", "x");
-        w.file("ws/sccache/a", "x");
-        w.file("ws/tree/a.rs", "fn a() {}\n");
-        w.file("ws/.sylphx/manifest", "a.rs\n");
-        let path = full_workspace_df(&w, false);
-        let (code, out, err) = bootstrap(&w, &path, &["1", "0"]);
-        assert_eq!((code, out.trim()), (0, "pruned"), "{err}");
-        assert!(!w.0.join("ws/target").exists());
-        assert!(w.0.join("ws/sccache/a").exists());
-        assert!(w.0.join("ws/tree/a.rs").exists());
-        assert!(w.0.join("ws/.sylphx/manifest.gz").exists(), "still warm");
-    }
-
-    #[test]
-    fn a_workspace_still_short_after_pruning_is_emptied_into_a_fresh_one() {
-        let w = Ws::new("ws-empty");
-        w.file("ws/target/debug/big", "x");
-        w.file("ws/sccache/a", "x");
-        w.file("ws/tree/a.rs", "fn a() {}\n");
-        w.file("ws/.sylphx/manifest", "a.rs\n");
-        let path = full_workspace_df(&w, true);
-        let (code, out, err) = bootstrap(&w, &path, &["1", "0"]);
-        assert_eq!((code, out.trim()), (0, "emptied"), "{err}");
-        let left: Vec<_> = std::fs::read_dir(w.0.join("ws"))
-            .unwrap()
-            .map(|e| e.unwrap().file_name().into_string().unwrap())
-            .collect();
-        assert_eq!(left, [".sylphx"], "no manifest, so the next sync is cold");
-        assert!(!w.0.join("ws/.sylphx/manifest.gz").exists());
-    }
-
-    #[test]
-    fn a_workspace_with_room_or_without_a_volume_is_left_alone() {
-        let w = Ws::new("ws-room");
-        w.file("ws/target/debug/big", "x");
-        w.file("ws/.sylphx/manifest", "a.rs\n");
-        let path = full_workspace_df(&w, false);
-        // No Volume (the machine's own disk): never checked.
-        let (code, out, err) = bootstrap(&w, &path, &["0", "0"]);
-        assert_eq!((code, out.as_str()), (0, ""), "{err}");
-        assert!(w.0.join("ws/target/debug/big").exists());
-        // The retry after running out of space empties it whatever df says.
-        let (code, out, err) = bootstrap(&w, &path, &["0", "1"]);
-        assert_eq!((code, out.trim()), (0, "emptied"), "{err}");
-    }
-
-    #[test]
-    fn a_volume_too_small_even_when_empty_stops_before_the_sync() {
-        let w = Ws::new("ws-small");
-        w.file(
-            "fakedf/df",
-            "#!/bin/sh\necho 'Filesystem 1024-blocks Used Available Capacity Mounted'\necho \"/dev/vdb 20971520 0 10485760 50% $2\"\n",
-        );
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(
-            w.0.join("fakedf/df"),
-            std::fs::Permissions::from_mode(0o755),
-        )
-        .unwrap();
-        let path = format!("{}:{SYS_PATH}", w.0.join("fakedf").display());
-        std::fs::create_dir_all(w.0.join("ws")).unwrap();
-        let (code, _, err) = bootstrap(&w, &path, &["1", "0"]);
-        assert_eq!(
-            code,
-            sylphx_build_lease::scripts::BOOTSTRAP_TOO_SMALL,
-            "{err}"
-        );
-        assert!(
-            err.contains("too little free space even when empty"),
-            "{err}"
-        );
-    }
-
-    #[test]
     fn the_bootstrap_floor_matches_the_named_limits() {
         use sylphx_build_lease::scripts::{WORKSPACE_MIN_FREE_GIB, WORKSPACE_MIN_FREE_PERCENT};
         assert!(BOOTSTRAP.contains(&format!(
@@ -3421,8 +2851,8 @@ esac
         assert!(!out_of_space("guest answered 503"));
     }
 
-    /// Any failed apply and envd's 507 for a cut-short upload empty the
-    /// workspace for the one retry; other faults keep their own verdict.
+    /// Any failed apply and envd's 507 for a cut-short upload retry once on
+    /// a fresh lease-owned workspace; other faults keep their own verdict.
     #[test]
     fn a_failed_apply_or_a_cut_short_upload_counts_as_a_full_workspace() {
         assert!(workspace_full(
@@ -3971,153 +3401,6 @@ esac
         assert_eq!(o.timeout, Duration::from_secs(3600));
     }
 
-    /// A run takes a free warm workspace whose node has room: one whose
-    /// node had none is skipped while another free warm workspace or room
-    /// for a fresh one remains, and is waited on again only when neither
-    /// does.
-    #[test]
-    fn a_run_skips_a_warm_workspace_whose_node_is_full() {
-        fn vol(name: &str, state: sbx::VolumeState) -> sbx::Volume {
-            let mut v = sbx::Volume::default();
-            v.name = name.into();
-            let mut st = sbx::VolumeStatus::default();
-            st.state = Some(state);
-            v.status = Some(st);
-            let mut meta = sylphx::common::ResourceMeta::default();
-            meta.annotations
-                .insert(MACHINE_ANNOTATION.into(), "warm".into());
-            meta.annotations
-                .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-standard".into());
-            v.meta = Some(meta);
-            v
-        }
-        let pool = vec![
-            vol("v-b", sbx::VolumeState::Available),
-            vol("v-a", sbx::VolumeState::Available),
-            vol("v-c", sbx::VolumeState::Attached),
-            vol("v-d", sbx::VolumeState::Creating),
-            vol("v-e", sbx::VolumeState::Deleting),
-            vol("v-f", sbx::VolumeState::Failed),
-            vol("v-g", sbx::VolumeState::Unknown(String::new())),
-        ];
-        let names = |f: Vec<&sbx::Volume>| f.iter().map(|v| v.name.clone()).collect::<Vec<_>>();
-        let mut full = HashSet::new();
-        // Free ones only, in a stable order.
-        assert_eq!(
-            names(free_warm(&pool, &mut full, true, "standard")),
-            ["v-a", "v-b"]
-        );
-        // v-a's node had no room: v-b is next.
-        full.insert("v-a".to_string());
-        assert_eq!(
-            names(free_warm(&pool, &mut full, true, "standard")),
-            ["v-b"]
-        );
-        // Both full, room for a fresh workspace: none of them; the run
-        // takes a fresh one.
-        full.insert("v-b".to_string());
-        assert!(free_warm(&pool, &mut full, true, "standard").is_empty());
-        assert_eq!(full.len(), 2);
-        // Both full and no room for a fresh one: wait on the warm ones again.
-        assert_eq!(
-            names(free_warm(&pool, &mut full, false, "standard")),
-            ["v-a", "v-b"]
-        );
-        assert!(full.is_empty());
-    }
-
-    /// A matching booted machine wins over a booting one, then cold;
-    /// within each class main's least-recently-used order remains intact.
-    #[test]
-    fn a_run_takes_the_workspace_whose_machine_is_booted_first() {
-        fn vol(name: &str, machine: Option<&str>, used: &str) -> sbx::Volume {
-            let mut v = sbx::Volume::default();
-            v.name = name.into();
-            let mut st = sbx::VolumeStatus::default();
-            st.state = Some(sbx::VolumeState::Available);
-            v.status = Some(st);
-            let mut meta = sylphx::common::ResourceMeta::default();
-            meta.update_time = used.into();
-            if let Some(m) = machine {
-                meta.annotations.insert(MACHINE_ANNOTATION.into(), m.into());
-                meta.annotations
-                    .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-standard".into());
-            }
-            v.meta = Some(meta);
-            v
-        }
-        let mut pool = vec![
-            vol("v-a", Some("booting"), "2026-10-06T10:00:00.000Z"),
-            vol("v-b", None, "2026-10-06T09:00:00.000Z"),
-            vol("v-c", Some("warm"), "2026-10-06T12:00:00.000Z"),
-            vol("v-d", Some("warm"), "2026-10-06T11:00:00.000Z"),
-            vol("v-e", Some("warm"), "2026-10-06T11:00:00.000Z"),
-            vol("v-f", Some("booting"), "2026-10-06T08:00:00.000Z"),
-            vol("v-g", None, "2026-10-06T07:00:00.000Z"),
-            vol("v-h", Some("warm"), "2026-10-06T06:00:00.000Z"),
-            vol("v-i", Some("warm"), "2026-10-06T05:00:00.000Z"),
-        ];
-        pool[7]
-            .meta
-            .as_mut()
-            .unwrap()
-            .annotations
-            .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-large".into());
-        pool[8]
-            .meta
-            .as_mut()
-            .unwrap()
-            .annotations
-            .remove(MACHINE_SHAPE_ANNOTATION);
-        let names = |f: Vec<&sbx::Volume>| f.iter().map(|v| v.name.clone()).collect::<Vec<_>>();
-        assert_eq!(
-            names(free_warm(&pool, &mut HashSet::new(), true, "standard")),
-            ["v-d", "v-e", "v-c", "v-f", "v-a", "v-i", "v-h", "v-g", "v-b"]
-        );
-    }
-
-    #[test]
-    fn machine_marks_only_prioritize_the_requested_build_shape() {
-        let mut v = sbx::Volume::default();
-        let mut meta = sylphx::common::ResourceMeta::default();
-        meta.annotations
-            .insert(MACHINE_ANNOTATION.into(), "warm".into());
-        v.meta = Some(meta);
-        // Older or incomplete marks have no shape and do not get priority.
-        assert_eq!(machine_rank(&v, "standard"), 2);
-        for size in SIZES {
-            v.meta
-                .as_mut()
-                .unwrap()
-                .annotations
-                .insert(MACHINE_SHAPE_ANNOTATION.into(), format!("build-{size}"));
-            for requested in SIZES {
-                assert_eq!(
-                    machine_rank(&v, requested),
-                    if size == requested { 0 } else { 2 }
-                );
-            }
-        }
-        v.meta
-            .as_mut()
-            .unwrap()
-            .annotations
-            .insert(MACHINE_SHAPE_ANNOTATION.into(), "build-standard".into());
-        v.meta
-            .as_mut()
-            .unwrap()
-            .annotations
-            .insert(MACHINE_ANNOTATION.into(), "booting".into());
-        assert_eq!(machine_rank(&v, "standard"), 1);
-        assert_eq!(machine_rank(&v, "large"), 2);
-        v.meta
-            .as_mut()
-            .unwrap()
-            .annotations
-            .insert(MACHINE_ANNOTATION.into(), "unknown".into());
-        assert_eq!(machine_rank(&v, "standard"), 2);
-    }
-
     /// A caller sends --region only when `build run --help` lists both
     /// flags, so the help text is part of the contract.
     #[test]
@@ -4256,7 +3539,6 @@ esac
         }
         // The events as the code builds them.
         let stats = Stats {
-            warm: true,
             bytes_up: 512,
             bytes_down: 2048,
             artifacts: 0,
@@ -4279,9 +3561,11 @@ esac
         }
         sink(json!({"type": "stdout", "data": String::from_utf8_lossy(b"ok\n")}));
         sink(
-            json!({"type": "sync", "full": false, "files": 1, "removed": 0, "bytes": 10, "bytes_up": 300, "duration_ms": 5, "workspace": "warm", "new_volume": false}),
+            json!({"type": "sync", "full": true, "files": 1, "removed": 0, "bytes": 10, "bytes_up": 300, "duration_ms": 5, "workspace": "cold", "volume": false}),
         );
-        sink(json!({"type": "running", "lease": "l", "size": "large", "workspace": "warm"}));
+        sink(
+            json!({"type": "running", "lease": "l", "size": "large", "workspace": "cold", "volume": false}),
+        );
         sink(json!({"type": "artifact", "path": "p", "digest": "sha256:aa", "bytes": 3}));
         for v in captured.lock().unwrap().iter() {
             check(v);

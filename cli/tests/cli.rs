@@ -1436,10 +1436,9 @@ fn git_init(dir: &std::path::Path) {
     assert!(ok);
 }
 
-/// The whole run against a stub API and guest: a new workspace from an empty
-/// pool, a `build-large` lease with it at /workspace on the package-host
-/// allow-list, a full sync (cold), the command's output on stdout and its own
-/// exit code, and the lease released at the end.
+/// The whole run against a stub API and guest: a volume-free `build-large`
+/// lease, a full sync into its cold owned workspace, the command's output
+/// and exit code, and the lease released at the end.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     let sb = Sandbox::new("build-run");
@@ -1451,16 +1450,11 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let replies = vec![
-        json_reply(json!({"volumes": []})),
         json_reply(
-            json!({"name": format!("{ENV}/volumes/vol-1"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "hk"}}, "spec": {"region": "hk"}, "status": {"state": "available"}}),
-        ),
-        json_reply(
-            json!({"name": lease, "spec": {"region": "hk", "volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+            json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),
-        (404, "text/plain", b"file not found".to_vec()),
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
@@ -1495,32 +1489,19 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         err.contains("sylphx: synced 2 files") || err.contains("sylphx: synced 1 files"),
         "{err}"
     );
-    assert!(err.contains("cold workspace"), "{err}");
+    assert!(err.contains("cold lease-owned workspace"), "{err}");
     assert!(err.contains("sylphx: exit 3 in"), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
 
     let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     assert!(
-        lines[0].starts_with(&format!("GET /v1/{ENV}/volumes")),
+        lines[0].starts_with(&format!("POST /v1/{ENV}/leases")),
         "{lines:?}"
     );
-    assert!(
-        lines[1].starts_with(&format!("POST /v1/{ENV}/volumes")),
-        "{lines:?}"
-    );
-    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
-    assert_eq!(vol["meta"]["labels"]["purpose"], "build-workspace");
-    assert_eq!(vol["spec"]["storageClass"], "local");
-    let created: Value = serde_json::from_str(&seen[2].body).unwrap();
+    let created: Value = serde_json::from_str(&seen[0].body).unwrap();
     assert_eq!(created["spec"]["shape"], "build-large");
     assert_eq!(created["spec"]["image"], "template:build");
-    assert_eq!(
-        created["spec"]["volumes"][0]["mount_path"]
-            .as_str()
-            .or(created["spec"]["volumes"][0]["mountPath"].as_str()),
-        Some("/workspace")
-    );
     let net = &created["spec"]["network"];
     assert!(
         net["egress"]
@@ -1536,7 +1517,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         "{net}"
     );
     // The guest calls carry the sandbox id and the lease token, never the key.
-    let guest: Vec<&Seen> = seen.iter().skip(4).take(7).collect();
+    let guest: Vec<&Seen> = seen.iter().skip(2).take(6).collect();
     for g in &guest {
         let head = g.head.to_ascii_lowercase();
         assert!(head.contains("e2b-sandbox-id: abcd1234"), "{}", g.head);
@@ -1544,34 +1525,30 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         assert!(!head.contains("sylphx_sk_test"), "{}", g.head);
     }
     assert!(
-        lines[4].starts_with("POST /process.Process/Start"),
+        lines[2].starts_with("POST /process.Process/Start"),
         "{lines:?}"
     );
     assert!(
-        lines[5].starts_with("GET /files?path=/workspace/.sylphx/manifest.gz"),
+        lines[3].starts_with("POST /files?path=/workspace/.sylphx/in-0000.tar.gz"),
         "{lines:?}"
     );
     assert!(
-        lines[6].starts_with("POST /files?path=/workspace/.sylphx/in-0000.tar.gz"),
+        lines[4].starts_with("POST /files?path=/workspace/.sylphx/add"),
         "{lines:?}"
     );
     assert!(
-        lines[7].starts_with("POST /files?path=/workspace/.sylphx/add"),
-        "{lines:?}"
-    );
-    assert!(
-        seen[10].body.contains("cargo"),
+        seen[7].body.contains("cargo"),
         "the command is started: {}",
-        seen[10].body
+        seen[7].body
     );
-    // On a Volume: the run keeps its local sccache (flag 0), as before.
+    // Cold targets use the scoped remote cache, never persistent local state.
     assert!(
-        seen[10].body.contains(r#""/workspace",".","0","cargo""#),
+        seen[7].body.contains(r#""/workspace",".","1","cargo""#),
         "{}",
-        seen[10].body
+        seen[7].body
     );
     assert!(
-        lines[11].contains(":release"),
+        lines[8].contains(":release"),
         "the lease is always released: {lines:?}"
     );
 }
@@ -1631,28 +1608,13 @@ async fn build_run_usage_errors_exit_2_and_dry_run_creates_nothing() {
     assert!(ev["files"].as_u64().unwrap() >= 1, "{ev}");
 }
 
-/// `--region gra`: a new workspace is created in the region and labelled
-/// with it, and the lease names the region and mounts that workspace (the
-/// pool filter itself is unit-tested in `build_run`).
+/// `--region gra` pins a volume-free lease even when admission is refused.
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_region_routes_the_lease_and_its_workspace() {
+async fn build_run_region_pins_the_volume_free_lease() {
     let sb = Sandbox::new("build-run-region");
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
-    let mut replies = vec![
-        // An available workspace of another pool.
-        (
-            200,
-            json!({"volumes": [{"name": format!("{ENV}/volumes/home-1"),
-                "meta": {"labels": {"purpose": "build-workspace", "build-repo": "any"}},
-                "spec": {"region": "hk"},
-                "status": {"state": "available"}}]}),
-        ),
-        (
-            200,
-            json!({"name": format!("{ENV}/volumes/vol-gra"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "gra"}}, "spec": {"region": "gra"}, "status": {"state": "available"}}),
-        ),
-    ];
+    let mut replies = Vec::new();
     // NO_CAPACITY is retryable: the SDK retries it itself before the run
     // gives up, so the stub answers it every time.
     let no_capacity = json!({"code": "NO_CAPACITY", "status": 503, "detail": "No machine can be granted in region `gra` now; retry.", "retryable": true});
@@ -1675,19 +1637,7 @@ async fn build_run_region_routes_the_lease_and_its_workspace() {
         ],
     )
     .await;
-    let seen = log.lock();
-    let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
-    assert!(
-        lines[1].starts_with(&format!("POST /v1/{ENV}/volumes")),
-        "{lines:?}"
-    );
-    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
-    assert_eq!(vol["spec"]["region"], "gra");
-    assert_eq!(vol["meta"]["labels"]["build-region"], "gra");
-    let lease: Value = serde_json::from_str(&seen[2].body).unwrap();
-    assert_eq!(lease["spec"]["region"], "gra");
-    let mounted = lease["spec"]["volumes"][0]["volume"].as_str().unwrap();
-    assert!(mounted.ends_with("/volumes/vol-gra"), "{lease}");
+    assert_volume_free_regional_leases(&log, "gra");
     // No capacity in the region: the platform exit code, retryable, which the
     // caller can turn into a run in the home region.
     assert_eq!(out.status.code(), Some(125));
@@ -1747,7 +1697,6 @@ async fn build_run_automatic_placement_executes_in_the_selected_fr_cell() {
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),
-        (404, "text/plain", b"file not found".to_vec()),
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
@@ -1795,9 +1744,9 @@ async fn build_run_automatic_placement_executes_in_the_selected_fr_cell() {
     assert!(created["spec"]
         .get("volumes")
         .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())));
-    assert!(seen[8].body.contains(r#""/workspace",".","1","cargo""#));
-    assert!(seen[9].line.contains(":release"));
-    for request in seen.iter().skip(2).take(7) {
+    assert!(seen[7].body.contains(r#""/workspace",".","1","cargo""#));
+    assert!(seen[8].line.contains(":release"));
+    for request in seen.iter().skip(2).take(6) {
         let headers = request.head.to_ascii_lowercase();
         assert!(headers.contains("x-access-token: h.p.s"));
         assert!(!headers.contains("sylphx_sk_test"));
@@ -1853,7 +1802,6 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
             "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}})),
         json_reply(json!({"token": "h.p.t", "generation": 1})),
         envd_process("", 0),
-        (404, "text/plain", b"file not found".to_vec()),
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
@@ -1935,7 +1883,7 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
     );
     assert!(
         commands[0].body.contains(r#""/workspace",".","1","cargo""#),
-        "no Volume means no local sccache"
+        "cold lease-owned targets use scoped remote cache"
     );
     assert_eq!(
         seen.iter().filter(|s| s.line.contains(":release")).count(),
@@ -1948,24 +1896,15 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
         .contains(&format!("/{second}:release")));
 }
 
-/// A region with no Cell (or not offered yet) refuses the workspace and then
-/// the lease at once: still 125, not retryable, so the wrapper falls back at
-/// once, and nothing was created.
+/// An unavailable region refuses the volume-free lease immediately: 125,
+/// not retryable, and no workspace request or allocation is attempted.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_region_not_offered_exits_125() {
     let sb = Sandbox::new("build-run-no-region");
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
     let no_cell = json!({"code": "SHAPE_NOT_OFFERED", "status": 422, "detail": "`spec.region`: region `gra` has no Sandboxes Cell", "retryable": false});
-    let (url, log) = serve(vec![
-        (200, json!({"volumes": []})),
-        (422, no_cell.clone()),
-        (
-            422,
-            json!({"code": "SHAPE_NOT_OFFERED", "status": 422, "detail": "region `gra` has no Sandboxes Cell", "retryable": false}),
-        ),
-    ])
-    .await;
+    let (url, log) = serve(vec![(422, no_cell)]).await;
     let out = run(
         &sb,
         &url,
@@ -1985,18 +1924,13 @@ async fn build_run_region_not_offered_exits_125() {
             .contains("no Sandboxes Cell"),
         "{last}"
     );
-    let seen = log.lock();
-    assert_eq!(seen.len(), 3, "no retry, no wait");
-    assert!(seen[2].line.starts_with(&format!("POST /v1/{ENV}/leases")));
+    assert_volume_free_regional_leases(&log, "gra");
+    assert_eq!(log.lock().len(), 1, "no retry, no wait, no Volume request");
 }
 
-/// A region whose Cell offers no Volumes (gra while its admission binds no
-/// claim): the workspace is refused at once with SHAPE_NOT_OFFERED, so the
-/// run leases the machine in the region with no Volume, syncs the whole tree
-/// to the machine's own disk, runs, and releases. No Volume is created, no
-/// queue-timeout is waited out, and the command's exit code comes back.
+/// Explicit regional placement executes cold without consulting Volume APIs.
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
+async fn build_run_in_an_explicit_region_uses_a_cold_owned_workspace() {
     let sb = Sandbox::new("build-run-no-volumes");
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("main.rs"), "fn main() {}\n").unwrap();
@@ -2005,16 +1939,12 @@ async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     drop(listener);
-    let no_volumes = json!({"code": "SHAPE_NOT_OFFERED", "status": 422, "detail": "`spec.region`: region `gra` offers no Volumes", "retryable": false});
     let replies = vec![
-        json_reply(json!({"volumes": []})),
-        (422, "application/json", no_volumes.to_string().into_bytes()),
         json_reply(
             json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),
-        (404, "text/plain", b"file not found".to_vec()),
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
@@ -2050,45 +1980,21 @@ async fn build_run_in_a_region_without_volumes_builds_on_the_machines_disk() {
     assert_eq!(running["region"], "gra", "{running}");
     assert_eq!(running["workspace"], "cold", "{running}");
     let sync = events.iter().find(|e| e["type"] == "sync").unwrap();
-    assert_eq!(sync["new_volume"], false, "{sync}");
+    assert_eq!(sync["volume"], false, "{sync}");
     assert_eq!(sync["full"], true, "{sync}");
     let last = events.last().unwrap();
     assert_eq!(last["type"], "result");
     assert_eq!(last["exit_code"], 0, "{last}");
 
+    assert_volume_free_regional_leases(&log, "gra");
     let seen = log.lock();
-    let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
-    // Exactly one workspace request, refused; no second one, no poll of it.
-    assert_eq!(
-        lines
-            .iter()
-            .filter(|l| l.starts_with(&format!("POST /v1/{ENV}/volumes")))
-            .count(),
-        1,
-        "{lines:?}"
-    );
-    let vol: Value = serde_json::from_str(&seen[1].body).unwrap();
-    assert_eq!(vol["spec"]["region"], "gra");
-    assert!(
-        lines[2].starts_with(&format!("POST /v1/{ENV}/leases")),
-        "{lines:?}"
-    );
-    let created: Value = serde_json::from_str(&seen[2].body).unwrap();
-    assert_eq!(created["spec"]["region"], "gra", "{created}");
+    let created: Value = serde_json::from_str(&seen[0].body).unwrap();
     assert_eq!(created["spec"]["shape"], "build-large", "{created}");
-    assert!(
-        created["spec"]
-            .get("volumes")
-            .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())),
-        "no Volume is mounted: {created}"
-    );
-    // The command runs with the no-volume flag (no local sccache).
-    let args = &seen[10].body;
-    assert!(args.contains("cargo"), "{args}");
+    let args = &seen[7].body;
     assert!(args.contains(r#""/workspace",".","1","cargo""#), "{args}");
     assert!(
-        lines[11].contains(":release"),
-        "the lease is always released: {lines:?}"
+        seen[8].line.contains(":release"),
+        "the lease is always released"
     );
 }
 
@@ -2126,11 +2032,11 @@ async fn build_run_exits_125_when_the_toolchain_cannot_be_installed() {
     assert_eq!(out.status.code(), Some(125), "{err}");
     assert!(err.contains("Connection timed out"), "{err}");
     assert!(err.contains("[retryable]"), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
-    assert_eq!(lines.len(), 11, "the command is never started: {lines:?}");
-    assert!(lines[10].contains(":release"), "{lines:?}");
+    assert_eq!(lines.len(), 8, "the command is never started: {lines:?}");
+    assert!(lines[7].contains(":release"), "{lines:?}");
 }
 
 /// A process stream that breaks after the command started (a proxy on the way
@@ -2169,7 +2075,7 @@ async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
     assert_eq!(String::from_utf8_lossy(&out.stdout), "after the break\n");
     assert!(err.contains("reattached to the running command"), "{err}");
     assert!(!err.contains("retrying"), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();
     let start = seen
         .iter()
@@ -2270,7 +2176,7 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     assert_eq!(result["outcome"], "lost");
     assert_eq!(result["exit_code"], 137);
     assert_eq!(result["retryable"], true);
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();
     assert_eq!(
         seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
@@ -2279,26 +2185,17 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     );
 }
 
-/// Reacquiring the full Volume empties it before the command runs once.
+/// Running out of space before command start retries on a fresh lease-owned
+/// workspace, without reusing, creating, or emptying a persistent Volume.
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_retries_a_full_workspace_once_on_an_emptied_one() {
-    full_workspace_retry("vol-1", "1").await;
-}
-
-/// A healthy Volume acquired while the full one detaches keeps its contents.
-#[tokio::test(flavor = "multi_thread")]
-async fn build_run_retries_a_full_workspace_without_emptying_a_different_volume() {
-    full_workspace_retry("healthy", "0").await;
-}
-
-async fn full_workspace_retry(retry_volume: &str, empty: &str) {
-    let sb = Sandbox::new(&format!("ws-full-{retry_volume}"));
+async fn build_run_retries_a_full_workspace_once_on_a_fresh_lease() {
+    let sb = Sandbox::new("ws-full-retry");
     project(&sb.dir);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let mut replies: Vec<_> = attempt_replies(&url, envd_process("", 0))
         .into_iter()
-        .take(4)
+        .take(2)
         .collect();
     replies.push(envd_process_err(
         "gzip: stdout: No space left on device\n",
@@ -2306,12 +2203,9 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
     ));
     replies.push(ended()); // the full machine is released before the retry
     let mut retry = attempt_replies(&url, envd_process("", 0));
-    let mut volume: Value = serde_json::from_slice(&retry[1].2).unwrap();
-    volume["name"] = json!(format!("{ENV}/volumes/{retry_volume}"));
-    retry[1].2 = volume.to_string().into_bytes();
-    let mut lease: Value = serde_json::from_slice(&retry[2].2).unwrap();
-    lease["spec"]["volumes"][0]["volume"] = json!(format!("{ENV}/volumes/{retry_volume}"));
-    retry[2].2 = lease.to_string().into_bytes();
+    let mut lease: Value = serde_json::from_slice(&retry[0].2).unwrap();
+    lease["name"] = json!(format!("{ENV}/leases/l2"));
+    retry[0].2 = lease.to_string().into_bytes();
     replies.extend(retry);
     replies.push(envd_process("built\n", 0));
     replies.push(ended());
@@ -2335,7 +2229,7 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
     assert_eq!(out.status.code(), Some(0), "{err}");
     assert_eq!(String::from_utf8_lossy(&out.stdout), "built\n");
     assert!(err.contains("ran out of space; retrying once"), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();
     let leases: Vec<Value> = seen
         .iter()
@@ -2343,29 +2237,19 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
         .map(|s| serde_json::from_str(&s.body).unwrap())
         .collect();
     assert_eq!(leases.len(), 2);
-    assert_eq!(
-        leases[1]["spec"]["volumes"][0]["volume"],
-        format!("{ENV}/volumes/{retry_volume}")
-    );
     let boots: Vec<_> = seen
         .iter()
         .filter(|s| s.body.contains("\"bootstrap\""))
         .collect();
     assert_eq!(boots.len(), 2);
-    assert!(
-        boots[0]
-            .body
-            .contains("\"bootstrap\",\"/workspace\",\"1\",\"0\""),
-        "{}",
-        boots[0].body
-    );
-    assert!(
-        boots[1]
-            .body
-            .contains(&format!("\"bootstrap\",\"/workspace\",\"1\",\"{empty}\"")),
-        "{}",
-        boots[1].body
-    );
+    for boot in boots {
+        assert!(
+            boot.body
+                .contains("\"bootstrap\",\"/workspace\",\"0\",\"0\""),
+            "{}",
+            boot.body
+        );
+    }
     assert_eq!(
         seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
         1
@@ -2380,17 +2264,21 @@ async fn full_workspace_retry(retry_volume: &str, empty: &str) {
 /// and the run answers 125, retryable, in about that long, not 30 minutes.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_queue_timeout_releases_and_exits_125() {
-    let sb = Sandbox::new("build-run-queue-timeout");
+    queued_build_timeout("run").await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_image_queue_timeout_never_reserves_a_workspace_volume() {
+    queued_build_timeout("image").await;
+}
+
+async fn queued_build_timeout(subcommand: &str) {
+    let sb = Sandbox::new(&format!("build-{subcommand}-queue-timeout"));
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
     let lease = format!("{ENV}/leases/l1");
-    let queued = json!({"name": lease, "spec": {"region": "gra", "volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "granted"}});
+    let queued = json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "granted"}});
     let (url, log) = serve(vec![
-        (200, json!({"volumes": []})),
-        (
-            200,
-            json!({"name": format!("{ENV}/volumes/vol-1"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "gra"}}, "spec": {"region": "gra"}, "status": {"state": "available"}}),
-        ),
         (200, queued.clone()),
         (200, queued.clone()),
         (200, queued.clone()),
@@ -2399,23 +2287,20 @@ async fn build_run_queue_timeout_releases_and_exits_125() {
     ])
     .await;
     let t = std::time::Instant::now();
-    let out = run(
-        &sb,
-        &url,
-        &[
-            "build",
-            "run",
-            "-o",
-            "json",
-            "--region",
-            "gra",
-            "--queue-timeout",
-            "3s",
-            "--",
-            "true",
-        ],
-    )
-    .await;
+    let mut args = vec![
+        "build",
+        subcommand,
+        "-o",
+        "json",
+        "--region",
+        "hk",
+        "--queue-timeout",
+        "3s",
+    ];
+    if subcommand == "run" {
+        args.extend(["--fresh", "--", "true"]);
+    }
+    let out = run(&sb, &url, &args).await;
     assert!(
         t.elapsed() < std::time::Duration::from_secs(30),
         "{:?}",
@@ -2429,8 +2314,12 @@ async fn build_run_queue_timeout_releases_and_exits_125() {
         last["error"].as_str().unwrap().contains("--queue-timeout"),
         "{last}"
     );
-    assert_regional_workspace_requests(&log, "gra");
+    assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();
+    assert!(
+        seen.iter().all(|s| s.line.contains("/leases")),
+        "queued work must not contact workspace or guest APIs"
+    );
     assert!(
         seen.iter().any(|s| s.line.contains(":release")),
         "the queued lease is released"
@@ -2579,15 +2468,14 @@ async fn hanging_server() -> String {
     url
 }
 
-/// The sandbox and guest stub of a run up to the start of the command: an
-/// empty pool, a new workspace, a ready lease, its token, and the sync.
+/// The sandbox and guest stub up to command start: a volume-free ready lease,
+/// its token, and a cold workspace sync.
 /// `tail` is what happens from the command on.
 async fn build_stub(tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
     build_stub_with(envd_process("", 0), tail).await
 }
 
-/// The replies of one attempt up to the start of the command: an empty pool,
-/// a new workspace, a ready lease, its token, the sync, then `provision`.
+/// One attempt: a volume-free ready lease, its token, a cold sync and provision.
 fn attempt_replies(
     url: &str,
     provision: (u16, &'static str, Vec<u8>),
@@ -2595,16 +2483,11 @@ fn attempt_replies(
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
     let lease = format!("{ENV}/leases/l1");
     vec![
-        json_reply(json!({"volumes": []})),
         json_reply(
-            json!({"name": format!("{ENV}/volumes/vol-1"), "meta": {"labels": {"purpose": "build-workspace", "build-region": "hk"}}, "spec": {"region": "hk"}, "status": {"state": "available"}}),
-        ),
-        json_reply(
-            json!({"name": lease, "spec": {"region": "hk", "volumes": [{"volume": format!("{ENV}/volumes/vol-1"), "mountPath": "/workspace"}]}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+            json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         envd_process("", 0),
-        (404, "text/plain", b"file not found".to_vec()),
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
@@ -2635,10 +2518,10 @@ fn ended() -> (u16, &'static str, Vec<u8>) {
     )
 }
 
-/// The environment the command was started with (the 11th call).
+/// The environment the command was started with (the eighth call).
 fn started_env(log: &Log) -> Value {
     let seen = log.lock();
-    let start = &seen[10];
+    let start = &seen[7];
     assert!(start.line.starts_with("POST /process.Process/Start"));
     let text = &start.body;
     let from = text.find("{\"process\"").expect("a JSON message");
@@ -2647,36 +2530,27 @@ fn started_env(log: &Log) -> Value {
     v["process"]["envs"].clone()
 }
 
-/// Warm fixtures must exercise explicitly regional requests, not automatic placement.
-fn assert_regional_workspace_requests(log: &Log, region: &str) {
+/// Every regional Build fixture leases without any persistent workspace API.
+fn assert_volume_free_regional_leases(log: &Log, region: &str) {
     let seen = log.lock();
-    let mut volumes = 0;
     let mut leases = 0;
     for request in seen.iter() {
-        if request
-            .line
-            .starts_with(&format!("POST /v1/{ENV}/volumes "))
-        {
+        assert!(!request.line.contains("/volumes"), "{}", request.line);
+        if request.line.starts_with(&format!("POST /v1/{ENV}/leases ")) {
             let body: Value = serde_json::from_str(&request.body).unwrap();
             assert_eq!(body["spec"]["region"], region, "{body}");
-            assert_eq!(body["meta"]["labels"]["build-region"], region, "{body}");
-            volumes += 1;
-        } else if request.line.starts_with(&format!("POST /v1/{ENV}/leases ")) {
-            let body: Value = serde_json::from_str(&request.body).unwrap();
-            assert_eq!(body["spec"]["region"], region, "{body}");
-            let mount = &body["spec"]["volumes"][0];
-            assert_eq!(
-                mount["mount_path"].as_str().or(mount["mountPath"].as_str()),
-                Some("/workspace"),
+            assert!(
+                body["spec"]
+                    .get("volumes")
+                    .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())),
                 "{body}"
             );
             leases += 1;
         }
     }
-    assert!(volumes > 0, "the fixture must request a regional workspace");
     assert!(
         leases > 0,
-        "the fixture must lease a machine with that workspace"
+        "the fixture must request a volume-free regional lease"
     );
 }
 
@@ -2723,7 +2597,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
     let err = String::from_utf8_lossy(&out.stderr);
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(out.status.code(), Some(0), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     // The mint: the key as a bearer, and the run's access, network and life.
     let seen = clog.lock();
     assert_eq!(seen.len(), 1);
@@ -2787,7 +2661,7 @@ async fn build_run_caps_the_token_life_at_the_longest_run() {
     )
     .await;
     assert_eq!(out.status.code(), Some(0));
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     let body: Value = serde_json::from_str(&clog.lock()[0].body).unwrap();
     assert_eq!(body["ttl_seconds"], 22500);
 }
@@ -2844,7 +2718,7 @@ async fn build_run_builds_without_the_cache_when_it_cannot_be_minted() {
         .await;
         let err = String::from_utf8_lossy(&out.stderr);
         assert_eq!(out.status.code(), Some(0), "{name}: {err}");
-        assert_regional_workspace_requests(&log, "hk");
+        assert_volume_free_regional_leases(&log, "hk");
         assert_eq!(String::from_utf8_lossy(&out.stdout), "ok\n", "{name}");
         let warn: Vec<&str> = err.lines().filter(|l| l.contains("build cache")).collect();
         assert_eq!(
@@ -2877,7 +2751,7 @@ async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     assert!(clog.lock().is_empty(), "no token was asked for");
     assert!(!err.contains("build cache"), "{err}");
     assert_eq!(sylphx_lines(&err).len(), 3, "{err}");
@@ -2915,7 +2789,7 @@ async fn build_run_errors_never_carry_the_token() {
     .await;
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(125), "{err}");
-    assert_regional_workspace_requests(&log, "hk");
+    assert_volume_free_regional_leases(&log, "hk");
     assert!(err.contains("sylphx: error:"), "{err}");
     assert!(!err.contains(CACHE_TOKEN), "{err}");
 }

@@ -21,17 +21,16 @@ use super::{BUILD_CACHE_HOST, SIZES, WS};
 
 /// The guest command.
 pub const GUEST_BIN: &str = "/usr/local/bin/sylphx-image-build";
-/// BuildKit's state: on the warm workspace, so layers stay warm.
+/// BuildKit's per-lease state on the cold owned workspace.
 pub fn state_dir() -> String {
     format!("{WS}/buildkit")
 }
-/// Removes the tree's `target` link to the warm workspace's `target/`
-/// before the image build, then runs it. The sync links `tree/target` to
-/// `../target` for `build run`; in an image's context that link dangles
-/// (`COPY . /app` gives `/app/target` pointing nowhere), and tools that walk
-/// the source fail on it (`next build`: `ENOENT, stat '/app/target'`). Only
-/// that exact link goes; a `target` of the source's own stays. The next sync
-/// puts it back.
+/// Removes the tree's `target` link to the workspace's `target/` before the
+/// image build, then runs it. The sync links `tree/target` to `../target`
+/// for `build run`; in an image's context that link dangles (`COPY . /app`
+/// gives `/app/target` pointing nowhere), and tools that walk the source fail
+/// on it (`next build`: `ENOENT, stat '/app/target'`). Only that exact link
+/// goes; a `target` of the source's own stays.
 pub const UNLINK_TARGET: &str = r#"t=$1/target
 shift
 if [ -L "$t" ] && [ "$(readlink "$t")" = ../target ]; then rm -f "$t"; fi
@@ -41,9 +40,9 @@ exec "$@"
 pub fn metadata_path() -> String {
     format!("{WS}/.sylphx/image.json")
 }
-/// A private directory (0700) for what must not be readable by others: on
-/// the machine's own disk, which ends with the lease, never on the warm
-/// workspace Volume, so an interrupted build leaves no credential behind.
+/// A private directory (0700) for credentials on the machine's root disk,
+/// outside the synced workspace. The machine ends with the lease, so an
+/// interrupted build leaves no credential behind.
 pub fn private_dir() -> String {
     "/tmp/sylphx-private".to_string()
 }
@@ -102,7 +101,7 @@ pub struct Source {
 pub fn command() -> Command {
     Command::new("image")
         .about("Build an OCI image from this work tree on a remote build machine; the digest comes back")
-        .long_about("Builds an OCI image from the enclosing git work tree (PATH inside it is the build context) with rootless BuildKit on a build machine: the Dockerfile, or with none the zero-config frontend (Railpack). Only files that differ from the warm workspace are sent; BuildKit's layer cache stays warm on it. Output streams back unchanged apart from at most three `sylphx:` lines on stderr; the digest, frontend and process sandbox are printed after it.\n\nThe image is reproducible when the tree is clean at HEAD: SOURCE_DATE_EPOCH is HEAD's commit time and the commit is recorded. A tree with local changes records no commit and builds with SOURCE_DATE_EPOCH 0 (still reproducible for the same tree), and says so on one `sylphx:` line.\n\nThe machine reaches no internet package host: only the project's build cache, the registry of --push, and each --allow-host. Package installs resolve through the build cache's mirrors; add --allow-host for any other source. --push REF needs --registry-auth FILE (a Docker config.json); the file is sent to the machine as a private file and removed after the build, and is never logged. A REF with no registry host in it (Docker Hub) needs --allow-host for that registry.\n\nExit codes: sylphx-image-build's (2 usage; 125 before BuildKit ran; otherwise BuildKit's); 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, sync failed, machine lost); 130 interrupted. -o json adds the whole metadata object to the `result` event as `image`.\n\nExample: sylphx build image --push registry.sylphx.net/acme/app:1 --registry-auth ~/.docker/config.json")
+        .long_about("Builds an OCI image from the enclosing git work tree (PATH inside it is the build context) with rootless BuildKit on a build machine: the Dockerfile, or with none the zero-config frontend (Railpack). Each build gets a cold lease-owned workspace after admission, reclaimed at lease end; --region pins placement without creating or attaching a persistent workspace Volume. BuildKit's local layer state ends with the lease. Output streams back unchanged apart from at most three `sylphx:` lines on stderr; the digest, frontend and process sandbox are printed after it.\n\nThe image is reproducible when the tree is clean at HEAD: SOURCE_DATE_EPOCH is HEAD's commit time and the commit is recorded. A tree with local changes records no commit and builds with SOURCE_DATE_EPOCH 0 (still reproducible for the same tree), and says so on one `sylphx:` line.\n\nThe machine reaches no internet package host: only the project's scoped build cache, the registry of --push, and each --allow-host. Package installs resolve through the build cache's mirrors; add --allow-host for any other source. --push REF needs --registry-auth FILE (a Docker config.json); the file is sent to the machine as a private file and removed after the build, and is never logged. A REF with no registry host in it (Docker Hub) needs --allow-host for that registry.\n\nExit codes: sylphx-image-build's (2 usage; 125 before BuildKit ran; otherwise BuildKit's); 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, sync failed, machine lost); 130 interrupted. -o json adds the whole metadata object to the `result` event as `image`.\n\nExample: sylphx build image --push registry.sylphx.net/acme/app:1 --registry-auth ~/.docker/config.json")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to build (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("dockerfile").long("dockerfile").value_name("PATH")
@@ -119,7 +118,7 @@ pub fn command() -> Command {
         .arg(Arg::new("timeout").long("timeout").value_name("DURATION")
             .help("Wall-clock limit for the build (default 60m, at most 6h)"))
         .arg(Arg::new("region").long("region").value_name("REGION")
-            .help("Region to pin the build to (default: automatic Build placement); explicit regions keep their own warm workspaces"))
+            .help("Region to pin the build to (default: automatic Build placement); workspace lifetime always follows the lease"))
         .arg(Arg::new("queue-timeout").long("queue-timeout").value_name("DURATION")
             .help("Longest wait for a build machine before exiting 125, retryable (default 30m, at most 6h)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
@@ -526,7 +525,7 @@ mod tests {
         assert_eq!(default_oci_mirror(), format!("https://{BUILD_CACHE_HOST}"));
         assert!(
             auth_path().starts_with("/tmp/"),
-            "credentials stay off the warm Volume"
+            "credentials stay outside the synced workspace"
         );
     }
 

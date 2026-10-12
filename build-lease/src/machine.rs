@@ -9,7 +9,7 @@ use sylphx::Client;
 
 use crate::guest::{Fault, Guest};
 
-/// The warm workspace's mount point; the tree is `WS/tree`.
+/// The lease-owned workspace's mount point; the tree is `WS/tree`.
 pub const WS: &str = "/workspace";
 pub const TEMPLATE: &str = "template:build";
 /// Sync, toolchain install and copy-back on top of the run's timeout.
@@ -49,16 +49,14 @@ pub fn wire(d: Duration) -> String {
 pub struct LeaseParams<'a> {
     /// `standard`, `large` or `xlarge`: the lease shape is `build-<size>`.
     pub size: &'a str,
-    /// The explicit region, or "" for automatic placement without a volume
-    /// (with a volume, "" retains the home-region binding).
+    /// The explicit region, or "" for automatic placement. Neither reserves
+    /// a persistent workspace; the admitted Pod owns its workspace.
     pub region: &'a str,
     /// The command's time limit; the lease lives this plus [`TTL_SLACK`].
     pub timeout: Duration,
     /// The egress allow-list, whole: [`allowed_domains`] for a command
     /// build, the caller's own list for another kind of build.
     pub domains: &'a [String],
-    /// A workspace Volume to mount at [`WS`].
-    pub volume: Option<&'a str>,
 }
 
 /// The request that leases a build machine below `parent` (an environment).
@@ -74,12 +72,6 @@ pub fn lease_request(parent: &str, p: &LeaseParams<'_>) -> sbx::CreateLeaseReque
     net.egress = Some(sbx::EgressPolicy::Allowlist);
     net.allowed_domains = p.domains.to_vec();
     spec.network = Some(net);
-    if let Some(volume) = p.volume {
-        let mut mount = sbx::VolumeMount::default();
-        mount.volume = volume.to_string();
-        mount.mount_path = WS.into();
-        spec.volumes = vec![mount];
-    }
     let mut meta = sylphx::common::ResourceMeta::default();
     meta.labels.insert("purpose".into(), "build-run".into());
     let mut lease = sbx::Lease::default();
@@ -306,26 +298,23 @@ mod tests {
     }
 
     #[test]
-    fn the_lease_is_a_build_shape_with_an_allowlist_and_an_optional_workspace() {
+    fn the_lease_is_a_build_shape_without_a_workspace_reservation() {
         let hosts = allowed_domains(&[]);
         let p = LeaseParams {
             size: "large",
             region: "",
             timeout: Duration::from_secs(60),
             domains: &hosts,
-            volume: None,
         };
         let r = lease_request("orgs/o/projects/p/envs/e", &p);
         let spec = r.lease.unwrap().spec.unwrap();
         assert_eq!(spec.shape, "build-large");
         assert!(spec.volumes.is_empty());
         assert_eq!(spec.ttl, format!("{}s", 60 + TTL_SLACK.as_secs()));
-        let p = LeaseParams {
-            volume: Some("v1"),
-            ..p
-        };
+        let p = LeaseParams { region: "hk", ..p };
         let spec = lease_request("x", &p).lease.unwrap().spec.unwrap();
-        assert_eq!(spec.volumes[0].mount_path, WS);
+        assert_eq!(spec.region, "hk");
+        assert!(spec.volumes.is_empty());
     }
 
     #[test]

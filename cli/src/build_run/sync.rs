@@ -1,11 +1,11 @@
-//! The workspace sync of `sylphx build run`: which files make up the tree,
-//! their digests, the manifest a warm workspace keeps, the diff between the
-//! two, and the tarballs and lists that carry the diff.
+//! The workspace sync of `sylphx build run`: which files make up the current
+//! tree, their digests, and the tarballs and lists that copy it into the
+//! lease's fresh workspace. The diff machinery also tests manifest and byte
+//! currentness through successive guest apply steps.
 //!
 //! The manifest is one line per file, `<sha256 hex> <mode> <path>`, after a
-//! header line. A path is escaped so it stays on one line (`\\` and `\n`), and
-//! the path always starts at byte [`PATH_AT`], so the guest can merge a diff
-//! into its manifest with `awk` alone (see [`APPLY`]).
+//! header line. Paths are escaped (`\\` and `\n`) and start at byte 73
+//! (1-based), so the guest can merge lines with `awk` alone (see [`APPLY`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Read, Write};
@@ -19,6 +19,7 @@ use sha2::{Digest, Sha256};
 pub const HEADER: &str = "sylphx-manifest 1";
 /// 64 hex digits, a space, six mode digits, a space: the path starts here
 /// (1-based, as `awk`'s `substr` counts).
+#[cfg(test)]
 pub const PATH_AT: usize = 73;
 /// A tarball holds at most this many bytes of file content, so one upload
 /// stays well inside what a guest accepts in one request.
@@ -168,8 +169,9 @@ pub fn render(tree: &Tree) -> String {
     out
 }
 
-/// The manifest a workspace answered; `None` when it is missing a header or
-/// any line is malformed, which makes the next sync a full one.
+/// Parse the guest's manifest for sync/currentness assertions. Every actual
+/// CLI lease starts cold and does not download a previous lease's manifest.
+#[cfg(test)]
 pub fn parse(text: &str) -> Option<Tree> {
     let mut lines = text.split('\n');
     if lines.next()? != HEADER {
@@ -791,51 +793,6 @@ pub fn git_path(root: &Path, name: &str) -> Option<PathBuf> {
         .then(|| PathBuf::from(String::from_utf8_lossy(&out.stdout).trim()))
 }
 
-/// The repository this tree is a checkout of: the normalized origin URL and
-/// the root commit. Any branch or worktree of it shares warm workspaces.
-pub fn repo_key(root: &Path) -> String {
-    let git = |args: &[&str]| -> String {
-        Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .args(args)
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_default()
-    };
-    let origin = normalize_origin(&git(&["remote", "get-url", "origin"]));
-    let first = git(&["rev-list", "--max-parents=0", "HEAD"]);
-    let first = first.lines().last().unwrap_or_default();
-    let mut key = sha256_hex(format!("{origin}\n{first}").as_bytes());
-    key.truncate(20);
-    key
-}
-
-/// `git@github.com:o/r.git`, `https://github.com/o/r` and `ssh://…` alike
-/// become `github.com/o/r`.
-pub fn normalize_origin(url: &str) -> String {
-    let mut s = url.trim().to_ascii_lowercase();
-    for scheme in ["https://", "http://", "ssh://", "git://"] {
-        if let Some(rest) = s.strip_prefix(scheme) {
-            s = rest.to_string();
-        }
-    }
-    if let Some((user, rest)) = s.split_once('@') {
-        if !user.contains('/') {
-            s = rest.to_string();
-        }
-    }
-    if let Some((host, path)) = s.split_once(':') {
-        if !host.contains('/') {
-            let path = path.trim_start_matches(|c: char| c.is_ascii_digit());
-            s = format!("{host}/{}", path.trim_start_matches('/'));
-        }
-    }
-    s.trim_end_matches('/').trim_end_matches(".git").to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -992,19 +949,6 @@ mod tests {
             let r = record("path", v);
             let (n, _) = r.split_once(' ').unwrap();
             assert_eq!(n.parse::<usize>().unwrap(), r.len(), "{r}");
-        }
-    }
-
-    #[test]
-    fn origins_normalize_to_one_key() {
-        for u in [
-            "git@github.com:SylphxAI/cloud.git",
-            "https://github.com/SylphxAI/cloud",
-            "https://github.com/SylphxAI/cloud.git/",
-            "ssh://git@github.com/SylphxAI/cloud.git",
-            "https://user@github.com/SylphxAI/cloud",
-        ] {
-            assert_eq!(normalize_origin(u), "github.com/sylphxai/cloud", "{u}");
         }
     }
 

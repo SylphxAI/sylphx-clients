@@ -88,38 +88,34 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `result.json`, `junit.xml`, `logcat.txt`, and `crash.txt` into `--out`
   (`device-results/`). Exit 0 passed, 1 failed, 2 infrastructure; the lease is
   released on the way out unless `--keep`.
-- New warm workspace Volumes reserve 64Gi rather than 100Gi. This is a
-  conservative default, not a measured peak guarantee: the 2026-10-12
-  `sbx-leases` snapshot had 69 Volumes reserving 6500Gi, mapping 850.33Gi in
-  total, with a maximum of 48.42Gi per Volume. Existing warm workspaces keep
-  their size, and explicit `sandboxes volumes create --spec.size-gib` requests
-  are honored unchanged. Use a newly released CLI for the new default; it is
-  chosen by the caller, not the Sandboxes API or an admission mutator.
+- Build workspaces are owned by the admitted lease, not a persistent client
+  pool. A queued Build holds no workspace PVC reservation. After Kueue admits
+  the suspended Job, Kubernetes creates the Pod's generic ephemeral raw-block
+  workspace claim; lease end removes it through normal workload garbage
+  collection after the guest unmounts. The catalog retains the current 64Gi
+  workspace request. Explicit customer Sandboxes Volumes are unchanged.
 - `sylphx build run [PATH] -- <command…>` runs the command on a remote build
   machine against this git work tree and behaves like the local command: the
   output streams back, the exit code is the command's own, and `--artifact
-  GLOB` files are copied into `--out` (`.sylphx/out/<run>/`). A warm workspace
-  (a pool of up to 10 Volumes per project and repository) keeps the tree,
-  `target/`, the Cargo registry, sccache and toolchains, so a repeat run sends
-  only the changed files. The region's workspaces are a cache: when it has no
-  room for a new one (`NO_CAPACITY`), the run deletes the least recently used
-  free workspace of any repository once and tries again. Exit codes: the command's own, 2 usage, 124
+  GLOB` files are copied into `--out` (`.sylphx/out/<run>/`). Every lease gets
+  a fresh `/workspace`, including with an explicit `--region`; the CLI never
+  lists, creates, evicts or attaches a workspace Volume before admission.
+  Cross-lease `target/`, local toolchains and BuildKit state are not retained.
+  The existing scoped remote build cache and dependency mirrors remain;
+  they do not replace all local BuildKit layers or mutable cache mounts.
+  Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
   event; anything that fails before the command starts, such as the sync or the
   toolchain install or a toolchain that fails its check, is 125, and a machine
   lost or a stream broken before the command starts is retried once after a
   short backoff first), 130 interrupted, 137 the machine was lost after the
   command started. A started command is never run twice: a broken output
-  stream is reattached to the running command. Cargo uses incremental compilation
-  on persistent workspaces (`CARGO_INCREMENTAL=1`) without automatically enabling
-  sccache, which refuses incremental builds. Ephemeral machines use
-  `CARGO_INCREMENTAL=0` with sccache when a remote cache is available.
-  Both use `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults
-  and an explicit compiler wrapper is preserved. `--region REGION` runs in that region's Cell with
-  that region's own warm workspaces (default: the project's home region); a
-  region whose Cell offers no Volumes refuses the workspace at once, and the
-  run builds on the machine's own disk instead (always cold, nothing left
-  behind, no local sccache); `--queue-timeout DURATION` (default 30m) is the longest wait for a machine,
+  stream is reattached to the running command. Cargo uses
+  `CARGO_INCREMENTAL=0` with sccache when a remote cache is available, and
+  `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults and an explicit
+  compiler wrapper is preserved. `--region REGION` pins placement, not a
+  persistent workspace. Automatic placement remains the Sandboxes API's
+  responsibility. `--queue-timeout DURATION` (default 30m) is the longest wait for a machine,
   after which the run releases its lease and exits 125, retryable, so a caller
   can try another region. `-o json` writes NDJSON events (`queued`,
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
