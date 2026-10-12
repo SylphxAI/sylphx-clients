@@ -42596,7 +42596,7 @@
                   },
                   "environment": {
                     "additionalProperties": false,
-                    "description": "Whether sessions get a Sylphx Sandboxes environment (shell, files,\nbrowser, computer use), attached on first need and put in standby when\nidle.",
+                    "description": "Default session environment (shell, files, browser, computer use), frozen\nin each AgentVersion. RunAgent overlays only its selected environment\nfields on that pinned default and requires a valid fresh finite lease.",
                     "properties": {
                       "budget": {
                         "additionalProperties": false,
@@ -43106,7 +43106,7 @@
           },
           "environment": {
             "additionalProperties": false,
-            "description": "The requested fresh lease, with a finite TTL and supported harness.",
+            "description": "Optional overrides of the environment in the pinned AgentVersion's frozen\nspec, never the Agent's current head. Omitted or empty with no mask keeps\nthat default unchanged. Only selected fields are overlaid; see\nenvironment_mask. The effective environment must have a supported shape,\nfinite positive TTL and valid repository, network and budget before admission.",
             "properties": {
               "budget": {
                 "additionalProperties": false,
@@ -43193,6 +43193,10 @@
               }
             },
             "type": "object"
+          },
+          "environment_mask": {
+            "description": "Fields of environment to overlay, relative to EnvironmentSpec, using proto\nsnake_case paths such as ttl, repo.uri, repo.revision,\negress.allowed_domains and budget.max_cost_micros. The wire value is a\ncomma-separated string; SDK property naming does not change these paths.\nOmitted or empty infers populated serialized leaf fields recursively,\npreserving unselected siblings from the pinned version. Proto defaults\n(including empty lists) need an explicit mask to reset a selected field.\nSelected lists replace, rather than append to, the inherited list.\nThe sole path \"*\" replaces the whole environment, resetting unpopulated\nfields. Unknown, invalid and output-only paths are rejected, as is a\nnonempty mask without environment. Effective validation also applies to\nexplicit resets and whole-environment replacement.",
+            "type": "string"
           },
           "message": {
             "additionalProperties": false,
@@ -43339,7 +43343,6 @@
           "agent_version",
           "agent_session_id",
           "message",
-          "environment",
           "completion",
           "runtime_credential_handle"
         ],
@@ -43414,7 +43417,7 @@
               },
               "environment": {
                 "additionalProperties": false,
-                "description": "The environment for this session; when omitted, use the pinned Agent\nversion's default. An explicit value replaces that default.",
+                "description": "The immutable effective environment for this session. RunAgent resolves it\nfrom the pinned AgentVersion's frozen default and selected request overrides.\nFor CreateAgentSession, omission inherits the pinned default; an explicit\nenvironment replaces it.",
                 "properties": {
                   "budget": {
                     "additionalProperties": false,
