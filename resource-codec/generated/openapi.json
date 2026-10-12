@@ -8881,32 +8881,32 @@
             "type": "object"
           },
           "repositories": {
-            "description": "The repositories this call needs, at most the policy's; empty means the\npolicy's.",
+            "description": "The one repository this call needs, `owner/name`, one of the policy's.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
-          "subject_token": {
-            "description": "The caller's identity: a SPIFFE JWT-SVID or an Access-issued workload\nOIDC token, with audience `broker.sylphx.com`.",
-            "type": "string",
-            "x-sylphx-sensitive": true
-          },
           "ttl": {
-            "description": "How long the credential should live, at most the policy's `max_ttl`.",
+            "description": "How long the credential should live, at most the policy's `max_ttl`.\nA GitHub installation token always lives one hour: unset or `3600s`.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           }
         },
         "required": [
           "name",
-          "subject_token"
+          "repositories"
         ],
         "type": "object"
       },
       "sylphx.broker.v1.ExchangeTokenResponse": {
         "description": "The response of ExchangeToken.",
         "properties": {
+          "connection": {
+            "description": "The Connection the credential was issued on, the policy's.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          },
           "credential_kind": {
             "$ref": "#/components/schemas/sylphx.broker.v1.CredentialKind",
             "description": "What `token` is."
@@ -8914,6 +8914,10 @@
           "expire_time": {
             "description": "When the credential stops working.",
             "format": "date-time",
+            "type": "string"
+          },
+          "issuer": {
+            "description": "The provider identity that signed the credential: for GitHub,\n`github-apps/{app_id}` of the installation it was minted against.",
             "type": "string"
           },
           "permissions": {
@@ -8924,7 +8928,7 @@
             "type": "object"
           },
           "repositories": {
-            "description": "The repositories the credential covers; empty means every repository\nthe Connection covers.",
+            "description": "The one repository the credential covers.",
             "items": {
               "type": "string"
             },
@@ -8934,8 +8938,27 @@
             "description": "The provider credential. Never logged, persisted, or cached by the\ncaller beyond `expire_time`.",
             "type": "string",
             "x-sylphx-sensitive": true
+          },
+          "token_exchange": {
+            "description": "The record of this credential,\n`orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:\nthe name to revoke it by.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
           }
         },
+        "type": "object"
+      },
+      "sylphx.broker.v1.GetTokenExchangeRequest": {
+        "description": "The request of GetTokenExchange.",
+        "properties": {
+          "name": {
+            "description": "The name of the record to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "sylphx.broker.v1.GetTrustPolicyRequest": {
@@ -8950,6 +8973,46 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.ListTokenExchangesRequest": {
+        "description": "The request of ListTokenExchanges.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The trust policy to list under.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.ListTokenExchangesResponse": {
+        "description": "The response of ListTokenExchanges.",
+        "properties": {
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          },
+          "token_exchanges": {
+            "description": "The page, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.broker.v1.TokenExchange"
+            },
+            "type": "array"
+          }
+        },
         "type": "object"
       },
       "sylphx.broker.v1.ListTrustPoliciesRequest": {
@@ -9000,8 +9063,103 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.RevokeTokenExchangeRequest": {
+        "description": "The request of RevokeTokenExchange.",
+        "properties": {
+          "name": {
+            "description": "The record of the credential to revoke.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.TokenExchange": {
+        "description": "A TokenExchange is the record of one credential the Broker issued under a\nTrustPolicy: who asked, for which Agent, on which repository, with which\npermissions, until when. The credential itself is never returned again;\nthe record keeps only its SHA-256. The Broker holds the credential sealed\nuntil it is revoked or expires, so `:revoke` needs nothing from the caller.",
+        "properties": {
+          "actor": {
+            "description": "The Agent the subject's delegated grant acted for; empty when the\nsubject exchanged for itself.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "connection": {
+            "description": "The Connection the credential was issued on.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          },
+          "create_time": {
+            "description": "When it was issued.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "credential_kind": {
+            "$ref": "#/components/schemas/sylphx.broker.v1.CredentialKind",
+            "description": "What the credential is.",
+            "readOnly": true
+          },
+          "expire_time": {
+            "description": "When the provider stops honoring it.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "issuer": {
+            "description": "The provider identity that signed it: for GitHub, `github-apps/{app_id}`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "`orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`.",
+            "type": "string"
+          },
+          "permissions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The permissions the credential carries.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "repository": {
+            "description": "The one repository the credential covers, `owner/name`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "revoke_time": {
+            "description": "When the provider confirmed it revoked; unset while live or when it\nsimply expired.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "subject": {
+            "description": "The accountable principal, `orgs/{org}/principals/{id}`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "token_sha256": {
+            "description": "Lowercase hex SHA-256 of the credential, to match a credential seen\nelsewhere to its record.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "`tkx_<cell><ulid>`; also the `{token_exchange}` id.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.TrustPolicy": {
-        "description": "A TrustPolicy grants a set of subjects the right to exchange their\nidentity for a provider credential on one Connection, never wider than\nthe policy's permissions and repositories.",
+        "description": "A TrustPolicy grants a set of Access principals the right to exchange\ntheir grant for a provider credential on one Connection, never wider than\nthe policy's permissions and repositories.",
         "properties": {
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
@@ -9021,7 +9179,7 @@
             "readOnly": true
           },
           "uid": {
-            "description": "`trp_<cell><ulid>`.",
+            "description": "`tpol_<cell><ulid>`.",
             "readOnly": true,
             "type": "string"
           }
@@ -9034,14 +9192,21 @@
       "sylphx.broker.v1.TrustPolicySpec": {
         "description": "TrustPolicySpec is the caller-writable state of a TrustPolicy.",
         "properties": {
+          "actors": {
+            "description": "The Agents a delegated grant may act for: an Agent name\n`orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every\nAgent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set,\nonly a delegated grant whose actor matches may exchange; a grant with no\nactor is refused. When empty, any grant of a subject may exchange,\ndelegated or not.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "connection": {
-            "description": "The Connection credentials are issued on.",
+            "description": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
             "type": "string",
             "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
           },
           "credential_kind": {
             "$ref": "#/components/schemas/sylphx.broker.v1.CredentialKind",
-            "description": "What the credential service issues."
+            "description": "What the credential service issues; `access_token` on the wire."
           },
           "max_ttl": {
             "description": "The longest a credential lives; default and maximum 1 hour.",
@@ -9052,18 +9217,18 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "The most a credential may carry, in the provider's permission names, for\nexample `{\"contents\": \"read\", \"checks\": \"write\"}`.",
+            "description": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
             "type": "object"
           },
           "repositories": {
-            "description": "The most repositories a credential may cover; empty means every\nrepository the Connection covers.",
+            "description": "The repositories a credential may cover, `owner/name`, 1 to 100, every\none owned by the Connection's account. One exchange covers exactly one.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "subjects": {
-            "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Sylphx Access principal names. The cell segment is never\nstripped.",
+            "description": "The Access principals allowed to exchange, `orgs/{org}/principals/{id}`\nin the policy's org: the caller's own principal, or the accountable\nprincipal of a delegated grant. 1 to 64.",
             "items": {
               "type": "string"
             },
@@ -9074,6 +9239,7 @@
           "connection",
           "subjects",
           "permissions",
+          "repositories",
           "credential_kind"
         ],
         "type": "object"
@@ -9082,7 +9248,7 @@
         "description": "TrustPolicyStatus is the observed state of a TrustPolicy.",
         "properties": {
           "conditions": {
-            "description": "Ready, Reconciling, Stalled. Ready is FALSE with reason\n`CapabilityMissing` when the Connection lacks a permission the policy\nnames.",
+            "description": "Ready: the policy was admitted against an active installation. A\npermission the installation lacks is refused at exchange with reason\n`CapabilityMissing`.",
             "items": {
               "$ref": "#/components/schemas/sylphx.common.v1.Condition"
             },
@@ -113201,7 +113367,7 @@
     },
     "/v1/orgs/{org}/trust_policies": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's trust policies.",
+        "description": "Lists an org's trust policies.",
         "operationId": "broker_trust_policies_list",
         "parameters": [
           {
@@ -113290,11 +113456,10 @@
         ],
         "x-sylphx-method": "broker.trust_policies.list",
         "x-sylphx-permission": "broker:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a trust policy.",
+        "description": "Creates a trust policy.",
         "operationId": "broker_trust_policies_create",
         "parameters": [
           {
@@ -113390,13 +113555,12 @@
         ],
         "x-sylphx-method": "broker.trust_policies.create",
         "x-sylphx-permission": "broker:admin",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/trust_policies/{trust_policy}": {
       "delete": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a trust policy.",
+        "description": "Deletes a trust policy.",
         "operationId": "broker_trust_policies_delete",
         "parameters": [
           {
@@ -113489,11 +113653,10 @@
         ],
         "x-sylphx-method": "broker.trust_policies.delete",
         "x-sylphx-permission": "broker:admin",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a trust policy.",
+        "description": "Gets a trust policy.",
         "operationId": "broker_trust_policies_get",
         "parameters": [
           {
@@ -113552,11 +113715,10 @@
         ],
         "x-sylphx-method": "broker.trust_policies.get",
         "x-sylphx-permission": "broker:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a trust policy.",
+        "description": "Updates a trust policy.",
         "operationId": "broker_trust_policies_update",
         "parameters": [
           {
@@ -113661,13 +113823,258 @@
         ],
         "x-sylphx-method": "broker.trust_policies.update",
         "x-sylphx-permission": "broker:admin",
-        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/trust_policies/{trust_policy}/token_exchanges": {
+      "get": {
+        "description": "Lists the credentials issued under a trust policy, newest first.",
+        "operationId": "broker_token_exchanges_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trust_policy",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.ListTokenExchangesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the credentials issued under a trust policy, newest first.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "broker.token_exchanges.list",
+        "x-sylphx-permission": "broker:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}": {
+      "get": {
+        "description": "Gets the record of one issued credential.",
+        "operationId": "broker_token_exchanges_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trust_policy",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token_exchange",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.TokenExchange"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets the record of one issued credential.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "broker.token_exchanges.get",
+        "x-sylphx-permission": "broker:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}:revoke": {
+      "post": {
+        "description": "Revokes an issued credential at the provider by its record. The Broker\nuses the credential it holds sealed, so the caller needs no token and no\nlive delegation. Idempotent: a credential already revoked or expired\nanswers the record. Erases the sealed credential once the provider\nconfirms.",
+        "operationId": "broker_token_exchanges_revoke",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trust_policy",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token_exchange",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.TokenExchange"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Revokes an issued credential at the provider by its record. The Broker uses the credential it holds sealed, so the caller needs no token and no live delegation. Idempotent: a credential already revoked or expired answers the record. Erases the sealed credential once the provider confirms.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.token_exchanges.revoke",
+        "x-sylphx-permission": "broker:read",
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/trust_policies/{trust_policy}:exchangeToken": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nExchanges the caller's workload identity for a short-lived provider\ncredential under a trust policy (RFC 8693 token exchange). The\ncredential is narrowed to the request and cached per installation and\npermission set; a permission the Connection lacks is PERMISSION_DENIED\nwith reason `CapabilityMissing`, never an outage.",
+        "description": "Exchanges the caller's Access grant for a short-lived provider\ncredential under a trust policy (RFC 8693 token exchange): a GitHub App\ninstallation token for exactly one of the policy's repositories,\nnarrowed to the requested permissions. The grant's principal (for a\ndelegated grant, its accountable principal) must be a policy subject,\nits actor must match the policy's actors, and it must hold\n`broker:exchange` on this policy. Every call writes one TokenExchange\nrecord. A permission the Connection lacks is PERMISSION_DENIED with\nreason `CapabilityMissing`, never an outage.",
         "operationId": "broker_trust_policies_exchange_token",
         "parameters": [
           {
@@ -113706,25 +114113,20 @@
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "The repositories this call needs, at most the policy's; empty means the\npolicy's.",
+                    "description": "The one repository this call needs, `owner/name`, one of the policy's.",
                     "items": {
                       "type": "string"
                     },
                     "type": "array"
                   },
-                  "subject_token": {
-                    "description": "The caller's identity: a SPIFFE JWT-SVID or an Access-issued workload\nOIDC token, with audience `broker.sylphx.com`.",
-                    "type": "string",
-                    "x-sylphx-sensitive": true
-                  },
                   "ttl": {
-                    "description": "How long the credential should live, at most the policy's `max_ttl`.",
+                    "description": "How long the credential should live, at most the policy's `max_ttl`.\nA GitHub installation token always lives one hour: unset or `3600s`.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   }
                 },
                 "required": [
-                  "subject_token"
+                  "repositories"
                 ],
                 "type": "object"
               }
@@ -113762,7 +114164,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Exchanges the caller's workload identity for a short-lived provider credential under a trust policy (RFC 8693 token exchange). The credential is narrowed to the request and cached per installation and permission set; a permission the Connection lacks is PERMISSION_DENIED with reason `CapabilityMissing`, never an outage.",
+        "summary": "Exchanges the caller's Access grant for a short-lived provider credential under a trust policy (RFC 8693 token exchange): a GitHub App installation token for exactly one of the policy's repositories, narrowed to the requested permissions. The grant's principal (for a delegated grant, its accountable principal) must be a policy subject, its actor must match the policy's actors, and it must hold `broker:exchange` on this policy. Every call writes one TokenExchange record. A permission the Connection lacks is PERMISSION_DENIED with reason `CapabilityMissing`, never an outage.",
         "tags": [
           "broker"
         ],
@@ -113777,7 +114179,6 @@
         ],
         "x-sylphx-method": "broker.trust_policies.exchange_token",
         "x-sylphx-permission": "broker:exchange",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

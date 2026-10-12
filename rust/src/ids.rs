@@ -303,6 +303,8 @@ pub const ACC: Prefix = Prefix::new("acc", "LedgerAccount", "ledger", None);
 pub const TXN: Prefix = Prefix::new("txn", "LedgerTransaction", "ledger", None);
 /// TrustPolicy (`tpol`, broker).
 pub const TPOL: Prefix = Prefix::new("tpol", "TrustPolicy", "broker", Some("trust_policies"));
+/// TokenExchange (`tkx`, broker).
+pub const TKX: Prefix = Prefix::new("tkx", "TokenExchange", "broker", Some("token_exchanges"));
 /// Build (`bld`, build).
 pub const BLD: Prefix = Prefix::new("bld", "Build", "build", Some("builds"));
 /// BuildCache (`bcc`, build).
@@ -693,12 +695,12 @@ pub const KSCH: Prefix = Prefix::new(
 pub const ALL: &[Prefix] = &[
     ORG, PRJ, ENV, KEY, PRN, DVG, OMB, MBR, USR, SESS, ACFG, AORG, COR, EDM, IVT, OAC, ORL, AGT,
     AGV, ASES, SEVT, MST, MEM, MDL, AI, LLM, ART, BAC, BLS, INV, MET, PLAN, URP, BSUB, SITEM, AUSE,
-    ACC, TXN, TPOL, BLD, BCC, CHG, FLAG, SEG, CONN, CPRV, BKT, DB, KV, IDX, CUS, ENT, EVT, IBE,
-    QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK, PRV, SRL, SVC, SLNK, KMS, KMSV, CERT, DOM, EGR, PLK,
-    RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, PRF, RCP, SND, SDM, SUP, TMPL, EEV, EGRP, LOG, SCRP,
-    SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV, POOL, SHP, SNAP, VOL, SBX, SEC, SECV, SECB,
-    PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK, TASK, CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS,
-    RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY,
+    ACC, TXN, TPOL, TKX, BLD, BCC, CHG, FLAG, SEG, CONN, CPRV, BKT, DB, KV, IDX, CUS, ENT, EVT,
+    IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK, PRV, SRL, SVC, SLNK, KMS, KMSV, CERT, DOM, EGR,
+    PLK, RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, PRF, RCP, SND, SDM, SUP, TMPL, EEV, EGRP, LOG,
+    SCRP, SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV, POOL, SHP, SNAP, VOL, SBX, SEC, SECV,
+    SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK, TASK, CEX, VMNT, WKSP, MDT, MDEV, CBT,
+    DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY,
     FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM,
     ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN,
     SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH,

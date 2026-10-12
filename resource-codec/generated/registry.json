@@ -30452,25 +30452,6 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
-          ],
-          "cli_flag": "",
-          "doc": "The caller's identity: a SPIFFE JWT-SVID or an Access-issued workload\nOIDC token, with audience `broker.sylphx.com`.",
-          "filterable": false,
-          "name": "subject_token",
-          "number": 2,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": true,
-          "type": {
-            "kind": "scalar",
-            "scalar": "string"
-          }
-        },
-        {
-          "behaviors": [
             "OPTIONAL"
           ],
           "cli_flag": "",
@@ -30493,10 +30474,10 @@
         },
         {
           "behaviors": [
-            "OPTIONAL"
+            "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The repositories this call needs, at most the policy's; empty means the\npolicy's.",
+          "doc": "The one repository this call needs, `owner/name`, one of the policy's.",
           "filterable": false,
           "name": "repositories",
           "number": 4,
@@ -30515,7 +30496,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "How long the credential should live, at most the policy's `max_ttl`.",
+          "doc": "How long the credential should live, at most the policy's `max_ttl`.\nA GitHub installation token always lives one hour: unset or `3600s`.",
           "filterable": false,
           "name": "ttl",
           "number": 5,
@@ -30610,7 +30591,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "The repositories the credential covers; empty means every repository\nthe Connection covers.",
+          "doc": "The one repository the credential covers.",
           "filterable": false,
           "name": "repositories",
           "number": 5,
@@ -30623,9 +30604,86 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The record of this credential,\n`orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:\nthe name to revoke it by.",
+          "filterable": false,
+          "name": "token_exchange",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "broker.sylphx.com/TokenExchange",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The Connection the credential was issued on, the policy's.",
+          "filterable": false,
+          "name": "connection",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/Connection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The provider identity that signed the credential: for GitHub,\n`github-apps/{app_id}` of the installation it was minted against.",
+          "filterable": false,
+          "name": "issuer",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.broker.v1.ExchangeTokenResponse",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The request of GetTokenExchange.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The name of the record to get.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "broker.sylphx.com/TokenExchange",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.GetTokenExchangeRequest",
       "package": "sylphx.broker.v1"
     },
     {
@@ -30652,6 +30710,111 @@
         }
       ],
       "name": "sylphx.broker.v1.GetTrustPolicyRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The request of ListTokenExchanges.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The trust policy to list under.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "broker.sylphx.com/TokenExchange",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "At most this many; default 50, clamped to 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "`next_page_token` of the previous page.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.ListTokenExchangesRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The response of ListTokenExchanges.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The page, newest first.",
+          "filterable": false,
+          "name": "token_exchanges",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.broker.v1.TokenExchange"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The token of the next page; empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.ListTokenExchangesResponse",
       "package": "sylphx.broker.v1"
     },
     {
@@ -30798,7 +30961,309 @@
       "package": "sylphx.broker.v1"
     },
     {
-      "doc": "A TrustPolicy grants a set of subjects the right to exchange their\nidentity for a provider credential on one Connection, never wider than\nthe policy's permissions and repositories.",
+      "doc": "The request of RevokeTokenExchange.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The record of the credential to revoke.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "broker.sylphx.com/TokenExchange",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.RevokeTokenExchangeRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "A TokenExchange is the record of one credential the Broker issued under a\nTrustPolicy: who asked, for which Agent, on which repository, with which\npermissions, until when. The credential itself is never returned again;\nthe record keeps only its SHA-256. The Broker holds the credential sealed\nuntil it is revoked or expires, so `:revoke` needs nothing from the caller.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "`orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`tkx_<cell><ulid>`; also the `{token_exchange}` id.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The accountable principal, `orgs/{org}/principals/{id}`.",
+          "filterable": true,
+          "name": "subject",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The Agent the subject's delegated grant acted for; empty when the\nsubject exchanged for itself.",
+          "filterable": true,
+          "name": "actor",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The one repository the credential covers, `owner/name`.",
+          "filterable": true,
+          "name": "repository",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The permissions the credential carries.",
+          "filterable": false,
+          "name": "permissions",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "What the credential is.",
+          "filterable": false,
+          "name": "credential_kind",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.broker.v1.CredentialKind"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When it was issued.",
+          "filterable": false,
+          "name": "create_time",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the provider stops honoring it.",
+          "filterable": false,
+          "name": "expire_time",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the provider confirmed it revoked; unset while live or when it\nsimply expired.",
+          "filterable": false,
+          "name": "revoke_time",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Lowercase hex SHA-256 of the credential, to match a credential seen\nelsewhere to its record.",
+          "filterable": false,
+          "name": "token_sha256",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The Connection the credential was issued on.",
+          "filterable": false,
+          "name": "connection",
+          "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/Connection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The provider identity that signed it: for GitHub, `github-apps/{app_id}`.",
+          "filterable": false,
+          "name": "issuer",
+          "number": 20,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.TokenExchange",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "A TrustPolicy grants a set of Access principals the right to exchange\ntheir grant for a provider credential on one Connection, never wider than\nthe policy's permissions and repositories.",
       "fields": [
         {
           "behaviors": [
@@ -30824,7 +31289,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "`trp_<cell><ulid>`.",
+          "doc": "`tpol_<cell><ulid>`.",
           "filterable": false,
           "name": "uid",
           "number": 2,
@@ -30907,7 +31372,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The Connection credentials are issued on.",
+          "doc": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
           "filterable": true,
           "name": "connection",
           "number": 1,
@@ -30926,7 +31391,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Sylphx Access principal names. The cell segment is never\nstripped.",
+          "doc": "The Access principals allowed to exchange, `orgs/{org}/principals/{id}`\nin the policy's org: the caller's own principal, or the accountable\nprincipal of a delegated grant. 1 to 64.",
           "filterable": false,
           "name": "subjects",
           "number": 2,
@@ -30945,7 +31410,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The most a credential may carry, in the provider's permission names, for\nexample `{\"contents\": \"read\", \"checks\": \"write\"}`.",
+          "doc": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
           "filterable": false,
           "name": "permissions",
           "number": 3,
@@ -30964,10 +31429,10 @@
         },
         {
           "behaviors": [
-            "OPTIONAL"
+            "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The most repositories a credential may cover; empty means every\nrepository the Connection covers.",
+          "doc": "The repositories a credential may cover, `owner/name`, 1 to 100, every\none owned by the Connection's account. One exchange covers exactly one.",
           "filterable": false,
           "name": "repositories",
           "number": 4,
@@ -30986,7 +31451,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "What the credential service issues.",
+          "doc": "What the credential service issues; `access_token` on the wire.",
           "filterable": false,
           "name": "credential_kind",
           "number": 5,
@@ -31017,6 +31482,25 @@
           "type": {
             "kind": "well_known",
             "wkt": "duration"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The Agents a delegated grant may act for: an Agent name\n`orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every\nAgent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set,\nonly a delegated grant whose actor matches may exchange; a grant with no\nactor is refused. When empty, any grant of a subject may exchange,\ndelegated or not.",
+          "filterable": false,
+          "name": "actors",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],
@@ -31050,7 +31534,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Ready, Reconciling, Stalled. Ready is FALSE with reason\n`CapabilityMissing` when the Connection lacks a permission the policy\nnames.",
+          "doc": "Ready: the policy was admitted against an active installation. A\npermission the installation lacks is refused at exchange with reason\n`CapabilityMissing`.",
           "filterable": false,
           "name": "conditions",
           "number": 2,
@@ -120300,6 +120784,28 @@
       "type": "billing.sylphx.com/UsageReport"
     },
     {
+      "collection": "token_exchanges",
+      "controller": "kernel/broker/controller",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "TokenExchange",
+      "message": "sylphx.broker.v1.TokenExchange",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/trust_policies/{trust_policy}",
+      "pattern": "orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}",
+      "plural": "tokenExchanges",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "broker",
+      "shape": "record",
+      "singular": "tokenExchange",
+      "stale_bound": null,
+      "storage": "kernel",
+      "terraform": false,
+      "type": "broker.sylphx.com/TokenExchange"
+    },
+    {
       "collection": "trust_policies",
       "controller": "kernel/broker/controller",
       "deletion_protection": false,
@@ -129552,7 +130058,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Exchanges the caller's workload identity for a short-lived provider\ncredential under a trust policy (RFC 8693 token exchange). The\ncredential is narrowed to the request and cached per installation and\npermission set; a permission the Connection lacks is PERMISSION_DENIED\nwith reason `CapabilityMissing`, never an outage.",
+              "doc": "Exchanges the caller's Access grant for a short-lived provider\ncredential under a trust policy (RFC 8693 token exchange): a GitHub App\ninstallation token for exactly one of the policy's repositories,\nnarrowed to the requested permissions. The grant's principal (for a\ndelegated grant, its accountable principal) must be a policy subject,\nits actor must match the policy's actors, and it must hold\n`broker:exchange` on this policy. Every call writes one TokenExchange\nrecord. A permission the Connection lacks is PERMISSION_DENIED with\nreason `CapabilityMissing`, never an outage.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
@@ -129594,6 +130100,137 @@
           ],
           "name": "trust_policies",
           "resource_type": "broker.sylphx.com/TrustPolicy"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Gets the record of one issued credential.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}",
+                    "pattern": "orgs/*/trust_policies/*/token_exchanges/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/trust_policies/*/token_exchanges/*}"
+              },
+              "id": "broker.token_exchanges.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "broker:read",
+              "proto": "sylphx.broker.v1.BrokerService.GetTokenExchange",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.GetTokenExchangeRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.TokenExchange",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists the credentials issued under a trust policy, newest first.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/trust_policies/{trust_policy}",
+                    "pattern": "orgs/*/trust_policies/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token"
+                ],
+                "template": "/v1/{parent=orgs/*/trust_policies/*}/token_exchanges"
+              },
+              "id": "broker.token_exchanges.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.broker.v1.TokenExchange",
+                "items_field": "token_exchanges"
+              },
+              "permission": "broker:read",
+              "proto": "sylphx.broker.v1.BrokerService.ListTokenExchanges",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.ListTokenExchangesRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.ListTokenExchangesResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Revokes an issued credential at the provider by its record. The Broker\nuses the credential it holds sealed, so the caller needs no token and no\nlive delegation. Idempotent: a credential already revoked or expired\nanswers the record. Erases the sealed credential once the provider\nconfirms.",
+              "effect": "destructive",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}",
+                    "pattern": "orgs/*/trust_policies/*/token_exchanges/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/trust_policies/*/token_exchanges/*}:revoke"
+              },
+              "id": "broker.token_exchanges.revoke",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "broker:read",
+              "proto": "sylphx.broker.v1.BrokerService.RevokeTokenExchange",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.RevokeTokenExchangeRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.TokenExchange",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "revoke"
+            }
+          ],
+          "name": "token_exchanges",
+          "resource_type": "broker.sylphx.com/TokenExchange"
         }
       ],
       "display_name": "Sylphx Broker",
@@ -129604,7 +130241,6 @@
       "proto_services": [
         "sylphx.broker.v1.BrokerService"
       ],
-      "served": false,
       "stage": "preview"
     },
     {

@@ -68,25 +68,17 @@ pub struct ExchangeTokenRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// The caller's identity: a SPIFFE JWT-SVID or an Access-issued workload
-    /// OIDC token, with audience `broker.sylphx.com`.
-    ///
-    /// Field behavior: `required`, `sensitive`.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "subjectToken"
-    )]
-    pub subject_token: String,
     /// The permissions this call needs, at most the policy's; empty means the
     /// policy's.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub permissions: std::collections::BTreeMap<String, String>,
-    /// The repositories this call needs, at most the policy's; empty means the
-    /// policy's.
+    /// The one repository this call needs, `owner/name`, one of the policy's.
+    ///
+    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub repositories: Vec<String>,
     /// How long the credential should live, at most the policy's `max_ttl`.
+    /// A GitHub installation token always lives one hour: unset or `3600s`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub ttl: String,
 }
@@ -118,10 +110,36 @@ pub struct ExchangeTokenResponse {
     /// The permissions the credential carries.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub permissions: std::collections::BTreeMap<String, String>,
-    /// The repositories the credential covers; empty means every repository
-    /// the Connection covers.
+    /// The one repository the credential covers.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub repositories: Vec<String>,
+    /// The record of this credential,
+    /// `orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:
+    /// the name to revoke it by.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tokenExchange"
+    )]
+    pub token_exchange: String,
+    /// The Connection the credential was issued on, the policy's.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub connection: String,
+    /// The provider identity that signed the credential: for GitHub,
+    /// `github-apps/{app_id}` of the installation it was minted against.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub issuer: String,
+}
+
+/// The request of GetTokenExchange.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetTokenExchangeRequest {
+    /// The name of the record to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
 }
 
 /// The request of GetTrustPolicy.
@@ -133,6 +151,51 @@ pub struct GetTrustPolicyRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// The request of ListTokenExchanges.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListTokenExchangesRequest {
+    /// The trust policy to list under.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListTokenExchanges.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListTokenExchangesResponse {
+    /// The page, newest first.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "tokenExchanges"
+    )]
+    pub token_exchanges: Vec<TokenExchange>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListTrustPolicies.
@@ -190,8 +253,120 @@ pub struct ListTrustPoliciesResponse {
     pub next_page_token: String,
 }
 
-/// A TrustPolicy grants a set of subjects the right to exchange their
-/// identity for a provider credential on one Connection, never wider than
+/// The request of RevokeTokenExchange.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RevokeTokenExchangeRequest {
+    /// The record of the credential to revoke.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// A TokenExchange is the record of one credential the Broker issued under a
+/// TrustPolicy: who asked, for which Agent, on which repository, with which
+/// permissions, until when. The credential itself is never returned again;
+/// the record keeps only its SHA-256. The Broker holds the credential sealed
+/// until it is revoked or expires, so `:revoke` needs nothing from the caller.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct TokenExchange {
+    /// `orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `tkx_<cell><ulid>`; also the `{token_exchange}` id.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The accountable principal, `orgs/{org}/principals/{id}`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub subject: String,
+    /// The Agent the subject's delegated grant acted for; empty when the
+    /// subject exchanged for itself.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub actor: String,
+    /// The one repository the credential covers, `owner/name`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub repository: String,
+    /// The permissions the credential carries.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub permissions: std::collections::BTreeMap<String, String>,
+    /// What the credential is.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "credentialKind"
+    )]
+    pub credential_kind: Option<CredentialKind>,
+    /// When it was issued.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// When the provider stops honoring it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+    /// When the provider confirmed it revoked; unset while live or when it
+    /// simply expired.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "revokeTime"
+    )]
+    pub revoke_time: String,
+    /// Lowercase hex SHA-256 of the credential, to match a credential seen
+    /// elsewhere to its record.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tokenSha256"
+    )]
+    pub token_sha256: String,
+    /// The Connection the credential was issued on.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub connection: String,
+    /// The provider identity that signed it: for GitHub, `github-apps/{app_id}`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub issuer: String,
+}
+
+/// A TrustPolicy grants a set of Access principals the right to exchange
+/// their grant for a provider credential on one Connection, never wider than
 /// the policy's permissions and repositories.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -201,7 +376,7 @@ pub struct TrustPolicy {
     /// Field behavior: `identifier`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// `trp_<cell><ulid>`.
+    /// `tpol_<cell><ulid>`.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -225,30 +400,35 @@ pub struct TrustPolicy {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct TrustPolicySpec {
-    /// The Connection credentials are issued on.
+    /// The Connection credentials are issued on:
+    /// `orgs/{org}/connections/github-{installation_id}`, an active
+    /// installation of the platform's GitHub App in the same org.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub connection: String,
-    /// The identities allowed to exchange: SPIFFE ids
-    /// (`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one
-    /// segment) or Sylphx Access principal names. The cell segment is never
-    /// stripped.
+    /// The Access principals allowed to exchange, `orgs/{org}/principals/{id}`
+    /// in the policy's org: the caller's own principal, or the accountable
+    /// principal of a delegated grant. 1 to 64.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub subjects: Vec<String>,
-    /// The most a credential may carry, in the provider's permission names, for
-    /// example `{"contents": "read", "checks": "write"}`.
+    /// The most a credential may carry, in GitHub repository permission names,
+    /// for example `{"contents": "write", "pull_requests": "write"}`.
+    /// `administration` is read only; organization permissions are refused.
+    /// A policy with `actors` carries at most `contents` and `pull_requests`.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub permissions: std::collections::BTreeMap<String, String>,
-    /// The most repositories a credential may cover; empty means every
-    /// repository the Connection covers.
+    /// The repositories a credential may cover, `owner/name`, 1 to 100, every
+    /// one owned by the Connection's account. One exchange covers exactly one.
+    ///
+    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub repositories: Vec<String>,
-    /// What the credential service issues.
+    /// What the credential service issues; `access_token` on the wire.
     ///
     /// Field behavior: `required`.
     #[serde(
@@ -264,6 +444,14 @@ pub struct TrustPolicySpec {
         alias = "maxTtl"
     )]
     pub max_ttl: String,
+    /// The Agents a delegated grant may act for: an Agent name
+    /// `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every
+    /// Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set,
+    /// only a delegated grant whose actor matches may exchange; a grant with no
+    /// actor is refused. When empty, any grant of a subject may exchange,
+    /// delegated or not.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actors: Vec<String>,
 }
 
 /// TrustPolicyStatus is the observed state of a TrustPolicy.
@@ -280,9 +468,9 @@ pub struct TrustPolicyStatus {
         alias = "observedGeneration"
     )]
     pub observed_generation: i64,
-    /// Ready, Reconciling, Stalled. Ready is FALSE with reason
-    /// `CapabilityMissing` when the Connection lacks a permission the policy
-    /// names.
+    /// Ready: the policy was admitted against an active installation. A
+    /// permission the installation lacks is refused at exchange with reason
+    /// `CapabilityMissing`.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -390,6 +578,13 @@ impl<'a, T: crate::runtime::Transport> BrokerApi<'a, T> {
     /// The `trust_policies` collection.
     pub fn trust_policies(&self) -> TrustPoliciesCollection<'a, T> {
         TrustPoliciesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `token_exchanges` collection.
+    pub fn token_exchanges(&self) -> TokenExchangesCollection<'a, T> {
+        TokenExchangesCollection {
             client: self.client,
         }
     }
@@ -565,11 +760,15 @@ impl<'a, T: crate::runtime::Transport> TrustPoliciesCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Exchanges the caller's workload identity for a short-lived provider
-    /// credential under a trust policy (RFC 8693 token exchange). The
-    /// credential is narrowed to the request and cached per installation and
-    /// permission set; a permission the Connection lacks is PERMISSION_DENIED
-    /// with reason `CapabilityMissing`, never an outage.
+    /// Exchanges the caller's Access grant for a short-lived provider
+    /// credential under a trust policy (RFC 8693 token exchange): a GitHub App
+    /// installation token for exactly one of the policy's repositories,
+    /// narrowed to the requested permissions. The grant's principal (for a
+    /// delegated grant, its accountable principal) must be a policy subject,
+    /// its actor must match the policy's actors, and it must hold
+    /// `broker:exchange` on this policy. Every call writes one TokenExchange
+    /// record. A permission the Connection lacks is PERMISSION_DENIED with
+    /// reason `CapabilityMissing`, never an outage.
     ///
     /// `POST /v1/{name=orgs/*/trust_policies/*}:exchangeToken` · permission `broker:exchange` · effect `write`
     ///
@@ -581,6 +780,121 @@ impl<'a, T: crate::runtime::Transport> TrustPoliciesCollection<'a, T> {
         let path = format!(
             "/v1/{}:exchangeToken",
             crate::runtime::path_param(&request.name, "orgs/*/trust_policies/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `token_exchanges` of Sylphx Broker: Resource type `broker.sylphx.com/TokenExchange`.
+pub struct TokenExchangesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> TokenExchangesCollection<'a, T> {
+    /// Gets the record of one issued credential.
+    ///
+    /// `GET /v1/{name=orgs/*/trust_policies/*/token_exchanges/*}` · permission `broker:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetTokenExchangeRequest,
+    ) -> Result<TokenExchange, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/trust_policies/*/token_exchanges/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists the credentials issued under a trust policy, newest first.
+    ///
+    /// `GET /v1/{parent=orgs/*/trust_policies/*}/token_exchanges` · permission `broker:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListTokenExchangesRequest,
+    ) -> Result<ListTokenExchangesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/token_exchanges",
+            crate::runtime::path_param(&request.parent, "orgs/*/trust_policies/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListTokenExchangesRequest,
+    ) -> Result<Vec<TokenExchange>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.token_exchanges);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Revokes an issued credential at the provider by its record. The Broker
+    /// uses the credential it holds sealed, so the caller needs no token and no
+    /// live delegation. Idempotent: a credential already revoked or expired
+    /// answers the record. Erases the sealed credential once the provider
+    /// confirms.
+    ///
+    /// `POST /v1/{name=orgs/*/trust_policies/*/token_exchanges/*}:revoke` · permission `broker:read` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn revoke(
+        &self,
+        request: RevokeTokenExchangeRequest,
+    ) -> Result<TokenExchange, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:revoke",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/trust_policies/*/token_exchanges/*",
+                "name"
+            )?
         );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {

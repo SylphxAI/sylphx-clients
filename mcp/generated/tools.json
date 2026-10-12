@@ -9383,7 +9383,7 @@
         "readOnlyHint": true,
         "title": "Gets a trust policy."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a trust policy.",
+      "description": "Gets a trust policy.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/trust_policies/*}",
       "input_schema": {
@@ -9404,7 +9404,6 @@
       "long_running": false,
       "method_id": "broker.trust_policies.get",
       "permission": "broker:read",
-      "served": false,
       "tool": "broker_trust_policies_get"
     },
     {
@@ -9415,7 +9414,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's trust policies."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's trust policies.",
+      "description": "Lists an org's trust policies.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/trust_policies",
       "input_schema": {
@@ -9453,7 +9452,6 @@
       "long_running": false,
       "method_id": "broker.trust_policies.list",
       "permission": "broker:read",
-      "served": false,
       "tool": "broker_trust_policies_list"
     },
     {
@@ -9464,7 +9462,7 @@
         "readOnlyHint": false,
         "title": "Creates a trust policy."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a trust policy.",
+      "description": "Creates a trust policy.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/trust_policies",
       "input_schema": {
@@ -9513,13 +9511,20 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "actors": {
+                    "description": "The Agents a delegated grant may act for: an Agent name\n`orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every\nAgent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set,\nonly a delegated grant whose actor matches may exchange; a grant with no\nactor is refused. When empty, any grant of a subject may exchange,\ndelegated or not.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "connection": {
-                    "description": "The Connection credentials are issued on.",
+                    "description": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
                     "type": "string",
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
                   "credential_kind": {
-                    "description": "What the credential service issues.",
+                    "description": "What the credential service issues; `access_token` on the wire.",
                     "enum": [
                       "access_token",
                       "runner_registration"
@@ -9535,18 +9540,18 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "The most a credential may carry, in the provider's permission names, for\nexample `{\"contents\": \"read\", \"checks\": \"write\"}`.",
+                    "description": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "The most repositories a credential may cover; empty means every\nrepository the Connection covers.",
+                    "description": "The repositories a credential may cover, `owner/name`, 1 to 100, every\none owned by the Connection's account. One exchange covers exactly one.",
                     "items": {
                       "type": "string"
                     },
                     "type": "array"
                   },
                   "subjects": {
-                    "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Sylphx Access principal names. The cell segment is never\nstripped.",
+                    "description": "The Access principals allowed to exchange, `orgs/{org}/principals/{id}`\nin the policy's org: the caller's own principal, or the accountable\nprincipal of a delegated grant. 1 to 64.",
                     "items": {
                       "type": "string"
                     },
@@ -9557,6 +9562,7 @@
                   "connection",
                   "subjects",
                   "permissions",
+                  "repositories",
                   "credential_kind"
                 ],
                 "type": "object"
@@ -9585,7 +9591,6 @@
       "long_running": false,
       "method_id": "broker.trust_policies.create",
       "permission": "broker:admin",
-      "served": false,
       "tool": "broker_trust_policies_create"
     },
     {
@@ -9596,7 +9601,7 @@
         "readOnlyHint": false,
         "title": "Updates a trust policy."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a trust policy.",
+      "description": "Updates a trust policy.",
       "effect": "write",
       "http": "PATCH /v1/{trust_policy.name=orgs/*/trust_policies/*}",
       "input_schema": {
@@ -9640,13 +9645,20 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "actors": {
+                    "description": "The Agents a delegated grant may act for: an Agent name\n`orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every\nAgent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set,\nonly a delegated grant whose actor matches may exchange; a grant with no\nactor is refused. When empty, any grant of a subject may exchange,\ndelegated or not.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "connection": {
-                    "description": "The Connection credentials are issued on.",
+                    "description": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
                     "type": "string",
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
                   "credential_kind": {
-                    "description": "What the credential service issues.",
+                    "description": "What the credential service issues; `access_token` on the wire.",
                     "enum": [
                       "access_token",
                       "runner_registration"
@@ -9662,18 +9674,18 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "The most a credential may carry, in the provider's permission names, for\nexample `{\"contents\": \"read\", \"checks\": \"write\"}`.",
+                    "description": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "The most repositories a credential may cover; empty means every\nrepository the Connection covers.",
+                    "description": "The repositories a credential may cover, `owner/name`, 1 to 100, every\none owned by the Connection's account. One exchange covers exactly one.",
                     "items": {
                       "type": "string"
                     },
                     "type": "array"
                   },
                   "subjects": {
-                    "description": "The identities allowed to exchange: SPIFFE ids\n(`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one\nsegment) or Sylphx Access principal names. The cell segment is never\nstripped.",
+                    "description": "The Access principals allowed to exchange, `orgs/{org}/principals/{id}`\nin the policy's org: the caller's own principal, or the accountable\nprincipal of a delegated grant. 1 to 64.",
                     "items": {
                       "type": "string"
                     },
@@ -9684,6 +9696,7 @@
                   "connection",
                   "subjects",
                   "permissions",
+                  "repositories",
                   "credential_kind"
                 ],
                 "type": "object"
@@ -9711,7 +9724,6 @@
       "long_running": false,
       "method_id": "broker.trust_policies.update",
       "permission": "broker:admin",
-      "served": false,
       "tool": "broker_trust_policies_update"
     },
     {
@@ -9722,7 +9734,7 @@
         "readOnlyHint": false,
         "title": "Deletes a trust policy."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a trust policy.",
+      "description": "Deletes a trust policy.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/trust_policies/*}",
       "input_schema": {
@@ -9757,8 +9769,115 @@
       "long_running": false,
       "method_id": "broker.trust_policies.delete",
       "permission": "broker:admin",
-      "served": false,
       "tool": "broker_trust_policies_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets the record of one issued credential."
+      },
+      "description": "Gets the record of one issued credential.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/trust_policies/*/token_exchanges/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetTokenExchange.",
+        "properties": {
+          "name": {
+            "description": "The name of the record to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "broker.token_exchanges.get",
+      "permission": "broker:read",
+      "tool": "broker_token_exchanges_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the credentials issued under a trust policy, newest first."
+      },
+      "description": "Lists the credentials issued under a trust policy, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/trust_policies/*}/token_exchanges",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListTokenExchanges.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The trust policy to list under.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "broker.token_exchanges.list",
+      "permission": "broker:read",
+      "tool": "broker_token_exchanges_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Revokes an issued credential at the provider by its record. The Broker uses the credential it holds sealed, so the caller needs no token and no live delegation. Idempotent: a credential already revoked or expired answers the record. Erases the sealed credential once the provider confirms."
+      },
+      "description": "Revokes an issued credential at the provider by its record. The Broker\nuses the credential it holds sealed, so the caller needs no token and no\nlive delegation. Idempotent: a credential already revoked or expired\nanswers the record. Erases the sealed credential once the provider\nconfirms.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/trust_policies/*/token_exchanges/*}:revoke",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RevokeTokenExchange.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The record of the credential to revoke.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "broker.token_exchanges.revoke",
+      "permission": "broker:read",
+      "tool": "broker_token_exchanges_revoke"
     },
     {
       "annotations": {

@@ -35,21 +35,16 @@ export interface ExchangeTokenRequest {
 	/** The trust policy to exchange under. */
 	name: string
 	/**
-	 * The caller's identity: a SPIFFE JWT-SVID or an Access-issued workload
-	 * OIDC token, with audience `broker.sylphx.com`.
-	 */
-	subjectToken: string
-	/**
 	 * The permissions this call needs, at most the policy's; empty means the
 	 * policy's.
 	 */
 	permissions?: Record<string, string>
+	/** The one repository this call needs, `owner/name`, one of the policy's. */
+	repositories: string[]
 	/**
-	 * The repositories this call needs, at most the policy's; empty means the
-	 * policy's.
+	 * How long the credential should live, at most the policy's `max_ttl`.
+	 * A GitHub installation token always lives one hour: unset or `3600s`.
 	 */
-	repositories?: string[]
-	/** How long the credential should live, at most the policy's `max_ttl`. */
 	ttl?: string
 }
 
@@ -66,17 +61,51 @@ export interface ExchangeTokenResponse {
 	expireTime?: string
 	/** The permissions the credential carries. */
 	permissions?: Record<string, string>
-	/**
-	 * The repositories the credential covers; empty means every repository
-	 * the Connection covers.
-	 */
+	/** The one repository the credential covers. */
 	repositories?: string[]
+	/**
+	 * The record of this credential,
+	 * `orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:
+	 * the name to revoke it by.
+	 */
+	tokenExchange?: string
+	/** The Connection the credential was issued on, the policy's. */
+	connection?: string
+	/**
+	 * The provider identity that signed the credential: for GitHub,
+	 * `github-apps/{app_id}` of the installation it was minted against.
+	 */
+	issuer?: string
+}
+
+/** The request of GetTokenExchange. */
+export interface GetTokenExchangeRequest {
+	/** The name of the record to get. */
+	name: string
 }
 
 /** The request of GetTrustPolicy. */
 export interface GetTrustPolicyRequest {
 	/** The name of the trust policy to get. */
 	name: string
+}
+
+/** The request of ListTokenExchanges. */
+export interface ListTokenExchangesRequest {
+	/** The trust policy to list under. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+}
+
+/** The response of ListTokenExchanges. */
+export interface ListTokenExchangesResponse {
+	/** The page, newest first. */
+	tokenExchanges?: TokenExchange[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
 }
 
 /** The request of ListTrustPolicies. */
@@ -101,15 +130,68 @@ export interface ListTrustPoliciesResponse {
 	nextPageToken?: string
 }
 
+/** The request of RevokeTokenExchange. */
+export interface RevokeTokenExchangeRequest {
+	/** The record of the credential to revoke. */
+	name: string
+}
+
 /**
- * A TrustPolicy grants a set of subjects the right to exchange their
- * identity for a provider credential on one Connection, never wider than
+ * A TokenExchange is the record of one credential the Broker issued under a
+ * TrustPolicy: who asked, for which Agent, on which repository, with which
+ * permissions, until when. The credential itself is never returned again;
+ * the record keeps only its SHA-256. The Broker holds the credential sealed
+ * until it is revoked or expires, so `:revoke` needs nothing from the caller.
+ */
+export interface TokenExchange {
+	/** `orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`. */
+	name?: string
+	/** `tkx_<cell><ulid>`; also the `{token_exchange}` id. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** The accountable principal, `orgs/{org}/principals/{id}`. */
+	readonly subject?: string
+	/**
+	 * The Agent the subject's delegated grant acted for; empty when the
+	 * subject exchanged for itself.
+	 */
+	readonly actor?: string
+	/** The one repository the credential covers, `owner/name`. */
+	readonly repository?: string
+	/** The permissions the credential carries. */
+	readonly permissions?: Record<string, string>
+	/** What the credential is. */
+	readonly credentialKind?: CredentialKind
+	/** When it was issued. */
+	readonly createTime?: string
+	/** When the provider stops honoring it. */
+	readonly expireTime?: string
+	/**
+	 * When the provider confirmed it revoked; unset while live or when it
+	 * simply expired.
+	 */
+	readonly revokeTime?: string
+	/**
+	 * Lowercase hex SHA-256 of the credential, to match a credential seen
+	 * elsewhere to its record.
+	 */
+	readonly tokenSha256?: string
+	/** The Connection the credential was issued on. */
+	readonly connection?: string
+	/** The provider identity that signed it: for GitHub, `github-apps/{app_id}`. */
+	readonly issuer?: string
+}
+
+/**
+ * A TrustPolicy grants a set of Access principals the right to exchange
+ * their grant for a provider credential on one Connection, never wider than
  * the policy's permissions and repositories.
  */
 export interface TrustPolicy {
 	/** `orgs/{org}/trust_policies/{trust_policy}`. */
 	name?: string
-	/** `trp_<cell><ulid>`. */
+	/** `tpol_<cell><ulid>`. */
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
@@ -121,29 +203,43 @@ export interface TrustPolicy {
 
 /** TrustPolicySpec is the caller-writable state of a TrustPolicy. */
 export interface TrustPolicySpec {
-	/** The Connection credentials are issued on. */
+	/**
+	 * The Connection credentials are issued on:
+	 * `orgs/{org}/connections/github-{installation_id}`, an active
+	 * installation of the platform's GitHub App in the same org.
+	 */
 	connection?: string
 	/**
-	 * The identities allowed to exchange: SPIFFE ids
-	 * (`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one
-	 * segment) or Sylphx Access principal names. The cell segment is never
-	 * stripped.
+	 * The Access principals allowed to exchange, `orgs/{org}/principals/{id}`
+	 * in the policy's org: the caller's own principal, or the accountable
+	 * principal of a delegated grant. 1 to 64.
 	 */
 	subjects?: string[]
 	/**
-	 * The most a credential may carry, in the provider's permission names, for
-	 * example `{"contents": "read", "checks": "write"}`.
+	 * The most a credential may carry, in GitHub repository permission names,
+	 * for example `{"contents": "write", "pull_requests": "write"}`.
+	 * `administration` is read only; organization permissions are refused.
+	 * A policy with `actors` carries at most `contents` and `pull_requests`.
 	 */
 	permissions?: Record<string, string>
 	/**
-	 * The most repositories a credential may cover; empty means every
-	 * repository the Connection covers.
+	 * The repositories a credential may cover, `owner/name`, 1 to 100, every
+	 * one owned by the Connection's account. One exchange covers exactly one.
 	 */
 	repositories?: string[]
-	/** What the credential service issues. */
+	/** What the credential service issues; `access_token` on the wire. */
 	credentialKind?: CredentialKind
 	/** The longest a credential lives; default and maximum 1 hour. */
 	maxTtl?: string
+	/**
+	 * The Agents a delegated grant may act for: an Agent name
+	 * `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every
+	 * Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set,
+	 * only a delegated grant whose actor matches may exchange; a grant with no
+	 * actor is refused. When empty, any grant of a subject may exchange,
+	 * delegated or not.
+	 */
+	actors?: string[]
 }
 
 /** TrustPolicyStatus is the observed state of a TrustPolicy. */
@@ -151,9 +247,9 @@ export interface TrustPolicyStatus {
 	/** The generation this status was computed from. */
 	readonly observedGeneration?: string
 	/**
-	 * Ready, Reconciling, Stalled. Ready is FALSE with reason
-	 * `CapabilityMissing` when the Connection lacks a permission the policy
-	 * names.
+	 * Ready: the policy was admitted against an active installation. A
+	 * permission the installation lacks is refused at exchange with reason
+	 * `CapabilityMissing`.
 	 */
 	readonly conditions?: common.Condition[]
 }
@@ -181,15 +277,24 @@ runtime.registerSchemas({
 		['validateOnly', 'validate_only'],
 	],
 	'sylphx.broker.v1.ExchangeTokenRequest': [
-		['subjectToken', 'subject_token'],
 		['permissions', 'permissions', undefined, 'map'],
 	],
 	'sylphx.broker.v1.ExchangeTokenResponse': [
 		['credentialKind', 'credential_kind'],
 		['expireTime', 'expire_time'],
 		['permissions', 'permissions', undefined, 'map'],
+		['tokenExchange', 'token_exchange'],
 	],
+	'sylphx.broker.v1.GetTokenExchangeRequest': [],
 	'sylphx.broker.v1.GetTrustPolicyRequest': [],
+	'sylphx.broker.v1.ListTokenExchangesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.broker.v1.ListTokenExchangesResponse': [
+		['tokenExchanges', 'token_exchanges', 'sylphx.broker.v1.TokenExchange'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.broker.v1.ListTrustPoliciesRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -198,6 +303,16 @@ runtime.registerSchemas({
 	'sylphx.broker.v1.ListTrustPoliciesResponse': [
 		['trustPolicies', 'trust_policies', 'sylphx.broker.v1.TrustPolicy'],
 		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.broker.v1.RevokeTokenExchangeRequest': [],
+	'sylphx.broker.v1.TokenExchange': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['permissions', 'permissions', undefined, 'map'],
+		['credentialKind', 'credential_kind'],
+		['createTime', 'create_time'],
+		['expireTime', 'expire_time'],
+		['revokeTime', 'revoke_time'],
+		['tokenSha256', 'token_sha256'],
 	],
 	'sylphx.broker.v1.TrustPolicy': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -229,9 +344,12 @@ runtime.registerSchemas({
 export class BrokerApi {
 	/** The `trust_policies` collection. */
 	readonly trustPolicies: TrustPoliciesCollection
+	/** The `token_exchanges` collection. */
+	readonly tokenExchanges: TokenExchangesCollection
 
 	constructor(client: runtime.Client) {
 		this.trustPolicies = new TrustPoliciesCollection(client)
+		this.tokenExchanges = new TokenExchangesCollection(client)
 	}
 }
 
@@ -342,11 +460,15 @@ export class TrustPoliciesCollection {
 	}
 
 	/**
-	 * Exchanges the caller's workload identity for a short-lived provider
-	 * credential under a trust policy (RFC 8693 token exchange). The
-	 * credential is narrowed to the request and cached per installation and
-	 * permission set; a permission the Connection lacks is PERMISSION_DENIED
-	 * with reason `CapabilityMissing`, never an outage.
+	 * Exchanges the caller's Access grant for a short-lived provider
+	 * credential under a trust policy (RFC 8693 token exchange): a GitHub App
+	 * installation token for exactly one of the policy's repositories,
+	 * narrowed to the requested permissions. The grant's principal (for a
+	 * delegated grant, its accountable principal) must be a policy subject,
+	 * its actor must match the policy's actors, and it must hold
+	 * `broker:exchange` on this policy. Every call writes one TokenExchange
+	 * record. A permission the Connection lacks is PERMISSION_DENIED with
+	 * reason `CapabilityMissing`, never an outage.
 	 *
 	 * `POST /v1/{name=orgs/*\/trust_policies/*}:exchangeToken` · permission `broker:exchange` · effect `write`
 	 *
@@ -359,6 +481,81 @@ export class TrustPoliciesCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.ExchangeTokenRequest',
 			responseType: 'sylphx.broker.v1.ExchangeTokenResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `token_exchanges` of Sylphx Broker: Resource type `broker.sylphx.com/TokenExchange`. */
+export class TokenExchangesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets the record of one issued credential.
+	 *
+	 * `GET /v1/{name=orgs/*\/trust_policies/*\/token_exchanges/*}` · permission `broker:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetTokenExchangeRequest): Promise<TokenExchange> {
+		return this.client.call<TokenExchange>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/trust_policies/*/token_exchanges/*', 'name')}`,
+			responseType: 'sylphx.broker.v1.TokenExchange',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists the credentials issued under a trust policy, newest first.
+	 *
+	 * `GET /v1/{parent=orgs/*\/trust_policies/*}/token_exchanges` · permission `broker:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListTokenExchangesRequest): Promise<ListTokenExchangesResponse> {
+		return this.client.call<ListTokenExchangesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/trust_policies/*', 'parent')}/token_exchanges`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.broker.v1.ListTokenExchangesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListTokenExchangesRequest): AsyncGenerator<TokenExchange> {
+		let next: ListTokenExchangesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.tokenExchanges ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Revokes an issued credential at the provider by its record. The Broker
+	 * uses the credential it holds sealed, so the caller needs no token and no
+	 * live delegation. Idempotent: a credential already revoked or expired
+	 * answers the record. Erases the sealed credential once the provider
+	 * confirms.
+	 *
+	 * `POST /v1/{name=orgs/*\/trust_policies/*\/token_exchanges/*}:revoke` · permission `broker:read` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async revoke(request: RevokeTokenExchangeRequest): Promise<TokenExchange> {
+		return this.client.call<TokenExchange>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/trust_policies/*/token_exchanges/*', 'name')}:revoke`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.RevokeTokenExchangeRequest',
+			responseType: 'sylphx.broker.v1.TokenExchange',
 			mutation: true,
 		})
 	}

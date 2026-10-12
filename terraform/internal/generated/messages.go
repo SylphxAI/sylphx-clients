@@ -169,12 +169,13 @@ func billingMoney() []def.Field {
 // brokerTrustPolicySpec is `sylphx.broker.v1.TrustPolicySpec`.
 func brokerTrustPolicySpec() []def.Field {
 	return []def.Field{
-		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection credentials are issued on."},
-		{Name: "subjects", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "The identities allowed to exchange: SPIFFE ids (`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one segment) or Sylphx Access principal names. The cell segment is never stripped."},
-		{Name: "permissions", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Flags: def.Required, Doc: "The most a credential may carry, in the provider's permission names, for example `{\"contents\": \"read\", \"checks\": \"write\"}`."},
-		{Name: "repositories", Kind: def.String, Repeated: true, Doc: "The most repositories a credential may cover; empty means every repository the Connection covers."},
-		{Name: "credential_kind", Kind: def.Enum, Values: []string{"access_token", "runner_registration"}, Flags: def.Required, Doc: "What the credential service issues."},
+		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection credentials are issued on: `orgs/{org}/connections/github-{installation_id}`, an active installation of the platform's GitHub App in the same org."},
+		{Name: "subjects", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "The Access principals allowed to exchange, `orgs/{org}/principals/{id}` in the policy's org: the caller's own principal, or the accountable principal of a delegated grant. 1 to 64."},
+		{Name: "permissions", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Flags: def.Required, Doc: "The most a credential may carry, in GitHub repository permission names, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`."},
+		{Name: "repositories", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "The repositories a credential may cover, `owner/name`, 1 to 100, every one owned by the Connection's account. One exchange covers exactly one."},
+		{Name: "credential_kind", Kind: def.Enum, Values: []string{"access_token", "runner_registration"}, Flags: def.Required, Doc: "What the credential service issues; `access_token` on the wire."},
 		{Name: "max_ttl", Kind: def.Duration, Doc: "The longest a credential lives; default and maximum 1 hour."},
+		{Name: "actors", Kind: def.String, Repeated: true, Doc: "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not."},
 	}
 }
 
@@ -182,7 +183,7 @@ func brokerTrustPolicySpec() []def.Field {
 func brokerTrustPolicyStatus() []def.Field {
 	return []def.Field{
 		{Name: "observed_generation", Kind: def.Int64, Flags: def.OutputOnly, Doc: "The generation this status was computed from."},
-		{Name: "conditions", Kind: def.Message, Msg: commonCondition, Flags: def.OutputOnly, Repeated: true, Doc: "Ready, Reconciling, Stalled. Ready is FALSE with reason `CapabilityMissing` when the Connection lacks a permission the policy names."},
+		{Name: "conditions", Kind: def.Message, Msg: commonCondition, Flags: def.OutputOnly, Repeated: true, Doc: "Ready: the policy was admitted against an active installation. A permission the installation lacks is refused at exchange with reason `CapabilityMissing`."},
 	}
 }
 

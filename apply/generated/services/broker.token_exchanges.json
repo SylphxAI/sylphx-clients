@@ -1,0 +1,33 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "broker.token_exchanges.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "broker.token_exchanges.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "broker.token_exchanges.revoke",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "broker.sylphx.com/TokenExchange"
+    }
+  ]
+}

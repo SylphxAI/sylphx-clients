@@ -1,0 +1,22 @@
+{
+  "collection": "token_exchanges",
+  "controller": "kernel/broker/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "TokenExchange",
+  "message": "sylphx.broker.v1.TokenExchange",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/trust_policies/{trust_policy}",
+  "pattern": "orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}",
+  "plural": "tokenExchanges",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "broker",
+  "shape": "record",
+  "singular": "tokenExchange",
+  "stale_bound": null,
+  "storage": "kernel",
+  "terraform": false,
+  "type": "broker.sylphx.com/TokenExchange"
+}

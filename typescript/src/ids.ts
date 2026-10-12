@@ -59,6 +59,7 @@ export const PREFIXES = [
 	{ prefix: 'acc', entity: 'LedgerAccount', service: 'ledger', collection: null },
 	{ prefix: 'txn', entity: 'LedgerTransaction', service: 'ledger', collection: null },
 	{ prefix: 'tpol', entity: 'TrustPolicy', service: 'broker', collection: 'trust_policies' },
+	{ prefix: 'tkx', entity: 'TokenExchange', service: 'broker', collection: 'token_exchanges' },
 	{ prefix: 'bld', entity: 'Build', service: 'build', collection: 'builds' },
 	{ prefix: 'bcc', entity: 'BuildCache', service: 'build', collection: 'build_caches' },
 	{ prefix: 'chg', entity: 'ConfigChange', service: 'config', collection: 'config_changes' },

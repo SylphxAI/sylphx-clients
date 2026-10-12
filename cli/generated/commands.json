@@ -6541,7 +6541,7 @@
                   "field": "trust_policy.spec.connection",
                   "flag": "--spec.connection",
                   "required": true,
-                  "summary": "The Connection credentials are issued on.",
+                  "summary": "The Connection credentials are issued on: `orgs/{org}/connections/github-{installation_id}`, an active installation of the platform's GitHub App in the same org.",
                   "type": "string"
                 },
                 {
@@ -6549,7 +6549,7 @@
                   "flag": "--spec.subjects",
                   "repeated": true,
                   "required": true,
-                  "summary": "The identities allowed to exchange: SPIFFE ids (`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one segment) or Sylphx Access principal names. The cell segment is never stripped.",
+                  "summary": "The Access principals allowed to exchange, `orgs/{org}/principals/{id}` in the policy's org: the caller's own principal, or the accountable principal of a delegated grant. 1 to 64.",
                   "type": "string"
                 },
                 {
@@ -6557,21 +6557,22 @@
                   "flag": "--spec.permissions",
                   "repeated": true,
                   "required": true,
-                  "summary": "The most a credential may carry, in the provider's permission names, for example `{\"contents\": \"read\", \"checks\": \"write\"}`.",
+                  "summary": "The most a credential may carry, in GitHub repository permission names, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
                   "type": "key=value"
                 },
                 {
                   "field": "trust_policy.spec.repositories",
                   "flag": "--spec.repositories",
                   "repeated": true,
-                  "summary": "The most repositories a credential may cover; empty means every repository the Connection covers.",
+                  "required": true,
+                  "summary": "The repositories a credential may cover, `owner/name`, 1 to 100, every one owned by the Connection's account. One exchange covers exactly one.",
                   "type": "string"
                 },
                 {
                   "field": "trust_policy.spec.credential_kind",
                   "flag": "--spec.credential-kind",
                   "required": true,
-                  "summary": "What the credential service issues.",
+                  "summary": "What the credential service issues; `access_token` on the wire.",
                   "type": "enum",
                   "values": [
                     "access_token",
@@ -6583,6 +6584,13 @@
                   "flag": "--spec.max-ttl",
                   "summary": "The longest a credential lives; default and maximum 1 hour.",
                   "type": "duration"
+                },
+                {
+                  "field": "trust_policy.spec.actors",
+                  "flag": "--spec.actors",
+                  "repeated": true,
+                  "summary": "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not.",
+                  "type": "string"
                 },
                 {
                   "field": "validate_only",
@@ -6631,7 +6639,7 @@
                   "field": "trust_policy.spec.connection",
                   "flag": "--spec.connection",
                   "required": true,
-                  "summary": "The Connection credentials are issued on.",
+                  "summary": "The Connection credentials are issued on: `orgs/{org}/connections/github-{installation_id}`, an active installation of the platform's GitHub App in the same org.",
                   "type": "string"
                 },
                 {
@@ -6639,7 +6647,7 @@
                   "flag": "--spec.subjects",
                   "repeated": true,
                   "required": true,
-                  "summary": "The identities allowed to exchange: SPIFFE ids (`spiffe://<trust-domain>/cell/<cell>/role/<role>`, `*` matching one segment) or Sylphx Access principal names. The cell segment is never stripped.",
+                  "summary": "The Access principals allowed to exchange, `orgs/{org}/principals/{id}` in the policy's org: the caller's own principal, or the accountable principal of a delegated grant. 1 to 64.",
                   "type": "string"
                 },
                 {
@@ -6647,21 +6655,22 @@
                   "flag": "--spec.permissions",
                   "repeated": true,
                   "required": true,
-                  "summary": "The most a credential may carry, in the provider's permission names, for example `{\"contents\": \"read\", \"checks\": \"write\"}`.",
+                  "summary": "The most a credential may carry, in GitHub repository permission names, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
                   "type": "key=value"
                 },
                 {
                   "field": "trust_policy.spec.repositories",
                   "flag": "--spec.repositories",
                   "repeated": true,
-                  "summary": "The most repositories a credential may cover; empty means every repository the Connection covers.",
+                  "required": true,
+                  "summary": "The repositories a credential may cover, `owner/name`, 1 to 100, every one owned by the Connection's account. One exchange covers exactly one.",
                   "type": "string"
                 },
                 {
                   "field": "trust_policy.spec.credential_kind",
                   "flag": "--spec.credential-kind",
                   "required": true,
-                  "summary": "What the credential service issues.",
+                  "summary": "What the credential service issues; `access_token` on the wire.",
                   "type": "enum",
                   "values": [
                     "access_token",
@@ -6673,6 +6682,13 @@
                   "flag": "--spec.max-ttl",
                   "summary": "The longest a credential lives; default and maximum 1 hour.",
                   "type": "duration"
+                },
+                {
+                  "field": "trust_policy.spec.actors",
+                  "flag": "--spec.actors",
+                  "repeated": true,
+                  "summary": "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not.",
+                  "type": "string"
                 },
                 {
                   "field": "validate_only",
@@ -6732,14 +6748,6 @@
               "effect": "write",
               "flags": [
                 {
-                  "field": "subject_token",
-                  "flag": "--subject-token",
-                  "required": true,
-                  "sensitive": true,
-                  "summary": "The caller's identity: a SPIFFE JWT-SVID or an Access-issued workload OIDC token, with audience `broker.sylphx.com`.",
-                  "type": "string"
-                },
-                {
                   "field": "permissions",
                   "flag": "--permissions",
                   "repeated": true,
@@ -6750,13 +6758,14 @@
                   "field": "repositories",
                   "flag": "--repositories",
                   "repeated": true,
-                  "summary": "The repositories this call needs, at most the policy's; empty means the policy's.",
+                  "required": true,
+                  "summary": "The one repository this call needs, `owner/name`, one of the policy's.",
                   "type": "string"
                 },
                 {
                   "field": "ttl",
                   "flag": "--ttl",
-                  "summary": "How long the credential should live, at most the policy's `max_ttl`.",
+                  "summary": "How long the credential should live, at most the policy's `max_ttl`. A GitHub installation token always lives one hour: unset or `3600s`.",
                   "type": "duration"
                 }
               ],
@@ -6769,18 +6778,88 @@
                 "field": "name",
                 "pattern": "orgs/{org}/trust_policies/{trust_policy}"
               },
-              "summary": "Exchanges the caller's workload identity for a short-lived provider credential under a trust policy (RFC 8693 token exchange). The credential is narrowed to the request and cached per installation and permission set; a permission the Connection lacks is PERMISSION_DENIED with reason `CapabilityMissing`, never an outage.",
+              "summary": "Exchanges the caller's Access grant for a short-lived provider credential under a trust policy (RFC 8693 token exchange): a GitHub App installation token for exactly one of the policy's repositories, narrowed to the requested permissions. The grant's principal (for a delegated grant, its accountable principal) must be a policy subject, its actor must match the policy's actors, and it must hold `broker:exchange` on this policy. Every call writes one TokenExchange record. A permission the Connection lacks is PERMISSION_DENIED with reason `CapabilityMissing`, never an outage.",
               "verb": "exchange-token"
             }
           ],
           "noun": "trust-policies",
           "resource_type": "broker.sylphx.com/TrustPolicy"
+        },
+        {
+          "collection": "token_exchanges",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/trust_policies/*/token_exchanges/*}",
+              "method": "broker.token_exchanges.get",
+              "permission": "broker:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}"
+              },
+              "summary": "Gets the record of one issued credential.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/trust_policies/*}/token_exchanges",
+              "method": "broker.token_exchanges.list",
+              "paginates": true,
+              "permission": "broker:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/trust_policies/{trust_policy}"
+              },
+              "summary": "Lists the credentials issued under a trust policy, newest first.",
+              "verb": "list"
+            },
+            {
+              "confirm": {
+                "prompt": true,
+                "skip_flag": "--yes"
+              },
+              "effect": "destructive",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/trust_policies/*/token_exchanges/*}:revoke",
+              "method": "broker.token_exchanges.revoke",
+              "permission": "broker:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}"
+              },
+              "summary": "Revokes an issued credential at the provider by its record. The Broker uses the credential it holds sealed, so the caller needs no token and no live delegation. Idempotent: a credential already revoked or expired answers the record. Erases the sealed credential once the provider confirms.",
+              "verb": "revoke"
+            }
+          ],
+          "noun": "token-exchanges",
+          "resource_type": "broker.sylphx.com/TokenExchange"
         }
       ],
       "commands": [],
       "display_name": "Sylphx Broker",
       "noun": "broker",
-      "served": false,
       "stage": "preview"
     },
     {

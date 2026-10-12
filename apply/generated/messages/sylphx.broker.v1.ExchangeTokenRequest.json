@@ -20,24 +20,6 @@
     },
     {
       "behaviors": [
-        "REQUIRED"
-      ],
-      "cli_flag": "",
-      "filterable": false,
-      "name": "subject_token",
-      "number": 2,
-      "oneof": null,
-      "optional": false,
-      "repeated": false,
-      "resource_reference": null,
-      "sensitive": true,
-      "type": {
-        "kind": "scalar",
-        "scalar": "string"
-      }
-    },
-    {
-      "behaviors": [
         "OPTIONAL"
       ],
       "cli_flag": "",
@@ -59,7 +41,7 @@
     },
     {
       "behaviors": [
-        "OPTIONAL"
+        "REQUIRED"
       ],
       "cli_flag": "",
       "filterable": false,
