@@ -118,6 +118,11 @@ jobs:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}
           if-no-files-found: error
+          # The release and npm jobs read these in the same run; 3 days is the
+          # longest the organization's artifact retention allows and every hour
+          # of it counts against the shared quota
+          # (SylphxAI/.github docs/run-store.md).
+          retention-days: 3
 
   # macOS binaries: GitHub's standard hosted macOS runner (Intel x86_64), free
   # on public repositories; arm64 is cross-compiled and has no smoke run. Only
@@ -166,6 +171,7 @@ jobs:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}
           if-no-files-found: error
+          retention-days: 3
 
   github-release:
     needs: [check, build-linux, build-macos]
