@@ -88,6 +88,13 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `result.json`, `junit.xml`, `logcat.txt`, and `crash.txt` into `--out`
   (`device-results/`). Exit 0 passed, 1 failed, 2 infrastructure; the lease is
   released on the way out unless `--keep`.
+- New warm workspace Volumes reserve 64Gi rather than 100Gi. This is a
+  conservative default, not a measured peak guarantee: the 2026-10-12
+  `sbx-leases` snapshot had 69 Volumes reserving 6500Gi, mapping 850.33Gi in
+  total, with a maximum of 48.42Gi per Volume. Existing warm workspaces keep
+  their size, and explicit `sandboxes volumes create --spec.size-gib` requests
+  are honored unchanged. Use a newly released CLI for the new default; it is
+  chosen by the caller, not the Sandboxes API or an admission mutator.
 - `sylphx build run [PATH] -- <command…>` runs the command on a remote build
   machine against this git work tree and behaves like the local command: the
   output streams back, the exit code is the command's own, and `--artifact

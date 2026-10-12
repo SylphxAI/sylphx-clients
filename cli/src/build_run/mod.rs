@@ -99,12 +99,25 @@ const TOKEN_RENEW: Duration = Duration::from_secs(45 * 60);
 /// refused `NO_CAPACITY` waits for the quota to free the evicted claim's room.
 const EVICT_WAITS: u32 = 3;
 const EVICT_WAIT: Duration = Duration::from_secs(5);
-/// A new workspace's size: the largest desk target is about 30 GB, so 100 GiB
-/// holds it with room; workspaces made at the old 200 GiB keep their size.
-const VOLUME_GIB: i32 = 100;
+/// Conservative default for new warm workspaces. The 2026-10-12 sbx-leases
+/// snapshot mapped at most 48.42 GiB per Volume; 64 GiB leaves headroom.
+/// Existing workspaces and explicitly sized customer Volumes keep their size.
+const VOLUME_GIB: i32 = 64;
 const POOL_PURPOSE: &str = "build-workspace";
 /// The pool's scope label: one pool per (environment, repository).
 const POOL_SCOPE: &str = "build-repo";
+
+fn workspace_volume_request(repo: &str, region: Option<&str>) -> Value {
+    let mut body = json!({
+        "meta": {"labels": {"purpose": POOL_PURPOSE, "build-repo": repo}},
+        "spec": {"sizeGib": VOLUME_GIB, "storageClass": VOLUME_CLASS},
+    });
+    if let Some(region) = region {
+        body["meta"]["labels"][REGION_LABEL] = json!(region);
+        body["spec"]["region"] = json!(region);
+    }
+    body
+}
 
 /// The lease's egress allow-list: for an image build [`image::allowed_domains`]
 /// (no internet package host), otherwise [`allowed_domains`] (the
@@ -1379,14 +1392,7 @@ impl Run<'_> {
     /// no Volumes: the API refuses with `SHAPE_NOT_OFFERED` before creating
     /// anything, so no workspace is left behind.
     async fn new_volume(&self, deadline: Instant) -> Result<Option<String>, Outcome> {
-        let mut body = json!({
-            "meta": {"labels": {"purpose": POOL_PURPOSE, "build-repo": self.repo}},
-            "spec": {"sizeGib": VOLUME_GIB, "storageClass": VOLUME_CLASS},
-        });
-        if let Some(r) = &self.o.region {
-            body["meta"]["labels"][REGION_LABEL] = json!(r);
-            body["spec"]["region"] = json!(r);
-        }
+        let body = workspace_volume_request(&self.repo, self.o.region.as_deref());
         // The region's room for workspaces is a cache: when it is full, the
         // least recently used free workspace (any repository's) gives way,
         // once, and the create is tried again.
@@ -2328,6 +2334,19 @@ mod tests {
     use sylphx_build_lease::BUILD_PACKAGES;
 
     const VOL: &str = "orgs/org_a/projects/prj_b/envs/env_c/volumes/vol-2zqbvdtx";
+
+    #[test]
+    fn new_workspace_request_reserves_64_gib_in_the_requested_region() {
+        for region in [None, Some("gra")] {
+            let body = workspace_volume_request("SylphxAI/cloud", region);
+            assert_eq!(body["spec"]["sizeGib"], 64);
+            assert_eq!(body["spec"]["storageClass"], VOLUME_CLASS);
+            assert_eq!(body["meta"]["labels"]["purpose"], POOL_PURPOSE);
+            assert_eq!(body["meta"]["labels"]["build-repo"], "SylphxAI/cloud");
+            assert_eq!(body["spec"]["region"].as_str(), region);
+            assert_eq!(body["meta"]["labels"][REGION_LABEL].as_str(), region);
+        }
+    }
 
     fn workspace_machine(volume: Option<&str>) -> Machine {
         let mut spec = sbx::LeaseSpec::default();
