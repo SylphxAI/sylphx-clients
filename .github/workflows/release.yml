@@ -51,6 +51,13 @@ jobs:
           done
           echo "version=$version" >> "$GITHUB_OUTPUT"
           case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.0
+      - name: Verify the exact Rust publish set without uploading
+        run: |
+          python3 -I scripts/test-check-publish-set.py
+          python3 -I scripts/check-publish-set.py
 
   # Linux binaries: built on our runners inside a digest-pinned Ubuntu 22.04
   # (glibc 2.35), so they run on every distribution the hosted 22.04 image
@@ -294,11 +301,11 @@ jobs:
         run: |
           set -euo pipefail
           on_registry() { curl -fsS -A 'SylphxAI-clients-release/1.0' "https://crates.io/api/v1/crates/$1/$2" >/dev/null 2>&1; }
-          for crate in sylphx sylphx-resource-codec sylphx-workload sylphx-apply sylphx-mcp sylphx-build-lease sylphx-cli; do
-            version="$(cargo metadata --no-deps --format-version 1 | jq -r --arg c "$crate" '.packages[] | select(.name == $c) | .version')"
+          python3 -I scripts/check-publish-set.py --list > "$RUNNER_TEMP/crates-list"
+          while read -r crate version; do
             if on_registry "$crate" "$version"; then echo "$crate@$version is on crates.io already"; continue; fi
             cargo publish --locked -p "$crate"
             for _ in $(seq 1 30); do on_registry "$crate" "$version" && break; sleep 10; done
             on_registry "$crate" "$version" || { echo "::error::$crate@$version did not appear"; exit 1; }
             echo "readback: $crate@$version"
-          done
+          done < "$RUNNER_TEMP/crates-list"

@@ -30,6 +30,16 @@ manifest version in the shipping PR; SDK versions are independent of the CLI.
 Published tags remain immutable. A publication repair ships with the next
 release; the frozen workflow does not offer a per-crate publishing mode.
 
+Before publication, the clients Rust CI lane and both release verification
+jobs run `python3 -I scripts/check-publish-set.py` from this workspace. The
+script supplies the complete not-yet-published set to one locked native
+`cargo publish --dry-run`, which stages its packages in dependency order and
+builds the actual package archives against their intended versions. Versions
+already on crates.io remain registry dependencies, not workspace overlays;
+an unchanged registry version cannot conceal a missing API such as Build's
+warm-workspace `pool` module. Only a registry 404 means a version is absent;
+registry failures stop the gate. The publisher reads the same ordered list.
+
 The public codec exposes `ir`, `route`, `schema` and `problem`: the Resource API
 front links this same implementation. `Index::embedded()` uses the release's
 generated registry and OpenAPI documents, with no private server dependency.

@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-build-lease"
-version = "0.1.0"
+version = "0.1.1"
 description = "Sylphx Build's build lease: the Sandboxes lease request of a build, waiting for the machine, the guest daemon's process stream, and how a fault is judged. Shared by the CLI and the Build service."
 keywords = ["sylphx", "build", "sandboxes"]
 categories = ["api-bindings"]
