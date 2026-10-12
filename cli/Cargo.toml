@@ -16,7 +16,7 @@ name = "sylphx"
 path = "src/main.rs"
 
 [dependencies]
-sylphx = { path = "../rust", version = "0.3.1" }
+sylphx = { path = "../rust", version = "0.3.2" }
 sylphx-apply = { path = "../apply", version = "0.1.0" }
 sylphx-mcp = { path = "../mcp", version = "0.29.9" }
 sylphx-build-lease = { path = "../build-lease", version = "0.1.0" }
