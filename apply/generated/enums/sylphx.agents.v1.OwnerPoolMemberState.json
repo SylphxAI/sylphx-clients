@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.agents.v1.OwnerPoolMemberState",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "OWNER_POOL_MEMBER_STATE_QUALIFIED",
+      "wire": "qualified"
+    },
+    {
+      "number": 2,
+      "proto_name": "OWNER_POOL_MEMBER_STATE_REFUSED",
+      "wire": "refused"
+    },
+    {
+      "number": 3,
+      "proto_name": "OWNER_POOL_MEMBER_STATE_DEMOTED",
+      "wire": "demoted"
+    }
+  ]
+}

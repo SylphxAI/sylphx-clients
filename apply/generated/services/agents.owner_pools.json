@@ -1,0 +1,65 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.owner_pools.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "agents.owner_pools.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "owner_pool_id"
+            ]
+          },
+          "id": "agents.owner_pools.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "agents.owner_pools.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.owner_pools.delete",
+          "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.owner_pools.qualify",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.owner_pools.observe",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/OwnerPool"
+    }
+  ]
+}

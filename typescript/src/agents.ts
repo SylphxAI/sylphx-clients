@@ -100,6 +100,11 @@ export interface AgentSession {
 	 * resource name and mode. The runtime never puts profile values in events.
 	 */
 	profiles?: ProfileMount[]
+	/**
+	 * The maker sessions this session verifies, as its `:run` named them;
+	 * empty for any other session.
+	 */
+	readonly verifies?: string[]
 }
 
 /**
@@ -148,6 +153,25 @@ export interface AgentSpec {
 	 * environment-wide setting. An omitted or empty value means `runtime`.
 	 */
 	harness?: string
+	/**
+	 * Read-only: the version holds no write grant, so it may verify another
+	 * agent's work but never own it. Create and update refuse memory stores,
+	 * MCP servers, `app_function` and `client` tools, the `memory`, `browser`
+	 * and `computer` built-ins, and an HTTP tool whose pinned operation is not
+	 * GET or HEAD unless it is `runtime_only`. The `shell` and `files`
+	 * built-ins, and a `claude_code` or `codex` harness (which bring their own),
+	 * need `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`
+	 * of the configured Sylphx API and inference gateways and the
+	 * version's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`
+	 * and `:run` check the version and the session's effective environment
+	 * again, and refuse any model-facing credential that is not a captured
+	 * Access key holding only `<service>:read` and `ai:inference` scopes; a
+	 * renewal's `credential_updates` value for a model-facing binding is held to
+	 * the same rule. A run's `completion.result_fields` never map into the
+	 * completion tool's path or query parameters. An OwnerPool never qualifies
+	 * the version.
+	 */
+	readOnly?: boolean
 }
 
 /** AgentStatus is the observed state of an Agent. */
@@ -327,6 +351,16 @@ export interface CreateMemoryStoreRequest {
 	validateOnly?: boolean
 }
 
+/** The request of CreateOwnerPool. */
+export interface CreateOwnerPoolRequest {
+	/** The parent to create in. */
+	parent: string
+	/** The owner pool id, the final name segment. */
+	ownerPoolId: string
+	/** The owner pool to create; only caller-writable fields are read. */
+	ownerPool: OwnerPool
+}
+
 /**
  * A CredentialBinding names where the gateway takes a credential from. The
  * value is resolved at egress only; the model, the event log and traces see
@@ -444,6 +478,12 @@ export interface DeleteMemoryStoreRequest {
 	force?: boolean
 }
 
+/** The request of DeleteOwnerPool. */
+export interface DeleteOwnerPoolRequest {
+	/** The name of the owner pool to delete. */
+	name: string
+}
+
 /**
  * EnvironmentSpec describes a session's Sandboxes environment. The pinned
  * AgentVersion may provide a default. RunAgent overlays selected fields using
@@ -548,6 +588,12 @@ export interface GetMemoryRequest {
 /** The request of GetMemoryStore. */
 export interface GetMemoryStoreRequest {
 	/** The name of the memory store to get. */
+	name: string
+}
+
+/** The request of GetOwnerPool. */
+export interface GetOwnerPoolRequest {
+	/** The name of the owner pool to get. */
 	name: string
 }
 
@@ -698,6 +744,24 @@ export interface ListMemoryStoresResponse {
 	nextPageToken?: string
 }
 
+/** The request of ListOwnerPools. */
+export interface ListOwnerPoolsRequest {
+	/** The parent to list in. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+}
+
+/** The response of ListOwnerPools. */
+export interface ListOwnerPoolsResponse {
+	/** The page. */
+	ownerPools?: OwnerPool[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
 /** The request of ListSessionEvents. */
 export interface ListSessionEventsRequest {
 	/** The session to list in. */
@@ -834,6 +898,138 @@ export interface Message {
 	parts?: ContentPart[]
 }
 
+/** The request of ObserveOwnerPoolMember. */
+export interface ObserveOwnerPoolMemberRequest {
+	/** The owner pool. */
+	name: string
+	/** The member version. */
+	agentVersion: string
+	/**
+	 * The observed value per metric over the caller's window, lower is better;
+	 * 1 to 64. A demotion rule's metric is never negative.
+	 */
+	metrics: Record<string, number>
+	/** The number of outcomes the values summarize. */
+	samples: string
+}
+
+/**
+ * An OwnerPool is the set of Agent versions qualified to own work. A version
+ * joins only by passing the pool's admission suite (`:qualify`) and leaves
+ * automatically when a live metric regresses past a demotion rule
+ * (`:observe`). `:run` with `owner_pool` admits only a qualified member. The
+ * suite, the metrics and their thresholds are the caller's own; the pool
+ * stores no method of its own.
+ */
+export interface OwnerPool {
+	/** `orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}`. */
+	name?: string
+	/** `aop_<cell><ulid>`; never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** Desired state. */
+	spec?: OwnerPoolSpec
+	/** Observed state: the members. */
+	readonly status?: OwnerPoolStatus
+}
+
+/** OwnerPoolAdmission is a fixed benchmark suite with minimum scores. */
+export interface OwnerPoolAdmission {
+	/** The suite's id, matched exactly by `:qualify`; at most 200 characters. */
+	suite?: string
+	/**
+	 * Minimum score per suite metric, higher is better; 1 to 64 metrics. A
+	 * member qualifies only when every metric is reported at or above its
+	 * minimum.
+	 */
+	minScores?: Record<string, number>
+	/**
+	 * The suite's version, matched exactly by `:qualify`; at most 200
+	 * characters.
+	 */
+	suiteVersion?: string
+}
+
+/**
+ * OwnerPoolDemotionRule demotes a member whose live metric, lower is better
+ * and never negative, regresses past its baseline. The platform computes the
+ * baseline; no caller sets it.
+ */
+export interface OwnerPoolDemotionRule {
+	/** The live metric's name, as `:observe` reports it. */
+	metric?: string
+	/**
+	 * The tolerated regression as a fraction of the baseline: a member is
+	 * demoted when the observed value exceeds `baseline * (1 + max_regression)`.
+	 */
+	maxRegression?: number
+	/**
+	 * Observations over fewer samples than this are recorded but never count
+	 * toward the baseline or demote; default 1.
+	 */
+	minSamples?: string
+	/**
+	 * The baseline is the median of the member's first this many counted
+	 * observations of the metric, set once it is finite and positive (while
+	 * the median is zero the window moves on). 1 to 100; default 5.
+	 */
+	baselineObservations?: string
+}
+
+/** An OwnerPoolMember is one Agent version's standing in a pool. */
+export interface OwnerPoolMember {
+	/** The member version. */
+	readonly agentVersion?: string
+	/** The model the version pins. */
+	readonly model?: string
+	/** Qualified, refused or demoted. */
+	readonly state?: OwnerPoolMemberState
+	/** The suite of the latest `:qualify`. */
+	readonly suite?: string
+	/** The scores of the latest `:qualify`. */
+	readonly scores?: Record<string, number>
+	/**
+	 * The baseline per demotion metric, computed by the platform from counted
+	 * observations; a re-qualify keeps it.
+	 */
+	readonly baseline?: Record<string, number>
+	/** The latest observation per metric. */
+	readonly observed?: Record<string, number>
+	/** When it last qualified. */
+	readonly qualifyTime?: string
+	/** When it was last demoted. */
+	readonly demoteTime?: string
+	/** Why it was refused or demoted. */
+	readonly reason?: string
+	/** When the state last changed. */
+	readonly updateTime?: string
+	/** The suite version of the latest `:qualify`. */
+	readonly suiteVersion?: string
+	/** The suite result of the latest `:qualify`. */
+	readonly result?: string
+	/** The principal that recorded the latest `:qualify`. */
+	readonly qualifier?: string
+}
+
+/** OwnerPoolSpec is the caller-writable state of an OwnerPool. */
+export interface OwnerPoolSpec {
+	/** The admission test every member passes. */
+	admission?: OwnerPoolAdmission
+	/** Live-metric rules that demote a member; at most 16, each metric once. */
+	demotion?: OwnerPoolDemotionRule[]
+}
+
+/** OwnerPoolStatus is the observed state of an OwnerPool. */
+export interface OwnerPoolStatus {
+	/** The generation this status was computed from. */
+	readonly observedGeneration?: string
+	/** Ready. */
+	readonly conditions?: common.Condition[]
+	/** Every version ever submitted to `:qualify`, most recently changed first. */
+	readonly members?: OwnerPoolMember[]
+}
+
 /** ProfileMount attaches a platform Profile by name, never its sign-in values. */
 export interface ProfileMount {
 	/** `orgs/{org}/projects/{project}/envs/{env}/profiles/{profile}`. */
@@ -843,6 +1039,28 @@ export interface ProfileMount {
 	 * changes at session end while its lease still answers; empty is read_only.
 	 */
 	mode?: string
+}
+
+/** The request of QualifyOwnerPoolMember. */
+export interface QualifyOwnerPoolMemberRequest {
+	/** The owner pool. */
+	name: string
+	/** The Agent version that ran the suite, in the pool's environment. */
+	agentVersion: string
+	/** The suite that ran; must equal the pool's `admission.suite`. */
+	suite: string
+	/** The score per suite metric; at most 64. */
+	scores: Record<string, number>
+	/**
+	 * The suite version that ran; must equal the pool's
+	 * `admission.suite_version`.
+	 */
+	suiteVersion: string
+	/**
+	 * The grader's id of this suite run, for example its evidence record; 1 to
+	 * 200 characters. Each result is recorded once per member.
+	 */
+	result: string
 }
 
 /** A pinned tool called periodically while the accepted task owns its grant. */
@@ -948,6 +1166,20 @@ export interface RunAgentRequest {
 	 * explicit resets and whole-environment replacement.
 	 */
 	environmentMask?: string
+	/**
+	 * The OwnerPool this run owns work for. Admission refuses with
+	 * `INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that
+	 * moment; later turns of the session are not re-checked.
+	 */
+	ownerPool?: string
+	/**
+	 * The maker sessions this run verifies, 1 to 16; empty for an ordinary
+	 * run. Admission refuses with `PERMISSION_DENIED` unless `agent_version` is
+	 * read-only and its Agent differs from every maker session's Agent. The
+	 * verifier session never receives a maker transcript. Set at most one of
+	 * `owner_pool` and `verifies`.
+	 */
+	verifies?: string[]
 }
 
 /** Durable acceptance, not task completion or sandbox readiness. */
@@ -1123,6 +1355,11 @@ export interface Tool {
 	 * event (`:submitToolResult`).
 	 */
 	client?: ClientTool
+	/**
+	 * Called only by the runtime, as a run's `completion` or `renewal` tool:
+	 * never offered to the model, which cannot call it.
+	 */
+	runtimeOnly?: boolean
 }
 
 /**
@@ -1267,6 +1504,14 @@ export interface UpdateMemoryStoreRequest {
 	validateOnly?: boolean
 }
 
+/** The request of UpdateOwnerPool. */
+export interface UpdateOwnerPoolRequest {
+	/** The owner pool to update; `name` identifies it. */
+	ownerPool: OwnerPool
+	/** The fields to write: `spec`, `meta` or both; unset writes both. */
+	updateMask?: string
+}
+
 /** ApprovalDecision is a person's answer to an approval. */
 export type ApprovalDecision = 'approve' | 'reject' | (string & {})
 
@@ -1275,6 +1520,9 @@ export type MemoryScope = 'project' | 'agent' | 'end_user' | (string & {})
 
 /** MemorySource is who wrote a memory. */
 export type MemorySource = 'agent' | 'api' | 'import' | (string & {})
+
+/** The standing of an OwnerPool member. */
+export type OwnerPoolMemberState = 'qualified' | 'refused' | 'demoted' | (string & {})
 
 /** PolicyDecision is what the tool policy does with a call. */
 export type PolicyDecision = 'allow' | 'deny' | 'ask' | (string & {})
@@ -1322,6 +1570,7 @@ runtime.registerSchemas({
 		['budget', 'budget', 'sylphx.agents.v1.AgentBudget'],
 		['endUserAccess', 'end_user_access'],
 		['environment', 'environment', 'sylphx.agents.v1.EnvironmentSpec'],
+		['readOnly', 'read_only'],
 	],
 	'sylphx.agents.v1.AgentStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -1377,6 +1626,10 @@ runtime.registerSchemas({
 		['memoryStore', 'memory_store', 'sylphx.agents.v1.MemoryStore'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.agents.v1.CreateOwnerPoolRequest': [
+		['ownerPoolId', 'owner_pool_id'],
+		['ownerPool', 'owner_pool', 'sylphx.agents.v1.OwnerPool'],
+	],
 	'sylphx.agents.v1.CredentialBinding': [
 		['endUserProvider', 'end_user_provider'],
 	],
@@ -1402,6 +1655,7 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.agents.v1.DeleteOwnerPoolRequest': [],
 	'sylphx.agents.v1.EnvironmentSpec': [
 		['idleStandby', 'idle_standby'],
 		['repo', 'repo', 'sylphx.agents.v1.RepositorySpec'],
@@ -1421,6 +1675,7 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.GetAgentVersionRequest': [],
 	'sylphx.agents.v1.GetMemoryRequest': [],
 	'sylphx.agents.v1.GetMemoryStoreRequest': [],
+	'sylphx.agents.v1.GetOwnerPoolRequest': [],
 	'sylphx.agents.v1.GetSessionEventRequest': [],
 	'sylphx.agents.v1.HttpTool': [
 		['openapiUri', 'openapi_uri'],
@@ -1475,6 +1730,14 @@ runtime.registerSchemas({
 		['memoryStores', 'memory_stores', 'sylphx.agents.v1.MemoryStore'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.agents.v1.ListOwnerPoolsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.agents.v1.ListOwnerPoolsResponse': [
+		['ownerPools', 'owner_pools', 'sylphx.agents.v1.OwnerPool'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.agents.v1.ListSessionEventsRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -1515,7 +1778,49 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.Message': [
 		['parts', 'parts', 'sylphx.agents.v1.ContentPart'],
 	],
+	'sylphx.agents.v1.ObserveOwnerPoolMemberRequest': [
+		['agentVersion', 'agent_version'],
+		['metrics', 'metrics', undefined, 'map'],
+	],
+	'sylphx.agents.v1.OwnerPool': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.agents.v1.OwnerPoolSpec'],
+		['status', 'status', 'sylphx.agents.v1.OwnerPoolStatus'],
+	],
+	'sylphx.agents.v1.OwnerPoolAdmission': [
+		['minScores', 'min_scores', undefined, 'map'],
+		['suiteVersion', 'suite_version'],
+	],
+	'sylphx.agents.v1.OwnerPoolDemotionRule': [
+		['maxRegression', 'max_regression'],
+		['minSamples', 'min_samples'],
+		['baselineObservations', 'baseline_observations'],
+	],
+	'sylphx.agents.v1.OwnerPoolMember': [
+		['agentVersion', 'agent_version'],
+		['scores', 'scores', undefined, 'map'],
+		['baseline', 'baseline', undefined, 'map'],
+		['observed', 'observed', undefined, 'map'],
+		['qualifyTime', 'qualify_time'],
+		['demoteTime', 'demote_time'],
+		['updateTime', 'update_time'],
+		['suiteVersion', 'suite_version'],
+	],
+	'sylphx.agents.v1.OwnerPoolSpec': [
+		['admission', 'admission', 'sylphx.agents.v1.OwnerPoolAdmission'],
+		['demotion', 'demotion', 'sylphx.agents.v1.OwnerPoolDemotionRule'],
+	],
+	'sylphx.agents.v1.OwnerPoolStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['members', 'members', 'sylphx.agents.v1.OwnerPoolMember'],
+	],
 	'sylphx.agents.v1.ProfileMount': [],
+	'sylphx.agents.v1.QualifyOwnerPoolMemberRequest': [
+		['agentVersion', 'agent_version'],
+		['scores', 'scores', undefined, 'map'],
+		['suiteVersion', 'suite_version'],
+	],
 	'sylphx.agents.v1.RenewalCall': [
 		['arguments', 'arguments', undefined, 'json'],
 		['cancelField', 'cancel_field'],
@@ -1542,6 +1847,7 @@ runtime.registerSchemas({
 		['renewal', 'renewal', 'sylphx.agents.v1.RenewalCall'],
 		['runtimeCredentialHandle', 'runtime_credential_handle'],
 		['environmentMask', 'environment_mask'],
+		['ownerPool', 'owner_pool'],
 	],
 	'sylphx.agents.v1.RunAgentResponse': [
 		['session', 'session', 'sylphx.agents.v1.AgentSession'],
@@ -1592,6 +1898,7 @@ runtime.registerSchemas({
 		['http', 'http', 'sylphx.agents.v1.HttpTool'],
 		['appFunction', 'app_function', 'sylphx.agents.v1.FunctionTool'],
 		['client', 'client', 'sylphx.agents.v1.ClientTool'],
+		['runtimeOnly', 'runtime_only'],
 	],
 	'sylphx.agents.v1.ToolCall': [
 		['input', 'input', undefined, 'json'],
@@ -1640,6 +1947,10 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.agents.v1.UpdateOwnerPoolRequest': [
+		['ownerPool', 'owner_pool', 'sylphx.agents.v1.OwnerPool'],
+		['updateMask', 'update_mask'],
+	],
 })
 
 /**
@@ -1649,9 +1960,14 @@ runtime.registerSchemas({
  *
  * Scopes: `agents:read` and `agents:write` manage agents, versions and
  * memory stores with a secret key. `agents:sessions` runs sessions and reads
- * and deletes session and memory records. All methods currently require a
- * secret key. Publishable-key access is deferred until the backend enforces
- * end-user ownership of sessions and memories and `end_user_access` on Agents.
+ * and deletes session and memory records. `agents:admin` governs owner pools
+ * (their admission minimums and demotion rules); no wildcard reaches it.
+ * `agents:qualify` records admission-suite results and live metrics for
+ * owner pool members: a grader's grant, held only by name, and refused to the
+ * principal whose create or update minted the version. All methods
+ * currently require a secret key. Publishable-key access is deferred until
+ * the backend enforces end-user ownership of sessions and memories and
+ * `end_user_access` on Agents.
  * Credential actions capture existing grants; handles are not CRUD resources.
  *
  * Namespace of Sylphx Agents on `Sylphx`.
@@ -1669,6 +1985,8 @@ export class AgentsApi {
 	readonly memoryStores: MemoryStoresCollection
 	/** The `memories` collection. */
 	readonly memories: MemoriesCollection
+	/** The `owner_pools` collection. */
+	readonly ownerPools: OwnerPoolsCollection
 
 	constructor(client: runtime.Client) {
 		this.agents = new AgentsCollection(client)
@@ -1677,6 +1995,7 @@ export class AgentsApi {
 		this.sessionEvents = new SessionEventsCollection(client)
 		this.memoryStores = new MemoryStoresCollection(client)
 		this.memories = new MemoriesCollection(client)
+		this.ownerPools = new OwnerPoolsCollection(client)
 	}
 }
 
@@ -1846,7 +2165,7 @@ export class AgentsCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agents/*}:run` · permission `agents:sessions` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`, `INVALID_STATE`.
 	 */
 	async run(request: RunAgentRequest): Promise<RunAgentResponse> {
 		return this.client.call<RunAgentResponse>({
@@ -2423,6 +2742,168 @@ export class MemoriesCollection {
 			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.agents.v1.SearchMemoriesRequest',
 			responseType: 'sylphx.agents.v1.SearchMemoriesResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `owner_pools` of Sylphx Agents: Resource type `agents.sylphx.com/OwnerPool`. */
+export class OwnerPoolsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets an owner pool with its members.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/owner_pools/*}` · permission `agents:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetOwnerPoolRequest): Promise<OwnerPool> {
+		return this.client.call<OwnerPool>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/owner_pools/*', 'name')}`,
+			responseType: 'sylphx.agents.v1.OwnerPool',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists owner pools, newest first.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/owner_pools` · permission `agents:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListOwnerPoolsRequest): Promise<ListOwnerPoolsResponse> {
+		return this.client.call<ListOwnerPoolsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/owner_pools`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.agents.v1.ListOwnerPoolsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListOwnerPoolsRequest): AsyncGenerator<OwnerPool> {
+		let next: ListOwnerPoolsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.ownerPools ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates an owner pool with no members. Its minimums and demotion rules
+	 * are governance, so the caller needs `agents:admin`.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/owner_pools` · permission `agents:admin` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateOwnerPoolRequest): Promise<OwnerPool> {
+		return this.client.call<OwnerPool>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/owner_pools`,
+			query: { owner_pool_id: request.ownerPoolId },
+			body: request.ownerPool ?? {},
+			bodyType: 'sylphx.agents.v1.OwnerPool',
+			responseType: 'sylphx.agents.v1.OwnerPool',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Replaces an owner pool's spec (`agents:admin`). Members keep their
+	 * standing; a changed suite or minimum applies from the next `:qualify`.
+	 *
+	 * `PATCH /v1/{owner_pool.name=orgs/*\/projects/*\/envs/*\/owner_pools/*}` · permission `agents:admin` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateOwnerPoolRequest): Promise<OwnerPool> {
+		return this.client.call<OwnerPool>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.ownerPool?.name, 'orgs/*/projects/*/envs/*/owner_pools/*', 'owner_pool.name')}`,
+			query: { update_mask: request.updateMask },
+			body: request.ownerPool ?? {},
+			bodyType: 'sylphx.agents.v1.OwnerPool',
+			responseType: 'sylphx.agents.v1.OwnerPool',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Deletes an owner pool and its members (`agents:admin`). Sessions already
+	 * admitted keep running.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/owner_pools/*}` · permission `agents:admin` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async delete(request: DeleteOwnerPoolRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/owner_pools/*', 'name')}`,
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Records an admission suite result for an Agent version. The caller holds
+	 * `agents:qualify` and is not the principal whose create or update minted
+	 * the version (`PERMISSION_DENIED`). Every minimum
+	 * met: the member is `QUALIFIED`. Any score missing or below its minimum:
+	 * the member is recorded `REFUSED` with the reason. Each qualification is
+	 * recorded with its suite, suite version, result and caller; a `result`
+	 * already recorded for the member is refused with `INVALID_FIELD`, so a
+	 * demoted member returns only with a new suite result. A read-only version
+	 * is refused with `PERMISSION_DENIED`; a suite or suite version other than
+	 * the pool's with `INVALID_FIELD`. Re-qualifying keeps the member's
+	 * baseline: the baseline belongs to the version and its pinned model.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/owner_pools/*}:qualify` · permission `agents:qualify` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async qualify(request: QualifyOwnerPoolMemberRequest): Promise<OwnerPoolMember> {
+		return this.client.call<OwnerPoolMember>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/owner_pools/*', 'name')}:qualify`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.QualifyOwnerPoolMemberRequest',
+			responseType: 'sylphx.agents.v1.OwnerPoolMember',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Records a live-metric observation for a member and applies the pool's
+	 * demotion rules (`agents:qualify`, refused to the version's authors as in
+	 * `:qualify`). The platform computes each rule's baseline: the median of
+	 * the member's first `baseline_observations` counted observations of the
+	 * metric, set only when it is finite and positive. Values of a rule metric
+	 * are lower-is-better and must not be negative. Once the baseline is set, a
+	 * metric past `baseline * (1 + max_regression)` demotes a qualified member.
+	 * Only `:qualify` brings a demoted member back.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/owner_pools/*}:observe` · permission `agents:qualify` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async observe(request: ObserveOwnerPoolMemberRequest): Promise<OwnerPoolMember> {
+		return this.client.call<OwnerPoolMember>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/owner_pools/*', 'name')}:observe`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.ObserveOwnerPoolMemberRequest',
+			responseType: 'sylphx.agents.v1.OwnerPoolMember',
 			mutation: true,
 		})
 	}

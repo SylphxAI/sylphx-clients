@@ -236,6 +236,42 @@
         "kind": "well_known",
         "wkt": "field_mask"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "owner_pool",
+      "number": 20,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "agents.sylphx.com/OwnerPool",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "verifies",
+      "number": 21,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": "agents.sylphx.com/AgentSession",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.agents.v1.RunAgentRequest",

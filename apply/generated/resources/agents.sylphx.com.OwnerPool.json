@@ -1,0 +1,22 @@
+{
+  "collection": "owner_pools",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "OwnerPool",
+  "message": "sylphx.agents.v1.OwnerPool",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}",
+  "plural": "ownerPools",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "spec_status",
+  "singular": "ownerPool",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/OwnerPool"
+}

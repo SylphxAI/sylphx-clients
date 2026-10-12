@@ -1556,6 +1556,12 @@
                   "type": "string"
                 },
                 {
+                  "field": "agent.spec.read_only",
+                  "flag": "--spec.read-only",
+                  "summary": "Read-only: the version holds no write grant, so it may verify another agent's work but never own it. Create and update refuse memory stores, MCP servers, `app_function` and `client` tools, the `memory`, `browser` and `computer` built-ins, and an HTTP tool whose pinned operation is not GET or HEAD unless it is `runtime_only`. The `shell` and `files` built-ins, and a `claude_code` or `codex` harness (which bring their own), need `environment.egress` that denies by default: `DENY`, or `ALLOWLIST` of the configured Sylphx API and inference gateways and the version's GET or HEAD tool hosts, with no CIDRs. Session create, `:send` and `:run` check the version and the session's effective environment again, and refuse any model-facing credential that is not a captured Access key holding only `<service>:read` and `ai:inference` scopes; a renewal's `credential_updates` value for a model-facing binding is held to the same rule. A run's `completion.result_fields` never map into the completion tool's path or query parameters. An OwnerPool never qualifies the version.",
+                  "type": "bool"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -1774,6 +1780,12 @@
                   "type": "string"
                 },
                 {
+                  "field": "agent.spec.read_only",
+                  "flag": "--spec.read-only",
+                  "summary": "Read-only: the version holds no write grant, so it may verify another agent's work but never own it. Create and update refuse memory stores, MCP servers, `app_function` and `client` tools, the `memory`, `browser` and `computer` built-ins, and an HTTP tool whose pinned operation is not GET or HEAD unless it is `runtime_only`. The `shell` and `files` built-ins, and a `claude_code` or `codex` harness (which bring their own), need `environment.egress` that denies by default: `DENY`, or `ALLOWLIST` of the configured Sylphx API and inference gateways and the version's GET or HEAD tool hosts, with no CIDRs. Session create, `:send` and `:run` check the version and the session's effective environment again, and refuse any model-facing credential that is not a captured Access key holding only `<service>:read` and `ai:inference` scopes; a renewal's `credential_updates` value for a model-facing binding is held to the same rule. A run's `completion.result_fields` never map into the completion tool's path or query parameters. An OwnerPool never qualifies the version.",
+                  "type": "bool"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the agent when it does not exist (declarative upsert).",
@@ -1927,6 +1939,19 @@
                   "flag": "--environment-mask",
                   "summary": "Fields of environment to overlay, relative to EnvironmentSpec, using proto snake_case paths such as ttl, repo.uri, repo.revision, egress.allowed_domains and budget.max_cost_micros. The wire value is a comma-separated string; SDK property naming does not change these paths. Omitted or empty infers populated serialized leaf fields recursively, preserving unselected siblings from the pinned version. Proto defaults (including empty lists) need an explicit mask to reset a selected field. Selected lists replace, rather than append to, the inherited list. The sole path \"*\" replaces the whole environment, resetting unpopulated fields. Unknown, invalid and output-only paths are rejected, as is a nonempty mask without environment. Effective validation also applies to explicit resets and whole-environment replacement.",
                   "type": "json"
+                },
+                {
+                  "field": "owner_pool",
+                  "flag": "--owner-pool",
+                  "summary": "The OwnerPool this run owns work for. Admission refuses with `INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that moment; later turns of the session are not re-checked.",
+                  "type": "string"
+                },
+                {
+                  "field": "verifies",
+                  "flag": "--verifies",
+                  "repeated": true,
+                  "summary": "The maker sessions this run verifies, 1 to 16; empty for an ordinary run. Admission refuses with `PERMISSION_DENIED` unless `agent_version` is read-only and its Agent differs from every maker session's Agent. The verifier session never receives a maker transcript. Set at most one of `owner_pool` and `verifies`.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agents/*}:run",
@@ -3082,6 +3107,309 @@
           ],
           "noun": "memories",
           "resource_type": "agents.sylphx.com/Memory"
+        },
+        {
+          "collection": "owner_pools",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}",
+              "method": "agents.owner_pools.get",
+              "permission": "agents:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}"
+              },
+              "summary": "Gets an owner pool with its members.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/owner_pools",
+              "method": "agents.owner_pools.list",
+              "paginates": true,
+              "permission": "agents:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists owner pools, newest first.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "owner_pool.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "owner_pool.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.spec.admission.suite",
+                  "flag": "--spec.admission.suite",
+                  "required": true,
+                  "summary": "The suite's id, matched exactly by `:qualify`; at most 200 characters.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.spec.admission.min_scores",
+                  "flag": "--spec.admission.min-scores",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Minimum score per suite metric, higher is better; 1 to 64 metrics. A member qualifies only when every metric is reported at or above its minimum.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "owner_pool.spec.admission.suite_version",
+                  "flag": "--spec.admission.suite-version",
+                  "required": true,
+                  "summary": "The suite's version, matched exactly by `:qualify`; at most 200 characters.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.spec.demotion",
+                  "flag": "--spec.demotion",
+                  "repeated": true,
+                  "summary": "Live-metric rules that demote a member; at most 16, each metric once.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/owner_pools",
+              "method": "agents.owner_pools.create",
+              "permission": "agents:admin",
+              "positional": {
+                "arg": "ID",
+                "field": "owner_pool_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "owner_pool",
+              "summary": "Creates an owner pool with no members. Its minimums and demotion rules are governance, so the caller needs `agents:admin`.",
+              "verb": "create"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "owner_pool.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "owner_pool.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "owner_pool.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.spec.admission.suite",
+                  "flag": "--spec.admission.suite",
+                  "required": true,
+                  "summary": "The suite's id, matched exactly by `:qualify`; at most 200 characters.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.spec.admission.min_scores",
+                  "flag": "--spec.admission.min-scores",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Minimum score per suite metric, higher is better; 1 to 64 metrics. A member qualifies only when every metric is reported at or above its minimum.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "owner_pool.spec.admission.suite_version",
+                  "flag": "--spec.admission.suite-version",
+                  "required": true,
+                  "summary": "The suite's version, matched exactly by `:qualify`; at most 200 characters.",
+                  "type": "string"
+                },
+                {
+                  "field": "owner_pool.spec.demotion",
+                  "flag": "--spec.demotion",
+                  "repeated": true,
+                  "summary": "Live-metric rules that demote a member; at most 16, each metric once.",
+                  "type": "json"
+                }
+              ],
+              "http": "PATCH /v1/{owner_pool.name=orgs/*/projects/*/envs/*/owner_pools/*}",
+              "method": "agents.owner_pools.update",
+              "permission": "agents:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "owner_pool.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}"
+              },
+              "resource_field": "owner_pool",
+              "sends_etag": true,
+              "summary": "Replaces an owner pool's spec (`agents:admin`). Members keep their standing; a changed suite or minimum applies from the next `:qualify`.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            },
+            {
+              "confirm": {
+                "prompt": true,
+                "skip_flag": "--yes"
+              },
+              "effect": "destructive",
+              "flags": [],
+              "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}",
+              "method": "agents.owner_pools.delete",
+              "permission": "agents:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}"
+              },
+              "summary": "Deletes an owner pool and its members (`agents:admin`). Sessions already admitted keep running.",
+              "verb": "delete"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "agent_version",
+                  "flag": "--agent-version",
+                  "required": true,
+                  "summary": "The Agent version that ran the suite, in the pool's environment.",
+                  "type": "string"
+                },
+                {
+                  "field": "suite",
+                  "flag": "--suite",
+                  "required": true,
+                  "summary": "The suite that ran; must equal the pool's `admission.suite`.",
+                  "type": "string"
+                },
+                {
+                  "field": "scores",
+                  "flag": "--scores",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "The score per suite metric; at most 64.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "suite_version",
+                  "flag": "--suite-version",
+                  "required": true,
+                  "summary": "The suite version that ran; must equal the pool's `admission.suite_version`.",
+                  "type": "string"
+                },
+                {
+                  "field": "result",
+                  "flag": "--result",
+                  "required": true,
+                  "summary": "The grader's id of this suite run, for example its evidence record; 1 to 200 characters. Each result is recorded once per member.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}:qualify",
+              "method": "agents.owner_pools.qualify",
+              "permission": "agents:qualify",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}"
+              },
+              "summary": "Records an admission suite result for an Agent version. The caller holds `agents:qualify` and is not the principal whose create or update minted the version (`PERMISSION_DENIED`). Every minimum met: the member is `QUALIFIED`. Any score missing or below its minimum: the member is recorded `REFUSED` with the reason. Each qualification is recorded with its suite, suite version, result and caller; a `result` already recorded for the member is refused with `INVALID_FIELD`, so a demoted member returns only with a new suite result. A read-only version is refused with `PERMISSION_DENIED`; a suite or suite version other than the pool's with `INVALID_FIELD`. Re-qualifying keeps the member's baseline: the baseline belongs to the version and its pinned model.",
+              "verb": "qualify"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "agent_version",
+                  "flag": "--agent-version",
+                  "required": true,
+                  "summary": "The member version.",
+                  "type": "string"
+                },
+                {
+                  "field": "metrics",
+                  "flag": "--metrics",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "The observed value per metric over the caller's window, lower is better; 1 to 64. A demotion rule's metric is never negative.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "samples",
+                  "flag": "--samples",
+                  "required": true,
+                  "summary": "The number of outcomes the values summarize.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}:observe",
+              "method": "agents.owner_pools.observe",
+              "permission": "agents:qualify",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}"
+              },
+              "summary": "Records a live-metric observation for a member and applies the pool's demotion rules (`agents:qualify`, refused to the version's authors as in `:qualify`). The platform computes each rule's baseline: the median of the member's first `baseline_observations` counted observations of the metric, set only when it is finite and positive. Values of a rule metric are lower-is-better and must not be negative. Once the baseline is set, a metric past `baseline * (1 + max_regression)` demotes a qualified member. Only `:qualify` brings a demoted member back.",
+              "verb": "observe"
+            }
+          ],
+          "noun": "owner-pools",
+          "resource_type": "agents.sylphx.com/OwnerPool"
         }
       ],
       "commands": [],

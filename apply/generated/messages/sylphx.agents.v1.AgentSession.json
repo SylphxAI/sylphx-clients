@@ -313,6 +313,24 @@
         "kind": "message",
         "name": "sylphx.agents.v1.ProfileMount"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "verifies",
+      "number": 24,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": "agents.sylphx.com/AgentSession",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.agents.v1.AgentSession",

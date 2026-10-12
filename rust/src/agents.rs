@@ -192,6 +192,12 @@ pub struct AgentSession {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub profiles: Vec<ProfileMount>,
+    /// The maker sessions this session verifies, as its `:run` named them;
+    /// empty for any other session.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub verifies: Vec<String>,
 }
 
 /// AgentSpec is the caller-writable definition of an Agent. An AgentVersion
@@ -247,6 +253,28 @@ pub struct AgentSpec {
     /// environment-wide setting. An omitted or empty value means `runtime`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub harness: String,
+    /// Read-only: the version holds no write grant, so it may verify another
+    /// agent's work but never own it. Create and update refuse memory stores,
+    /// MCP servers, `app_function` and `client` tools, the `memory`, `browser`
+    /// and `computer` built-ins, and an HTTP tool whose pinned operation is not
+    /// GET or HEAD unless it is `runtime_only`. The `shell` and `files`
+    /// built-ins, and a `claude_code` or `codex` harness (which bring their own),
+    /// need `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`
+    /// of the configured Sylphx API and inference gateways and the
+    /// version's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`
+    /// and `:run` check the version and the session's effective environment
+    /// again, and refuse any model-facing credential that is not a captured
+    /// Access key holding only `<service>:read` and `ai:inference` scopes; a
+    /// renewal's `credential_updates` value for a model-facing binding is held to
+    /// the same rule. A run's `completion.result_fields` never map into the
+    /// completion tool's path or query parameters. An OwnerPool never qualifies
+    /// the version.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "readOnly"
+    )]
+    pub read_only: bool,
 }
 
 /// AgentStatus is the observed state of an Agent.
@@ -638,6 +666,31 @@ pub struct CreateMemoryStoreRequest {
     pub validate_only: bool,
 }
 
+/// The request of CreateOwnerPool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateOwnerPoolRequest {
+    /// The parent to create in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The owner pool id, the final name segment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ownerPoolId"
+    )]
+    pub owner_pool_id: String,
+    /// The owner pool to create; only caller-writable fields are read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "ownerPool")]
+    pub owner_pool: Option<OwnerPool>,
+}
+
 /// A CredentialBinding names where the gateway takes a credential from. The
 /// value is resolved at egress only; the model, the event log and traces see
 /// the binding, never the value.
@@ -855,6 +908,17 @@ pub struct DeleteMemoryStoreRequest {
     pub force: bool,
 }
 
+/// The request of DeleteOwnerPool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteOwnerPoolRequest {
+    /// The name of the owner pool to delete.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// EnvironmentSpec describes a session's Sandboxes environment. The pinned
 /// AgentVersion may provide a default. RunAgent overlays selected fields using
 /// RunAgentRequest.environment_mask; an explicit environment on
@@ -1041,6 +1105,17 @@ pub struct GetMemoryRequest {
 #[non_exhaustive]
 pub struct GetMemoryStoreRequest {
     /// The name of the memory store to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetOwnerPool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetOwnerPoolRequest {
+    /// The name of the owner pool to get.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1376,6 +1451,47 @@ pub struct ListMemoryStoresResponse {
     pub next_page_token: String,
 }
 
+/// The request of ListOwnerPools.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListOwnerPoolsRequest {
+    /// The parent to list in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListOwnerPools.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListOwnerPoolsResponse {
+    /// The page.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "ownerPools")]
+    pub owner_pools: Vec<OwnerPool>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
 /// The request of ListSessionEvents.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1659,6 +1775,286 @@ pub struct Message {
     pub parts: Vec<ContentPart>,
 }
 
+/// The request of ObserveOwnerPoolMember.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ObserveOwnerPoolMemberRequest {
+    /// The owner pool.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The member version.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "agentVersion"
+    )]
+    pub agent_version: String,
+    /// The observed value per metric over the caller's window, lower is better;
+    /// 1 to 64. A demotion rule's metric is never negative.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub metrics: std::collections::BTreeMap<String, f64>,
+    /// The number of outcomes the values summarize.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub samples: i64,
+}
+
+/// An OwnerPool is the set of Agent versions qualified to own work. A version
+/// joins only by passing the pool's admission suite (`:qualify`) and leaves
+/// automatically when a live metric regresses past a demotion rule
+/// (`:observe`). `:run` with `owner_pool` admits only a qualified member. The
+/// suite, the metrics and their thresholds are the caller's own; the pool
+/// stores no method of its own.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OwnerPool {
+    /// `orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `aop_<cell><ulid>`; never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Desired state.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<OwnerPoolSpec>,
+    /// Observed state: the members.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<OwnerPoolStatus>,
+}
+
+/// OwnerPoolAdmission is a fixed benchmark suite with minimum scores.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OwnerPoolAdmission {
+    /// The suite's id, matched exactly by `:qualify`; at most 200 characters.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub suite: String,
+    /// Minimum score per suite metric, higher is better; 1 to 64 metrics. A
+    /// member qualifies only when every metric is reported at or above its
+    /// minimum.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "minScores"
+    )]
+    pub min_scores: std::collections::BTreeMap<String, f64>,
+    /// The suite's version, matched exactly by `:qualify`; at most 200
+    /// characters.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "suiteVersion"
+    )]
+    pub suite_version: String,
+}
+
+/// OwnerPoolDemotionRule demotes a member whose live metric, lower is better
+/// and never negative, regresses past its baseline. The platform computes the
+/// baseline; no caller sets it.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OwnerPoolDemotionRule {
+    /// The live metric's name, as `:observe` reports it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub metric: String,
+    /// The tolerated regression as a fraction of the baseline: a member is
+    /// demoted when the observed value exceeds `baseline * (1 + max_regression)`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maxRegression"
+    )]
+    pub max_regression: f64,
+    /// Observations over fewer samples than this are recorded but never count
+    /// toward the baseline or demote; default 1.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "minSamples"
+    )]
+    pub min_samples: i64,
+    /// The baseline is the median of the member's first this many counted
+    /// observations of the metric, set once it is finite and positive (while
+    /// the median is zero the window moves on). 1 to 100; default 5.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "baselineObservations"
+    )]
+    pub baseline_observations: i64,
+}
+
+/// An OwnerPoolMember is one Agent version's standing in a pool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OwnerPoolMember {
+    /// The member version.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "agentVersion"
+    )]
+    pub agent_version: String,
+    /// The model the version pins.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub model: String,
+    /// Qualified, refused or demoted.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<OwnerPoolMemberState>,
+    /// The suite of the latest `:qualify`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub suite: String,
+    /// The scores of the latest `:qualify`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub scores: std::collections::BTreeMap<String, f64>,
+    /// The baseline per demotion metric, computed by the platform from counted
+    /// observations; a re-qualify keeps it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub baseline: std::collections::BTreeMap<String, f64>,
+    /// The latest observation per metric.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub observed: std::collections::BTreeMap<String, f64>,
+    /// When it last qualified.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "qualifyTime"
+    )]
+    pub qualify_time: String,
+    /// When it was last demoted.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "demoteTime"
+    )]
+    pub demote_time: String,
+    /// Why it was refused or demoted.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// When the state last changed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateTime"
+    )]
+    pub update_time: String,
+    /// The suite version of the latest `:qualify`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "suiteVersion"
+    )]
+    pub suite_version: String,
+    /// The suite result of the latest `:qualify`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub result: String,
+    /// The principal that recorded the latest `:qualify`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub qualifier: String,
+}
+
+/// OwnerPoolSpec is the caller-writable state of an OwnerPool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OwnerPoolSpec {
+    /// The admission test every member passes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub admission: Option<OwnerPoolAdmission>,
+    /// Live-metric rules that demote a member; at most 16, each metric once.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub demotion: Vec<OwnerPoolDemotionRule>,
+}
+
+/// OwnerPoolStatus is the observed state of an OwnerPool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OwnerPoolStatus {
+    /// The generation this status was computed from.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Ready.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Every version ever submitted to `:qualify`, most recently changed first.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<OwnerPoolMember>,
+}
+
 /// ProfileMount attaches a platform Profile by name, never its sign-in values.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1672,6 +2068,52 @@ pub struct ProfileMount {
     /// changes at session end while its lease still answers; empty is read_only.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub mode: String,
+}
+
+/// The request of QualifyOwnerPoolMember.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QualifyOwnerPoolMemberRequest {
+    /// The owner pool.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The Agent version that ran the suite, in the pool's environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "agentVersion"
+    )]
+    pub agent_version: String,
+    /// The suite that ran; must equal the pool's `admission.suite`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub suite: String,
+    /// The score per suite metric; at most 64.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub scores: std::collections::BTreeMap<String, f64>,
+    /// The suite version that ran; must equal the pool's
+    /// `admission.suite_version`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "suiteVersion"
+    )]
+    pub suite_version: String,
+    /// The grader's id of this suite run, for example its evidence record; 1 to
+    /// 200 characters. Each result is recorded once per member.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub result: String,
 }
 
 /// A pinned tool called periodically while the accepted task owns its grant.
@@ -1893,6 +2335,22 @@ pub struct RunAgentRequest {
         alias = "environmentMask"
     )]
     pub environment_mask: String,
+    /// The OwnerPool this run owns work for. Admission refuses with
+    /// `INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that
+    /// moment; later turns of the session are not re-checked.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ownerPool"
+    )]
+    pub owner_pool: String,
+    /// The maker sessions this run verifies, 1 to 16; empty for an ordinary
+    /// run. Admission refuses with `PERMISSION_DENIED` unless `agent_version` is
+    /// read-only and its Agent differs from every maker session's Agent. The
+    /// verifier session never receives a maker transcript. Set at most one of
+    /// `owner_pool` and `verifies`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub verifies: Vec<String>,
 }
 
 /// Durable acceptance, not task completion or sandbox readiness.
@@ -2250,6 +2708,14 @@ pub struct Tool {
     /// event (`:submitToolResult`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub client: Option<ClientTool>,
+    /// Called only by the runtime, as a run's `completion` or `renewal` tool:
+    /// never offered to the model, which cannot call it.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "runtimeOnly"
+    )]
+    pub runtime_only: bool,
 }
 
 /// A ToolCall is the agent asking to call a tool. `id` is assigned by the
@@ -2575,6 +3041,24 @@ pub struct UpdateMemoryStoreRequest {
     pub validate_only: bool,
 }
 
+/// The request of UpdateOwnerPool.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateOwnerPoolRequest {
+    /// The owner pool to update; `name` identifies it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "ownerPool")]
+    pub owner_pool: Option<OwnerPool>,
+    /// The fields to write: `spec`, `meta` or both; unset writes both.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+}
+
 /// ApprovalDecision is a person's answer to an approval.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -2732,6 +3216,62 @@ impl<'de> serde::Deserialize<'de> for MemorySource {
 }
 
 impl crate::runtime::QueryValue for MemorySource {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// The standing of an OwnerPool member.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum OwnerPoolMemberState {
+    /// Passed the admission suite and not demoted since: may own.
+    Qualified,
+    /// Failed the admission suite: never owns until it passes.
+    Refused,
+    /// A live metric regressed past a demotion rule: never owns until it
+    /// qualifies again.
+    Demoted,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl OwnerPoolMemberState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Qualified => "qualified",
+            Self::Refused => "refused",
+            Self::Demoted => "demoted",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "qualified" => Self::Qualified,
+            "refused" => Self::Refused,
+            "demoted" => Self::Demoted,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for OwnerPoolMemberState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for OwnerPoolMemberState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for OwnerPoolMemberState {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
@@ -3028,9 +3568,14 @@ impl<T: crate::runtime::Transport> crate::runtime::Client<T> {
 ///
 /// Scopes: `agents:read` and `agents:write` manage agents, versions and
 /// memory stores with a secret key. `agents:sessions` runs sessions and reads
-/// and deletes session and memory records. All methods currently require a
-/// secret key. Publishable-key access is deferred until the backend enforces
-/// end-user ownership of sessions and memories and `end_user_access` on Agents.
+/// and deletes session and memory records. `agents:admin` governs owner pools
+/// (their admission minimums and demotion rules); no wildcard reaches it.
+/// `agents:qualify` records admission-suite results and live metrics for
+/// owner pool members: a grader's grant, held only by name, and refused to the
+/// principal whose create or update minted the version. All methods
+/// currently require a secret key. Publishable-key access is deferred until
+/// the backend enforces end-user ownership of sessions and memories and
+/// `end_user_access` on Agents.
 /// Credential actions capture existing grants; handles are not CRUD resources.
 ///
 /// Namespace of Sylphx Agents on the client.
@@ -3077,6 +3622,13 @@ impl<'a, T: crate::runtime::Transport> AgentsApi<'a, T> {
     /// The `memories` collection.
     pub fn memories(&self) -> MemoriesCollection<'a, T> {
         MemoriesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `owner_pools` collection.
+    pub fn owner_pools(&self) -> OwnerPoolsCollection<'a, T> {
+        OwnerPoolsCollection {
             client: self.client,
         }
     }
@@ -3336,7 +3888,7 @@ impl<'a, T: crate::runtime::Transport> AgentsCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/agents/*}:run` · permission `agents:sessions` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`, `INVALID_STATE`.
     pub async fn run(
         &self,
         request: RunAgentRequest,
@@ -4292,6 +4844,259 @@ impl<'a, T: crate::runtime::Transport> MemoriesCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `owner_pools` of Sylphx Agents: Resource type `agents.sylphx.com/OwnerPool`.
+pub struct OwnerPoolsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> OwnerPoolsCollection<'a, T> {
+    /// Gets an owner pool with its members.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}` · permission `agents:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetOwnerPoolRequest,
+    ) -> Result<OwnerPool, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/owner_pools/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists owner pools, newest first.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/owner_pools` · permission `agents:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListOwnerPoolsRequest,
+    ) -> Result<ListOwnerPoolsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/owner_pools",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListOwnerPoolsRequest,
+    ) -> Result<Vec<OwnerPool>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.owner_pools);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates an owner pool with no members. Its minimums and demotion rules
+    /// are governance, so the caller needs `agents:admin`.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/owner_pools` · permission `agents:admin` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateOwnerPoolRequest,
+    ) -> Result<OwnerPool, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/owner_pools",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("owner_pool_id", &request.owner_pool_id);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.owner_pool)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Replaces an owner pool's spec (`agents:admin`). Members keep their
+    /// standing; a changed suite or minimum applies from the next `:qualify`.
+    ///
+    /// `PATCH /v1/{owner_pool.name=orgs/*/projects/*/envs/*/owner_pools/*}` · permission `agents:admin` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateOwnerPoolRequest,
+    ) -> Result<OwnerPool, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .owner_pool
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/owner_pools/*",
+                "owner_pool.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.owner_pool)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Deletes an owner pool and its members (`agents:admin`). Sessions already
+    /// admitted keep running.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}` · permission `agents:admin` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn delete(
+        &self,
+        request: DeleteOwnerPoolRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/owner_pools/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Records an admission suite result for an Agent version. The caller holds
+    /// `agents:qualify` and is not the principal whose create or update minted
+    /// the version (`PERMISSION_DENIED`). Every minimum
+    /// met: the member is `QUALIFIED`. Any score missing or below its minimum:
+    /// the member is recorded `REFUSED` with the reason. Each qualification is
+    /// recorded with its suite, suite version, result and caller; a `result`
+    /// already recorded for the member is refused with `INVALID_FIELD`, so a
+    /// demoted member returns only with a new suite result. A read-only version
+    /// is refused with `PERMISSION_DENIED`; a suite or suite version other than
+    /// the pool's with `INVALID_FIELD`. Re-qualifying keeps the member's
+    /// baseline: the baseline belongs to the version and its pinned model.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}:qualify` · permission `agents:qualify` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn qualify(
+        &self,
+        request: QualifyOwnerPoolMemberRequest,
+    ) -> Result<OwnerPoolMember, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:qualify",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/owner_pools/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Records a live-metric observation for a member and applies the pool's
+    /// demotion rules (`agents:qualify`, refused to the version's authors as in
+    /// `:qualify`). The platform computes each rule's baseline: the median of
+    /// the member's first `baseline_observations` counted observations of the
+    /// metric, set only when it is finite and positive. Values of a rule metric
+    /// are lower-is-better and must not be negative. Once the baseline is set, a
+    /// metric past `baseline * (1 + max_regression)` demotes a qualified member.
+    /// Only `:qualify` brings a demoted member back.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}:observe` · permission `agents:qualify` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn observe(
+        &self,
+        request: ObserveOwnerPoolMemberRequest,
+    ) -> Result<OwnerPoolMember, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:observe",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/owner_pools/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

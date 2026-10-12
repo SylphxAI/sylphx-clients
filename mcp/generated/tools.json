@@ -2170,6 +2170,10 @@
                     "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
                     "type": "string"
                   },
+                  "read_only": {
+                    "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
+                    "type": "boolean"
+                  },
                   "skills": {
                     "description": "Skills: instruction packs the agent loads when relevant, at most 64.",
                     "items": {
@@ -2376,6 +2380,10 @@
                         "name": {
                           "description": "The name the model calls, unique within the agent.",
                           "type": "string"
+                        },
+                        "runtime_only": {
+                          "description": "Called only by the runtime, as a run's `completion` or `renewal` tool:\nnever offered to the model, which cannot call it.",
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -2670,6 +2678,10 @@
                     "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
                     "type": "string"
                   },
+                  "read_only": {
+                    "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
+                    "type": "boolean"
+                  },
                   "skills": {
                     "description": "Skills: instruction packs the agent loads when relevant, at most 64.",
                     "items": {
@@ -2876,6 +2888,10 @@
                         "name": {
                           "description": "The name the model calls, unique within the agent.",
                           "type": "string"
+                        },
+                        "runtime_only": {
+                          "description": "Called only by the runtime, as a run's `completion` or `renewal` tool:\nnever offered to the model, which cannot call it.",
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -3211,6 +3227,11 @@
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
           },
+          "owner_pool": {
+            "description": "The OwnerPool this run owns work for. Admission refuses with\n`INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that\nmoment; later turns of the session are not re-checked.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          },
           "profiles": {
             "description": "Granted profile mounts for the fresh session lease.",
             "items": {
@@ -3292,6 +3313,14 @@
           "task_ref": {
             "description": "Caller-owned opaque reference, not interpreted by Agents.",
             "type": "string"
+          },
+          "verifies": {
+            "description": "The maker sessions this run verifies, 1 to 16; empty for an ordinary\nrun. Admission refuses with `PERMISSION_DENIED` unless `agent_version` is\nread-only and its Agent differs from every maker session's Agent. The\nverifier session never receives a maker transcript. Set at most one of\n`owner_pool` and `verifies`.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
           },
           "workspace_knowledge": {
             "additionalProperties": true,
@@ -4940,6 +4969,510 @@
       "permission": "agents:sessions",
       "served": false,
       "tool": "agents_memories_search"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an owner pool with its members."
+      },
+      "description": "Gets an owner pool with its members.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetOwnerPool.",
+        "properties": {
+          "name": {
+            "description": "The name of the owner pool to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.get",
+      "permission": "agents:read",
+      "tool": "agents_owner_pools_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists owner pools, newest first."
+      },
+      "description": "Lists owner pools, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/owner_pools",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListOwnerPools.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.list",
+      "permission": "agents:read",
+      "tool": "agents_owner_pools_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an owner pool with no members. Its minimums and demotion rules are governance, so the caller needs `agents:admin`."
+      },
+      "description": "Creates an owner pool with no members. Its minimums and demotion rules\nare governance, so the caller needs `agents:admin`.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/owner_pools",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateOwnerPool.",
+        "properties": {
+          "owner_pool": {
+            "additionalProperties": false,
+            "description": "The owner pool to create; only caller-writable fields are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "admission": {
+                    "additionalProperties": false,
+                    "description": "The admission test every member passes.",
+                    "properties": {
+                      "min_scores": {
+                        "additionalProperties": {
+                          "type": "number"
+                        },
+                        "description": "Minimum score per suite metric, higher is better; 1 to 64 metrics. A\nmember qualifies only when every metric is reported at or above its\nminimum.",
+                        "type": "object"
+                      },
+                      "suite": {
+                        "description": "The suite's id, matched exactly by `:qualify`; at most 200 characters.",
+                        "type": "string"
+                      },
+                      "suite_version": {
+                        "description": "The suite's version, matched exactly by `:qualify`; at most 200\ncharacters.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "suite",
+                      "min_scores",
+                      "suite_version"
+                    ],
+                    "type": "object"
+                  },
+                  "demotion": {
+                    "description": "Live-metric rules that demote a member; at most 16, each metric once.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "OwnerPoolDemotionRule demotes a member whose live metric, lower is better\nand never negative, regresses past its baseline. The platform computes the\nbaseline; no caller sets it.",
+                      "properties": {
+                        "baseline_observations": {
+                          "description": "The baseline is the median of the member's first this many counted\nobservations of the metric, set once it is finite and positive (while\nthe median is zero the window moves on). 1 to 100; default 5.",
+                          "format": "int64",
+                          "type": "string"
+                        },
+                        "max_regression": {
+                          "description": "The tolerated regression as a fraction of the baseline: a member is\ndemoted when the observed value exceeds `baseline * (1 + max_regression)`.",
+                          "type": "number"
+                        },
+                        "metric": {
+                          "description": "The live metric's name, as `:observe` reports it.",
+                          "type": "string"
+                        },
+                        "min_samples": {
+                          "description": "Observations over fewer samples than this are recorded but never count\ntoward the baseline or demote; default 1.",
+                          "format": "int64",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "metric",
+                        "max_regression"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "admission"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "owner_pool_id": {
+            "description": "The owner pool id, the final name segment.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          }
+        },
+        "required": [
+          "parent",
+          "owner_pool_id",
+          "owner_pool"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.create",
+      "permission": "agents:admin",
+      "tool": "agents_owner_pools_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Replaces an owner pool's spec (`agents:admin`). Members keep their standing; a changed suite or minimum applies from the next `:qualify`."
+      },
+      "description": "Replaces an owner pool's spec (`agents:admin`). Members keep their\nstanding; a changed suite or minimum applies from the next `:qualify`.",
+      "effect": "write",
+      "http": "PATCH /v1/{owner_pool.name=orgs/*/projects/*/envs/*/owner_pools/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateOwnerPool.",
+        "properties": {
+          "owner_pool": {
+            "additionalProperties": false,
+            "description": "The owner pool to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/owner_pools/{owner_pool}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "admission": {
+                    "additionalProperties": false,
+                    "description": "The admission test every member passes.",
+                    "properties": {
+                      "min_scores": {
+                        "additionalProperties": {
+                          "type": "number"
+                        },
+                        "description": "Minimum score per suite metric, higher is better; 1 to 64 metrics. A\nmember qualifies only when every metric is reported at or above its\nminimum.",
+                        "type": "object"
+                      },
+                      "suite": {
+                        "description": "The suite's id, matched exactly by `:qualify`; at most 200 characters.",
+                        "type": "string"
+                      },
+                      "suite_version": {
+                        "description": "The suite's version, matched exactly by `:qualify`; at most 200\ncharacters.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "suite",
+                      "min_scores",
+                      "suite_version"
+                    ],
+                    "type": "object"
+                  },
+                  "demotion": {
+                    "description": "Live-metric rules that demote a member; at most 16, each metric once.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "OwnerPoolDemotionRule demotes a member whose live metric, lower is better\nand never negative, regresses past its baseline. The platform computes the\nbaseline; no caller sets it.",
+                      "properties": {
+                        "baseline_observations": {
+                          "description": "The baseline is the median of the member's first this many counted\nobservations of the metric, set once it is finite and positive (while\nthe median is zero the window moves on). 1 to 100; default 5.",
+                          "format": "int64",
+                          "type": "string"
+                        },
+                        "max_regression": {
+                          "description": "The tolerated regression as a fraction of the baseline: a member is\ndemoted when the observed value exceeds `baseline * (1 + max_regression)`.",
+                          "type": "number"
+                        },
+                        "metric": {
+                          "description": "The live metric's name, as `:observe` reports it.",
+                          "type": "string"
+                        },
+                        "min_samples": {
+                          "description": "Observations over fewer samples than this are recorded but never count\ntoward the baseline or demote; default 1.",
+                          "format": "int64",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "metric",
+                        "max_regression"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "admission"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write: `spec`, `meta` or both; unset writes both.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner_pool"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.update",
+      "permission": "agents:admin",
+      "tool": "agents_owner_pools_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an owner pool and its members (`agents:admin`). Sessions already admitted keep running."
+      },
+      "description": "Deletes an owner pool and its members (`agents:admin`). Sessions already\nadmitted keep running.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteOwnerPool.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the owner pool to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.delete",
+      "permission": "agents:admin",
+      "tool": "agents_owner_pools_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records an admission suite result for an Agent version. The caller holds `agents:qualify` and is not the principal whose create or update minted the version (`PERMISSION_DENIED`). Every minimum met: the member is `QUALIFIED`. Any score missing or below its minimum: the member is recorded `REFUSED` with the reason. Each qualification is recorded with its suite, suite version, result and caller; a `result` already recorded for the member is refused with `INVALID_FIELD`, so a demoted member returns only with a new suite result. A read-only version is refused with `PERMISSION_DENIED`; a suite or suite version other than the pool's with `INVALID_FIELD`. Re-qualifying keeps the member's baseline: the baseline belongs to the version and its pinned model."
+      },
+      "description": "Records an admission suite result for an Agent version. The caller holds\n`agents:qualify` and is not the principal whose create or update minted\nthe version (`PERMISSION_DENIED`). Every minimum\nmet: the member is `QUALIFIED`. Any score missing or below its minimum:\nthe member is recorded `REFUSED` with the reason. Each qualification is\nrecorded with its suite, suite version, result and caller; a `result`\nalready recorded for the member is refused with `INVALID_FIELD`, so a\ndemoted member returns only with a new suite result. A read-only version\nis refused with `PERMISSION_DENIED`; a suite or suite version other than\nthe pool's with `INVALID_FIELD`. Re-qualifying keeps the member's\nbaseline: the baseline belongs to the version and its pinned model.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}:qualify",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of QualifyOwnerPoolMember.",
+        "properties": {
+          "agent_version": {
+            "description": "The Agent version that ran the suite, in the pool's environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
+          },
+          "name": {
+            "description": "The owner pool.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          },
+          "result": {
+            "description": "The grader's id of this suite run, for example its evidence record; 1 to\n200 characters. Each result is recorded once per member.",
+            "type": "string"
+          },
+          "scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "The score per suite metric; at most 64.",
+            "type": "object"
+          },
+          "suite": {
+            "description": "The suite that ran; must equal the pool's `admission.suite`.",
+            "type": "string"
+          },
+          "suite_version": {
+            "description": "The suite version that ran; must equal the pool's\n`admission.suite_version`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "agent_version",
+          "suite",
+          "scores",
+          "suite_version",
+          "result"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.qualify",
+      "permission": "agents:qualify",
+      "tool": "agents_owner_pools_qualify"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records a live-metric observation for a member and applies the pool's demotion rules (`agents:qualify`, refused to the version's authors as in `:qualify`). The platform computes each rule's baseline: the median of the member's first `baseline_observations` counted observations of the metric, set only when it is finite and positive. Values of a rule metric are lower-is-better and must not be negative. Once the baseline is set, a metric past `baseline * (1 + max_regression)` demotes a qualified member. Only `:qualify` brings a demoted member back."
+      },
+      "description": "Records a live-metric observation for a member and applies the pool's\ndemotion rules (`agents:qualify`, refused to the version's authors as in\n`:qualify`). The platform computes each rule's baseline: the median of\nthe member's first `baseline_observations` counted observations of the\nmetric, set only when it is finite and positive. Values of a rule metric\nare lower-is-better and must not be negative. Once the baseline is set, a\nmetric past `baseline * (1 + max_regression)` demotes a qualified member.\nOnly `:qualify` brings a demoted member back.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/owner_pools/*}:observe",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ObserveOwnerPoolMember.",
+        "properties": {
+          "agent_version": {
+            "description": "The member version.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "The observed value per metric over the caller's window, lower is better;\n1 to 64. A demotion rule's metric is never negative.",
+            "type": "object"
+          },
+          "name": {
+            "description": "The owner pool.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          },
+          "samples": {
+            "description": "The number of outcomes the values summarize.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "agent_version",
+          "metrics",
+          "samples"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.owner_pools.observe",
+      "permission": "agents:qualify",
+      "tool": "agents_owner_pools_observe"
     },
     {
       "annotations": {
@@ -43269,6 +43802,10 @@
                     "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
                     "type": "string"
                   },
+                  "read_only": {
+                    "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
+                    "type": "boolean"
+                  },
                   "skills": {
                     "description": "Skills: instruction packs the agent loads when relevant, at most 64.",
                     "items": {
@@ -43475,6 +44012,10 @@
                         "name": {
                           "description": "The name the model calls, unique within the agent.",
                           "type": "string"
+                        },
+                        "runtime_only": {
+                          "description": "Called only by the runtime, as a run's `completion` or `renewal` tool:\nnever offered to the model, which cannot call it.",
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -43755,6 +44296,11 @@
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
           },
+          "owner_pool": {
+            "description": "The OwnerPool this run owns work for. Admission refuses with\n`INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that\nmoment; later turns of the session are not re-checked.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/OwnerPool"
+          },
           "profiles": {
             "description": "Granted profile mounts for the fresh session lease.",
             "items": {
@@ -43836,6 +44382,14 @@
           "task_ref": {
             "description": "Caller-owned opaque reference, not interpreted by Agents.",
             "type": "string"
+          },
+          "verifies": {
+            "description": "The maker sessions this run verifies, 1 to 16; empty for an ordinary\nrun. Admission refuses with `PERMISSION_DENIED` unless `agent_version` is\nread-only and its Agent differs from every maker session's Agent. The\nverifier session never receives a maker transcript. Set at most one of\n`owner_pool` and `verifies`.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
           },
           "workspace_knowledge": {
             "additionalProperties": true,

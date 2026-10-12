@@ -43,6 +43,7 @@ export const PREFIXES = [
 	{ prefix: 'sevt', entity: 'SessionEvent', service: 'agents', collection: 'session_events' },
 	{ prefix: 'mst', entity: 'MemoryStore', service: 'agents', collection: 'memory_stores' },
 	{ prefix: 'mem', entity: 'Memory', service: 'agents', collection: 'memories' },
+	{ prefix: 'aop', entity: 'OwnerPool', service: 'agents', collection: 'owner_pools' },
 	{ prefix: 'mdl', entity: 'AiModel', service: 'ai', collection: 'ai_models' },
 	{ prefix: 'ai', entity: 'AiUsage', service: 'ai', collection: null },
 	{ prefix: 'llm', entity: 'LlmLog', service: 'ai', collection: null },
