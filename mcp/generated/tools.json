@@ -34155,6 +34155,392 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates or replaces a namespace's rules. Existing channels follow the new rules from their next message; shortening history trims at the next publish."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates or replaces a namespace's rules. Existing channels follow the new\nrules from their next message; shortening history trims at the next\npublish.",
+      "effect": "write",
+      "http": "PUT /v1/namespaces/{name}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of PutNamespace.",
+        "properties": {
+          "client_publish": {
+            "description": "Whether clients may publish.",
+            "type": "boolean"
+          },
+          "history": {
+            "description": "How much history channels keep.",
+            "enum": [
+              "none",
+              "short",
+              "standard"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "The namespace name; see Namespace.name.",
+            "type": "string"
+          },
+          "presence": {
+            "description": "Whether channels track presence.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.namespaces.put",
+      "permission": "realtime:write",
+      "served": false,
+      "tool": "realtime_namespaces_put"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a namespace."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Reads a namespace.",
+      "effect": "read",
+      "http": "GET /v1/namespaces/{name}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetNamespace.",
+        "properties": {
+          "name": {
+            "description": "The namespace name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.namespaces.get",
+      "permission": "realtime:read",
+      "served": false,
+      "tool": "realtime_namespaces_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the environment's namespaces."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists the environment's namespaces.",
+      "effect": "read",
+      "http": "GET /v1/namespaces",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListNamespaces.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many namespaces; the service caps it.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The `next_page_token` of the previous page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.namespaces.list",
+      "permission": "realtime:read",
+      "served": false,
+      "tool": "realtime_namespaces_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes a namespace, its channels' history and presence, and closes the subscriptions on them."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a namespace, its channels' history and presence, and closes the\nsubscriptions on them.",
+      "effect": "destructive",
+      "http": "DELETE /v1/namespaces/{name}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteNamespace.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The namespace name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.namespaces.delete",
+      "permission": "realtime:write",
+      "served": false,
+      "tool": "realtime_namespaces_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Publishes a message to a channel. The namespace must exist. The server publishes regardless of `client_publish`. A repeated Sylphx-Effect-Id publishes once."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Publishes a message to a channel. The namespace must exist. The server\npublishes regardless of `client_publish`. A repeated Sylphx-Effect-Id\npublishes once.",
+      "effect": "write",
+      "http": "POST /v1/channels:publish",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of Publish.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`: the name is 1 to 128 characters of\n`a-z A-Z 0-9 - _ . =` and no `*`.",
+            "type": "string"
+          },
+          "data": {
+            "description": "The JSON payload, at most 64 KiB encoded."
+          },
+          "event": {
+            "description": "The application's event name, 1 to 64 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "event"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.channels.publish",
+      "permission": "realtime:publish",
+      "served": false,
+      "tool": "realtime_channels_publish"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a channel's messages after a cursor, oldest first. With `wait_seconds`, an empty result waits up to that long for the first new message and answers as soon as one arrives: this is how an agent subscribes."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a channel's messages after a cursor, oldest first. With\n`wait_seconds`, an empty result waits up to that long for the first new\nmessage and answers as soon as one arrives: this is how an agent\nsubscribes.",
+      "effect": "read",
+      "http": "GET /v1/channels/{channel}/messages",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMessages.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`.",
+            "type": "string"
+          },
+          "cursor": {
+            "description": "Return messages after this cursor. Empty starts at the oldest kept\nmessage.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many messages; default 100, at most 1,000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "wait_seconds": {
+            "description": "When no message is after the cursor, wait up to this many seconds for\none; 0 to 30, default 0 (answer at once).",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.channels.history",
+      "permission": "realtime:read",
+      "served": false,
+      "tool": "realtime_channels_history"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists who is present on a channel."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists who is present on a channel.",
+      "effect": "read",
+      "http": "GET /v1/channels/{channel}/presence",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListPresence.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many members; default 100, at most 1,000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The `next_page_token` of the previous page.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.channels.presence",
+      "permission": "realtime:read",
+      "served": false,
+      "tool": "realtime_channels_presence"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Mints a connection or channel token for an end user. The customer's server calls it with the secret key after authenticating the user, and hands the token to the client."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Mints a connection or channel token for an end user. The customer's\nserver calls it with the secret key after authenticating the user, and\nhands the token to the client.",
+      "effect": "write",
+      "http": "POST /v1/tokens:issue",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of IssueToken.",
+        "properties": {
+          "grants": {
+            "description": "The channels and capabilities to grant. A channel token takes exactly one\ngrant whose pattern has no `*`. At most 64 grants.",
+            "items": {
+              "additionalProperties": false,
+              "description": "ChannelGrant is the capabilities a token grants on one channel pattern.",
+              "properties": {
+                "capabilities": {
+                  "description": "The capabilities granted. At least one.",
+                  "items": {
+                    "description": "Capability is one thing a token lets its holder do on a channel pattern.",
+                    "enum": [
+                      "subscribe",
+                      "publish",
+                      "presence"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "pattern": {
+                  "description": "A channel name or pattern: `room:42`, or `room:*` for every channel of the\nnamespace. `*` is allowed only as the whole name part, and never in the\nnamespace part.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "pattern",
+                "capabilities"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "Which kind of token to mint.",
+            "enum": [
+              "connection",
+              "channel"
+            ],
+            "type": "string"
+          },
+          "ttl": {
+            "description": "How long the token lives; 1 minute to 24 hours, default 1 hour.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "user": {
+            "description": "The end user's id. Required for a connection token.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "grants"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.tokens.issue",
+      "permission": "realtime:token",
+      "served": false,
+      "tool": "realtime_tokens_issue"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Binds a bus Subscription's matching events to a channel: each event the Subscription matches is published to the channel, with the event's CloudEvents `type` as the message event and its `data` as the payload. The Subscription itself is an Events Resource (`sylphx.events.v1`); this call only names the channel it feeds, and replaces the Subscription's earlier binding."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Binds a bus Subscription's matching events to a channel: each event the\nSubscription matches is published to the channel, with the event's\nCloudEvents `type` as the message event and its `data` as the payload. The\nSubscription itself is an Events Resource (`sylphx.events.v1`); this call\nonly names the channel it feeds, and replaces the Subscription's earlier\nbinding.",
+      "effect": "write",
+      "http": "POST /v1/subscription-bindings",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of BindSubscription.",
+        "properties": {
+          "channel": {
+            "description": "The channel its events are published to, `namespace:name`.",
+            "type": "string"
+          },
+          "subscription": {
+            "description": "The Events Subscription's resource name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscription",
+          "channel"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "realtime.bindings.create",
+      "permission": "realtime:write",
+      "served": false,
+      "tool": "realtime_bindings_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -42375,7 +42761,7 @@
       "tool": "workflows_distributed_runs_read_workers"
     }
   ],
-  "generated": "@generated by sylphx-gen 0.1.0 from contracts@fd5d1e1a5b8b6e1f82990b84f6ad09294239c98d714def9690bcf1e2e4c86665. Do not edit.",
+  "generated": "@generated by sylphx-gen 0.1.0 from contracts@c8a7361c53e572321b0ec9fb014fd1e8279b007b62562423038e0d0e5b9d767a. Do not edit.",
   "server": {
     "name": "sylphx",
     "remote_url": "https://api.sylphx.com/mcp"

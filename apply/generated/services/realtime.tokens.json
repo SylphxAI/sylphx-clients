@@ -1,0 +1,16 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "realtime.tokens.issue",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": ""
+    }
+  ]
+}

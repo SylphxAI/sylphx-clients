@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.realtime.v1.HistoryPreset",
+  "package": "sylphx.realtime.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "HISTORY_PRESET_NONE",
+      "wire": "none"
+    },
+    {
+      "number": 2,
+      "proto_name": "HISTORY_PRESET_SHORT",
+      "wire": "short"
+    },
+    {
+      "number": 3,
+      "proto_name": "HISTORY_PRESET_STANDARD",
+      "wire": "standard"
+    }
+  ]
+}

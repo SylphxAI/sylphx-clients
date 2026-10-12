@@ -1,0 +1,40 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "realtime.namespaces.put",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "realtime.namespaces.get",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "realtime.namespaces.list",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "realtime.namespaces.delete",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": ""
+    }
+  ]
+}

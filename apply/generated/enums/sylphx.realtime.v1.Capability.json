@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.realtime.v1.Capability",
+  "package": "sylphx.realtime.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CAPABILITY_SUBSCRIBE",
+      "wire": "subscribe"
+    },
+    {
+      "number": 2,
+      "proto_name": "CAPABILITY_PUBLISH",
+      "wire": "publish"
+    },
+    {
+      "number": 3,
+      "proto_name": "CAPABILITY_PRESENCE",
+      "wire": "presence"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "realtime.bindings.create",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": ""
+    }
+  ]
+}

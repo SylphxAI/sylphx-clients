@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.realtime.v1.TokenKind",
+  "package": "sylphx.realtime.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "TOKEN_KIND_CONNECTION",
+      "wire": "connection"
+    },
+    {
+      "number": 2,
+      "proto_name": "TOKEN_KIND_CHANNEL",
+      "wire": "channel"
+    }
+  ]
+}

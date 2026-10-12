@@ -32155,6 +32155,490 @@
         },
         "type": "object"
       },
+      "sylphx.realtime.v1.BindSubscriptionRequest": {
+        "description": "The request of BindSubscription.",
+        "properties": {
+          "channel": {
+            "description": "The channel its events are published to, `namespace:name`.",
+            "type": "string"
+          },
+          "subscription": {
+            "description": "The Events Subscription's resource name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscription",
+          "channel"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.BindSubscriptionResponse": {
+        "description": "The response of BindSubscription.",
+        "properties": {
+          "channel": {
+            "description": "The channel it feeds.",
+            "type": "string"
+          },
+          "subscription": {
+            "description": "The Subscription bound.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.Capability": {
+        "description": "Capability is one thing a token lets its holder do on a channel pattern.",
+        "enum": [
+          "subscribe",
+          "publish",
+          "presence"
+        ],
+        "type": "string"
+      },
+      "sylphx.realtime.v1.ChannelGrant": {
+        "description": "ChannelGrant is the capabilities a token grants on one channel pattern.",
+        "properties": {
+          "capabilities": {
+            "description": "The capabilities granted. At least one.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.realtime.v1.Capability"
+            },
+            "type": "array"
+          },
+          "pattern": {
+            "description": "A channel name or pattern: `room:42`, or `room:*` for every channel of the\nnamespace. `*` is allowed only as the whole name part, and never in the\nnamespace part.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern",
+          "capabilities"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.DeleteNamespaceRequest": {
+        "description": "The request of DeleteNamespace.",
+        "properties": {
+          "name": {
+            "description": "The namespace name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.DeleteNamespaceResponse": {
+        "description": "The response of DeleteNamespace.",
+        "properties": {},
+        "type": "object"
+      },
+      "sylphx.realtime.v1.GetNamespaceRequest": {
+        "description": "The request of GetNamespace.",
+        "properties": {
+          "name": {
+            "description": "The namespace name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.HistoryPreset": {
+        "description": "HistoryPreset is how much of a channel's past a namespace keeps. Longer\nretention is not a realtime feature: route the channel's messages to an\nEvents topic.",
+        "enum": [
+          "none",
+          "short",
+          "standard"
+        ],
+        "type": "string"
+      },
+      "sylphx.realtime.v1.IssueTokenRequest": {
+        "description": "The request of IssueToken.",
+        "properties": {
+          "grants": {
+            "description": "The channels and capabilities to grant. A channel token takes exactly one\ngrant whose pattern has no `*`. At most 64 grants.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.realtime.v1.ChannelGrant"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.realtime.v1.TokenKind",
+            "description": "Which kind of token to mint."
+          },
+          "ttl": {
+            "description": "How long the token lives; 1 minute to 24 hours, default 1 hour.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "user": {
+            "description": "The end user's id. Required for a connection token.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "grants"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.IssueTokenResponse": {
+        "description": "The response of IssueToken.",
+        "properties": {
+          "claims": {
+            "$ref": "#/components/schemas/sylphx.realtime.v1.TokenClaims",
+            "description": "The claims the service put in it, for the caller to log or check."
+          },
+          "connect_uri": {
+            "description": "The realtime host the client connects to. Never hard-code it: it can\nchange, with no port, and the protocol-v1 paths are fixed.",
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "When it expires.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "refresh_time": {
+            "description": "The earliest the client should ask for a replacement: the in-band\n`refresh_required` frame arrives at this time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "token": {
+            "description": "The token. Opaque; sent in the `connect` frame or the `Authorization`\nheader, never in a URL.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.ListMessagesRequest": {
+        "description": "The request of ListMessages.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`.",
+            "type": "string"
+          },
+          "cursor": {
+            "description": "Return messages after this cursor. Empty starts at the oldest kept\nmessage.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many messages; default 100, at most 1,000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "wait_seconds": {
+            "description": "When no message is after the cursor, wait up to this many seconds for\none; 0 to 30, default 0 (answer at once).",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.ListMessagesResponse": {
+        "description": "The response of ListMessages.",
+        "properties": {
+          "messages": {
+            "description": "The messages, oldest first. Empty when the wait ran out.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.realtime.v1.Message"
+            },
+            "type": "array"
+          },
+          "next_cursor": {
+            "description": "The cursor to pass as `cursor` next. Always set unless the\nnamespace is ephemeral.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.ListNamespacesRequest": {
+        "description": "The request of ListNamespaces.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many namespaces; the service caps it.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The `next_page_token` of the previous page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.ListNamespacesResponse": {
+        "description": "The response of ListNamespaces.",
+        "properties": {
+          "namespaces": {
+            "description": "The page of namespaces.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.realtime.v1.Namespace"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.ListPresenceRequest": {
+        "description": "The request of ListPresence.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many members; default 100, at most 1,000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The `next_page_token` of the previous page.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.ListPresenceResponse": {
+        "description": "The response of ListPresence.",
+        "properties": {
+          "members": {
+            "description": "The members present.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.realtime.v1.Member"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.Member": {
+        "description": "Member is one connection present on a channel.",
+        "properties": {
+          "connection_id": {
+            "description": "The connection id, unique while the connection lives.",
+            "type": "string"
+          },
+          "data": {
+            "description": "The application's presence data, at most 4 KiB encoded."
+          },
+          "enter_time": {
+            "description": "When this connection entered.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "user": {
+            "description": "The user id from the token.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.Message": {
+        "description": "Message is one message of a channel.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`.",
+            "type": "string"
+          },
+          "cursor": {
+            "description": "The message's cursor: opaque, ordered within the channel, and the value\nto resume from. Empty in an ephemeral namespace.",
+            "type": "string"
+          },
+          "data": {
+            "description": "The JSON payload, at most 64 KiB encoded."
+          },
+          "event": {
+            "description": "The application's event name, for example `move`. 1 to 64 characters.",
+            "type": "string"
+          },
+          "publish_time": {
+            "description": "When the service accepted the message.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "publisher": {
+            "description": "The user id of the publisher; empty when a server published without one.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.Namespace": {
+        "description": "Namespace is the only configured object of Sylphx Realtime. It carries the\nrules of every channel named `<namespace>:<name>`. Channels are implicit:\nthey exist from their first publish or subscribe and are never created.\nDeclared in `sylphx.toml` as `[realtime.namespaces.<name>]`.",
+        "properties": {
+          "client_publish": {
+            "description": "Whether a client holding a token with the publish capability may publish.\nDefault off: only servers publish.",
+            "type": "boolean"
+          },
+          "create_time": {
+            "description": "When the namespace was created.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "history": {
+            "$ref": "#/components/schemas/sylphx.realtime.v1.HistoryPreset",
+            "description": "How much history channels keep. Default NONE."
+          },
+          "name": {
+            "description": "The namespace name: 1 to 32 characters of `a-z`, `0-9`, `-` and `_`,\nstarting with a letter. It is the part of a channel before the first\ncolon, and never changes.",
+            "type": "string"
+          },
+          "presence": {
+            "description": "Whether channels track who is present. Default off.",
+            "type": "boolean"
+          },
+          "update_time": {
+            "description": "When the rules last changed.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.PublishRequest": {
+        "description": "The request of Publish.",
+        "properties": {
+          "channel": {
+            "description": "The channel, `namespace:name`: the name is 1 to 128 characters of\n`a-z A-Z 0-9 - _ . =` and no `*`.",
+            "type": "string"
+          },
+          "data": {
+            "description": "The JSON payload, at most 64 KiB encoded."
+          },
+          "event": {
+            "description": "The application's event name, 1 to 64 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "event"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.PublishResponse": {
+        "description": "The response of Publish.",
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/sylphx.realtime.v1.Message",
+            "description": "The published message; its cursor is empty in an ephemeral namespace."
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.PutNamespaceRequest": {
+        "description": "The request of PutNamespace.",
+        "properties": {
+          "client_publish": {
+            "description": "Whether clients may publish.",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/sylphx.realtime.v1.HistoryPreset",
+            "description": "How much history channels keep."
+          },
+          "name": {
+            "description": "The namespace name; see Namespace.name.",
+            "type": "string"
+          },
+          "presence": {
+            "description": "Whether channels track presence.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.realtime.v1.TokenClaims": {
+        "description": "TokenClaims are the claims every Sylphx Realtime token carries. A token is\nopaque to SDK users; this message states what the service puts in it and\nwhat it checks.",
+        "properties": {
+          "cell": {
+            "description": "The authoritative Access cell id of the issuing tenant. Required.",
+            "type": "string"
+          },
+          "environment": {
+            "description": "The authoritative Access environment id, not a client-supplied value.\nValid only within the organization, project and cell below.",
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "When the token expires. Between issue time plus 1 minute and 24 hours.\nThe service closes a connection whose token has expired and was not\nrefreshed.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "grants": {
+            "description": "The channels the holder may use. A connection token holds the grants of\nevery channel its connection may touch; a channel token holds exactly one.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.realtime.v1.ChannelGrant"
+            },
+            "type": "array"
+          },
+          "issue_time": {
+            "description": "When the token was issued.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "issuer_key_id": {
+            "description": "The issuing Access key id (not its secret). Required: the service rechecks\nits freshness, expiry, revocation and token-issuing authority through the\nAccess verifier at admission, refresh and while the connection is open.",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.realtime.v1.TokenKind",
+            "description": "The token's kind."
+          },
+          "organization": {
+            "description": "The authoritative Access organization id of the issuing tenant. Required.",
+            "type": "string"
+          },
+          "project": {
+            "description": "The authoritative Access project id of the issuing tenant. Required.",
+            "type": "string"
+          },
+          "token_id": {
+            "description": "A unique id; the service can revoke a token by it until it expires.",
+            "type": "string"
+          },
+          "user": {
+            "description": "The end user's id (`sub`). Required for a connection token; it is the\nuser shown in presence.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.realtime.v1.TokenKind": {
+        "description": "TokenKind says what a token connects.",
+        "enum": [
+          "connection",
+          "channel"
+        ],
+        "type": "string"
+      },
       "sylphx.release.v1.CreateReleaseRequest": {
         "description": "The request of CreateRelease.",
         "properties": {
@@ -39779,7 +40263,7 @@
     "description": "One API for every Sylphx service. Generated from contracts/; do not edit.",
     "title": "Sylphx API",
     "version": "v1",
-    "x-sylphx-generated": "@generated by sylphx-gen 0.1.0 from contracts@fd5d1e1a5b8b6e1f82990b84f6ad09294239c98d714def9690bcf1e2e4c86665. Do not edit."
+    "x-sylphx-generated": "@generated by sylphx-gen 0.1.0 from contracts@c8a7361c53e572321b0ec9fb014fd1e8279b007b62562423038e0d0e5b9d767a. Do not edit."
   },
   "openapi": "3.1.0",
   "paths": {
@@ -39924,6 +40408,277 @@
         "x-sylphx-method": "ai.ai_models.get",
         "x-sylphx-permission": "ai:read",
         "x-sylphx-publishable-ok": true,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/channels/{channel}/messages": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists a channel's messages after a cursor, oldest first. With\n`wait_seconds`, an empty result waits up to that long for the first new\nmessage and answers as soon as one arrives: this is how an agent\nsubscribes.",
+        "operationId": "realtime_channels_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return messages after this cursor. Empty starts at the oldest kept\nmessage.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many messages; default 100, at most 1,000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "When no message is after the cursor, wait up to this many seconds for\none; 0 to 30, default 0 (answer at once).",
+            "in": "query",
+            "name": "wait_seconds",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.ListMessagesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Lists a channel's messages after a cursor, oldest first. With `wait_seconds`, an empty result waits up to that long for the first new message and answers as soon as one arrives: this is how an agent subscribes.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "realtime.channels.history",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/channels/{channel}/presence": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists who is present on a channel.",
+        "operationId": "realtime_channels_presence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many members; default 100, at most 1,000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The `next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.ListPresenceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Lists who is present on a channel.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "realtime.channels.presence",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/channels:publish": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nPublishes a message to a channel. The namespace must exist. The server\npublishes regardless of `client_publish`. A repeated Sylphx-Effect-Id\npublishes once.",
+        "operationId": "realtime_channels_publish",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "channel": {
+                    "description": "The channel, `namespace:name`: the name is 1 to 128 characters of\n`a-z A-Z 0-9 - _ . =` and no `*`.",
+                    "type": "string"
+                  },
+                  "data": {
+                    "description": "The JSON payload, at most 64 KiB encoded."
+                  },
+                  "event": {
+                    "description": "The application's event name, 1 to 64 characters.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "channel",
+                  "event"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.PublishResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Publishes a message to a channel. The namespace must exist. The server publishes regardless of `client_publish`. A repeated Sylphx-Effect-Id publishes once.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "realtime.channels.publish",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:publish",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -42354,6 +43109,299 @@
         "x-sylphx-method": "data.search.multi",
         "x-sylphx-origin": "https://api.data.sylphx.com",
         "x-sylphx-permission": "data:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/namespaces": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists the environment's namespaces.",
+        "operationId": "realtime_namespaces_list",
+        "parameters": [
+          {
+            "description": "At most this many namespaces; the service caps it.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The `next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.ListNamespacesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Lists the environment's namespaces.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "realtime.namespaces.list",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/namespaces/{name}": {
+      "delete": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a namespace, its channels' history and presence, and closes the\nsubscriptions on them.",
+        "operationId": "realtime_namespaces_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.DeleteNamespaceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Deletes a namespace, its channels' history and presence, and closes the subscriptions on them.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "realtime.namespaces.delete",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:write",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReads a namespace.",
+        "operationId": "realtime_namespaces_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.Namespace"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Reads a namespace.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "realtime.namespaces.get",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "put": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates or replaces a namespace's rules. Existing channels follow the new\nrules from their next message; shortening history trims at the next\npublish.",
+        "operationId": "realtime_namespaces_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "client_publish": {
+                    "description": "Whether clients may publish.",
+                    "type": "boolean"
+                  },
+                  "history": {
+                    "$ref": "#/components/schemas/sylphx.realtime.v1.HistoryPreset",
+                    "description": "How much history channels keep."
+                  },
+                  "presence": {
+                    "description": "Whether channels track presence.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.Namespace"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "402": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Creates or replaces a namespace's rules. Existing channels follow the new rules from their next message; shortening history trims at the next publish.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PLAN_LIMIT_REACHED"
+        ],
+        "x-sylphx-method": "realtime.namespaces.put",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -113417,6 +114465,186 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/subscription-bindings": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nBinds a bus Subscription's matching events to a channel: each event the\nSubscription matches is published to the channel, with the event's\nCloudEvents `type` as the message event and its `data` as the payload. The\nSubscription itself is an Events Resource (`sylphx.events.v1`); this call\nonly names the channel it feeds, and replaces the Subscription's earlier\nbinding.",
+        "operationId": "realtime_bindings_create",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "channel": {
+                    "description": "The channel its events are published to, `namespace:name`.",
+                    "type": "string"
+                  },
+                  "subscription": {
+                    "description": "The Events Subscription's resource name.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "subscription",
+                  "channel"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.BindSubscriptionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Binds a bus Subscription's matching events to a channel: each event the Subscription matches is published to the channel, with the event's CloudEvents `type` as the message event and its `data` as the payload. The Subscription itself is an Events Resource (`sylphx.events.v1`); this call only names the channel it feeds, and replaces the Subscription's earlier binding.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "realtime.bindings.create",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:write",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/tokens:issue": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nMints a connection or channel token for an end user. The customer's\nserver calls it with the secret key after authenticating the user, and\nhands the token to the client.",
+        "operationId": "realtime_tokens_issue",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "grants": {
+                    "description": "The channels and capabilities to grant. A channel token takes exactly one\ngrant whose pattern has no `*`. At most 64 grants.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.realtime.v1.ChannelGrant"
+                    },
+                    "type": "array"
+                  },
+                  "kind": {
+                    "$ref": "#/components/schemas/sylphx.realtime.v1.TokenKind",
+                    "description": "Which kind of token to mint."
+                  },
+                  "ttl": {
+                    "description": "How long the token lives; 1 minute to 24 hours, default 1 hour.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "user": {
+                    "description": "The end user's id. Required for a connection token.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "grants"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.realtime.v1.IssueTokenResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "servers": [
+          {
+            "url": "https://api.realtime.sylphx.com"
+          }
+        ],
+        "summary": "Mints a connection or channel token for an end user. The customer's server calls it with the secret key after authenticating the user, and hands the token to the client.",
+        "tags": [
+          "realtime"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "realtime.tokens.issue",
+        "x-sylphx-origin": "https://api.realtime.sylphx.com",
+        "x-sylphx-permission": "realtime:token",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/whoami": {
       "get": {
         "description": "Returns the caller: the principal and the scope of the key or token that\nauthenticated this request. Clients fill their org, project, and env\ndefaults from it; every valid key may call it, whatever its scopes.",
@@ -113557,6 +114785,10 @@
     {
       "description": "Sylphx Observability (preview). ObservabilityService is Sylphx Observability's log, trace, and error\nsurface: ingest through the emitter-side buffer, tenant-fenced bounded\nqueries, and error-group triage. Observability is only ever a soft\ndependency.",
       "name": "observability"
+    },
+    {
+      "description": "Sylphx Realtime (preview). ChannelService is the Channel API of Sylphx Realtime: the server side that\nconfigures namespaces, publishes, reads history, lists presence, and mints\nthe tokens clients connect with. It is served by the Events service at the\nRealtime origin, not by the Resource API, and is called with the\nenvironment's secret key (`SYLPHX_API_KEY`); the key's org, project and\nenvironment are the tenant. Clients connect with a token over the Sylphx\nchannel protocol v1 (`protocol.proto`).\n\nThe same calls become MCP tools. An agent cannot hold a socket, so\nListMessages with `wait_seconds` is its subscribe.",
+      "name": "realtime"
     },
     {
       "description": "Sylphx Release (preview). ReleaseService is Sylphx Release: the only deployable unit and the progress\nof its rollouts. Releases are immutable; there is no Update or Delete.",

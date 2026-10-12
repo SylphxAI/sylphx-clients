@@ -1,0 +1,37 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "realtime.channels.publish",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "cursor",
+              "page_size",
+              "wait_seconds"
+            ]
+          },
+          "id": "realtime.channels.history",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "realtime.channels.presence",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": ""
+    }
+  ]
+}
