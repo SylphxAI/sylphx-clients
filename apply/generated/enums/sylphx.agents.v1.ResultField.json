@@ -26,6 +26,26 @@
       "number": 5,
       "proto_name": "RESULT_FIELD_OUTCOME",
       "wire": "outcome"
+    },
+    {
+      "number": 6,
+      "proto_name": "RESULT_FIELD_AWAITS",
+      "wire": "awaits"
+    },
+    {
+      "number": 7,
+      "proto_name": "RESULT_FIELD_CHECKPOINT",
+      "wire": "checkpoint"
+    },
+    {
+      "number": 8,
+      "proto_name": "RESULT_FIELD_COUNTED",
+      "wire": "counted"
+    },
+    {
+      "number": 9,
+      "proto_name": "RESULT_FIELD_RETRY_AT",
+      "wire": "retry_at"
     }
   ]
 }

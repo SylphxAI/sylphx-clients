@@ -1,0 +1,60 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "lease",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "state",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sandbox_seconds",
+      "number": 3,
+      "oneof": null,
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    }
+  ],
+  "name": "sylphx.agents.v1.SandboxActivity",
+  "package": "sylphx.agents.v1"
+}

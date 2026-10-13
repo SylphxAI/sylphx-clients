@@ -422,6 +422,11 @@ pub enum ErrorCode {
     /// owning service (identifiers-convergence.md §4.4). The Resource-API
     /// moved-id resolver answers it in front of every service.
     IdMoved,
+    /// FAILED_PRECONDITION / 409: a keyed command was dispatched to the guest but
+    /// its outcome was lost (the dispatcher, the stream, or the lease ended before
+    /// the result was recorded). The key never runs again; the command may or may
+    /// not have taken effect. Not retryable with the same key.
+    ExecOutcomeUnknown,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -463,6 +468,7 @@ impl ErrorCode {
             Self::EtagConflict => "ETAG_CONFLICT",
             Self::ValidateOnlyNotSupported => "VALIDATE_ONLY_NOT_SUPPORTED",
             Self::IdMoved => "ID_MOVED",
+            Self::ExecOutcomeUnknown => "EXEC_OUTCOME_UNKNOWN",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -503,6 +509,7 @@ impl ErrorCode {
             "ETAG_CONFLICT" => Self::EtagConflict,
             "VALIDATE_ONLY_NOT_SUPPORTED" => Self::ValidateOnlyNotSupported,
             "ID_MOVED" => Self::IdMoved,
+            "EXEC_OUTCOME_UNKNOWN" => Self::ExecOutcomeUnknown,
             other => Self::Unknown(other.to_string()),
         }
     }

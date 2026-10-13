@@ -243,6 +243,24 @@
       ],
       "cli_flag": "",
       "filterable": false,
+      "name": "item_key",
+      "number": 14,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
       "name": "owner_pool",
       "number": 20,
       "oneof": null,

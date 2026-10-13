@@ -619,14 +619,28 @@ pub struct ExecLeaseRequest {
     /// Bytes written to standard input.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub stdin: String,
-    /// Kill the process after this long; default 60 seconds, at most 10
-    /// minutes.
+    /// Kill the process after this long; default 60 seconds, at most 30
+    /// minutes, and never past the lease's `expire_time`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub timeout: String,
     /// The guest user; default `user`. `root` is allowed: the whole machine
     /// belongs to the lessee.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub user: String,
+    /// Dispatches the command at most once per lease and key, 1-255 printable
+    /// ASCII characters. The first call claims the key before the command
+    /// starts; a later call with the same key and request returns the recorded
+    /// result (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the
+    /// first still runs (the command continues after the call returns), and
+    /// `EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same
+    /// key with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before
+    /// the command started releases the key.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "idempotencyKey"
+    )]
+    pub idempotency_key: String,
 }
 
 /// The response of ExecLease.
@@ -4391,12 +4405,14 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     }
 
     /// Runs one command in the lease to completion and returns its output, capped
-    /// at 1 MiB per stream. Long-running or interactive processes use the guest
-    /// protocol at `status.endpoints.guest_uri`.
+    /// at 1 MiB per stream. With `idempotency_key` the command is dispatched at
+    /// most once per lease and key, and its recorded result is returned again,
+    /// also after the lease ended. Long-running or interactive processes use the
+    /// guest protocol at `status.endpoints.guest_uri`.
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:exec` · permission `sandboxes:exec` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `STALE_GENERATION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `STALE_GENERATION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `EXEC_OUTCOME_UNKNOWN`.
     pub async fn exec(
         &self,
         request: ExecLeaseRequest,

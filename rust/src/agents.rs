@@ -65,6 +65,24 @@ pub struct AgentBudget {
     pub max_session_spend_micros: i64,
 }
 
+/// The owner's pinned model and the cheap inference-only tool/compaction model.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AgentModels {
+    /// The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned
+    /// for the life of a session; the runtime never remaps it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub primary: String,
+    /// The exact catalog id of the cheap model used only for owner-briefed
+    /// `subcall.*` tools and in-loop compaction; never an owner.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub light: String,
+}
+
 /// An AgentSession is a durable conversation with one pinned AgentVersion.
 /// Its conversation is its SessionEvent log. Each turn runs as one Sylphx
 /// Workflows Run, and each model call and tool call is a step keyed by
@@ -205,13 +223,6 @@ pub struct AgentSession {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct AgentSpec {
-    /// The exact Sylphx AI catalog id (`ai_models`), set per Agent through the
-    /// API as runtime state, never code or a deployed file. Agents in the same
-    /// environment may use different models; the harness never remaps this id.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
-    pub model: String,
     /// The system instructions, at most 256 KiB.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub instructions: String,
@@ -248,11 +259,11 @@ pub struct AgentSpec {
     /// fields on that pinned default and requires a valid fresh finite lease.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<EnvironmentSpec>,
-    /// The execution harness, independent of `model`: `runtime` (default),
-    /// `claude_code` or `codex`. It is part of the immutable version, not an
-    /// environment-wide setting. An omitted or empty value means `runtime`.
-    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
-    pub harness: String,
+    /// Exact owner and cheap-tool model ids. Neither is silently substituted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub models: Option<AgentModels>,
     /// Read-only: the version holds no write grant, so it may verify another
     /// agent's work but never own it. Create and update refuse memory stores,
     /// MCP servers, `app_function` and `client` tools, the `memory`, `browser`
@@ -2335,6 +2346,16 @@ pub struct RunAgentRequest {
         alias = "environmentMask"
     )]
     pub environment_mask: String,
+    /// The caller's stable identity of the work item, not interpreted otherwise.
+    /// Every session and attempt with the same item key works on one repository
+    /// branch derived from it, so a new attempt continues the pushed work.
+    /// Omitted, the session is the item.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "itemKey"
+    )]
+    pub item_key: String,
     /// The OwnerPool this run owns work for. Admission refuses with
     /// `INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that
     /// moment; later turns of the session are not re-checked.
@@ -2381,6 +2402,31 @@ pub struct RunAgentResponse {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub cleanup: String,
+}
+
+/// A public lease fact recorded at allocation and confirmed physical release.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SandboxActivity {
+    /// The lease's resource name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub lease: String,
+    /// `allocated` or `released` (the release was read back as ENDED).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// On `released`: exact decimal seconds from allocation to release.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "sandboxSeconds"
+    )]
+    pub sandbox_seconds: Option<String>,
 }
 
 /// The request of SearchMemories.
@@ -2516,6 +2562,20 @@ pub struct SessionEvent {
         alias = "createTime"
     )]
     pub create_time: String,
+    /// Observed accounting for this step; absent values are unknown, never zero.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<StepUsage>,
+    /// Stable runtime-assigned effect key, independent of invocation attempts.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "stepKey"
+    )]
+    pub step_key: String,
     /// For USER_MESSAGE, STEER and AGENT_MESSAGE.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<Message>,
@@ -2547,6 +2607,9 @@ pub struct SessionEvent {
     /// For ERROR.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<ErrorEvent>,
+    /// For SANDBOX: authoritative allocation/release history, including replacements.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<SandboxActivity>,
 }
 
 /// SessionUsage is what a session has used. Model tokens are on the Sylphx AI
@@ -2637,6 +2700,68 @@ pub struct SteerAgentSessionRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<Message>,
+}
+
+/// Observed per-step accounting. Exact decimal USD avoids binary rounding.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct StepUsage {
+    /// Uncached input tokens the step was charged for; absent when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "inputTokens"
+    )]
+    pub input_tokens: Option<u64>,
+    /// Input tokens served from the provider cache; absent when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "cachedTokens"
+    )]
+    pub cached_tokens: Option<u64>,
+    /// Output tokens; absent when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "outputTokens"
+    )]
+    pub output_tokens: Option<u64>,
+    /// The exact decimal USD charge the gateway reported; absent when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "costUsd")]
+    pub cost_usd: Option<String>,
+    /// The catalog id the step ran on; empty for a step with no inference.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub model: String,
+    /// `model`, `tool`, `compaction` or `subcall`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub kind: String,
+    /// For a model step: when the runtime received the stream's first non-empty
+    /// assistant text or tool-call delta (not a role-only or empty chunk), on
+    /// the runtime's clock, from the attempt that produced the recorded step.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "firstDeltaTime"
+    )]
+    pub first_delta_time: String,
 }
 
 /// The request of SubmitAgentSessionToolResult.
@@ -2900,6 +3025,16 @@ pub struct TurnResult {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub duration: String,
+    /// The first non-empty assistant text or tool-call delta of the turn: the
+    /// earliest `first_delta_time` of its recorded model steps.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "firstDeltaTime"
+    )]
+    pub first_delta_time: String,
 }
 
 /// TurnTokenUsage is the model token usage reported for a completed turn.
@@ -3346,6 +3481,14 @@ pub enum ResultField {
     Where,
     /// The terminal complete or error outcome.
     Outcome,
+    /// Typed neutral await targets produced by a wait tool.
+    Awaits,
+    /// The durable owner's checkpoint, never an item plan.
+    Checkpoint,
+    /// Whether the terminal outcome is charged as a task attempt.
+    Counted,
+    /// Capacity retry time as UTC epoch milliseconds.
+    RetryAt,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3359,6 +3502,10 @@ impl ResultField {
             Self::Next => "next",
             Self::Where => "where",
             Self::Outcome => "outcome",
+            Self::Awaits => "awaits",
+            Self::Checkpoint => "checkpoint",
+            Self::Counted => "counted",
+            Self::RetryAt => "retry_at",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3371,6 +3518,10 @@ impl ResultField {
             "next" => Self::Next,
             "where" => Self::Where,
             "outcome" => Self::Outcome,
+            "awaits" => Self::Awaits,
+            "checkpoint" => Self::Checkpoint,
+            "counted" => Self::Counted,
+            "retry_at" => Self::RetryAt,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -3427,6 +3578,10 @@ pub enum SessionEventType {
     Response,
     /// A step or harness failure.
     Error,
+    /// An observed model, tool, subcall or compaction step's accounting.
+    Usage,
+    /// An authoritative sandbox allocation or confirmed release.
+    Sandbox,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3448,6 +3603,8 @@ impl SessionEventType {
             Self::FileChange => "file_change",
             Self::Response => "response",
             Self::Error => "error",
+            Self::Usage => "usage",
+            Self::Sandbox => "sandbox",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3468,6 +3625,8 @@ impl SessionEventType {
             "file_change" => Self::FileChange,
             "response" => Self::Response,
             "error" => Self::Error,
+            "usage" => Self::Usage,
+            "sandbox" => Self::Sandbox,
             other => Self::Unknown(other.to_string()),
         }
     }

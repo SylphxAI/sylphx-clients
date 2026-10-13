@@ -40,6 +40,20 @@ export interface AgentBudget {
 	maxSessionSpendMicros?: string
 }
 
+/** The owner's pinned model and the cheap inference-only tool/compaction model. */
+export interface AgentModels {
+	/**
+	 * The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned
+	 * for the life of a session; the runtime never remaps it.
+	 */
+	primary?: string
+	/**
+	 * The exact catalog id of the cheap model used only for owner-briefed
+	 * `subcall.*` tools and in-loop compaction; never an owner.
+	 */
+	light?: string
+}
+
 /**
  * An AgentSession is a durable conversation with one pinned AgentVersion.
  * Its conversation is its SessionEvent log. Each turn runs as one Sylphx
@@ -112,12 +126,6 @@ export interface AgentSession {
  * holds a frozen copy of it.
  */
 export interface AgentSpec {
-	/**
-	 * The exact Sylphx AI catalog id (`ai_models`), set per Agent through the
-	 * API as runtime state, never code or a deployed file. Agents in the same
-	 * environment may use different models; the harness never remaps this id.
-	 */
-	model?: string
 	/** The system instructions, at most 256 KiB. */
 	instructions?: string
 	/** The tools the agent may call, at most 128, each `name` once. */
@@ -147,12 +155,8 @@ export interface AgentSpec {
 	 * fields on that pinned default and requires a valid fresh finite lease.
 	 */
 	environment?: EnvironmentSpec
-	/**
-	 * The execution harness, independent of `model`: `runtime` (default),
-	 * `claude_code` or `codex`. It is part of the immutable version, not an
-	 * environment-wide setting. An omitted or empty value means `runtime`.
-	 */
-	harness?: string
+	/** Exact owner and cheap-tool model ids. Neither is silently substituted. */
+	models?: AgentModels
 	/**
 	 * Read-only: the version holds no write grant, so it may verify another
 	 * agent's work but never own it. Create and update refuse memory stores,
@@ -1167,6 +1171,13 @@ export interface RunAgentRequest {
 	 */
 	environmentMask?: string
 	/**
+	 * The caller's stable identity of the work item, not interpreted otherwise.
+	 * Every session and attempt with the same item key works on one repository
+	 * branch derived from it, so a new attempt continues the pushed work.
+	 * Omitted, the session is the item.
+	 */
+	itemKey?: string
+	/**
 	 * The OwnerPool this run owns work for. Admission refuses with
 	 * `INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that
 	 * moment; later turns of the session are not re-checked.
@@ -1192,6 +1203,16 @@ export interface RunAgentResponse {
 	readonly delivery?: string
 	/** Lease-cleanup progress; released requires terminal lease evidence. */
 	readonly cleanup?: string
+}
+
+/** A public lease fact recorded at allocation and confirmed physical release. */
+export interface SandboxActivity {
+	/** The lease's resource name. */
+	readonly lease?: string
+	/** `allocated` or `released` (the release was read back as ENDED). */
+	readonly state?: string
+	/** On `released`: exact decimal seconds from allocation to release. */
+	readonly sandboxSeconds?: string
 }
 
 /** The request of SearchMemories. */
@@ -1251,6 +1272,10 @@ export interface SessionEvent {
 	readonly step?: string
 	/** When it was appended. */
 	readonly createTime?: string
+	/** Observed accounting for this step; absent values are unknown, never zero. */
+	readonly usage?: StepUsage
+	/** Stable runtime-assigned effect key, independent of invocation attempts. */
+	readonly stepKey?: string
 	/** For USER_MESSAGE, STEER and AGENT_MESSAGE. */
 	message?: Message
 	/** For TOOL_CALL. */
@@ -1269,6 +1294,8 @@ export interface SessionEvent {
 	response?: TurnResult
 	/** For ERROR. */
 	error?: ErrorEvent
+	/** For SANDBOX: authoritative allocation/release history, including replacements. */
+	sandbox?: SandboxActivity
 }
 
 /**
@@ -1311,6 +1338,28 @@ export interface SteerAgentSessionRequest {
 	name: string
 	/** The message, 1 to 64 parts. */
 	message: Message
+}
+
+/** Observed per-step accounting. Exact decimal USD avoids binary rounding. */
+export interface StepUsage {
+	/** Uncached input tokens the step was charged for; absent when unknown. */
+	readonly inputTokens?: string
+	/** Input tokens served from the provider cache; absent when unknown. */
+	readonly cachedTokens?: string
+	/** Output tokens; absent when unknown. */
+	readonly outputTokens?: string
+	/** The exact decimal USD charge the gateway reported; absent when unknown. */
+	readonly costUsd?: string
+	/** The catalog id the step ran on; empty for a step with no inference. */
+	readonly model?: string
+	/** `model`, `tool`, `compaction` or `subcall`. */
+	readonly kind?: string
+	/**
+	 * For a model step: when the runtime received the stream's first non-empty
+	 * assistant text or tool-call delta (not a role-only or empty chunk), on
+	 * the runtime's clock, from the attempt that produced the recorded step.
+	 */
+	readonly firstDeltaTime?: string
 }
 
 /** The request of SubmitAgentSessionToolResult. */
@@ -1456,6 +1505,11 @@ export interface TurnResult {
 	readonly costMicros?: string
 	/** How long the turn ran. */
 	readonly duration?: string
+	/**
+	 * The first non-empty assistant text or tool-call delta of the turn: the
+	 * earliest `first_delta_time` of its recorded model steps.
+	 */
+	readonly firstDeltaTime?: string
 }
 
 /** TurnTokenUsage is the model token usage reported for a completed turn. */
@@ -1528,10 +1582,10 @@ export type OwnerPoolMemberState = 'qualified' | 'refused' | 'demoted' | (string
 export type PolicyDecision = 'allow' | 'deny' | 'ask' | (string & {})
 
 /** Runtime-produced fields mapped into an authorized completion tool call. */
-export type ResultField = 'text' | 'done' | 'next' | 'where' | 'outcome' | (string & {})
+export type ResultField = 'text' | 'done' | 'next' | 'where' | 'outcome' | 'awaits' | 'checkpoint' | 'counted' | 'retry_at' | (string & {})
 
 /** SessionEventType is what a session event records. */
-export type SessionEventType = 'user_message' | 'steer' | 'agent_message' | 'tool_call' | 'tool_result' | 'approval_requested' | 'approval_decided' | 'status' | 'compaction' | 'thought' | 'file_change' | 'response' | 'error' | (string & {})
+export type SessionEventType = 'user_message' | 'steer' | 'agent_message' | 'tool_call' | 'tool_result' | 'approval_requested' | 'approval_decided' | 'status' | 'compaction' | 'thought' | 'file_change' | 'response' | 'error' | 'usage' | 'sandbox' | (string & {})
 
 /** SessionState is where a session is. */
 export type SessionState = 'idle' | 'running' | 'awaiting_approval' | 'awaiting_client' | 'failed' | (string & {})
@@ -1547,6 +1601,7 @@ runtime.registerSchemas({
 		['turnTimeout', 'turn_timeout'],
 		['maxSessionSpendMicros', 'max_session_spend_micros'],
 	],
+	'sylphx.agents.v1.AgentModels': [],
 	'sylphx.agents.v1.AgentSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['agentVersion', 'agent_version'],
@@ -1570,6 +1625,7 @@ runtime.registerSchemas({
 		['budget', 'budget', 'sylphx.agents.v1.AgentBudget'],
 		['endUserAccess', 'end_user_access'],
 		['environment', 'environment', 'sylphx.agents.v1.EnvironmentSpec'],
+		['models', 'models', 'sylphx.agents.v1.AgentModels'],
 		['readOnly', 'read_only'],
 	],
 	'sylphx.agents.v1.AgentStatus': [
@@ -1847,11 +1903,15 @@ runtime.registerSchemas({
 		['renewal', 'renewal', 'sylphx.agents.v1.RenewalCall'],
 		['runtimeCredentialHandle', 'runtime_credential_handle'],
 		['environmentMask', 'environment_mask'],
+		['itemKey', 'item_key'],
 		['ownerPool', 'owner_pool'],
 	],
 	'sylphx.agents.v1.RunAgentResponse': [
 		['session', 'session', 'sylphx.agents.v1.AgentSession'],
 		['initialEvent', 'initial_event', 'sylphx.agents.v1.SessionEvent'],
+	],
+	'sylphx.agents.v1.SandboxActivity': [
+		['sandboxSeconds', 'sandbox_seconds'],
 	],
 	'sylphx.agents.v1.SearchMemoriesRequest': [
 		['endUser', 'end_user'],
@@ -1868,6 +1928,8 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.SessionEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['createTime', 'create_time'],
+		['usage', 'usage', 'sylphx.agents.v1.StepUsage'],
+		['stepKey', 'step_key'],
 		['message', 'message', 'sylphx.agents.v1.Message'],
 		['toolCall', 'tool_call', 'sylphx.agents.v1.ToolCall'],
 		['toolResult', 'tool_result', 'sylphx.agents.v1.ToolResult'],
@@ -1877,6 +1939,7 @@ runtime.registerSchemas({
 		['fileChange', 'file_change', 'sylphx.agents.v1.FileChange'],
 		['response', 'response', 'sylphx.agents.v1.TurnResult'],
 		['error', 'error', 'sylphx.agents.v1.ErrorEvent'],
+		['sandbox', 'sandbox', 'sylphx.agents.v1.SandboxActivity'],
 	],
 	'sylphx.agents.v1.SessionUsage': [
 		['activeTurnDuration', 'active_turn_duration'],
@@ -1887,6 +1950,13 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.StatusChange': [],
 	'sylphx.agents.v1.SteerAgentSessionRequest': [
 		['message', 'message', 'sylphx.agents.v1.Message'],
+	],
+	'sylphx.agents.v1.StepUsage': [
+		['inputTokens', 'input_tokens'],
+		['cachedTokens', 'cached_tokens'],
+		['outputTokens', 'output_tokens'],
+		['costUsd', 'cost_usd'],
+		['firstDeltaTime', 'first_delta_time'],
 	],
 	'sylphx.agents.v1.SubmitAgentSessionToolResultRequest': [
 		['callId', 'call_id'],
@@ -1923,6 +1993,7 @@ runtime.registerSchemas({
 		['isError', 'is_error'],
 		['usage', 'usage', 'sylphx.agents.v1.TurnTokenUsage'],
 		['costMicros', 'cost_micros'],
+		['firstDeltaTime', 'first_delta_time'],
 	],
 	'sylphx.agents.v1.TurnTokenUsage': [
 		['inputTokens', 'input_tokens'],

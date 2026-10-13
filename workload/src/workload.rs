@@ -495,10 +495,10 @@ mod tests {
     #[test]
     fn the_fetch_response_yields_the_token_of_the_named_spiffe_id() {
         let id = "spiffe://sylphx.local/role/api";
-        let msg = fetch_response(&[(id, "eyJhbGciOiJub25lIn0.body.sig")]);
+        let msg = fetch_response(&[(id, "synthetic-svid")]);
         assert_eq!(
             decode_jwt_svid_response(&msg, id).unwrap(),
-            "eyJhbGciOiJub25lIn0.body.sig"
+            "synthetic-svid"
         );
     }
 

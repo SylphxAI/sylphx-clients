@@ -66,6 +66,16 @@
       "number": 13,
       "proto_name": "SESSION_EVENT_TYPE_ERROR",
       "wire": "error"
+    },
+    {
+      "number": 14,
+      "proto_name": "SESSION_EVENT_TYPE_USAGE",
+      "wire": "usage"
+    },
+    {
+      "number": 15,
+      "proto_name": "SESSION_EVENT_TYPE_SANDBOX",
+      "wire": "sandbox"
     }
   ]
 }

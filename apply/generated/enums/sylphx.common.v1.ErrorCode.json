@@ -166,6 +166,11 @@
       "number": 33,
       "proto_name": "ERROR_CODE_ID_MOVED",
       "wire": "ID_MOVED"
+    },
+    {
+      "number": 34,
+      "proto_name": "ERROR_CODE_EXEC_OUTCOME_UNKNOWN",
+      "wire": "EXEC_OUTCOME_UNKNOWN"
     }
   ]
 }

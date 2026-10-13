@@ -1296,6 +1296,24 @@
         },
         "type": "object"
       },
+      "sylphx.agents.v1.AgentModels": {
+        "description": "The owner's pinned model and the cheap inference-only tool/compaction model.",
+        "properties": {
+          "light": {
+            "description": "The exact catalog id of the cheap model used only for owner-briefed\n`subcall.*` tools and in-loop compaction; never an owner.",
+            "type": "string"
+          },
+          "primary": {
+            "description": "The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned\nfor the life of a session; the runtime never remaps it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "primary",
+          "light"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.AgentSession": {
         "description": "An AgentSession is a durable conversation with one pinned AgentVersion.\nIts conversation is its SessionEvent log. Each turn runs as one Sylphx\nWorkflows Run, and each model call and tool call is a step keyed by\n`(session, turn, step)`, assigned by the runtime and never taken from the\nmodel's tool-call id. An idle session holds no Run and no compute.",
         "properties": {
@@ -1425,10 +1443,6 @@
             "$ref": "#/components/schemas/sylphx.agents.v1.EnvironmentSpec",
             "description": "Default session environment (shell, files, browser, computer use), frozen\nin each AgentVersion. RunAgent overlays only its selected environment\nfields on that pinned default and requires a valid fresh finite lease."
           },
-          "harness": {
-            "description": "The execution harness, independent of `model`: `runtime` (default),\n`claude_code` or `codex`. It is part of the immutable version, not an\nenvironment-wide setting. An omitted or empty value means `runtime`.",
-            "type": "string"
-          },
           "instructions": {
             "description": "The system instructions, at most 256 KiB.",
             "type": "string"
@@ -1448,9 +1462,9 @@
             "type": "array",
             "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
           },
-          "model": {
-            "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
-            "type": "string"
+          "models": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.AgentModels",
+            "description": "Exact owner and cheap-tool model ids. Neither is silently substituted."
           },
           "read_only": {
             "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
@@ -1476,7 +1490,7 @@
           }
         },
         "required": [
-          "model"
+          "models"
         ],
         "type": "object"
       },
@@ -3353,7 +3367,11 @@
           "done",
           "next",
           "where",
-          "outcome"
+          "outcome",
+          "awaits",
+          "checkpoint",
+          "counted",
+          "retry_at"
         ],
         "type": "string"
       },
@@ -3444,6 +3462,10 @@
             "description": "Fields of environment to overlay, relative to EnvironmentSpec, using proto\nsnake_case paths such as ttl, repo.uri, repo.revision,\negress.allowed_domains and budget.max_cost_micros. The wire value is a\ncomma-separated string; SDK property naming does not change these paths.\nOmitted or empty infers populated serialized leaf fields recursively,\npreserving unselected siblings from the pinned version. Proto defaults\n(including empty lists) need an explicit mask to reset a selected field.\nSelected lists replace, rather than append to, the inherited list.\nThe sole path \"*\" replaces the whole environment, resetting unpopulated\nfields. Unknown, invalid and output-only paths are rejected, as is a\nnonempty mask without environment. Effective validation also applies to\nexplicit resets and whole-environment replacement.",
             "type": "string"
           },
+          "item_key": {
+            "description": "The caller's stable identity of the work item, not interpreted otherwise.\nEvery session and attempt with the same item key works on one repository\nbranch derived from it, so a new attempt continues the pushed work.\nOmitted, the session is the item.",
+            "type": "string"
+          },
           "message": {
             "$ref": "#/components/schemas/sylphx.agents.v1.Message",
             "description": "The initial task message appended atomically with session acceptance."
@@ -3524,6 +3546,27 @@
             "$ref": "#/components/schemas/sylphx.agents.v1.AgentSession",
             "description": "The durably accepted session; acceptance is not task completion.",
             "readOnly": true
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.agents.v1.SandboxActivity": {
+        "description": "A public lease fact recorded at allocation and confirmed physical release.",
+        "properties": {
+          "lease": {
+            "description": "The lease's resource name.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sandbox_seconds": {
+            "description": "On `released`: exact decimal seconds from allocation to release.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "`allocated` or `released` (the release was read back as ENDED).",
+            "readOnly": true,
+            "type": "string"
           }
         },
         "type": "object"
@@ -3639,6 +3682,10 @@
             "$ref": "#/components/schemas/sylphx.agents.v1.TurnResult",
             "description": "For RESPONSE: the completed turn's answer and usage."
           },
+          "sandbox": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SandboxActivity",
+            "description": "For SANDBOX: authoritative allocation/release history, including replacements."
+          },
           "sequence": {
             "description": "The position in the session's log, from 1, with no gaps.",
             "format": "int64",
@@ -3652,6 +3699,11 @@
           "step": {
             "description": "The step within the turn, from 1, assigned by the runtime; 0 for an\nevent that is not a step.",
             "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "step_key": {
+            "description": "Stable runtime-assigned effect key, independent of invocation attempts.",
             "readOnly": true,
             "type": "string"
           },
@@ -3682,6 +3734,11 @@
             "description": "`sevt_<cell><ulid>`; never reused.",
             "readOnly": true,
             "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.StepUsage",
+            "description": "Observed accounting for this step; absent values are unknown, never zero.",
+            "readOnly": true
           }
         },
         "type": "object"
@@ -3701,7 +3758,9 @@
           "thought",
           "file_change",
           "response",
-          "error"
+          "error",
+          "usage",
+          "sandbox"
         ],
         "type": "string"
       },
@@ -3796,6 +3855,51 @@
           "name",
           "message"
         ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.StepUsage": {
+        "description": "Observed per-step accounting. Exact decimal USD avoids binary rounding.",
+        "properties": {
+          "cached_tokens": {
+            "description": "Input tokens served from the provider cache; absent when unknown.",
+            "format": "uint64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cost_usd": {
+            "description": "The exact decimal USD charge the gateway reported; absent when unknown.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "first_delta_time": {
+            "description": "For a model step: when the runtime received the stream's first non-empty\nassistant text or tool-call delta (not a role-only or empty chunk), on\nthe runtime's clock, from the attempt that produced the recorded step.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "input_tokens": {
+            "description": "Uncached input tokens the step was charged for; absent when unknown.",
+            "format": "uint64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "kind": {
+            "description": "`model`, `tool`, `compaction` or `subcall`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "model": {
+            "description": "The catalog id the step ran on; empty for a step with no inference.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "output_tokens": {
+            "description": "Output tokens; absent when unknown.",
+            "format": "uint64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.agents.v1.SubmitAgentSessionToolResultRequest": {
@@ -4014,6 +4118,12 @@
           "duration": {
             "description": "How long the turn ran.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "first_delta_time": {
+            "description": "The first non-empty assistant text or tool-call delta of the turn: the\nearliest `first_delta_time` of its recorded model steps.",
+            "format": "date-time",
             "readOnly": true,
             "type": "string"
           },
@@ -8873,6 +8983,10 @@
             },
             "type": "array"
           },
+          "group_end_customers": {
+            "description": "Group by optional opaque end-customer attribution, not a price dimension.",
+            "type": "boolean"
+          },
           "group_projects": {
             "description": "Group by project in addition to meter.",
             "type": "boolean"
@@ -9217,6 +9331,11 @@
             "description": "The dimensions grouped on.",
             "readOnly": true,
             "type": "object"
+          },
+          "end_customer": {
+            "description": "Opaque attribution when grouped by end customer; absent for unattributed usage.",
+            "readOnly": true,
+            "type": "string"
           },
           "end_time": {
             "description": "The end of the bucket.",
@@ -10739,7 +10858,8 @@
           "INVALID_ID",
           "ETAG_CONFLICT",
           "VALIDATE_ONLY_NOT_SUPPORTED",
-          "ID_MOVED"
+          "ID_MOVED",
+          "EXEC_OUTCOME_UNKNOWN"
         ],
         "type": "string"
       },
@@ -34810,6 +34930,10 @@
             "description": "Extra environment variables.",
             "type": "object"
           },
+          "idempotency_key": {
+            "description": "Dispatches the command at most once per lease and key, 1-255 printable\nASCII characters. The first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
+            "type": "string"
+          },
           "name": {
             "description": "The name of the lease.",
             "type": "string",
@@ -34821,7 +34945,7 @@
             "type": "string"
           },
           "timeout": {
-            "description": "Kill the process after this long; default 60 seconds, at most 10\nminutes.",
+            "description": "Kill the process after this long; default 60 seconds, at most 30\nminutes, and never past the lease's `expire_time`.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
@@ -53834,6 +53958,10 @@
                   },
                   "environment_mask": {
                     "description": "Fields of environment to overlay, relative to EnvironmentSpec, using proto\nsnake_case paths such as ttl, repo.uri, repo.revision,\negress.allowed_domains and budget.max_cost_micros. The wire value is a\ncomma-separated string; SDK property naming does not change these paths.\nOmitted or empty infers populated serialized leaf fields recursively,\npreserving unselected siblings from the pinned version. Proto defaults\n(including empty lists) need an explicit mask to reset a selected field.\nSelected lists replace, rather than append to, the inherited list.\nThe sole path \"*\" replaces the whole environment, resetting unpopulated\nfields. Unknown, invalid and output-only paths are rejected, as is a\nnonempty mask without environment. Effective validation also applies to\nexplicit resets and whole-environment replacement.",
+                    "type": "string"
+                  },
+                  "item_key": {
+                    "description": "The caller's stable identity of the work item, not interpreted otherwise.\nEvery session and attempt with the same item key works on one repository\nbranch derived from it, so a new attempt continues the pushed work.\nOmitted, the session is the item.",
                     "type": "string"
                   },
                   "message": {
@@ -77413,7 +77541,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/leases/{lease}:exec": {
       "post": {
-        "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. Long-running or interactive processes use the guest\nprotocol at `status.endpoints.guest_uri`.",
+        "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. With `idempotency_key` the command is dispatched at\nmost once per lease and key, and its recorded result is returned again,\nalso after the lease ended. Long-running or interactive processes use the\nguest protocol at `status.endpoints.guest_uri`.",
         "operationId": "sandboxes_leases_exec",
         "parameters": [
           {
@@ -77474,13 +77602,17 @@
                     "description": "Extra environment variables.",
                     "type": "object"
                   },
+                  "idempotency_key": {
+                    "description": "Dispatches the command at most once per lease and key, 1-255 printable\nASCII characters. The first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
+                    "type": "string"
+                  },
                   "stdin": {
                     "contentEncoding": "base64",
                     "description": "Bytes written to standard input.",
                     "type": "string"
                   },
                   "timeout": {
-                    "description": "Kill the process after this long; default 60 seconds, at most 10\nminutes.",
+                    "description": "Kill the process after this long; default 60 seconds, at most 30\nminutes, and never past the lease's `expire_time`.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
@@ -77535,7 +77667,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
+        "summary": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. With `idempotency_key` the command is dispatched at most once per lease and key, and its recorded result is returned again, also after the lease ended. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
         "tags": [
           "sandboxes"
         ],
@@ -77547,7 +77679,8 @@
           "INVALID_STATE",
           "STALE_GENERATION",
           "IDEMPOTENCY_KEY_REUSED",
-          "IDEMPOTENCY_IN_PROGRESS"
+          "IDEMPOTENCY_IN_PROGRESS",
+          "EXEC_OUTCOME_UNKNOWN"
         ],
         "x-sylphx-method": "sandboxes.leases.exec",
         "x-sylphx-permission": "sandboxes:exec",
@@ -115587,6 +115720,10 @@
                       "type": "string"
                     },
                     "type": "array"
+                  },
+                  "group_end_customers": {
+                    "description": "Group by optional opaque end-customer attribution, not a price dimension.",
+                    "type": "boolean"
                   },
                   "group_projects": {
                     "description": "Group by project in addition to meter.",

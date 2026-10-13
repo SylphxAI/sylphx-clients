@@ -2,24 +2,6 @@
   "fields": [
     {
       "behaviors": [
-        "REQUIRED"
-      ],
-      "cli_flag": "",
-      "filterable": false,
-      "name": "model",
-      "number": 1,
-      "oneof": null,
-      "optional": false,
-      "repeated": false,
-      "resource_reference": null,
-      "sensitive": false,
-      "type": {
-        "kind": "scalar",
-        "scalar": "string"
-      }
-    },
-    {
-      "behaviors": [
         "OPTIONAL"
       ],
       "cli_flag": "",
@@ -182,20 +164,20 @@
     },
     {
       "behaviors": [
-        "OPTIONAL"
+        "REQUIRED"
       ],
       "cli_flag": "",
       "filterable": false,
-      "name": "harness",
-      "number": 11,
+      "name": "models",
+      "number": 12,
       "oneof": null,
       "optional": false,
       "repeated": false,
       "resource_reference": null,
       "sensitive": false,
       "type": {
-        "kind": "scalar",
-        "scalar": "string"
+        "kind": "message",
+        "name": "sylphx.agents.v1.AgentModels"
       }
     },
     {

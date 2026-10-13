@@ -1381,13 +1381,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "agent.spec.model",
-                  "flag": "--spec.model",
-                  "required": true,
-                  "summary": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the API as runtime state, never code or a deployed file. Agents in the same environment may use different models; the harness never remaps this id.",
-                  "type": "string"
-                },
-                {
                   "field": "agent.spec.instructions",
                   "flag": "--spec.instructions",
                   "summary": "The system instructions, at most 256 KiB.",
@@ -1550,9 +1543,17 @@
                   "type": "duration"
                 },
                 {
-                  "field": "agent.spec.harness",
-                  "flag": "--spec.harness",
-                  "summary": "The execution harness, independent of `model`: `runtime` (default), `claude_code` or `codex`. It is part of the immutable version, not an environment-wide setting. An omitted or empty value means `runtime`.",
+                  "field": "agent.spec.models.primary",
+                  "flag": "--spec.models.primary",
+                  "required": true,
+                  "summary": "The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned for the life of a session; the runtime never remaps it.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent.spec.models.light",
+                  "flag": "--spec.models.light",
+                  "required": true,
+                  "summary": "The exact catalog id of the cheap model used only for owner-briefed `subcall.*` tools and in-loop compaction; never an owner.",
                   "type": "string"
                 },
                 {
@@ -1605,13 +1606,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "agent.spec.model",
-                  "flag": "--spec.model",
-                  "required": true,
-                  "summary": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the API as runtime state, never code or a deployed file. Agents in the same environment may use different models; the harness never remaps this id.",
-                  "type": "string"
-                },
-                {
                   "field": "agent.spec.instructions",
                   "flag": "--spec.instructions",
                   "summary": "The system instructions, at most 256 KiB.",
@@ -1774,9 +1768,17 @@
                   "type": "duration"
                 },
                 {
-                  "field": "agent.spec.harness",
-                  "flag": "--spec.harness",
-                  "summary": "The execution harness, independent of `model`: `runtime` (default), `claude_code` or `codex`. It is part of the immutable version, not an environment-wide setting. An omitted or empty value means `runtime`.",
+                  "field": "agent.spec.models.primary",
+                  "flag": "--spec.models.primary",
+                  "required": true,
+                  "summary": "The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned for the life of a session; the runtime never remaps it.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent.spec.models.light",
+                  "flag": "--spec.models.light",
+                  "required": true,
+                  "summary": "The exact catalog id of the cheap model used only for owner-briefed `subcall.*` tools and in-loop compaction; never an owner.",
                   "type": "string"
                 },
                 {
@@ -1939,6 +1941,12 @@
                   "flag": "--environment-mask",
                   "summary": "Fields of environment to overlay, relative to EnvironmentSpec, using proto snake_case paths such as ttl, repo.uri, repo.revision, egress.allowed_domains and budget.max_cost_micros. The wire value is a comma-separated string; SDK property naming does not change these paths. Omitted or empty infers populated serialized leaf fields recursively, preserving unselected siblings from the pinned version. Proto defaults (including empty lists) need an explicit mask to reset a selected field. Selected lists replace, rather than append to, the inherited list. The sole path \"*\" replaces the whole environment, resetting unpopulated fields. Unknown, invalid and output-only paths are rejected, as is a nonempty mask without environment. Effective validation also applies to explicit resets and whole-environment replacement.",
                   "type": "json"
+                },
+                {
+                  "field": "item_key",
+                  "flag": "--item-key",
+                  "summary": "The caller's stable identity of the work item, not interpreted otherwise. Every session and attempt with the same item key works on one repository branch derived from it, so a new attempt continues the pushed work. Omitted, the session is the item.",
+                  "type": "string"
                 },
                 {
                   "field": "owner_pool",
@@ -6683,6 +6691,12 @@
                   "repeated": true,
                   "summary": "Dimension keys to group by, for example `model`.",
                   "type": "string"
+                },
+                {
+                  "field": "group_end_customers",
+                  "flag": "--group-end-customers",
+                  "summary": "Group by optional opaque end-customer attribution, not a price dimension.",
+                  "type": "bool"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*}/usage_reports:query",
@@ -26988,13 +27002,19 @@
                 {
                   "field": "timeout",
                   "flag": "--timeout",
-                  "summary": "Kill the process after this long; default 60 seconds, at most 10 minutes.",
+                  "summary": "Kill the process after this long; default 60 seconds, at most 30 minutes, and never past the lease's `expire_time`.",
                   "type": "duration"
                 },
                 {
                   "field": "user",
                   "flag": "--user",
                   "summary": "The guest user; default `user`. `root` is allowed: the whole machine belongs to the lessee.",
+                  "type": "string"
+                },
+                {
+                  "field": "idempotency_key",
+                  "flag": "--idempotency-key",
+                  "summary": "Dispatches the command at most once per lease and key, 1-255 printable ASCII characters. The first call claims the key before the command starts; a later call with the same key and request returns the recorded result (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the first still runs (the command continues after the call returns), and `EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same key with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before the command started releases the key.",
                   "type": "string"
                 }
               ],
@@ -27007,7 +27027,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/leases/{lease}"
               },
-              "summary": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
+              "summary": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. With `idempotency_key` the command is dispatched at most once per lease and key, and its recorded result is returned again, also after the lease ended. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
               "verb": "exec"
             },
             {

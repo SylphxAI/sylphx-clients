@@ -145,6 +145,42 @@
       }
     },
     {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "usage",
+      "number": 15,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.agents.v1.StepUsage"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "step_key",
+      "number": 16,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
       "behaviors": [],
       "cli_flag": "",
       "filterable": false,
@@ -286,6 +322,22 @@
       "type": {
         "kind": "message",
         "name": "sylphx.agents.v1.ErrorEvent"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sandbox",
+      "number": 29,
+      "oneof": "payload",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.agents.v1.SandboxActivity"
       }
     }
   ],

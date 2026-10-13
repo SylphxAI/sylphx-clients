@@ -128,6 +128,24 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "idempotency_key",
+      "number": 8,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.sandboxes.v1.ExecLeaseRequest",

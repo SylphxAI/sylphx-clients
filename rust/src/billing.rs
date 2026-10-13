@@ -1388,6 +1388,13 @@ pub struct QueryUsageReportsRequest {
         alias = "groupDimensions"
     )]
     pub group_dimensions: Vec<String>,
+    /// Group by optional opaque end-customer attribution, not a price dimension.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "groupEndCustomers"
+    )]
+    pub group_end_customers: bool,
 }
 
 /// The response of QueryUsageReports.
@@ -1778,6 +1785,15 @@ pub struct UsageRow {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
+    /// Opaque attribution when grouped by end customer; absent for unattributed usage.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "endCustomer"
+    )]
+    pub end_customer: Option<String>,
 }
 
 /// BillingAccountState is an org's payment standing.

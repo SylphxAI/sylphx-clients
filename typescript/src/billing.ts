@@ -599,6 +599,8 @@ export interface QueryUsageReportsRequest {
 	groupProjects?: boolean
 	/** Dimension keys to group by, for example `model`. */
 	groupDimensions?: string[]
+	/** Group by optional opaque end-customer attribution, not a price dimension. */
+	groupEndCustomers?: boolean
 }
 
 /** The response of QueryUsageReports. */
@@ -766,6 +768,8 @@ export interface UsageRow {
 	readonly quantity?: string
 	/** The service that emits the meter. */
 	readonly service?: string
+	/** Opaque attribution when grouped by end customer; absent for unattributed usage. */
+	readonly endCustomer?: string
 }
 
 /** BillingAccountState is an org's payment standing. */
@@ -967,6 +971,7 @@ runtime.registerSchemas({
 		['endTime', 'end_time'],
 		['groupProjects', 'group_projects'],
 		['groupDimensions', 'group_dimensions'],
+		['groupEndCustomers', 'group_end_customers'],
 	],
 	'sylphx.billing.v1.QueryUsageReportsResponse': [
 		['rows', 'rows', 'sylphx.billing.v1.UsageRow'],
@@ -1013,6 +1018,7 @@ runtime.registerSchemas({
 		['startTime', 'start_time'],
 		['endTime', 'end_time'],
 		['dimensions', 'dimensions', undefined, 'map'],
+		['endCustomer', 'end_customer'],
 	],
 })
 

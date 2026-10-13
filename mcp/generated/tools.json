@@ -2090,10 +2090,6 @@
                     },
                     "type": "object"
                   },
-                  "harness": {
-                    "description": "The execution harness, independent of `model`: `runtime` (default),\n`claude_code` or `codex`. It is part of the immutable version, not an\nenvironment-wide setting. An omitted or empty value means `runtime`.",
-                    "type": "string"
-                  },
                   "instructions": {
                     "description": "The system instructions, at most 256 KiB.",
                     "type": "string"
@@ -2166,9 +2162,24 @@
                     "type": "array",
                     "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
                   },
-                  "model": {
-                    "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
-                    "type": "string"
+                  "models": {
+                    "additionalProperties": false,
+                    "description": "Exact owner and cheap-tool model ids. Neither is silently substituted.",
+                    "properties": {
+                      "light": {
+                        "description": "The exact catalog id of the cheap model used only for owner-briefed\n`subcall.*` tools and in-loop compaction; never an owner.",
+                        "type": "string"
+                      },
+                      "primary": {
+                        "description": "The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned\nfor the life of a session; the runtime never remaps it.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "primary",
+                      "light"
+                    ],
+                    "type": "object"
                   },
                   "read_only": {
                     "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
@@ -2395,7 +2406,7 @@
                   }
                 },
                 "required": [
-                  "model"
+                  "models"
                 ],
                 "type": "object"
               }
@@ -2598,10 +2609,6 @@
                     },
                     "type": "object"
                   },
-                  "harness": {
-                    "description": "The execution harness, independent of `model`: `runtime` (default),\n`claude_code` or `codex`. It is part of the immutable version, not an\nenvironment-wide setting. An omitted or empty value means `runtime`.",
-                    "type": "string"
-                  },
                   "instructions": {
                     "description": "The system instructions, at most 256 KiB.",
                     "type": "string"
@@ -2674,9 +2681,24 @@
                     "type": "array",
                     "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
                   },
-                  "model": {
-                    "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
-                    "type": "string"
+                  "models": {
+                    "additionalProperties": false,
+                    "description": "Exact owner and cheap-tool model ids. Neither is silently substituted.",
+                    "properties": {
+                      "light": {
+                        "description": "The exact catalog id of the cheap model used only for owner-briefed\n`subcall.*` tools and in-loop compaction; never an owner.",
+                        "type": "string"
+                      },
+                      "primary": {
+                        "description": "The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned\nfor the life of a session; the runtime never remaps it.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "primary",
+                      "light"
+                    ],
+                    "type": "object"
                   },
                   "read_only": {
                     "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
@@ -2903,7 +2925,7 @@
                   }
                 },
                 "required": [
-                  "model"
+                  "models"
                 ],
                 "type": "object"
               }
@@ -3030,7 +3052,11 @@
                     "done",
                     "next",
                     "where",
-                    "outcome"
+                    "outcome",
+                    "awaits",
+                    "checkpoint",
+                    "counted",
+                    "retry_at"
                   ],
                   "type": "string"
                 },
@@ -3173,6 +3199,10 @@
           },
           "environment_mask": {
             "description": "Fields of environment to overlay, relative to EnvironmentSpec, using proto\nsnake_case paths such as ttl, repo.uri, repo.revision,\negress.allowed_domains and budget.max_cost_micros. The wire value is a\ncomma-separated string; SDK property naming does not change these paths.\nOmitted or empty infers populated serialized leaf fields recursively,\npreserving unselected siblings from the pinned version. Proto defaults\n(including empty lists) need an explicit mask to reset a selected field.\nSelected lists replace, rather than append to, the inherited list.\nThe sole path \"*\" replaces the whole environment, resetting unpopulated\nfields. Unknown, invalid and output-only paths are rejected, as is a\nnonempty mask without environment. Effective validation also applies to\nexplicit resets and whole-environment replacement.",
+            "type": "string"
+          },
+          "item_key": {
+            "description": "The caller's stable identity of the work item, not interpreted otherwise.\nEvery session and attempt with the same item key works on one repository\nbranch derived from it, so a new attempt continues the pushed work.\nOmitted, the session is the item.",
             "type": "string"
           },
           "message": {
@@ -9782,6 +9812,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "group_end_customers": {
+            "description": "Group by optional opaque end-customer attribution, not a price dimension.",
+            "type": "boolean"
           },
           "group_projects": {
             "description": "Group by project in addition to meter.",
@@ -37149,9 +37183,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`."
+        "title": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. With `idempotency_key` the command is dispatched at most once per lease and key, and its recorded result is returned again, also after the lease ended. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`."
       },
-      "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. Long-running or interactive processes use the guest\nprotocol at `status.endpoints.guest_uri`.",
+      "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. With `idempotency_key` the command is dispatched at\nmost once per lease and key, and its recorded result is returned again,\nalso after the lease ended. Long-running or interactive processes use the\nguest protocol at `status.endpoints.guest_uri`.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:exec",
       "input_schema": {
@@ -37172,6 +37206,10 @@
             "description": "Extra environment variables.",
             "type": "object"
           },
+          "idempotency_key": {
+            "description": "Dispatches the command at most once per lease and key, 1-255 printable\nASCII characters. The first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
+            "type": "string"
+          },
           "name": {
             "description": "The name of the lease.",
             "type": "string",
@@ -37183,7 +37221,7 @@
             "type": "string"
           },
           "timeout": {
-            "description": "Kill the process after this long; default 60 seconds, at most 10\nminutes.",
+            "description": "Kill the process after this long; default 60 seconds, at most 30\nminutes, and never past the lease's `expire_time`.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
@@ -43722,10 +43760,6 @@
                     },
                     "type": "object"
                   },
-                  "harness": {
-                    "description": "The execution harness, independent of `model`: `runtime` (default),\n`claude_code` or `codex`. It is part of the immutable version, not an\nenvironment-wide setting. An omitted or empty value means `runtime`.",
-                    "type": "string"
-                  },
                   "instructions": {
                     "description": "The system instructions, at most 256 KiB.",
                     "type": "string"
@@ -43798,9 +43832,24 @@
                     "type": "array",
                     "x-sylphx-resource-reference": "agents.sylphx.com/MemoryStore"
                   },
-                  "model": {
-                    "description": "The exact Sylphx AI catalog id (`ai_models`), set per Agent through the\nAPI as runtime state, never code or a deployed file. Agents in the same\nenvironment may use different models; the harness never remaps this id.",
-                    "type": "string"
+                  "models": {
+                    "additionalProperties": false,
+                    "description": "Exact owner and cheap-tool model ids. Neither is silently substituted.",
+                    "properties": {
+                      "light": {
+                        "description": "The exact catalog id of the cheap model used only for owner-briefed\n`subcall.*` tools and in-loop compaction; never an owner.",
+                        "type": "string"
+                      },
+                      "primary": {
+                        "description": "The exact Sylphx AI catalog id (`ai_models`) of the owner model, pinned\nfor the life of a session; the runtime never remaps it.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "primary",
+                      "light"
+                    ],
+                    "type": "object"
                   },
                   "read_only": {
                     "description": "Read-only: the version holds no write grant, so it may verify another\nagent's work but never own it. Create and update refuse memory stores,\nMCP servers, `app_function` and `client` tools, the `memory`, `browser`\nand `computer` built-ins, and an HTTP tool whose pinned operation is not\nGET or HEAD unless it is `runtime_only`. The `shell` and `files`\nbuilt-ins, and a `claude_code` or `codex` harness (which bring their own),\nneed `environment.egress` that denies by default: `DENY`, or `ALLOWLIST`\nof the configured Sylphx API and inference gateways and the\nversion's GET or HEAD tool hosts, with no CIDRs. Session create, `:send`\nand `:run` check the version and the session's effective environment\nagain, and refuse any model-facing credential that is not a captured\nAccess key holding only `<service>:read` and `ai:inference` scopes; a\nrenewal's `credential_updates` value for a model-facing binding is held to\nthe same rule. A run's `completion.result_fields` never map into the\ncompletion tool's path or query parameters. An OwnerPool never qualifies\nthe version.",
@@ -44027,7 +44076,7 @@
                   }
                 },
                 "required": [
-                  "model"
+                  "models"
                 ],
                 "type": "object"
               }
@@ -44099,7 +44148,11 @@
                     "done",
                     "next",
                     "where",
-                    "outcome"
+                    "outcome",
+                    "awaits",
+                    "checkpoint",
+                    "counted",
+                    "retry_at"
                   ],
                   "type": "string"
                 },
@@ -44242,6 +44295,10 @@
           },
           "environment_mask": {
             "description": "Fields of environment to overlay, relative to EnvironmentSpec, using proto\nsnake_case paths such as ttl, repo.uri, repo.revision,\negress.allowed_domains and budget.max_cost_micros. The wire value is a\ncomma-separated string; SDK property naming does not change these paths.\nOmitted or empty infers populated serialized leaf fields recursively,\npreserving unselected siblings from the pinned version. Proto defaults\n(including empty lists) need an explicit mask to reset a selected field.\nSelected lists replace, rather than append to, the inherited list.\nThe sole path \"*\" replaces the whole environment, resetting unpopulated\nfields. Unknown, invalid and output-only paths are rejected, as is a\nnonempty mask without environment. Effective validation also applies to\nexplicit resets and whole-environment replacement.",
+            "type": "string"
+          },
+          "item_key": {
+            "description": "The caller's stable identity of the work item, not interpreted otherwise.\nEvery session and attempt with the same item key works on one repository\nbranch derived from it, so a new attempt continues the pushed work.\nOmitted, the session is the item.",
             "type": "string"
           },
           "message": {
