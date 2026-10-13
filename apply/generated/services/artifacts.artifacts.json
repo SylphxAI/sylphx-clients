@@ -25,11 +25,19 @@
           "http": {
             "query_params": [
               "artifact_id",
-              "validate_only"
+              "validate_only",
+              "managed_upload"
             ]
           },
           "id": "artifacts.artifacts.create",
           "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "artifacts.artifacts.prepare_upload",
+          "kind": "custom"
         },
         {
           "http": {

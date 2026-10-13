@@ -59,7 +59,9 @@ export interface Artifact {
 	readonly regions?: string[]
 	/**
 	 * The OCI reference by digest to pull, for example
-	 * `registry.sylphx.com/<project>@sha256:4f1c…`.
+	 * `registry.sylphx.com/<org>/<project>-image@sha256:4f1c…`. Set by the
+	 * server for an Artifact registered from a managed upload; empty for a
+	 * generic registration.
 	 */
 	readonly reference?: string
 }
@@ -77,6 +79,15 @@ export interface CreateArtifactRequest {
 	artifactId?: string
 	/** Validate and return the result without writing anything. */
 	validateOnly?: boolean
+	/**
+	 * The bytes were pushed to this project's managed upload reference, so the
+	 * registry is asked before the digest is registered: it must hold the
+	 * manifest for `digest` in the project's managed repository, with this
+	 * `media_type` and `size_bytes`. The record then carries the pull
+	 * `reference`. Unset, the artifact is registered as given (generic
+	 * registration), and `reference` stays empty.
+	 */
+	managedUpload?: boolean
 }
 
 /** The request of DeleteArtifact. */
@@ -117,6 +128,31 @@ export interface ListArtifactsResponse {
 	nextPageToken?: string
 }
 
+/** The request of PrepareUpload. */
+export interface PrepareUploadRequest {
+	/** The project the image is uploaded to. */
+	parent: string
+}
+
+/** The response of PrepareUpload. */
+export interface PrepareUploadResponse {
+	/**
+	 * The repository and tag to push, `<registry>/<org>/<project>-image:<upload>`;
+	 * the tag is unique per call.
+	 */
+	readonly imageReference?: string
+	/**
+	 * A Docker config JSON whose `identitytoken` for the registry authenticates
+	 * this upload; a push credential, never stored or logged.
+	 */
+	readonly registryAuth?: string
+	/**
+	 * When the credential stops authenticating. `expires_at` names the issuer
+	 * credential's expiry, the credential protocol's field.
+	 */
+	readonly expiresAt?: string
+}
+
 /** ArtifactKind is what an Artifact is. */
 export type ArtifactKind = 'image' | 'sbom' | 'provenance' | 'signature' | 'bundle' | (string & {})
 
@@ -140,6 +176,7 @@ runtime.registerSchemas({
 		['artifact', 'artifact', 'sylphx.artifacts.v1.Artifact'],
 		['artifactId', 'artifact_id'],
 		['validateOnly', 'validate_only'],
+		['managedUpload', 'managed_upload'],
 	],
 	'sylphx.artifacts.v1.DeleteArtifactRequest': [
 		['validateOnly', 'validate_only'],
@@ -153,6 +190,12 @@ runtime.registerSchemas({
 	'sylphx.artifacts.v1.ListArtifactsResponse': [
 		['artifacts', 'artifacts', 'sylphx.artifacts.v1.Artifact'],
 		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.artifacts.v1.PrepareUploadRequest': [],
+	'sylphx.artifacts.v1.PrepareUploadResponse': [
+		['imageReference', 'image_reference'],
+		['registryAuth', 'registry_auth'],
+		['expiresAt', 'expires_at'],
 	],
 })
 
@@ -234,10 +277,32 @@ export class ArtifactsCollection {
 		return this.client.call<Artifact>({
 			method: 'POST',
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*', 'parent')}/artifacts`,
-			query: { artifact_id: request.artifactId, validate_only: request.validateOnly },
+			query: { artifact_id: request.artifactId, validate_only: request.validateOnly, managed_upload: request.managedUpload },
 			body: request.artifact ?? {},
 			bodyType: 'sylphx.artifacts.v1.Artifact',
 			responseType: 'sylphx.artifacts.v1.Artifact',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Mints one short-lived registry credential and the unique image reference
+	 * for an upload of this project. The repository is derived from the
+	 * caller's grant and this parent, never from the caller; the tag is unique
+	 * per call, so uploads of the same project never collide. Push to the
+	 * reference, then register the pushed digest with CreateArtifact.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*}/artifacts:prepareUpload` · permission `artifacts:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async prepareUpload(request: PrepareUploadRequest): Promise<PrepareUploadResponse> {
+		return this.client.call<PrepareUploadResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*', 'parent')}/artifacts:prepareUpload`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.artifacts.v1.PrepareUploadRequest',
+			responseType: 'sylphx.artifacts.v1.PrepareUploadResponse',
 			mutation: true,
 		})
 	}

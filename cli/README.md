@@ -19,6 +19,7 @@ sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
+sylphx build image                     # build and publish to the linked project; no registry setup
 eval "$(sylphx build cache env)"      # point local sccache and Turbo at the project's shared build cache
 sylphx build run --size standard -- cargo check   # home region; keep the default 30m cold-fallback wait
 sylphx events listen --forward localhost:3000/hook   # a topic's events, signed like a webhook, to a local URL
@@ -76,6 +77,13 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   standalone run to write a Resource managed by a Release. Eligible kinds
   are listed in `clients/apply/declarable.toml`; this list remains empty
   until each kind's writer cutover is complete.
+- `sylphx build image [PATH]` publishes to a managed project repository by
+  default and returns an immutable Artifact name and a digest-pinned
+  `source_ref` for Hosting. Its registry credentials are minted on the public
+  customer API, kept only in the lease's private directory, renewed during
+  long builds, and scrubbed from output. `--push REF --registry-auth FILE`
+  overrides that default for an external registry; `--oci-out FILE` copies
+  the OCI archive back. Neither override is a prerequisite.
 - `sylphx api GET /v1/whoami` is the raw escape hatch.
 - `sylphx data docs sync|search|read` keeps a Markdown tree in one of the
   environment's search indexes. `sync [GLOB…] --index ID --revision REV`

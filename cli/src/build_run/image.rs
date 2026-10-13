@@ -6,6 +6,14 @@
 //! egress list, the registry credentials' handling, and the metadata copied
 //! back.
 //!
+//! With neither `--push` nor `--registry-auth` the build is a managed one:
+//! the platform mints a unique upload reference on the project's registry and
+//! a short-lived credential just before the build runs ([`Publish`]), the
+//! image is registered in Kernel Artifacts when it succeeds, and the
+//! deployable `repo@digest` reference is what the caller deploys with. An
+//! explicit `--push REF --registry-auth FILE` pair publishes to another
+//! registry and registers nothing.
+//!
 //! Exit codes are `build run`'s: the script's (2 usage, 125 before BuildKit
 //! ran, else BuildKit's) once it has started; 124, 125 and 130 as there.
 
@@ -21,6 +29,13 @@ use super::{BUILD_CACHE_HOST, SIZES, WS};
 
 /// The guest command.
 pub const GUEST_BIN: &str = "/usr/local/bin/sylphx-image-build";
+/// The registry the managed publication pushes to: the deployed data-plane
+/// host, not customer configuration. The lease's egress allow-list is fixed
+/// before the machine is acquired, while the upload reference is only minted
+/// after it is ready, so the host is named here and the minted reference is
+/// held to it: a managed build must be able to reach its registry from its
+/// first byte.
+pub const MANAGED_REGISTRY_HOST: &str = "registry.sylphx.com";
 /// BuildKit's per-lease state on the cold owned workspace.
 pub fn state_dir() -> String {
     format!("{WS}/buildkit")
@@ -83,6 +98,7 @@ pub fn oci_path() -> String {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Image {
     pub dockerfile: Option<String>,
+    /// The reference an explicit `--push` names; `None` on the managed path.
     pub push: Option<String>,
     /// The local credentials file; its content goes to the machine alone.
     pub registry_auth: Option<PathBuf>,
@@ -90,6 +106,28 @@ pub struct Image {
     pub oci_out: Option<PathBuf>,
     /// The local HEAD's commit time and id, when the tree is clean at HEAD.
     pub source: Option<Source>,
+    /// No `--push` and no `--registry-auth`: the image is published through
+    /// the platform's managed path. The reference and the credentials are
+    /// minted just before the build runs ([`Publish`]).
+    pub managed: bool,
+}
+
+/// Where the guest pushes the image and how it authenticates, resolved just
+/// before the build starts: an explicit `--push`/`--registry-auth` pair, or
+/// the reference and credentials the platform minted for this build.
+///
+/// It holds no credential: the registry credentials live only on the machine
+/// (a private file) and among the run's scrubbed secrets. The reference is a
+/// non-secret upload name.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Publish {
+    /// The reference the guest pushes to (`--push`).
+    pub reference: Option<String>,
+    /// The guest has a private credentials file at [`auth_path`].
+    pub auth: bool,
+    /// Minted by the platform: the run registers the pushed image as an
+    /// Artifact when the build succeeds.
+    pub managed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,18 +136,27 @@ pub struct Source {
     pub commit: String,
 }
 
+/// The pushed image index's descriptor, as the OCI archive records it: what
+/// Kernel Artifacts needs besides the digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexDescriptor {
+    pub media_type: String,
+    pub digest: String,
+    pub size_bytes: i64,
+}
+
 pub fn command() -> Command {
     Command::new("image")
         .about("Build an OCI image from this work tree on a remote build machine; the digest comes back")
-        .long_about("Builds an OCI image from the enclosing git work tree (PATH inside it is the build context) with rootless BuildKit on a build machine: the Dockerfile, or with none the zero-config frontend (Railpack). Each build gets a cold lease-owned workspace after admission, reclaimed at lease end; --region pins placement without creating or attaching a persistent workspace Volume. BuildKit's local layer state ends with the lease. Output streams back unchanged apart from at most three `sylphx:` lines on stderr; the digest, frontend and process sandbox are printed after it.\n\nThe image is reproducible when the tree is clean at HEAD: SOURCE_DATE_EPOCH is HEAD's commit time and the commit is recorded. A tree with local changes records no commit and builds with SOURCE_DATE_EPOCH 0 (still reproducible for the same tree), and says so on one `sylphx:` line.\n\nThe machine reaches no internet package host: only the project's scoped build cache, the registry of --push, and each --allow-host. Package installs resolve through the build cache's mirrors; add --allow-host for any other source. --push REF needs --registry-auth FILE (a Docker config.json); the file is sent to the machine as a private file and removed after the build, and is never logged. A REF with no registry host in it (Docker Hub) needs --allow-host for that registry.\n\nExit codes: sylphx-image-build's (2 usage; 125 before BuildKit ran; otherwise BuildKit's); 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, sync failed, machine lost); 130 interrupted. -o json adds the whole metadata object to the `result` event as `image`.\n\nExample: sylphx build image --push registry.sylphx.net/acme/app:1 --registry-auth ~/.docker/config.json")
+        .long_about("Builds an OCI image from the enclosing git work tree (PATH inside it is the build context) with rootless BuildKit on a build machine: the Dockerfile, or with none the zero-config frontend (Railpack). Each build gets a cold lease-owned workspace after admission, reclaimed at lease end; --region pins placement without creating or attaching a persistent workspace Volume. BuildKit's local layer state ends with the lease. Output streams back unchanged apart from at most three `sylphx:` lines on stderr; the digest, frontend and process sandbox are printed after it.\n\nThe image is reproducible when the tree is clean at HEAD: SOURCE_DATE_EPOCH is HEAD's commit time and the commit is recorded. A tree with local changes records no commit and builds with SOURCE_DATE_EPOCH 0 (still reproducible for the same tree), and says so on one `sylphx:` line.\n\nBy default the image is published to the project's managed registry (registry.sylphx.com/<org>/<project>-image) under a unique upload reference, with credentials the platform mints for this build alone: nothing to pass, and no credential on this machine. When the build succeeds its digest is registered in Sylphx Artifacts and the deployable reference (repo@digest) is printed. --push REF --registry-auth FILE publishes to another registry instead: the file (a Docker config.json) is sent to the machine as a private file, removed after the build, and never logged.\n\nThe machine reaches no internet package host: only the project's scoped build cache, the managed registry (or the registry of --push), and each --allow-host. Package installs resolve through the build cache's mirrors; add --allow-host for any other source. An explicit REF with no registry host in it (Docker Hub) needs --allow-host for that registry.\n\nExit codes: sylphx-image-build's (2 usage; 125 before BuildKit ran; otherwise BuildKit's); 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, sync failed, machine lost); 130 interrupted. -o json adds the whole metadata object to the `result` event as `image`, plus `artifact` and `source_ref` for a managed publication.\n\nExample: sylphx build image")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to build (default \".\"); the synced root is its git work tree"))
         .arg(Arg::new("dockerfile").long("dockerfile").value_name("PATH")
             .help("Dockerfile, relative to PATH (default: PATH/Dockerfile, else the zero-config frontend)"))
         .arg(Arg::new("push").long("push").value_name("REF")
-            .help("Push the image to this reference; needs --registry-auth"))
+            .help("Publish to this reference instead of the managed registry; needs --registry-auth"))
         .arg(Arg::new("registry-auth").long("registry-auth").value_name("FILE")
-            .help("Registry credentials (a Docker config.json), sent to the machine privately and removed after the build"))
+            .help("Registry credentials for --push (a Docker config.json), sent to the machine privately and removed after the build"))
         .arg(Arg::new("oci-out").long("oci-out").value_name("FILE")
             .help("Copy the image back as an OCI archive to FILE"))
         .arg(Arg::new("size").long("size").value_name("SIZE").default_value("large")
@@ -122,7 +169,7 @@ pub fn command() -> Command {
         .arg(Arg::new("queue-timeout").long("queue-timeout").value_name("DURATION")
             .help("Longest wait for a build machine before exiting 125, retryable (default 30m, at most 6h)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
-            .help("Extra egress host beyond the build cache and the --push registry (repeatable)"))
+            .help("Extra egress host beyond the build cache and the publication registry (repeatable)"))
         .arg(Arg::new("quiet").long("quiet").short('q').action(ArgAction::SetTrue)
             .help("No `sylphx:` progress lines on stderr"))
 }
@@ -160,18 +207,33 @@ impl Image {
                 return Err(format!("--registry-auth {}: not a file", f.display()));
             }
         }
+        // Neither flag names an external registry: the platform mints the
+        // publication (and its credentials) just before the build runs.
+        let managed = push.is_none() && registry_auth.is_none();
         Ok(Self {
             dockerfile,
             push,
             registry_auth,
             oci_out: nonempty("oci-out")?.map(PathBuf::from),
             source: None,
+            managed,
         })
+    }
+
+    /// The publication the caller named on the command line: an explicit
+    /// `--push`/`--registry-auth` pair, or none — a managed build resolves it
+    /// at [`Publish`] time.
+    pub fn explicit_publish(&self) -> Publish {
+        Publish {
+            reference: self.push.clone(),
+            auth: self.registry_auth.is_some(),
+            managed: self.managed,
+        }
     }
 
     /// The guest command line: [`UNLINK_TARGET`], then the image build of
     /// [`Self::guest_argv`].
-    pub fn argv(&self, rel: &str) -> Vec<String> {
+    pub fn argv(&self, rel: &str, publish: &Publish) -> Vec<String> {
         let mut a = vec![
             "/bin/sh".to_string(),
             "-c".into(),
@@ -179,13 +241,15 @@ impl Image {
             "sylphx-image".into(),
             format!("{WS}/tree"),
         ];
-        a.extend(self.guest_argv(rel));
+        a.extend(self.guest_argv(rel, publish));
         a
     }
 
     /// `sylphx-image-build`'s command line; the build context is the tree
-    /// directory.
-    pub fn guest_argv(&self, rel: &str) -> Vec<String> {
+    /// directory. `publish` carries only what the guest is told — the upload
+    /// reference, and whether a private credentials file is at [`auth_path`]
+    /// — never a credential.
+    pub fn guest_argv(&self, rel: &str, publish: &Publish) -> Vec<String> {
         let ctx = if rel.is_empty() || rel == "." {
             format!("{WS}/tree")
         } else {
@@ -203,13 +267,16 @@ impl Image {
         if let Some(d) = &self.dockerfile {
             a.extend(["--dockerfile".into(), d.clone()]);
         }
-        if let Some(r) = &self.push {
+        if let Some(r) = &publish.reference {
             a.extend(["--push".into(), r.clone()]);
         }
-        if self.registry_auth.is_some() {
+        if publish.auth {
             a.extend(["--registry-auth".into(), auth_path()]);
         }
-        if self.oci_out.is_some() {
+        // A managed build always keeps the archive at a known path: the
+        // pushed index's descriptor (media type, size) is read from it after
+        // the build, to register the image in Artifacts.
+        if self.oci_out.is_some() || self.managed {
             a.extend(["--oci-out".into(), oci_path()]);
         }
         a
@@ -227,12 +294,15 @@ impl Image {
     }
 }
 
-/// The egress allow-list of an image build: the build cache and the push
-/// registry's host, then each `--allow-host`. No internet package host: the
+/// The egress allow-list of an image build: the build cache and the registry
+/// the image is published to — the managed one by default, `--push`'s host
+/// otherwise — then each `--allow-host`. No internet package host: the
 /// build's installs resolve through the cache's mirrors.
 pub fn allowed_domains(image: &Image, extra: &[String]) -> Vec<String> {
     let mut v = vec![BUILD_CACHE_HOST.to_string()];
-    if let Some(h) = image.push.as_deref().and_then(registry_host) {
+    if image.managed {
+        v.push(MANAGED_REGISTRY_HOST.to_string());
+    } else if let Some(h) = image.push.as_deref().and_then(registry_host) {
         v.push(h);
     }
     v.extend(extra.iter().cloned());
@@ -252,6 +322,94 @@ pub fn registry_host(reference: &str) -> Option<String> {
     let host = first.rsplit_once(':').map_or(first, |(h, _)| h);
     (!host.is_empty()).then(|| host.to_ascii_lowercase())
 }
+
+/// The project a resource name below `orgs/{org}/projects/{project}/…` hangs
+/// from (`orgs/{org}/projects/{project}`): the parent an Artifact and a
+/// managed upload are scoped to. The environment of the run's own parent
+/// never names the repository a caller chooses.
+pub fn project_parent(parent: &str) -> Option<String> {
+    let mut segs = parent.split('/');
+    let (mut org, mut project) = (None, None);
+    while let Some(seg) = segs.next() {
+        match seg {
+            "orgs" => org = segs.next(),
+            "projects" => project = segs.next(),
+            _ => {}
+        }
+    }
+    match (
+        org.filter(|s| !s.is_empty()),
+        project.filter(|s| !s.is_empty()),
+    ) {
+        (Some(org), Some(project)) => Some(format!("orgs/{org}/projects/{project}")),
+        _ => None,
+    }
+}
+
+/// The canonical digest accepted by Kernel Artifacts and Hosting.
+pub fn is_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    })
+}
+
+/// The Artifact's name: `{parent}/artifacts/{digest}` with `-` for `:`, as
+/// the server derives it from the digest.
+pub fn artifact_name(parent: &str, digest: &str) -> Option<String> {
+    is_digest(digest).then(|| format!("{parent}/artifacts/sha256-{}", &digest[7..]))
+}
+
+/// The deployable reference of a pushed image: the registry repository of
+/// `reference` with its tag replaced by the digest the registry stored.
+pub fn source_ref(reference: &str, digest: &str) -> Option<String> {
+    if !is_digest(digest) {
+        return None;
+    }
+    let repo = match reference.rsplit_once(':') {
+        Some((repo, tag)) if !tag.contains('/') => repo,
+        _ => reference,
+    };
+    (!repo.is_empty()).then(|| format!("{repo}@{digest}"))
+}
+
+/// The image digest the build's metadata records, when it is one.
+pub fn image_digest(meta: &Value) -> Option<&str> {
+    let digest = meta.get("digest")?.as_str()?;
+    is_digest(digest).then_some(digest)
+}
+
+/// The pushed image index's descriptor, as
+/// [`INDEX_DESCRIPTOR`] prints it: the media type and byte size the registry
+/// stored under the pushed digest.
+pub fn index_descriptor(v: &Value) -> Option<IndexDescriptor> {
+    let media_type = v.get("mediaType")?.as_str()?;
+    let digest = v.get("digest")?.as_str()?;
+    let size_bytes = v.get("size")?.as_i64()?;
+    if size_bytes <= 0 || media_type.is_empty() || !is_digest(digest) {
+        return None;
+    }
+    Some(IndexDescriptor {
+        media_type: media_type.to_string(),
+        digest: digest.to_string(),
+        size_bytes,
+    })
+}
+
+/// Reads the pushed image index's descriptor from the build's OCI archive:
+/// the archive always holds the index the build pushed, and its descriptor
+/// carries the media type and byte size the registry stored. The descriptor
+/// must be the pushed digest's own — an archive that does not hold it is
+/// reported, never substituted. Args: the archive, then the pushed digest.
+pub const INDEX_DESCRIPTOR: &str = r#"d=$1
+want=$2
+[ -f "$d" ] || exit 3
+tar -xOf "$d" index.json | jq -c --arg want "$want" '
+  ((.manifests // []) | map(select(.digest == $want)) | .[0]) // empty
+'
+"#;
 
 /// Commit time and id of the local HEAD, when the work tree is clean at HEAD
 /// (nothing modified, staged or untracked). `None` otherwise.
@@ -336,11 +494,16 @@ mod tests {
         Image::parse(r)
     }
 
+    /// No `--push` and no `--registry-auth`: the build is a managed one. Its
+    /// upload reference and credentials do not exist yet, so the command as
+    /// parsed carries neither — and it keeps the archive where the pushed
+    /// index's descriptor is read from after the build.
     #[test]
-    fn defaults_render_the_minimal_command() {
+    fn defaults_render_the_managed_command() {
         let i = parse(&["sylphx", "image"]).unwrap();
+        assert!(i.managed && i.push.is_none() && i.registry_auth.is_none());
         assert_eq!(
-            i.guest_argv(""),
+            i.guest_argv("", &i.explicit_publish()),
             [
                 GUEST_BIN,
                 "--context",
@@ -348,13 +511,15 @@ mod tests {
                 "--state",
                 "/workspace/buildkit",
                 "--metadata",
-                "/workspace/.sylphx/image.json"
+                "/workspace/.sylphx/image.json",
+                "--oci-out",
+                "/workspace/.sylphx/image.oci.tar"
             ]
         );
-        let sub = i.guest_argv("services/api");
+        let sub = i.guest_argv("services/api", &i.explicit_publish());
         assert_eq!(sub[2], "/workspace/tree/services/api");
         // The guest runs the build behind the unlink of the tree's target link.
-        let a = i.argv("services/api");
+        let a = i.argv("services/api", &i.explicit_publish());
         assert_eq!(
             a[..5],
             [
@@ -366,6 +531,67 @@ mod tests {
             ]
         );
         assert_eq!(a[5..], sub[..]);
+    }
+
+    /// The minted publication reaches the guest as a reference and a path —
+    /// never as a credential: the Docker config stays a private file on the
+    /// machine, and no argument or environment value carries it.
+    #[test]
+    fn the_minted_publication_never_puts_a_credential_in_the_command() {
+        let i = parse(&["sylphx", "image"]).unwrap();
+        let auth = r#"{"auths":{"registry.sylphx.com":{"identitytoken":"mint-token-value"}}}"#;
+        let publish = Publish {
+            reference: Some(format!("{MANAGED_REGISTRY_HOST}/org_1/prj_1-image:up1")),
+            auth: true,
+            managed: true,
+        };
+        let a = i.argv(".", &publish);
+        let at = |flag: &str| a[a.iter().position(|x| x == flag).unwrap() + 1].clone();
+        assert_eq!(
+            at("--push"),
+            format!("{MANAGED_REGISTRY_HOST}/org_1/prj_1-image:up1")
+        );
+        assert_eq!(at("--registry-auth"), auth_path());
+        assert!(!a.iter().any(|x| x.contains("mint-token-value")), "{a:?}");
+        assert!(!i.env().values().any(|v| v.contains("mint-token-value")));
+        // The credential's values are scrubbed from anything that leaves.
+        let secrets = auth_secrets(auth);
+        assert!(crate::build_cache::scrub(auth, &secrets).contains("[redacted]"));
+    }
+
+    #[test]
+    fn every_flag_reaches_the_guest_command() {
+        let dir = std::env::temp_dir().join(format!("sylphx-image-auth-{}", std::process::id()));
+        std::fs::write(&dir, "{}").unwrap();
+        let f = dir.to_str().unwrap();
+        let i = parse(&[
+            "sylphx",
+            "image",
+            "--dockerfile",
+            "docker/App.Dockerfile",
+            "--push",
+            "registry.sylphx.net/acme/app:1",
+            "--registry-auth",
+            f,
+            "--oci-out",
+            "out/app.tar",
+        ])
+        .unwrap();
+        // An explicit publication is not a managed one.
+        assert!(!i.managed);
+        let a = i.argv(".", &i.explicit_publish());
+        let at = |flag: &str| a[a.iter().position(|x| x == flag).unwrap() + 1].clone();
+        assert_eq!(at("--dockerfile"), "docker/App.Dockerfile");
+        assert_eq!(at("--push"), "registry.sylphx.net/acme/app:1");
+        // The machine sees its own private copy, never the local path.
+        assert_eq!(
+            at("--registry-auth"),
+            "/tmp/sylphx-private/registry-auth.json"
+        );
+        assert_eq!(at("--oci-out"), "/workspace/.sylphx/image.oci.tar");
+        assert!(!a.iter().any(|x| x.contains("sylphx-image-auth")));
+        assert_eq!(i.oci_out.as_deref(), Some(Path::new("out/app.tar")));
+        let _ = std::fs::remove_file(&dir);
     }
 
     /// Only the sync's own `target -> ../target` link leaves the tree; a
@@ -401,39 +627,6 @@ mod tests {
         assert!(std::fs::symlink_metadata(link.join("target")).is_ok());
         run(&dir.join("none"));
         let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn every_flag_reaches_the_guest_command() {
-        let dir = std::env::temp_dir().join(format!("sylphx-image-auth-{}", std::process::id()));
-        std::fs::write(&dir, "{}").unwrap();
-        let f = dir.to_str().unwrap();
-        let i = parse(&[
-            "sylphx",
-            "image",
-            "--dockerfile",
-            "docker/App.Dockerfile",
-            "--push",
-            "registry.sylphx.net/acme/app:1",
-            "--registry-auth",
-            f,
-            "--oci-out",
-            "out/app.tar",
-        ])
-        .unwrap();
-        let a = i.argv(".");
-        let at = |flag: &str| a[a.iter().position(|x| x == flag).unwrap() + 1].clone();
-        assert_eq!(at("--dockerfile"), "docker/App.Dockerfile");
-        assert_eq!(at("--push"), "registry.sylphx.net/acme/app:1");
-        // The machine sees its own private copy, never the local path.
-        assert_eq!(
-            at("--registry-auth"),
-            "/tmp/sylphx-private/registry-auth.json"
-        );
-        assert_eq!(at("--oci-out"), "/workspace/.sylphx/image.oci.tar");
-        assert!(!a.iter().any(|x| x.contains("sylphx-image-auth")));
-        assert_eq!(i.oci_out.as_deref(), Some(Path::new("out/app.tar")));
-        let _ = std::fs::remove_file(&dir);
     }
 
     #[test]
@@ -482,6 +675,132 @@ mod tests {
         // Docker Hub short names name no host: --allow-host does.
         assert_eq!(registry_host("acme/app:1"), None);
         assert_eq!(registry_host("localhost/app"), Some("localhost".into()));
+    }
+
+    /// A managed build is allowed the project's registry from the lease's
+    /// first byte: the upload reference is minted only after the machine is
+    /// ready, so nothing else can put the host on the list.
+    #[test]
+    fn a_managed_build_leases_with_the_managed_registry() {
+        let managed = Image {
+            managed: true,
+            ..Image::default()
+        };
+        assert_eq!(
+            allowed_domains(&managed, &[]),
+            [BUILD_CACHE_HOST, MANAGED_REGISTRY_HOST]
+        );
+        assert!(
+            parse(&["sylphx", "image"]).unwrap().managed,
+            "no flags name the managed publication"
+        );
+        for h in sylphx_build_lease::BUILD_PACKAGES {
+            if h != BUILD_CACHE_HOST {
+                assert!(
+                    !allowed_domains(&managed, &[]).iter().any(|x| x == h),
+                    "{h}"
+                );
+            }
+        }
+    }
+
+    /// The parent an Artifact and a managed upload are scoped to: the run's
+    /// canonical parent, never a repository a caller names.
+    #[test]
+    fn the_project_parent_drops_the_environment() {
+        assert_eq!(
+            project_parent("orgs/org_1/projects/prj_1/envs/env_1").as_deref(),
+            Some("orgs/org_1/projects/prj_1")
+        );
+        assert_eq!(
+            project_parent("orgs/org_1/projects/prj_1").as_deref(),
+            Some("orgs/org_1/projects/prj_1")
+        );
+        assert_eq!(project_parent("orgs/org_1"), None);
+        assert_eq!(project_parent(""), None);
+    }
+
+    /// The deployable reference the build prints: the pushed repository, the
+    /// digest the registry stored — not the upload tag.
+    #[test]
+    fn the_source_ref_replaces_the_upload_tag_with_the_digest() {
+        let digest = format!("sha256:{}", "a".repeat(64));
+        assert_eq!(
+            source_ref(
+                &format!("{MANAGED_REGISTRY_HOST}/org_1/prj_1-image:up1"),
+                &digest
+            )
+            .as_deref(),
+            Some(format!("{MANAGED_REGISTRY_HOST}/org_1/prj_1-image@{digest}").as_str())
+        );
+        assert_eq!(
+            source_ref("registry.sylphx.com:443/acme/app:1", &digest).as_deref(),
+            Some(format!("registry.sylphx.com:443/acme/app@{digest}").as_str())
+        );
+        assert_eq!(
+            source_ref("localhost:5000/acme/app", &digest).as_deref(),
+            Some(format!("localhost:5000/acme/app@{digest}").as_str())
+        );
+        assert_eq!(source_ref("acme/app:1", "not-a-digest"), None);
+    }
+
+    #[test]
+    fn artifact_names_and_digests_follow_the_resource() {
+        let digest = format!("sha256:{}", "b".repeat(64));
+        assert_eq!(
+            artifact_name("orgs/o/projects/p", &digest).as_deref(),
+            Some(format!("orgs/o/projects/p/artifacts/sha256-{}", "b".repeat(64)).as_str())
+        );
+        assert_eq!(artifact_name("orgs/o/projects/p", "sha256"), None);
+        assert_eq!(
+            image_digest(&serde_json::json!({"digest": digest.clone()})),
+            Some(digest.as_str())
+        );
+        assert_eq!(
+            image_digest(&serde_json::json!({"digest": "sha256:"})),
+            None
+        );
+        assert_eq!(image_digest(&serde_json::json!({})), None);
+        assert!(is_digest(&digest));
+        for invalid in [
+            "sha256:ab",
+            "sha256:",
+            "ab",
+            &format!("sha256:{}", "A".repeat(64)),
+            &format!("sha512:{}", "a".repeat(64)),
+        ] {
+            assert!(!is_digest(invalid), "{invalid}");
+        }
+    }
+
+    /// The pushed index's descriptor the guest prints from the archive: what
+    /// Kernel Artifacts needs beyond the digest.
+    #[test]
+    fn the_index_descriptor_carries_the_media_type_and_size() {
+        let digest = format!("sha256:{}", "c".repeat(64));
+        let v = serde_json::json!({
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": digest.clone(),
+            "size": 4096
+        });
+        let d = index_descriptor(&v).expect("descriptor");
+        assert_eq!(d.media_type, "application/vnd.oci.image.index.v1+json");
+        assert_eq!(d.digest, digest);
+        assert_eq!(d.size_bytes, 4096);
+        // A descriptor without a size, a digest, or a media type is refused:
+        // a registration must carry the real ones.
+        assert_eq!(
+            index_descriptor(&serde_json::json!({"digest": digest.clone()})),
+            None
+        );
+        assert_eq!(
+            index_descriptor(&serde_json::json!({"digest": digest.clone(), "mediaType": "x"})),
+            None
+        );
+        assert_eq!(
+            index_descriptor(&serde_json::json!({"digest": digest, "mediaType": "x", "size": 0})),
+            None
+        );
     }
 
     #[test]
@@ -547,20 +866,6 @@ mod tests {
         // Ordinary text survives.
         assert!(clean.contains("push failed"));
         assert!(clean.contains("registry.sylphx.net"));
-    }
-
-    #[test]
-    fn summary_names_the_three_facts() {
-        let m = serde_json::json!({"digest": "sha256:ab", "frontend": "dockerfile", "process_sandbox": true});
-        assert_eq!(
-            summary(&m),
-            [
-                "digest: sha256:ab",
-                "frontend: dockerfile",
-                "process_sandbox: true"
-            ]
-        );
-        assert_eq!(summary(&serde_json::json!({}))[0], "digest: -");
     }
 
     #[test]

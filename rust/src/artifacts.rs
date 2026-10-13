@@ -120,7 +120,9 @@ pub struct Artifact {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub regions: Vec<String>,
     /// The OCI reference by digest to pull, for example
-    /// `registry.sylphx.com/<project>@sha256:4f1c…`.
+    /// `registry.sylphx.com/<org>/<project>-image@sha256:4f1c…`. Set by the
+    /// server for an Artifact registered from a managed upload; empty for a
+    /// generic registration.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -156,6 +158,18 @@ pub struct CreateArtifactRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+    /// The bytes were pushed to this project's managed upload reference, so the
+    /// registry is asked before the digest is registered: it must hold the
+    /// manifest for `digest` in the project's managed repository, with this
+    /// `media_type` and `size_bytes`. The record then carries the pull
+    /// `reference`. Unset, the artifact is registered as given (generic
+    /// registration), and `reference` stays empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "managedUpload"
+    )]
+    pub managed_upload: bool,
 }
 
 /// The request of DeleteArtifact.
@@ -239,6 +253,53 @@ pub struct ListArtifactsResponse {
         alias = "nextPageToken"
     )]
     pub next_page_token: String,
+}
+
+/// The request of PrepareUpload.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PrepareUploadRequest {
+    /// The project the image is uploaded to.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+}
+
+/// The response of PrepareUpload.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PrepareUploadResponse {
+    /// The repository and tag to push, `<registry>/<org>/<project>-image:<upload>`;
+    /// the tag is unique per call.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "imageReference"
+    )]
+    pub image_reference: String,
+    /// A Docker config JSON whose `identitytoken` for the registry authenticates
+    /// this upload; a push credential, never stored or logged.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registryAuth"
+    )]
+    pub registry_auth: String,
+    /// When the credential stops authenticating. `expires_at` names the issuer
+    /// credential's expiry, the credential protocol's field.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expiresAt"
+    )]
+    pub expires_at: String,
 }
 
 /// ArtifactKind is what an Artifact is.
@@ -532,11 +593,42 @@ impl<'a, T: crate::runtime::Transport> ArtifactsCollection<'a, T> {
         let mut query = crate::runtime::Query::default();
         query.push("artifact_id", &request.artifact_id);
         query.push("validate_only", &request.validate_only);
+        query.push("managed_upload", &request.managed_upload);
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.artifact)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Mints one short-lived registry credential and the unique image reference
+    /// for an upload of this project. The repository is derived from the
+    /// caller's grant and this parent, never from the caller; the tag is unique
+    /// per call, so uploads of the same project never collide. Push to the
+    /// reference, then register the pushed digest with CreateArtifact.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*}/artifacts:prepareUpload` · permission `artifacts:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn prepare_upload(
+        &self,
+        request: PrepareUploadRequest,
+    ) -> Result<PrepareUploadResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/artifacts:prepareUpload",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

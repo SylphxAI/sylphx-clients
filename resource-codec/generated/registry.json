@@ -18613,7 +18613,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "The OCI reference by digest to pull, for example\n`registry.sylphx.com/<project>@sha256:4f1c…`.",
+          "doc": "The OCI reference by digest to pull, for example\n`registry.sylphx.com/<org>/<project>-image@sha256:4f1c…`. Set by the\nserver for an Artifact registered from a managed upload; empty for a\ngeneric registration.",
           "filterable": false,
           "name": "reference",
           "number": 24,
@@ -18700,6 +18700,25 @@
           "filterable": false,
           "name": "validate_only",
           "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The bytes were pushed to this project's managed upload reference, so the\nregistry is asked before the digest is registered: it must hold the\nmanifest for `digest` in the project's managed repository, with this\n`media_type` and `size_bytes`. The record then carries the pull\n`reference`. Unset, the artifact is registered as given (generic\nregistration), and `reference` stays empty.",
+          "filterable": false,
+          "name": "managed_upload",
+          "number": 5,
           "oneof": null,
           "optional": false,
           "repeated": false,
@@ -18945,6 +18964,96 @@
         }
       ],
       "name": "sylphx.artifacts.v1.ListArtifactsResponse",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
+      "doc": "The request of PrepareUpload.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The project the image is uploaded to.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "artifacts.sylphx.com/Artifact",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.PrepareUploadRequest",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
+      "doc": "The response of PrepareUpload.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The repository and tag to push, `<registry>/<org>/<project>-image:<upload>`;\nthe tag is unique per call.",
+          "filterable": false,
+          "name": "image_reference",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "A Docker config JSON whose `identitytoken` for the registry authenticates\nthis upload; a push credential, never stored or logged.",
+          "filterable": false,
+          "name": "registry_auth",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the credential stops authenticating. `expires_at` names the issuer\ncredential's expiry, the credential protocol's field.",
+          "filterable": false,
+          "name": "expires_at",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.PrepareUploadResponse",
       "package": "sylphx.artifacts.v1"
     },
     {
@@ -128789,7 +128898,8 @@
                 ],
                 "query_params": [
                   "artifact_id",
-                  "validate_only"
+                  "validate_only",
+                  "managed_upload"
                 ],
                 "template": "/v1/{parent=orgs/*/projects/*}/artifacts"
               },
@@ -128808,6 +128918,46 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "create"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Mints one short-lived registry credential and the unique image reference\nfor an upload of this project. The repository is derived from the\ncaller's grant and this parent, never from the caller; the tag is unique\nper call, so uploads of the same project never collide. Push to the\nreference, then register the pushed digest with CreateArtifact.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}",
+                    "pattern": "orgs/*/projects/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*}/artifacts:prepareUpload"
+              },
+              "id": "artifacts.artifacts.prepare_upload",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "artifacts:write",
+              "proto": "sylphx.artifacts.v1.ArtifactsService.PrepareUpload",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.artifacts.v1.PrepareUploadRequest",
+              "resource_field": null,
+              "response": "sylphx.artifacts.v1.PrepareUploadResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "prepare_upload"
             },
             {
               "cancellable": false,

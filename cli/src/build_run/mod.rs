@@ -81,6 +81,8 @@ const DEFAULT_QUEUE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const KEEPALIVE: Duration = Duration::from_secs(60);
 /// Renew the lease token well before it expires.
 const TOKEN_RENEW: Duration = Duration::from_secs(45 * 60);
+/// The registry issuer caps each managed credential at one hour.
+const REGISTRY_TOKEN_RENEW: Duration = Duration::from_secs(30 * 60);
 
 /// The lease's egress allow-list: for an image build [`image::allowed_domains`]
 /// (no internet package host), otherwise [`allowed_domains`] (the
@@ -351,9 +353,12 @@ impl Opts {
     pub fn parse_image(m: &ArgMatches) -> Result<Self, String> {
         let sh = Shared::parse(m, false)?;
         let image = image::Image::parse(m)?;
+        // The explicit publication is known here; a managed one is resolved
+        // at send_auth, and the run rebuilds the command from it.
+        let command = image.argv(&sh.rel, &image.explicit_publish());
         Ok(Self {
             org: m.try_get_one::<String>("org").ok().flatten().cloned(),
-            command: image.argv(&sh.rel),
+            command,
             root: sh.root,
             rel: sh.rel,
             size: sh.size,
@@ -479,6 +484,9 @@ struct HeldState {
     proc: Option<(Guest, u64)>,
     /// Cache token values: removed from any text that leaves the process.
     secrets: Vec<String>,
+    /// `build image`: where the guest pushes, resolved at `send_auth` (the
+    /// managed mint, or the explicit flags). Holds no credential.
+    publish: Option<image::Publish>,
 }
 
 impl Held {
@@ -497,6 +505,11 @@ struct Stats {
     from_store: usize,
     /// `build image`: the script's metadata object.
     image: Option<Value>,
+    /// `build image` (managed): the name of the Artifact the image was
+    /// registered as.
+    artifact: Option<String>,
+    /// `build image` (managed): the deployable `repo@digest` reference.
+    source_ref: Option<String>,
 }
 
 /// `sylphx build run`. `client` is the signed-in client, or why there is none.
@@ -636,6 +649,12 @@ fn result_event(outcome: &Outcome, s: &Stats, ms: u64) -> Value {
     }
     if let Some(image) = &s.image {
         result["image"] = image.clone();
+    }
+    if let Some(artifact) = &s.artifact {
+        result["artifact"] = json!(artifact);
+    }
+    if let Some(source_ref) = &s.source_ref {
+        result["source_ref"] = json!(source_ref);
     }
     result
 }
@@ -876,6 +895,15 @@ struct Run<'a> {
 /// A ready machine with its workspace.
 struct Machine {
     lease: sbx::Lease,
+}
+
+/// The managed publication the platform minted for one image build: where
+/// the guest pushes, and the Docker config that authenticates it. It holds a
+/// credential, so it has no `Debug` output and never touches this machine's
+/// disk.
+struct Minted {
+    reference: String,
+    auth: Vec<u8>,
 }
 
 impl Run<'_> {
@@ -1496,7 +1524,14 @@ impl Run<'_> {
             self.rel().to_string(),
             "1".into(),
         ];
-        args.extend(self.o.command.iter().cloned());
+        // An image build's command carries the publication resolved at
+        // send_auth (the managed reference is only known then); everything
+        // else runs the command the caller gave.
+        let command = self.held.with(|h| match (&self.o.image, &h.publish) {
+            (Some(img), Some(publish)) => img.argv(self.rel(), publish),
+            _ => self.o.command.clone(),
+        });
+        args.extend(command);
         // The command's own `--env` wins over the cache's and ours.
         let mut env = cache;
         if let Some(img) = &self.o.image {
@@ -1524,6 +1559,7 @@ impl Run<'_> {
         let deadline = tokio::time::Instant::now() + self.o.timeout;
         let mut tick = tokio::time::interval(KEEPALIVE);
         tick.tick().await;
+        let mut registry_minted = Instant::now();
         let mut reattached = false;
         let result = loop {
             tokio::select! {
@@ -1587,6 +1623,17 @@ impl Run<'_> {
                             *minted = Instant::now();
                         }
                     }
+                    if self.o.image.as_ref().is_some_and(|i| i.managed)
+                        && registry_minted.elapsed() >= REGISTRY_TOKEN_RENEW
+                    {
+                        if let Err(fault) = self.renew_registry_auth(g).await {
+                            if let Some(pid) = p.pid {
+                                let _ = g.signal(pid, "SIGKILL").await;
+                            }
+                            return Err(ExecFault { started: p.pid.is_some(), fault });
+                        }
+                        registry_minted = Instant::now();
+                    }
                     let _ = g.touch(WS).await;
                 }
                 _ = tokio::time::sleep_until(deadline) => {
@@ -1603,16 +1650,37 @@ impl Run<'_> {
         Ok(result)
     }
 
-    /// `build image --registry-auth`: puts the credentials on the machine as a
-    /// private file (0600 in a 0700 directory), and the file's values among
-    /// the secrets scrubbed from any text that leaves this process.
+    /// `build image`: resolves the publication (minting the managed one),
+    /// puts its credentials on the machine as a private file (0600 in a 0700
+    /// directory), and adds the file's values to the secrets scrubbed from
+    /// any text that leaves this process. The file never exists on this
+    /// machine, and the credentials never enter an argument, an environment
+    /// variable, or a synced file.
     async fn send_auth(&self, g: &Guest) -> Result<(), Fault> {
-        let Some(file) = self.o.image.as_ref().and_then(|i| i.registry_auth.as_ref()) else {
+        let Some(img) = self.o.image.as_ref() else {
             return Ok(());
         };
-        let bytes = std::fs::read(file).map_err(|e| {
-            Fault::Other(format!("reading --registry-auth {}: {e}", file.display()))
-        })?;
+        let (publish, bytes) = if img.managed {
+            let minted = self.mint_upload().await?;
+            (
+                image::Publish {
+                    reference: Some(minted.reference),
+                    auth: true,
+                    managed: true,
+                },
+                minted.auth,
+            )
+        } else {
+            let Some(file) = img.registry_auth.as_ref().filter(|f| f.is_file()) else {
+                return Err(Fault::Other(
+                    "--push needs a readable --registry-auth file".into(),
+                ));
+            };
+            let bytes = std::fs::read(file).map_err(|e| {
+                Fault::Other(format!("reading --registry-auth {}: {e}", file.display()))
+            })?;
+            (img.explicit_publish(), bytes)
+        };
         self.held.with(|h| {
             h.secrets
                 .extend(image::auth_secrets(&String::from_utf8_lossy(&bytes)))
@@ -1644,6 +1712,102 @@ mkdir -m 700 "$1"
                 "securing the registry credentials failed".into(),
             ));
         }
+        self.held.with(|h| h.publish = Some(publish));
+        Ok(())
+    }
+
+    /// Mints this build's managed publication: the upload reference and a
+    /// short-lived registry credential, both scoped by the verified grant and
+    /// the run's canonical parent — never a repository a caller names. The
+    /// registry host is the one the lease's egress was fixed to. An issuer
+    /// that is down answers 503: a platform failure the caller may retry.
+    async fn mint_upload(&self) -> Result<Minted, Fault> {
+        let parent = image::project_parent(&self.parent).ok_or_else(|| {
+            Fault::Other(format!(
+                "{}: no project to publish the image in",
+                self.parent
+            ))
+        })?;
+        let answer = self
+            .client
+            .invoke(
+                "artifacts.artifacts.prepare_upload",
+                json!({"parent": parent}),
+            )
+            .await
+            .map_err(|e| Fault::Other(format!("minting the image upload: {}", why(&e))))?;
+        let reference = answer
+            .get("image_reference")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let auth = answer
+            .get("registry_auth")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        if reference.is_empty() || auth.is_empty() {
+            return Err(Fault::Other(
+                "the image upload mint answered no reference".into(),
+            ));
+        }
+        // The lease's egress list was fixed before this call: a reference to
+        // another host would be pushed into a blocked route.
+        if image::registry_host(reference).as_deref() != Some(image::MANAGED_REGISTRY_HOST) {
+            return Err(Fault::Other(format!(
+                "the image upload mint answered {reference}: not on {}",
+                image::MANAGED_REGISTRY_HOST
+            )));
+        }
+        Ok(Minted {
+            reference: reference.to_string(),
+            auth: auth.as_bytes().to_vec(),
+        })
+    }
+
+    /// Replaces the private config atomically. The guest credential helper
+    /// reads it on each BuildKit credential lookup, including publication.
+    async fn renew_registry_auth(&self, g: &Guest) -> Result<(), Fault> {
+        let minted = self.mint_upload().await?;
+        let same_repository = self.held.with(|h| {
+            h.publish
+                .as_ref()
+                .and_then(|p| p.reference.as_deref())
+                .is_some_and(|reference| {
+                    reference.rsplit_once(':').map(|(repository, _)| repository)
+                        == minted
+                            .reference
+                            .rsplit_once(':')
+                            .map(|(repository, _)| repository)
+                })
+        });
+        if !same_repository {
+            return Err(Fault::Other("the renewed upload changed repository".into()));
+        }
+        self.held.with(|h| {
+            h.secrets
+                .extend(image::auth_secrets(&String::from_utf8_lossy(&minted.auth)));
+        });
+        let path = image::auth_path();
+        let next = format!("{path}.next");
+        g.upload(&next, USER, &minted.auth).await?;
+        let (code, _, _) = g
+            .run(
+                USER,
+                &argv(&[
+                    "/bin/sh",
+                    "-c",
+                    "chmod 600 \"$1\" && mv -f \"$1\" \"$2\"",
+                    "registry-auth",
+                    &next,
+                    &path,
+                ]),
+                &BTreeMap::new(),
+            )
+            .await?;
+        if code != 0 {
+            return Err(Fault::Other(
+                "renewing the private registry credentials failed".into(),
+            ));
+        }
         Ok(())
     }
 
@@ -1651,10 +1815,8 @@ mkdir -m 700 "$1"
     /// machine may be gone, and the next image build replaces the directory).
     async fn drop_auth(&self, g: &Guest) {
         if self
-            .o
-            .image
-            .as_ref()
-            .is_some_and(|i| i.registry_auth.is_some())
+            .held
+            .with(|h| h.publish.as_ref().is_some_and(|p| p.auth))
         {
             let _ = g
                 .run(
@@ -1708,8 +1870,172 @@ mkdir -m 700 "$1"
             }
             println!("{line}");
         }
+        // A managed publication is registered in Sylphx Artifacts, so a
+        // Release can name it; the deployable reference is what a caller
+        // deploys with.
+        if let Some(publish) = self.held.with(|h| h.publish.take()).filter(|p| p.managed) {
+            let (artifact, source_ref) = self.register_image(g, &meta, &publish).await?;
+            if !self.o.json {
+                println!("source_ref: {source_ref}");
+            }
+            self.add(|s| {
+                s.artifact = Some(artifact);
+                s.source_ref = Some(source_ref);
+            });
+        }
         self.add(|s| s.image = Some(meta));
         Ok(())
+    }
+
+    /// Registers the pushed image as an immutable Artifact and answers its
+    /// name and the deployable `repo@digest` reference. A digest already
+    /// registered is the same image (a digest addresses immutable bytes):
+    /// the existing Artifact's name is reported, never a second one and
+    /// never a success without it.
+    async fn register_image(
+        &self,
+        g: &Guest,
+        meta: &Value,
+        publish: &image::Publish,
+    ) -> Result<(String, String), Outcome> {
+        let digest = image::image_digest(meta)
+            .ok_or_else(|| Outcome::platform("the build metadata names no image digest", false))?;
+        let descriptor = self.index_descriptor(g, digest).await?;
+        let reference = publish.reference.as_deref().unwrap_or_default();
+        let source_ref = image::source_ref(reference, digest).ok_or_else(|| {
+            Outcome::platform(format!("{reference}: not a published digest"), false)
+        })?;
+        let parent = image::project_parent(&self.parent).ok_or_else(|| {
+            Outcome::platform(
+                format!("{}: no project to register the image in", self.parent),
+                false,
+            )
+        })?;
+        let name = self
+            .register(&parent, digest, descriptor, &source_ref)
+            .await?;
+        Ok((name, source_ref))
+    }
+
+    /// Registers one immutable Artifact for the pushed image and answers its
+    /// name. A digest already registered is the same bytes: the Artifact
+    /// there is read back and checked, never duplicated and never assumed.
+    async fn register(
+        &self,
+        parent: &str,
+        digest: &str,
+        descriptor: image::IndexDescriptor,
+        expected_reference: &str,
+    ) -> Result<String, Outcome> {
+        let mut artifact = sylphx::artifacts::Artifact::default();
+        artifact.digest = digest.to_string();
+        artifact.kind = Some(sylphx::artifacts::ArtifactKind::Image);
+        artifact.media_type = descriptor.media_type;
+        artifact.size_bytes = descriptor.size_bytes;
+        let mut request = sylphx::artifacts::CreateArtifactRequest::default();
+        request.parent = parent.to_string();
+        request.artifact = Some(artifact);
+        request.managed_upload = true;
+        let registered = match self.client.artifacts().artifacts().create(request).await {
+            Ok(a) => a,
+            Err(sylphx::Error::Api {
+                code: sylphx::common::ErrorCode::ResourceAlreadyExists,
+                ..
+            }) => self.existing_image(parent, digest).await?,
+            Err(e) => return Err(api("registering the image artifact", &e)),
+        };
+        let expected_name = image::artifact_name(parent, digest)
+            .ok_or_else(|| Outcome::platform("the image digest is not canonical", false))?;
+        if registered.name != expected_name
+            || registered.digest != digest
+            || registered.kind != Some(sylphx::artifacts::ArtifactKind::Image)
+            || registered.reference != expected_reference
+        {
+            return Err(Outcome::platform(
+                "the registered Artifact does not name this managed image",
+                false,
+            ));
+        }
+        Ok(registered.name)
+    }
+
+    /// The Artifact already registered for `digest`, checked to be that same
+    /// image.
+    async fn existing_image(
+        &self,
+        parent: &str,
+        digest: &str,
+    ) -> Result<sylphx::artifacts::Artifact, Outcome> {
+        let name = image::artifact_name(parent, digest).ok_or_else(|| {
+            Outcome::platform(format!("{parent}: no artifact name for {digest}"), false)
+        })?;
+        let mut request = sylphx::artifacts::GetArtifactRequest::default();
+        request.name = name.clone();
+        let artifact = self
+            .client
+            .artifacts()
+            .artifacts()
+            .get(request)
+            .await
+            .map_err(|e| api(&format!("reading the registered image artifact {name}"), &e))?;
+        if artifact.digest != digest {
+            return Err(Outcome::platform(
+                format!("{name} holds {} and not {digest}", artifact.digest.trim()),
+                false,
+            ));
+        }
+        Ok(artifact)
+    }
+
+    /// The pushed image index's descriptor, read from the build's OCI archive
+    /// on the machine: Kernel Artifacts needs the media type and byte size
+    /// the registry stored under the pushed digest, which the build metadata
+    /// does not carry.
+    async fn index_descriptor(
+        &self,
+        g: &Guest,
+        digest: &str,
+    ) -> Result<image::IndexDescriptor, Outcome> {
+        let args = argv(&[
+            "/bin/sh",
+            "-c",
+            image::INDEX_DESCRIPTOR,
+            "image-descriptor",
+            &image::oci_path(),
+            digest,
+        ]);
+        let (code, out, err) = g.run(USER, &args, &BTreeMap::new()).await.map_err(|f| {
+            Outcome::platform(format!("reading the image descriptor: {}", f.text()), true)
+        })?;
+        if code != 0 {
+            return Err(Outcome::platform(
+                format!(
+                    "reading the image descriptor: {}",
+                    String::from_utf8_lossy(&err).trim()
+                ),
+                false,
+            ));
+        }
+        let value: Value =
+            serde_json::from_str(String::from_utf8_lossy(&out).trim()).map_err(|e| {
+                Outcome::platform(format!("the image descriptor is not JSON: {e}"), false)
+            })?;
+        let descriptor = image::index_descriptor(&value).ok_or_else(|| {
+            Outcome::platform(
+                format!("the image archive holds no descriptor for {digest}"),
+                false,
+            )
+        })?;
+        if descriptor.digest != digest {
+            return Err(Outcome::platform(
+                format!(
+                    "the image archive's descriptor names {} and the metadata {digest}",
+                    descriptor.digest
+                ),
+                false,
+            ));
+        }
+        Ok(descriptor)
     }
 
     /// Copies the `--artifact` matches back, checking each digest.
@@ -2573,9 +2899,15 @@ mod tests {
         let (_, r) = b.subcommand().unwrap();
         let o = Opts::parse_image(r).unwrap();
         let _ = std::fs::remove_dir_all(&tree);
+        // A managed build (no --push) reaches the project's registry and
+        // nothing else beyond the cache and the caller's own hosts.
         assert_eq!(
             lease_domains(&o),
-            ["build-cache.sylphx.net", "proxy.example.com"]
+            [
+                "build-cache.sylphx.net",
+                image::MANAGED_REGISTRY_HOST,
+                "proxy.example.com"
+            ]
         );
         assert!(o.command[5].ends_with("sylphx-image-build"));
         // `build run` keeps its preset.
@@ -3546,7 +3878,9 @@ esac
             bytes_down: 2048,
             artifacts: 0,
             from_store: 7,
-            image: None,
+            image: Some(json!({"digest": "sha256:aa"})),
+            artifact: Some("orgs/o/projects/p/artifacts/sha256-aa".into()),
+            source_ref: Some("registry.sylphx.com/o/p-image@sha256:aa".into()),
         };
         let captured = Mutex::new(Vec::new());
         let sink = |v: Value| captured.lock().unwrap().push(v);
@@ -3572,6 +3906,150 @@ esac
         sink(json!({"type": "artifact", "path": "p", "digest": "sha256:aa", "bytes": 3}));
         for v in captured.lock().unwrap().iter() {
             check(v);
+        }
+    }
+
+    /// A `Run` with nothing but a client: the pieces that need no machine.
+    fn api_only_run<'a>(
+        client: &'a Client,
+        o: &'a Opts,
+        out: &'a Out,
+        held: &'a Held,
+        stats: &'a Mutex<Stats>,
+        parent: &str,
+    ) -> Run<'a> {
+        Run {
+            client,
+            o,
+            out,
+            held,
+            stats,
+            parent: parent.to_string(),
+            tree: BTreeMap::new(),
+            git_deps: Vec::new(),
+            source_history: None,
+            key: None,
+            cache_url: String::new(),
+            cache_warned: AtomicBool::new(false),
+            accepted_region: None,
+        }
+    }
+
+    /// A digest already registered is the same image: the CLI reads that
+    /// Artifact back and reports it, rather than failing or claiming a new
+    /// registration.
+    #[tokio::test]
+    async fn an_already_registered_digest_is_read_back_not_duplicated() {
+        use tokio::io::AsyncWriteExt;
+        let digest = format!("sha256:{}", "e".repeat(64));
+        let name = format!(
+            "orgs/org_a/projects/prj_a/artifacts/sha256-{}",
+            "e".repeat(64)
+        );
+        let reference = format!(
+            "{}/org_a/prj_a-image@{digest}",
+            image::MANAGED_REGISTRY_HOST
+        );
+        let foreign = format!(
+            "{}/other/project-image@{digest}",
+            image::MANAGED_REGISTRY_HOST
+        );
+        for held_reference in [reference.as_str(), "", foreign.as_str()] {
+            let answer = json!({
+                "name": name.clone(), "uid": "art_hk01e", "digest": digest.clone(),
+                "kind": "image", "reference": held_reference,
+            })
+            .to_string();
+            let conflict = json!({
+                "code": "RESOURCE_ALREADY_EXISTS",
+                "status": 409,
+                "detail": "This digest is already registered.",
+                "retryable": false,
+            })
+            .to_string();
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let url = format!("http://{}", listener.local_addr().unwrap());
+            let path = name.clone();
+            let requests = std::sync::Arc::new(parking_lot::Mutex::new(Vec::new()));
+            let seen = requests.clone();
+            let server = tokio::spawn(async move {
+                // The create is refused, then the Artifact is read by its name.
+                for (status, payload) in [(409, conflict), (200, answer)] {
+                    let (mut socket, _) = listener.accept().await.unwrap();
+                    let (line, body) = read_http_request(&mut socket).await;
+                    seen.lock().push((line, body));
+                    socket
+                    .write_all(
+                        format!(
+                            "HTTP/1.1 {status} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{payload}",
+                            payload.len()
+                        )
+                        .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+                    socket.shutdown().await.unwrap();
+                }
+            });
+            let client = Client::new(
+                sylphx::HttpTransport::builder()
+                    .base_url(url)
+                    .build()
+                    .unwrap(),
+            );
+            let tree = GitTree::new();
+            let o = parse(&["sylphx", "build", "run", tree.path(), "--", "true"]).unwrap();
+            let out = Out {
+                json: true,
+                quiet: true,
+            };
+            let held = Held::default();
+            let stats = Mutex::new(Stats::default());
+            let run = api_only_run(
+                &client,
+                &o,
+                &out,
+                &held,
+                &stats,
+                "orgs/org_a/projects/prj_a/envs/env_a",
+            );
+            let registered = run
+                .register(
+                    "orgs/org_a/projects/prj_a",
+                    &digest,
+                    image::IndexDescriptor {
+                        media_type: "application/vnd.oci.image.index.v1+json".into(),
+                        digest: digest.clone(),
+                        size_bytes: 4096,
+                    },
+                    &reference,
+                )
+                .await;
+            if held_reference == reference {
+                assert_eq!(registered.expect("the existing managed artifact"), name);
+            } else {
+                assert_eq!(
+                    registered
+                        .expect_err("a different reference is not this upload")
+                        .code(),
+                    125
+                );
+            }
+            server.await.unwrap();
+            let requests = requests.lock();
+            assert_eq!(requests.len(), 2, "{requests:?}");
+            assert!(
+                requests[0].0.starts_with(
+                    "POST /v1/orgs/org_a/projects/prj_a/artifacts?managed_upload=true "
+                ),
+                "{}",
+                requests[0].0
+            );
+            assert!(
+                requests[1].0.starts_with(&format!("GET /v1/{path} ")),
+                "{}",
+                requests[1].0
+            );
         }
     }
 }

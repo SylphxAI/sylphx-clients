@@ -3662,6 +3662,12 @@
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
                   "type": "bool"
+                },
+                {
+                  "field": "managed_upload",
+                  "flag": "--managed-upload",
+                  "summary": "The bytes were pushed to this project's managed upload reference, so the registry is asked before the digest is registered: it must hold the manifest for `digest` in the project's managed repository, with this `media_type` and `size_bytes`. The record then carries the pull `reference`. Unset, the artifact is registered as given (generic registration), and `reference` stays empty.",
+                  "type": "bool"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*}/artifacts",
@@ -3676,6 +3682,21 @@
               "resource_field": "artifact",
               "summary": "Registers an artifact whose bytes were pushed by digest; verification runs after.",
               "verb": "create"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{parent=orgs/*/projects/*}/artifacts:prepareUpload",
+              "method": "artifacts.artifacts.prepare_upload",
+              "permission": "artifacts:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}"
+              },
+              "summary": "Mints one short-lived registry credential and the unique image reference for an upload of this project. The repository is derived from the caller's grant and this parent, never from the caller; the tag is unique per call, so uploads of the same project never collide. Push to the reference, then register the pushed digest with CreateArtifact.",
+              "verb": "prepare-upload"
             },
             {
               "confirm": {

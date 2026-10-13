@@ -4606,7 +4606,7 @@
             "x-sylphx-resource-reference": "artifacts.sylphx.com/Artifact"
           },
           "reference": {
-            "description": "The OCI reference by digest to pull, for example\n`registry.sylphx.com/<project>@sha256:4f1c…`.",
+            "description": "The OCI reference by digest to pull, for example\n`registry.sylphx.com/<org>/<project>-image@sha256:4f1c…`. Set by the\nserver for an Artifact registered from a managed upload; empty for a\ngeneric registration.",
             "readOnly": true,
             "type": "string"
           },
@@ -4694,6 +4694,10 @@
           "artifact_id": {
             "description": "The id of the new artifact, the digest with `-` for `:`; the server derives it from `digest` when empty; the server assigns one when\nempty.",
             "type": "string"
+          },
+          "managed_upload": {
+            "description": "The bytes were pushed to this project's managed upload reference, so the\nregistry is asked before the digest is registered: it must hold the\nmanifest for `digest` in the project's managed repository, with this\n`media_type` and `size_bytes`. The record then carries the pull\n`reference`. Unset, the artifact is registered as given (generic\nregistration), and `reference` stays empty.",
+            "type": "boolean"
           },
           "parent": {
             "description": "The project to create in.",
@@ -4791,6 +4795,43 @@
           "next_page_token": {
             "description": "The token of the next page; empty on the last page.",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.artifacts.v1.PrepareUploadRequest": {
+        "description": "The request of PrepareUpload.",
+        "properties": {
+          "parent": {
+            "description": "The project the image is uploaded to.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/Artifact"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.artifacts.v1.PrepareUploadResponse": {
+        "description": "The response of PrepareUpload.",
+        "properties": {
+          "expires_at": {
+            "description": "When the credential stops authenticating. `expires_at` names the issuer\ncredential's expiry, the credential protocol's field.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "image_reference": {
+            "description": "The repository and tag to push, `<registry>/<org>/<project>-image:<upload>`;\nthe tag is unique per call.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "registry_auth": {
+            "description": "A Docker config JSON whose `identitytoken` for the registry authenticates\nthis upload; a push credential, never stored or logged.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
           }
         },
         "type": "object"
@@ -48302,6 +48343,15 @@
             }
           },
           {
+            "description": "The bytes were pushed to this project's managed upload reference, so the\nregistry is asked before the digest is registered: it must hold the\nmanifest for `digest` in the project's managed repository, with this\n`media_type` and `size_bytes`. The record then carries the pull\n`reference`. Unset, the artifact is registered as given (generic\nregistration), and `reference` stays empty.",
+            "in": "query",
+            "name": "managed_upload",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "$ref": "#/components/parameters/SylphxVersion"
           },
           {
@@ -48544,6 +48594,88 @@
         ],
         "x-sylphx-method": "artifacts.artifacts.get",
         "x-sylphx-permission": "artifacts:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/artifacts:prepareUpload": {
+      "post": {
+        "description": "Mints one short-lived registry credential and the unique image reference\nfor an upload of this project. The repository is derived from the\ncaller's grant and this parent, never from the caller; the tag is unique\nper call, so uploads of the same project never collide. Push to the\nreference, then register the pushed digest with CreateArtifact.",
+        "operationId": "artifacts_artifacts_prepare_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.artifacts.v1.PrepareUploadResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Mints one short-lived registry credential and the unique image reference for an upload of this project. The repository is derived from the caller's grant and this parent, never from the caller; the tag is unique per call, so uploads of the same project never collide. Push to the reference, then register the pushed digest with CreateArtifact.",
+        "tags": [
+          "artifacts"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "artifacts.artifacts.prepare_upload",
+        "x-sylphx-permission": "artifacts:write",
         "x-sylphx-stage": "preview"
       }
     },

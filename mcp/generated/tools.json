@@ -5796,6 +5796,10 @@
             "description": "The id of the new artifact, the digest with `-` for `:`; the server derives it from `digest` when empty; the server assigns one when\nempty.",
             "type": "string"
           },
+          "managed_upload": {
+            "description": "The bytes were pushed to this project's managed upload reference, so the\nregistry is asked before the digest is registered: it must hold the\nmanifest for `digest` in the project's managed repository, with this\n`media_type` and `size_bytes`. The record then carries the pull\n`reference`. Unset, the artifact is registered as given (generic\nregistration), and `reference` stays empty.",
+            "type": "boolean"
+          },
           "parent": {
             "description": "The project to create in.",
             "type": "string",
@@ -5816,6 +5820,37 @@
       "method_id": "artifacts.artifacts.create",
       "permission": "artifacts:write",
       "tool": "artifacts_artifacts_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Mints one short-lived registry credential and the unique image reference for an upload of this project. The repository is derived from the caller's grant and this parent, never from the caller; the tag is unique per call, so uploads of the same project never collide. Push to the reference, then register the pushed digest with CreateArtifact."
+      },
+      "description": "Mints one short-lived registry credential and the unique image reference\nfor an upload of this project. The repository is derived from the\ncaller's grant and this parent, never from the caller; the tag is unique\nper call, so uploads of the same project never collide. Push to the\nreference, then register the pushed digest with CreateArtifact.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*}/artifacts:prepareUpload",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of PrepareUpload.",
+        "properties": {
+          "parent": {
+            "description": "The project the image is uploaded to.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/Artifact"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "artifacts.artifacts.prepare_upload",
+      "permission": "artifacts:write",
+      "tool": "artifacts_artifacts_prepare_upload"
     },
     {
       "annotations": {
