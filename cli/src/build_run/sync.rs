@@ -252,7 +252,7 @@ pub fn lists(tree: &Tree, plan: &Plan, filled: &BTreeSet<String>) -> Lists {
 /// `gzip`, `awk` and `xargs`. `$1` is the workspace, `$2` is 1 for a full
 /// sync, 2 for a full sync that also empties the build caches (`--fresh`),
 /// `$3` is 1 when the build store filled `.sylphx/fill/tree` (see
-/// [`super::store::FILL`]): those files are copied in after the tarballs and
+/// [`super::pack_guest::FILL`]): those files are copied in after the tarballs and
 /// their lines (`.sylphx/fill/ok`) appended after `add`.
 ///
 /// The manifest is moved aside first and written back last, so a sync that
@@ -677,6 +677,68 @@ pub fn tarballs(root: &Path, paths: &[String], tree: &Tree) -> Result<Vec<Vec<u8
     Ok(out)
 }
 
+/// Serializes regular files only when their bytes and normalized executable mode
+/// still match the scanned manifest. A failed archive must never enter the CAS.
+pub(super) fn checked_tar(root: &Path, paths: &[String], tree: &Tree) -> Result<Vec<u8>, String> {
+    let mut tar = Tar::new();
+    let mut buf = [0u8; 1 << 16];
+    for p in paths {
+        let e = tree
+            .get(p)
+            .ok_or_else(|| format!("{p}: missing manifest entry"))?;
+        if e.mode == Mode::Link {
+            return Err(format!("{p}: packs require regular files"));
+        }
+        let full = root.join(p);
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+        }
+        let md = std::fs::symlink_metadata(&full).map_err(|err| format!("{p}: {err}"))?;
+        if !md.is_file() {
+            return Err(format!("{p}: source is no longer a regular file"));
+        }
+        let mut file = options.open(&full).map_err(|err| format!("{p}: {err}"))?;
+        let matches = |md: &std::fs::Metadata| {
+            md.is_file() && md.len() == e.size && executable(md) == (e.mode == Mode::Exec)
+        };
+        let md = file.metadata().map_err(|err| format!("{p}: {err}"))?;
+        if !matches(&md) {
+            return Err(format!("{p}: source size or mode changed since scan"));
+        }
+        tar.entry(
+            p,
+            b'0',
+            if e.mode == Mode::Exec { 0o755 } else { 0o644 },
+            e.size,
+            "",
+        )?;
+        let mut digest = Sha256::new();
+        let mut size = 0u64;
+        loop {
+            let n = file.read(&mut buf).map_err(|err| format!("{p}: {err}"))?;
+            if n == 0 {
+                break;
+            }
+            size += n as u64;
+            if size > e.size {
+                return Err(format!("{p}: source grew since scan"));
+            }
+            digest.update(&buf[..n]);
+            tar.write(&buf[..n])?;
+        }
+        let md = file.metadata().map_err(|err| format!("{p}: {err}"))?;
+        if size != e.size || !matches(&md) || hex(&digest.finalize()) != e.digest {
+            return Err(format!("{p}: source content or mode changed since scan"));
+        }
+        tar.pad(size)?;
+    }
+    tar.finish()
+}
+
 /// A minimal POSIX (pax) tar writer: regular files and symlinks, long names
 /// and link targets through pax `path` and `linkpath` records.
 struct Tar {
@@ -686,7 +748,10 @@ struct Tar {
 impl Tar {
     fn new() -> Self {
         Self {
-            gz: flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast()),
+            gz: flate2::GzBuilder::new()
+                .mtime(0)
+                .operating_system(255)
+                .write(Vec::new(), flate2::Compression::fast()),
         }
     }
 

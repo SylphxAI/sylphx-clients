@@ -128,6 +128,13 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   Cross-lease `target/`, local toolchains and BuildKit state are not retained.
   The existing scoped remote build cache and dependency mirrors remain;
   they do not replace all local BuildKit layers or mutable cache mounts.
+  Fresh workspaces materialize source from content-addressed tree packs in
+  the Build store: the CLI checks which packs are absent and sends only those.
+  Versioned manifest keys reuse unchanged archives across clients; path-anchored
+  boundaries keep edits local. No cache or infrastructure setup is required.
+  Packs are verified before publication; missing/corrupt packs, links and unusual
+  filenames use direct compressed transfer. `--no-cache` uses that direct path
+  for the whole tree. This applies to both `build run` and `build image`.
   Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
   event; anything that fails before the command starts, such as the sync or the
@@ -156,9 +163,10 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   source type; negations do not reinclude Git-ignored files. Git metadata and
   local `.sylphx` output/state are not uploaded from ordinary directories.
   Both source types use the same content hashing, CAS transfer, and lease
-  execution path. For ordinary directories, stat and known-blob caches live
+  execution path. For ordinary directories, stat and pack-action indexes live
   outside the source under the user cache directory, keyed by canonical PATH;
-  unchanged inputs reuse their digests and CAS presence. `--region`, `--size`,
+  unchanged inputs reuse digests and archives, with CAS presence checked each run.
+  `--region`, `--size`,
   `--env`, `--no-cache`, and `--no-tree` remain optional advanced overrides.
   `--source-history` still requires actual Git history.
 - Cargo git dependencies come with the run: every git commit a `Cargo.lock`

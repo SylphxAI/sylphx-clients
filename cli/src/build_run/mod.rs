@@ -31,6 +31,8 @@
 mod git_deps;
 mod history;
 mod image;
+mod pack_guest;
+mod packs;
 mod remote;
 mod store;
 mod sync;
@@ -1275,8 +1277,8 @@ impl Run<'_> {
         sylphx_build_lease::guest(self.client, lease).await
     }
 
-    /// Copy the current tree into a fresh workspace. Full/cold syncs retain
-    /// the direct compressed tarball path rather than one fetch per file.
+    /// Materialize a fresh workspace from in-cell packs. Direct tarballs
+    /// remain the cache-failure and --no-cache path.
     async fn sync(&self, g: &Guest, store: Option<&store::Store>) -> Result<(), Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
@@ -1301,7 +1303,7 @@ impl Run<'_> {
         let filled = match store {
             Some(st) if !plan.upload.is_empty() => {
                 let mut known = store::Known::load(
-                    Some(sync::local_path(&self.o.root, "sylphx/cas-known")),
+                    Some(sync::local_path(&self.o.root, "sylphx/tree-packs")),
                     &st.instance_key(),
                 );
                 let f = store::fill(
@@ -1317,7 +1319,7 @@ impl Run<'_> {
                     USER,
                 )
                 .await?;
-                known.save(&self.tree);
+                known.save();
                 up += f.sent;
                 if let Some(w) = &f.warning {
                     if !self.cache_warned.swap(true, Ordering::Relaxed) {
