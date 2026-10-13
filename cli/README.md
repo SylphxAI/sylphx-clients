@@ -115,9 +115,12 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults and an explicit
   compiler wrapper is preserved. `--region REGION` pins placement, not a
   persistent workspace. Automatic placement remains the Sandboxes API's
-  responsibility. `--queue-timeout DURATION` (default 30m) is the longest wait for a machine,
-  after which the run releases its lease and exits 125, retryable, so a caller
-  can try another region. `-o json` writes NDJSON events (`queued`,
+  responsibility. `--queue-timeout DURATION` (default 30m) is the longest wait for a machine:
+  it covers creating the lease (or, with `--no-tree`, the Build) and the SDK's
+  retries of retryable API answers while doing so, not just the wait for
+  READY. Past it the run releases its lease and exits 125, retryable, with
+  the server's own message when the API answered, so a caller can try
+  another region. `-o json` writes NDJSON events (`queued`,
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
   prints what a cold run would send. Files: `git ls-files` (tracked and
   untracked, not ignored) minus `.sylphxignore`.

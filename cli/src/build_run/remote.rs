@@ -8,7 +8,7 @@
 //! command started, 130 when interrupted.
 
 use std::sync::Mutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::json;
 use sylphx::build as bld;
@@ -81,7 +81,9 @@ async fn create_and_follow(
     out: &Out,
     created: &Mutex<Option<String>>,
 ) -> Result<Ended, Outcome> {
-    let parent = project(client, o.org.as_deref()).await?;
+    let deadline = Instant::now() + o.queue_timeout;
+    let bounded = client.with_deadline(deadline);
+    let parent = project(&bounded, o.org.as_deref()).await?;
     let mut target = bld::CommandTarget::default();
     target.argv = o.command.clone();
     let mut spec = bld::BuildSpec::default();
@@ -94,7 +96,13 @@ async fn create_and_follow(
     let mut req = bld::CreateBuildRequest::default();
     req.parent = parent;
     req.build = Some(build);
-    let op = client
+    // Creating the Build is obtaining its machine: the queue budget is the
+    // SDK client's shared deadline, so its own retries of a retryable
+    // answer (a stale access snapshot answering 503, say) are spent inside
+    // it, and when they end the server's own answer is returned, message
+    // intact. No new logical call is made here: a fresh create would carry
+    // a fresh idempotency key and could duplicate the Build.
+    let op = bounded
         .build()
         .builds()
         .create(req)

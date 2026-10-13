@@ -19,8 +19,9 @@
 //! capacity. Neither path creates or reserves a persistent workspace Volume.
 //! Once a lease is accepted, every internal retry stays in its returned Cell,
 //! including a lease lost before READY.
-//! `--queue-timeout` bounds the wait for a machine: past it the run answers
-//! 125, retryable, so a caller can try another region.
+//! `--queue-timeout` bounds the wait for a machine, API retries before the
+//! machine is obtained included: past it the run answers 125, retryable, so
+//! a caller can try another region.
 //!
 //! Exit codes: the command's own; 2 usage; 124 `--timeout`; 125 a platform
 //! failure before the command started (with `retryable` in the `result`
@@ -1144,19 +1145,31 @@ impl Run<'_> {
 
     /// Lease first; the workload creates its cold workspace only after
     /// admission. Explicit regions pin placement, never a workspace Volume.
+    ///
+    /// The queue budget starts here, before the lease is created, and is the
+    /// SDK client's shared deadline: the SDK's own retries of a retryable
+    /// answer (a stale access snapshot answering 503, say) are spent inside
+    /// it, and when they end — at its retry limit or at the deadline — the
+    /// server's own answer is returned, message intact. No new logical call
+    /// is made here: a fresh create would carry a fresh idempotency key and
+    /// could duplicate the machine.
     async fn acquire(&mut self) -> Result<Machine, Attempt> {
         let deadline = Instant::now() + self.o.queue_timeout;
-        let lease = self.lease().await.map_err(Attempt::Done)?;
+        let bounded = self.client.with_deadline(deadline);
+        let lease = self.lease(&bounded).await.map_err(Attempt::Done)?;
         self.out.event(
             json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "volume": false}),
         );
-        self.ready(lease, deadline)
+        // Readiness polls on the unbounded client: `wait_ready` enforces the
+        // queue budget itself and reports QueueTimeout, which a deadline-bounded
+        // client would turn into a transport error.
+        self.ready(self.client, lease, deadline)
             .await
             .map(|lease| Machine { lease })
     }
 
     /// Create a Build lease with no pre-created or attached workspace Volume.
-    async fn lease(&mut self) -> Result<sbx::Lease, Outcome> {
+    async fn lease(&mut self, client: &Client) -> Result<sbx::Lease, Outcome> {
         let domains = lease_domains(self.o);
         let req = lease_request(
             &self.parent,
@@ -1167,8 +1180,7 @@ impl Run<'_> {
                 domains: &domains,
             },
         );
-        let lease = self
-            .client
+        let lease = client
             .sandboxes()
             .leases()
             .create(req)
@@ -1182,12 +1194,19 @@ impl Run<'_> {
     }
 
     /// Wait for admission and READY within the caller's queue budget.
-    async fn ready(&self, lease: sbx::Lease, deadline: Instant) -> Result<sbx::Lease, Attempt> {
-        match wait_ready(self.client, lease, None, deadline).await {
+    async fn ready(
+        &self,
+        client: &Client,
+        lease: sbx::Lease,
+        deadline: Instant,
+    ) -> Result<sbx::Lease, Attempt> {
+        match wait_ready(client, lease.clone(), None, deadline).await {
             Ready::Ready(l) => Ok(*l),
             // No workspace node pin is requested by this caller.
             Ready::PinExpired => unreachable!("volume-free Build leases have no node pin"),
             Ready::QueueTimeout => {
+                // `wait_ready` polls on the unbounded client and released the
+                // lease itself; only forget it here.
                 self.held.with(|h| h.lease = None);
                 Err(Attempt::Done(Outcome::platform(
                     format!(

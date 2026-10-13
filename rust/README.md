@@ -34,6 +34,11 @@ async fn main() -> Result<(), sylphx::Error> {
   request_id, .. }` from the one RFC 9457 problem body.
 - The client retries retryable answers with full-jitter backoff, honours
   `Retry-After`, and sends one `Idempotency-Key` per logical mutation.
+  `Client::with_deadline(instant)` returns a copy whose calls share that
+  one absolute budget: requests and retries alike must finish by it, a
+  retry that would start past it returns the last answer instead (so its
+  server message reaches the caller), and it never widens a shorter
+  per-call `timeout` — whichever deadline ends first bounds the call.
 - `Client::invoke("data.databases.get", json!({"name": "…"}))` calls any
   method by id with wire JSON.
 - Sylphx Data's objects, key-value entries (strings, counters, hashes, lists,

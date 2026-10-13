@@ -542,6 +542,67 @@ mod http {
         assert_eq!(seen.lock().unwrap().len(), 2);
     }
 
+    #[tokio::test]
+    async fn a_shared_deadline_bounds_retries_and_keeps_the_server_answer() {
+        let mut stale = problem("ACCESS_SNAPSHOT_STALE", 503, true);
+        stale["detail"] = json!("the access snapshot is stale");
+        let (url, seen) = serve(vec![(503, "retry-after: 30\r\n", stale)]).await;
+        let c = client(&url)
+            .with_deadline(std::time::Instant::now() + std::time::Duration::from_millis(300));
+        let t = std::time::Instant::now();
+        let err = c.invoke("access.whoami", json!({})).await.unwrap_err();
+        assert!(
+            t.elapsed() < std::time::Duration::from_secs(5),
+            "the 30s Retry-After must not be slept out: {:?}",
+            t.elapsed()
+        );
+        match err {
+            Error::Api {
+                status,
+                retryable,
+                detail,
+                ..
+            } => {
+                assert_eq!(status, 503);
+                assert!(retryable);
+                assert_eq!(detail, "the access snapshot is stale");
+            }
+            other => panic!("{other}"),
+        }
+        assert_eq!(seen.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_shorter_configured_timeout_still_wins_over_a_shared_deadline() {
+        let mut stale = problem("ACCESS_SNAPSHOT_STALE", 503, true);
+        stale["detail"] = json!("the access snapshot is stale");
+        let (url, seen) = serve(vec![(503, "retry-after: 30\r\n", stale)]).await;
+        let c = Client::new(
+            HttpTransport::builder()
+                .base_url(&url)
+                .api_key("sylphx_sk_test")
+                .timeout(std::time::Duration::from_millis(300))
+                .build()
+                .unwrap(),
+        )
+        .with_deadline(std::time::Instant::now() + std::time::Duration::from_secs(60));
+        let t = std::time::Instant::now();
+        let err = c.invoke("access.whoami", json!({})).await.unwrap_err();
+        assert!(
+            t.elapsed() < std::time::Duration::from_secs(5),
+            "the shared deadline must not widen the 300ms timeout: {:?}",
+            t.elapsed()
+        );
+        match err {
+            Error::Api { status, detail, .. } => {
+                assert_eq!(status, 503);
+                assert_eq!(detail, "the access snapshot is stale");
+            }
+            other => panic!("{other}"),
+        }
+        assert_eq!(seen.lock().unwrap().len(), 1);
+    }
+
     fn data_client(url: &str, retries: u32) -> Client {
         Client::new(
             HttpTransport::builder()

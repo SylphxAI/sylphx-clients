@@ -143,6 +143,15 @@ impl Client<HttpTransport> {
             HttpTransport::builder().api_key(api_key).build()?,
         ))
     }
+
+    /// A copy of this client whose calls share one absolute deadline: every
+    /// request and every retry of a retryable answer must finish by then, and
+    /// a retry that would start past it returns the last answer instead, so
+    /// its server message reaches the caller. A caller-owned budget (a queue
+    /// wait, say) uses this so the budget includes the SDK's own retries.
+    pub fn with_deadline(&self, deadline: std::time::Instant) -> Self {
+        Self::new(self.transport.with_deadline(deadline))
+    }
 }
 
 impl<T: Transport> Client<T> {
@@ -618,6 +627,7 @@ pub struct HttpTransport {
     api_key: Option<String>,
     api_version: Option<String>,
     timeout: Option<std::time::Duration>,
+    deadline: Option<std::time::Instant>,
     max_retries: u32,
     origins: std::collections::BTreeMap<String, String>,
 }
@@ -693,6 +703,7 @@ impl HttpTransportBuilder {
             api_key: self.api_key,
             api_version: self.api_version,
             timeout: self.timeout,
+            deadline: None,
             max_retries: self.max_retries.unwrap_or(3),
             origins: self.origins,
         })
@@ -766,6 +777,14 @@ impl HttpTransport {
     /// The base URL requests go to.
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    /// A copy of this transport whose calls share `deadline` (see
+    /// [`Client::with_deadline`]).
+    pub fn with_deadline(&self, deadline: std::time::Instant) -> Self {
+        let mut t = self.clone();
+        t.deadline = Some(deadline);
+        t
     }
 
     async fn send_once(
@@ -888,7 +907,14 @@ impl HttpTransport {
             });
         // A protocol mutation without effect ids is never resent.
         let resend = !(request.mutation && request.origin.is_some() && !request.effect_ids);
-        let deadline = self.timeout.map(|t| std::time::Instant::now() + t);
+        // The shared deadline never widens a shorter per-call timeout:
+        // whichever ends first bounds the call and its retries.
+        let deadline = match (self.deadline, self.timeout) {
+            (Some(d), Some(t)) => Some(d.min(std::time::Instant::now() + t)),
+            (Some(d), None) => Some(d),
+            (None, Some(t)) => Some(std::time::Instant::now() + t),
+            (None, None) => None,
+        };
         let mut attempt = 0u32;
         loop {
             let result = self

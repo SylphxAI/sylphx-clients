@@ -2326,6 +2326,78 @@ async fn queued_build_timeout(subcommand: &str) {
     );
 }
 
+/// A retryable 503 while the machine is being obtained (a stale access
+/// snapshot): the SDK's retries of the one create call are bounded by
+/// --queue-timeout, and the run then exits 125 with the server's own
+/// message, retryable — it neither hangs past the queue budget nor loses
+/// the answer to a deadline error.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_stale_snapshot_exits_125_with_the_server_message() {
+    stale_snapshot_exits_125("run").await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_no_tree_stale_snapshot_exits_125_with_the_server_message() {
+    stale_snapshot_exits_125("no-tree").await;
+}
+
+async fn stale_snapshot_exits_125(subcommand: &str) {
+    let sb = Sandbox::new(&format!("build-{subcommand}-stale-snapshot"));
+    let problem = json!({
+        "type": "about:blank", "title": "access_snapshot_stale", "status": 503,
+        "detail": "the access snapshot is stale; retry once it refreshes",
+        "code": "access_snapshot_stale", "grpc_status": "UNAVAILABLE",
+        "retryable": true, "effect": "none",
+    });
+    let (url, log) = serve(vec![(503, problem); 16]).await;
+    let t = std::time::Instant::now();
+    let mut args = vec!["build", "run", "-o", "json", "--queue-timeout", "3s"];
+    if subcommand == "run" {
+        git_init(&sb.dir);
+        std::fs::write(sb.dir.join("a.txt"), "a\n").unwrap();
+        args.extend(["--fresh", "--", "true"]);
+    } else {
+        args.extend(["--no-tree", "--", "true"]);
+    }
+    let out = run(&sb, &url, &args).await;
+    assert!(
+        t.elapsed() < std::time::Duration::from_secs(30),
+        "the queue budget bounds the SDK's retries: {:?}",
+        t.elapsed()
+    );
+    assert_eq!(out.status.code(), Some(125));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let last: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(last["retryable"], true, "{last}");
+    assert!(
+        last["error"]
+            .as_str()
+            .unwrap()
+            .contains("the access snapshot is stale; retry once it refreshes"),
+        "the server's message reaches the caller: {last}"
+    );
+    let seen = log.lock();
+    assert!(
+        (2..=4).contains(&seen.len()),
+        "one logical create, retried by the SDK (no fresh mutation): {} requests",
+        seen.len()
+    );
+    let keys: Vec<_> = seen
+        .iter()
+        .filter_map(|s| {
+            s.head.lines().find_map(|l| {
+                l.to_ascii_lowercase()
+                    .strip_prefix("idempotency-key:")
+                    .map(|v| v.trim().to_string())
+            })
+        })
+        .collect();
+    assert!(
+        !keys.is_empty() && keys.iter().all(|k| k == &keys[0]),
+        "every retry carries the one logical call's idempotency key: {keys:?}"
+    );
+}
+
 /// [`serve_bytes`] on a known address (the guest's URI must be known before
 /// the replies are built).
 async fn serve_bytes_at(url: &str, replies: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
