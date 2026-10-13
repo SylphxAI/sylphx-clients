@@ -1199,6 +1199,11 @@
       "sylphx.access.v1.WhoamiResponse": {
         "description": "The caller of a request.",
         "properties": {
+          "actor": {
+            "description": "The agent acting for `principal` on a delegated token (RFC 8693 `act`):\nan Agent name, `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`,\nor the delegate's own principal, `orgs/{org}/principals/{principal}`.\nEmpty for every other credential.",
+            "readOnly": true,
+            "type": "string"
+          },
           "api_key": {
             "description": "The API key that authenticated the request; empty for an OAuth token.",
             "readOnly": true,
@@ -1223,7 +1228,7 @@
             "x-sylphx-resource-reference": "access.sylphx.com/Org"
           },
           "principal": {
-            "description": "The authenticated principal, `principal_<cell><ulid>`.",
+            "description": "The authenticated principal, `principal_<cell><ulid>`; for a delegated\ntoken, the accountable person it acts for (RFC 8693 `sub`).",
             "readOnly": true,
             "type": "string"
           },
@@ -1232,6 +1237,14 @@
             "readOnly": true,
             "type": "string",
             "x-sylphx-resource-reference": "access.sylphx.com/Project"
+          },
+          "resources": {
+            "description": "The full resource names the credential is restricted to; empty for an\nunrestricted credential. A restricted credential acts only on these.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
           },
           "scopes": {
             "description": "The credential's scopes, `<service>:<action>`.",

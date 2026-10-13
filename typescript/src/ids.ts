@@ -26,6 +26,7 @@ export const PREFIXES = [
 	{ prefix: 'key', entity: 'ApiKey', service: 'access', collection: 'api_keys' },
 	{ prefix: 'prn', entity: 'Principal', service: 'access', collection: null },
 	{ prefix: 'dvg', entity: 'DeviceGrant', service: 'access', collection: null },
+	{ prefix: 'dlgt', entity: 'Delegation', service: 'access', collection: null },
 	{ prefix: 'omb', entity: 'OrgMember', service: 'access', collection: null },
 	{ prefix: 'mbr', entity: 'Member', service: 'auth', collection: 'memberships' },
 	{ prefix: 'usr', entity: 'User', service: 'auth', collection: 'end_users' },

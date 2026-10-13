@@ -1184,7 +1184,8 @@ pub struct WhoamiRequest {}
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct WhoamiResponse {
-    /// The authenticated principal, `principal_<cell><ulid>`.
+    /// The authenticated principal, `principal_<cell><ulid>`; for a delegated
+    /// token, the accountable person it acts for (RFC 8693 `sub`).
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1228,6 +1229,20 @@ pub struct WhoamiResponse {
         alias = "apiVersion"
     )]
     pub api_version: String,
+    /// The agent acting for `principal` on a delegated token (RFC 8693 `act`):
+    /// an Agent name, `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`,
+    /// or the delegate's own principal, `orgs/{org}/principals/{principal}`.
+    /// Empty for every other credential.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub actor: String,
+    /// The full resource names the credential is restricted to; empty for an
+    /// unrestricted credential. A restricted credential acts only on these.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resources: Vec<String>,
 }
 
 /// ApiKeyKind is whether a key may be shipped to a browser.

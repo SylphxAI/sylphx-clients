@@ -553,7 +553,10 @@ export interface WhoamiRequest {
 
 /** The caller of a request. */
 export interface WhoamiResponse {
-	/** The authenticated principal, `principal_<cell><ulid>`. */
+	/**
+	 * The authenticated principal, `principal_<cell><ulid>`; for a delegated
+	 * token, the accountable person it acts for (RFC 8693 `sub`).
+	 */
 	readonly principal?: string
 	/** The API key that authenticated the request; empty for an OAuth token. */
 	readonly apiKey?: string
@@ -570,6 +573,18 @@ export interface WhoamiResponse {
 	 * version.
 	 */
 	readonly apiVersion?: string
+	/**
+	 * The agent acting for `principal` on a delegated token (RFC 8693 `act`):
+	 * an Agent name, `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`,
+	 * or the delegate's own principal, `orgs/{org}/principals/{principal}`.
+	 * Empty for every other credential.
+	 */
+	readonly actor?: string
+	/**
+	 * The full resource names the credential is restricted to; empty for an
+	 * unrestricted credential. A restricted credential acts only on these.
+	 */
+	readonly resources?: string[]
 }
 
 /** ApiKeyKind is whether a key may be shipped to a browser. */
