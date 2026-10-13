@@ -2,7 +2,7 @@
   "fields": [
     {
       "behaviors": [
-        "REQUIRED",
+        "OPTIONAL",
         "IMMUTABLE"
       ],
       "cli_flag": "",
@@ -97,7 +97,7 @@
     },
     {
       "behaviors": [
-        "REQUIRED",
+        "OPTIONAL",
         "IMMUTABLE"
       ],
       "cli_flag": "",

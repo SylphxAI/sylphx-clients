@@ -106124,10 +106124,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Desired state.",
+          "doc": "Desired state; omit it, or send it empty, for the zero-config lease: the\nplatform resolves and records the shape and `ttl` (see `LeaseSpec`).",
           "filterable": false,
           "name": "spec",
           "number": 4,
@@ -106675,15 +106675,15 @@
       "package": "sylphx.sandboxes.v1"
     },
     {
-      "doc": "LeaseSpec is the caller-writable state of a Lease.",
+      "doc": "LeaseSpec is the caller-writable state of a Lease. Every field is optional:\nan empty spec (or no spec at all) is the zero-config lease — a GENERAL lease\nof the `base` image on the `linux-s` shape for 300 seconds. Set `kind` for a\nbrowser, desktop, or Android machine; set `shape`, `ttl`, or `region` only to\ngo beyond those defaults. The platform records the resolved shape and `ttl`\non the created lease.",
       "fields": [
         {
           "behaviors": [
-            "REQUIRED",
+            "OPTIONAL",
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The shape.",
+          "doc": "The shape; when unset the platform resolves one from `kind` and the image:\n`linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP\nor ANDROID, and `build-standard` for the `template:build` image. An\nexplicit shape must serve `kind`.",
           "filterable": true,
           "name": "shape",
           "number": 1,
@@ -106703,7 +106703,7 @@
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`\n(`base`,\n`desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.",
+          "doc": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`\n(`base`, `desktop`, `browser`, `android`,\n`build`). Default the template of `kind`. Ignored when `source_snapshot` is\nset.",
           "filterable": false,
           "name": "image",
           "number": 2,
@@ -106743,7 +106743,7 @@
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The region; default the project's home region.",
+          "doc": "Optional placement override. Unpinned ephemeral leases use eligible capacity;\nleases mounting volumes retain the home region unless explicitly pinned.",
           "filterable": true,
           "name": "region",
           "number": 4,
@@ -106779,11 +106779,11 @@
         },
         {
           "behaviors": [
-            "REQUIRED",
+            "OPTIONAL",
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The maximum wall time from grant: 1 minute to 24 hours for microVMs, 24\nhours to 30 days for macOS. `:renew` extends it within the shape's bound.\nReaching it ends the lease EXPIRED.",
+          "doc": "The maximum wall time from grant; default 300 seconds, never past the\nshape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30\ndays for macOS). `:renew` extends it within the shape's bound. Reaching it\nends the lease EXPIRED.",
           "filterable": false,
           "name": "ttl",
           "number": 6,

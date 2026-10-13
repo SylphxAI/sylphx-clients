@@ -35374,7 +35374,7 @@
           },
           "spec": {
             "$ref": "#/components/schemas/sylphx.sandboxes.v1.LeaseSpec",
-            "description": "Desired state."
+            "description": "Desired state; omit it, or send it empty, for the zero-config lease: the\nplatform resolves and records the shape and `ttl` (see `LeaseSpec`)."
           },
           "status": {
             "$ref": "#/components/schemas/sylphx.sandboxes.v1.LeaseStatus",
@@ -35387,9 +35387,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "spec"
-        ],
         "type": "object"
       },
       "sylphx.sandboxes.v1.LeaseBudget": {
@@ -35598,7 +35595,7 @@
         "type": "string"
       },
       "sylphx.sandboxes.v1.LeaseSpec": {
-        "description": "LeaseSpec is the caller-writable state of a Lease.",
+        "description": "LeaseSpec is the caller-writable state of a Lease. Every field is optional:\nan empty spec (or no spec at all) is the zero-config lease — a GENERAL lease\nof the `base` image on the `linux-s` shape for 300 seconds. Set `kind` for a\nbrowser, desktop, or Android machine; set `shape`, `ttl`, or `region` only to\ngo beyond those defaults. The platform records the resolved shape and `ttl`\non the created lease.",
         "properties": {
           "browser": {
             "$ref": "#/components/schemas/sylphx.sandboxes.v1.BrowserSpec",
@@ -35635,7 +35632,7 @@
             "x-sylphx-immutable": true
           },
           "image": {
-            "description": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`\n(`base`,\n`desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.",
+            "description": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`\n(`base`, `desktop`, `browser`, `android`,\n`build`). Default the template of `kind`. Ignored when `source_snapshot` is\nset.",
             "type": "string",
             "x-sylphx-immutable": true
           },
@@ -35662,12 +35659,12 @@
             "type": "array"
           },
           "region": {
-            "description": "The region; default the project's home region.",
+            "description": "Optional placement override. Unpinned ephemeral leases use eligible capacity;\nleases mounting volumes retain the home region unless explicitly pinned.",
             "type": "string",
             "x-sylphx-immutable": true
           },
           "shape": {
-            "description": "The shape.",
+            "description": "The shape; when unset the platform resolves one from `kind` and the image:\n`linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP\nor ANDROID, and `build-standard` for the `template:build` image. An\nexplicit shape must serve `kind`.",
             "type": "string",
             "x-sylphx-immutable": true,
             "x-sylphx-resource-reference": "sandboxes.sylphx.com/Shape"
@@ -35679,7 +35676,7 @@
             "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
           },
           "ttl": {
-            "description": "The maximum wall time from grant: 1 minute to 24 hours for microVMs, 24\nhours to 30 days for macOS. `:renew` extends it within the shape's bound.\nReaching it ends the lease EXPIRED.",
+            "description": "The maximum wall time from grant; default 300 seconds, never past the\nshape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30\ndays for macOS). `:renew` extends it within the shape's bound. Reaching it\nends the lease EXPIRED.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string",
             "x-sylphx-immutable": true
@@ -35698,10 +35695,6 @@
             "x-sylphx-immutable": true
           }
         },
-        "required": [
-          "shape",
-          "ttl"
-        ],
         "type": "object"
       },
       "sylphx.sandboxes.v1.LeaseState": {

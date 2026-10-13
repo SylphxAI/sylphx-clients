@@ -56,7 +56,7 @@
     },
     {
       "behaviors": [
-        "REQUIRED"
+        "OPTIONAL"
       ],
       "cli_flag": "",
       "filterable": false,

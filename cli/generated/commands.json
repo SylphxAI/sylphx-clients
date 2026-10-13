@@ -26565,14 +26565,13 @@
                 {
                   "field": "lease.spec.shape",
                   "flag": "--spec.shape",
-                  "required": true,
-                  "summary": "The shape.",
+                  "summary": "The shape; when unset the platform resolves one from `kind` and the image: `linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP or ANDROID, and `build-standard` for the `template:build` image. An explicit shape must serve `kind`.",
                   "type": "string"
                 },
                 {
                   "field": "lease.spec.image",
                   "flag": "--spec.image",
-                  "summary": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>` (`base`, `desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.",
+                  "summary": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>` (`base`, `desktop`, `browser`, `android`, `build`). Default the template of `kind`. Ignored when `source_snapshot` is set.",
                   "type": "string"
                 },
                 {
@@ -26590,7 +26589,7 @@
                 {
                   "field": "lease.spec.region",
                   "flag": "--spec.region",
-                  "summary": "The region; default the project's home region.",
+                  "summary": "Optional placement override. Unpinned ephemeral leases use eligible capacity; leases mounting volumes retain the home region unless explicitly pinned.",
                   "type": "string"
                 },
                 {
@@ -26602,8 +26601,7 @@
                 {
                   "field": "lease.spec.ttl",
                   "flag": "--spec.ttl",
-                  "required": true,
-                  "summary": "The maximum wall time from grant: 1 minute to 24 hours for microVMs, 24 hours to 30 days for macOS. `:renew` extends it within the shape's bound. Reaching it ends the lease EXPIRED.",
+                  "summary": "The maximum wall time from grant; default 300 seconds, never past the shape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30 days for macOS). `:renew` extends it within the shape's bound. Reaching it ends the lease EXPIRED.",
                   "type": "duration"
                 },
                 {

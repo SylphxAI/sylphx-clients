@@ -889,9 +889,8 @@ pub struct Lease {
     /// Resource metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<crate::common::ResourceMeta>,
-    /// Desired state.
-    ///
-    /// Field behavior: `required`.
+    /// Desired state; omit it, or send it empty, for the zero-config lease: the
+    /// platform resolves and records the shape and `ttl` (see `LeaseSpec`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<LeaseSpec>,
     /// Observed state.
@@ -1098,18 +1097,27 @@ pub struct LeasePort {
     pub uri: String,
 }
 
-/// LeaseSpec is the caller-writable state of a Lease.
+/// LeaseSpec is the caller-writable state of a Lease. Every field is optional:
+/// an empty spec (or no spec at all) is the zero-config lease — a GENERAL lease
+/// of the `base` image on the `linux-s` shape for 300 seconds. Set `kind` for a
+/// browser, desktop, or Android machine; set `shape`, `ttl`, or `region` only to
+/// go beyond those defaults. The platform records the resolved shape and `ttl`
+/// on the created lease.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct LeaseSpec {
-    /// The shape.
+    /// The shape; when unset the platform resolves one from `kind` and the image:
+    /// `linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP
+    /// or ANDROID, and `build-standard` for the `template:build` image. An
+    /// explicit shape must serve `kind`.
     ///
-    /// Field behavior: `required`, `immutable`.
+    /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub shape: String,
     /// The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`
-    /// (`base`,
-    /// `desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.
+    /// (`base`, `desktop`, `browser`, `android`,
+    /// `build`). Default the template of `kind`. Ignored when `source_snapshot` is
+    /// set.
     ///
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1119,7 +1127,8 @@ pub struct LeaseSpec {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<LeaseKind>,
-    /// The region; default the project's home region.
+    /// Optional placement override. Unpinned ephemeral leases use eligible capacity;
+    /// leases mounting volumes retain the home region unless explicitly pinned.
     ///
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1130,11 +1139,12 @@ pub struct LeaseSpec {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub pool: String,
-    /// The maximum wall time from grant: 1 minute to 24 hours for microVMs, 24
-    /// hours to 30 days for macOS. `:renew` extends it within the shape's bound.
-    /// Reaching it ends the lease EXPIRED.
+    /// The maximum wall time from grant; default 300 seconds, never past the
+    /// shape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30
+    /// days for macOS). `:renew` extends it within the shape's bound. Reaching it
+    /// ends the lease EXPIRED.
     ///
-    /// Field behavior: `required`, `immutable`.
+    /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub ttl: String,
     /// End the lease IDLE after no data-plane call, stream input, or exec for

@@ -490,7 +490,10 @@ export interface Lease {
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
-	/** Desired state. */
+	/**
+	 * Desired state; omit it, or send it empty, for the zero-config lease: the
+	 * platform resolves and records the shape and `ttl` (see `LeaseSpec`).
+	 */
 	spec?: LeaseSpec
 	/** Observed state. */
 	readonly status?: LeaseStatus
@@ -595,19 +598,35 @@ export interface LeasePort {
 	readonly uri?: string
 }
 
-/** LeaseSpec is the caller-writable state of a Lease. */
+/**
+ * LeaseSpec is the caller-writable state of a Lease. Every field is optional:
+ * an empty spec (or no spec at all) is the zero-config lease — a GENERAL lease
+ * of the `base` image on the `linux-s` shape for 300 seconds. Set `kind` for a
+ * browser, desktop, or Android machine; set `shape`, `ttl`, or `region` only to
+ * go beyond those defaults. The platform records the resolved shape and `ttl`
+ * on the created lease.
+ */
 export interface LeaseSpec {
-	/** The shape. */
+	/**
+	 * The shape; when unset the platform resolves one from `kind` and the image:
+	 * `linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP
+	 * or ANDROID, and `build-standard` for the `template:build` image. An
+	 * explicit shape must serve `kind`.
+	 */
 	shape?: string
 	/**
 	 * The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`
-	 * (`base`,
-	 * `desktop`, `browser`, `android`). Ignored when `source_snapshot` is set.
+	 * (`base`, `desktop`, `browser`, `android`,
+	 * `build`). Default the template of `kind`. Ignored when `source_snapshot` is
+	 * set.
 	 */
 	image?: string
 	/** What the machine serves; default GENERAL. */
 	kind?: LeaseKind
-	/** The region; default the project's home region. */
+	/**
+	 * Optional placement override. Unpinned ephemeral leases use eligible capacity;
+	 * leases mounting volumes retain the home region unless explicitly pinned.
+	 */
 	region?: string
 	/**
 	 * The Pool to take a warm machine from; default the platform pool for the
@@ -615,9 +634,10 @@ export interface LeaseSpec {
 	 */
 	pool?: string
 	/**
-	 * The maximum wall time from grant: 1 minute to 24 hours for microVMs, 24
-	 * hours to 30 days for macOS. `:renew` extends it within the shape's bound.
-	 * Reaching it ends the lease EXPIRED.
+	 * The maximum wall time from grant; default 300 seconds, never past the
+	 * shape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30
+	 * days for macOS). `:renew` extends it within the shape's bound. Reaching it
+	 * ends the lease EXPIRED.
 	 */
 	ttl?: string
 	/**
