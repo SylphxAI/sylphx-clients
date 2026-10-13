@@ -57,6 +57,7 @@ jobs:
       - name: Verify the exact Rust publish set without uploading
         run: |
           python3 -I scripts/test-check-publish-set.py
+          python3 -I scripts/test-wait-for-npm-version.py
           python3 -I scripts/check-publish-set.py
 
   # Linux binaries: built on our runners inside a digest-pinned Ubuntu 22.04
@@ -281,12 +282,7 @@ jobs:
           set -euo pipefail
           while read -r tgz tag name version; do
             npm publish "$tgz" --access public --tag "$tag" --provenance
-            ok=false
-            for _ in $(seq 1 30); do
-              [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ] && { ok=true; break; }
-              sleep 10
-            done
-            $ok || { echo "::error::$name@$version did not appear on npm"; exit 1; }
+            python3 -I scripts/wait-for-npm-version.py "$name" "$version"
             echo "readback: $name@$version ($tag)"
           done < "$RUNNER_TEMP/npm/list"
 
