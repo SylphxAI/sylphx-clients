@@ -9,8 +9,9 @@
 # only there.
 #
 # Every publish is idempotent (skipped when that version is on the registry)
-# and read back. npm packages go to their publishConfig dist-tag (`next`);
-# promotion to `latest` follows the production smoke (promote.yml).
+# and read back. The newest stable GitHub Release becomes Latest here; older
+# reruns and prereleases cannot replace it. npm packages keep their publishConfig
+# dist-tag (`next`); npm/Homebrew promotion follows the production smoke.
 name: Release
 
 on:
@@ -40,6 +41,14 @@ jobs:
         timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
+      # Release-control scripts come from the workflow revision, not the
+      # (possibly historical) release tag: an old tag's tree may predate the
+      # current scripts, while its release sources must stay frozen at the tag.
+      - uses: actions/checkout@v6
+        timeout-minutes: 10
+        with:
+          ref: ${{ github.sha }}
+          path: .release-control
       - id: v
         run: |
           set -euo pipefail
@@ -56,9 +65,10 @@ jobs:
           toolchain: 1.99.0
       - name: Verify the exact Rust publish set without uploading
         run: |
-          python3 -I scripts/test-check-publish-set.py
-          python3 -I scripts/test-wait-for-npm-version.py
-          python3 -I scripts/check-publish-set.py
+          python3 -I .release-control/scripts/test-check-publish-set.py
+          python3 -I .release-control/scripts/test-mark-latest-release.py
+          python3 -I .release-control/scripts/test-wait-for-npm-version.py
+          python3 -I .release-control/scripts/check-publish-set.py
 
   # Linux binaries: built on our runners inside a digest-pinned Ubuntu 22.04
   # (glibc 2.35), so they run on every distribution the hosted 22.04 image
@@ -175,6 +185,14 @@ jobs:
           retention-days: 3
 
   github-release:
+    concurrency:
+      group: client-github-release-latest
+      cancel-in-progress: false
+      # Queue every pending publication (up to GitHub's max) instead of the
+      # default single pending slot, where a newer arrival would cancel the
+      # pending job: an old-tag rerun must never cancel the newest tag's
+      # pending publication (which would leave Latest behind).
+      queue: max
     needs: [check, build-linux, build-macos]
     runs-on: sylphx-linux-standard
     permissions:
@@ -186,6 +204,12 @@ jobs:
         timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
+      # See the check job: control scripts come from the workflow revision.
+      - uses: actions/checkout@v6
+        timeout-minutes: 10
+        with:
+          ref: ${{ github.sha }}
+          path: .release-control
       - uses: actions/download-artifact@v6
         with:
           path: dist
@@ -218,6 +242,7 @@ jobs:
           npm: \`@sylphx/cli\`, \`@sylphx/mcp\`, \`@sylphx/sdk\` · crates.io: \`sylphx-cli\`, \`sylphx-mcp\`, \`sylphx\`"
           fi
           gh release view "$TAG" --json assets --jq '.assets[].name'
+          python3 -I .release-control/scripts/mark-latest-release.py
 
   # npm packages with npm provenance. The one job on a GitHub-hosted runner:
   # the free standard label, allowed for public repositories (owner#750),
@@ -233,6 +258,12 @@ jobs:
         timeout-minutes: 10
         with:
           ref: ${{ env.TAG }}
+      # See the check job: control scripts come from the workflow revision.
+      - uses: actions/checkout@v6
+        timeout-minutes: 10
+        with:
+          ref: ${{ github.sha }}
+          path: .release-control
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -282,7 +313,7 @@ jobs:
           set -euo pipefail
           while read -r tgz tag name version; do
             npm publish "$tgz" --access public --tag "$tag" --provenance
-            python3 -I scripts/wait-for-npm-version.py "$name" "$version"
+            python3 -I .release-control/scripts/wait-for-npm-version.py "$name" "$version"
             echo "readback: $name@$version ($tag)"
           done < "$RUNNER_TEMP/npm/list"
 

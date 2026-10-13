@@ -1,7 +1,6 @@
-# Promotes a release to `latest` once it passed the production smoke: the
-# npm dist-tag `latest` for @sylphx/cli (+ platform packages), @sylphx/mcp and
-# @sylphx/sdk, and the GitHub Release's "Latest" mark (which `install.sh`
-# follows), then opens the Homebrew tap's formula bump pull request.
+# Promotes npm dist-tags and Homebrew once a release passed production smoke.
+# GitHub's Latest mark is owned by the Release workflow and follows the newest
+# published stable version, independently of npm/Homebrew promotion.
 name: Promote
 
 on:
@@ -48,13 +47,6 @@ jobs:
           S="$(curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/v$V/typescript/package.json" | jq -r .version)"
           npm dist-tag add "@sylphx/sdk@$S" latest
           readback @sylphx/sdk "$S"
-      - name: GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          V: ${{ inputs.version }}
-        run: |
-          gh release edit "v$V" -R "$GITHUB_REPOSITORY" --prerelease=false --latest
-          gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName
 
   homebrew:
     needs: promote
