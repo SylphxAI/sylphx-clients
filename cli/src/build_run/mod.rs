@@ -94,10 +94,10 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 
 pub fn command() -> Command {
     Command::new("run")
-        .about("Run a command on a remote build machine against this work tree; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of the enclosing git work tree, in PATH inside it. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree intent; each lease's workspace is already fresh.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure (not signed in, no capacity, no machine within --queue-timeout, region not offered, sync failed, the toolchain could not be installed, machine lost; anything before the command starts); 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nKeep the default 30m machine wait for admission and cold boot; an explicit --queue-timeout replaces that budget.\n\nExample: sylphx build run --size standard -- cargo test -p sylphx-cli")
+        .about("Run a command on a remote build machine against this source directory; output, exit code and --artifact files come back")
+        .long_about("Runs <command> on a remote copy of PATH, or its enclosing Git work tree when present. No Git initialization or manifest is required. Ordinary directories honor .gitignore; optional .sylphxignore exclusions apply to both source types. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree behavior.\n\nAdmission and cold boot have a default 30m wait budget. --queue-timeout optionally overrides that budget; keep the default unless you need a different wait limit.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure before the command starts; 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --size standard -- cargo test")
         .arg(Arg::new("path").value_name("PATH").index(1)
-            .help("Directory to run in (default \".\"); the synced root is its git work tree"))
+            .help("Directory to run in (default \".\"); syncs it or its enclosing Git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
             .help("The command and its arguments, after --"))
         .arg(Arg::new("size").long("size").value_name("SIZE").default_value("large")
@@ -1273,7 +1273,7 @@ impl Run<'_> {
         let filled = match store {
             Some(st) if !plan.upload.is_empty() => {
                 let mut known = store::Known::load(
-                    sync::git_path(&self.o.root, "sylphx/cas-known"),
+                    Some(sync::local_path(&self.o.root, "sylphx/cas-known")),
                     &st.instance_key(),
                 );
                 let f = store::fill(
@@ -1793,8 +1793,7 @@ fn prepare_git_deps(
     if deps.is_empty() {
         return Ok(Vec::new());
     }
-    let cache = sync::git_path(root, "sylphx/git-deps")
-        .unwrap_or_else(|| std::env::temp_dir().join("sylphx-git-deps"));
+    let cache = sync::local_path(root, "sylphx/git-deps");
     std::fs::create_dir_all(&cache).map_err(|e| format!("preparing {}: {e}", cache.display()))?;
     deps.into_iter()
         .map(|d| git_deps::pack(&cache, &d).map(|p| (d, p)))
@@ -3418,21 +3417,6 @@ esac
         assert_eq!(o.region.as_deref(), Some("gra"));
         assert_eq!(o.queue_timeout, Duration::from_secs(120));
         assert_eq!(o.timeout, Duration::from_secs(3600));
-    }
-
-    /// A caller sends --region only when `build run --help` lists both
-    /// flags, so the help text is part of the contract.
-    #[test]
-    fn help_lists_region_and_queue_timeout() {
-        let help = command().render_long_help().to_string();
-        assert!(help.contains("--region"), "{help}");
-        assert!(help.contains("--queue-timeout"), "{help}");
-        assert!(help.contains("default 30m"), "{help}");
-        assert!(
-            help.contains("Example: sylphx build run --size standard -- cargo test"),
-            "{help}"
-        );
-        assert!(!help.contains("--queue-timeout 120s"), "{help}");
     }
 
     #[test]

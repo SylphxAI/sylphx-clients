@@ -1585,7 +1585,8 @@ async fn build_run_json_reports_a_platform_failure_as_125() {
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_usage_errors_exit_2_and_dry_run_creates_nothing() {
     let sb = Sandbox::new("build-run-usage");
-    git_init(&sb.dir);
+    std::fs::write(sb.dir.join(".gitignore"), "*.log\n").unwrap();
+    std::fs::write(sb.dir.join("ignored.log"), "not sent").unwrap();
     std::fs::write(sb.dir.join("a.txt"), "abc\n").unwrap();
     // No server: nothing may be called.
     let url = "http://127.0.0.1:9";
@@ -1605,7 +1606,11 @@ async fn build_run_usage_errors_exit_2_and_dry_run_creates_nothing() {
     );
     let ev: Value = serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
     assert_eq!(ev["type"], "sync");
-    assert!(ev["files"].as_u64().unwrap() >= 1, "{ev}");
+    assert_eq!(
+        ev["files"], 2,
+        "only source and .gitignore; no output or Git initialization: {ev}"
+    );
+    assert!(!sb.dir.join(".git").exists());
 }
 
 /// `--region gra` pins a volume-free lease even when admission is refused.

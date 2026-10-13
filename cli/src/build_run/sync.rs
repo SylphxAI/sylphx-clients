@@ -314,11 +314,14 @@ mv -f "$S/manifest.next" "$S/manifest"
 rm -rf "$S/manifest.old" "$S/drop" "$S/add" "$S/remove" "$S/fill"
 "#;
 
-/// The files a run sends: tracked and untracked-but-not-ignored, as
-/// `git ls-files` lists them from the work-tree root, minus whatever
-/// `.sylphxignore` (gitignore syntax) matches. Deleted files and submodules
+/// Git sources send tracked and untracked-but-not-ignored files; ordinary
+/// directories honor Git-compatible exclusions without initialization.
+/// `.sylphxignore` subtracts from either set. Deleted files and submodules
 /// are not files here and are skipped by [`scan`].
 pub fn file_set(root: &Path) -> Result<Vec<String>, String> {
+    if git_path(root, "sylphx/cas-index").is_none() {
+        return directory_files(root);
+    }
     let all = git_z(
         root,
         &[
@@ -349,6 +352,51 @@ pub fn file_set(root: &Path) -> Result<Vec<String>, String> {
     };
     let set: BTreeSet<String> = all.into_iter().filter(|p| !skip.contains(p)).collect();
     Ok(set.into_iter().collect())
+}
+
+/// Ordinary directories use Git-compatible exclusions without a repository.
+fn directory_files(root: &Path) -> Result<Vec<String>, String> {
+    let mut exclusions = ignore::gitignore::GitignoreBuilder::new(root);
+    let ignore_file = root.join(".sylphxignore");
+    if ignore_file.is_file() {
+        if let Some(error) = exclusions.add(ignore_file) {
+            return Err(format!(".sylphxignore: {error}"));
+        }
+    }
+    let exclusions = exclusions.build().map_err(|e| e.to_string())?;
+    let cache = source_cache(root);
+    let mut walker = ignore::WalkBuilder::new(root);
+    walker
+        .hidden(false)
+        .parents(false)
+        .require_git(false)
+        .follow_links(false)
+        .filter_entry(move |entry| {
+            entry.depth() == 0
+                || (entry.file_name() != ".git"
+                    && entry.file_name() != ".sylphx"
+                    && entry.path() != cache)
+        });
+    let mut paths = Vec::new();
+    for entry in walker.build() {
+        let entry = entry.map_err(|e| format!("listing {}: {e}", root.display()))?;
+        if entry.depth() == 0 || entry.file_type().is_some_and(|t| t.is_dir()) {
+            continue;
+        }
+        if exclusions
+            .matched_path_or_any_parents(entry.path(), false)
+            .is_ignore()
+        {
+            continue;
+        }
+        let path = entry.path().strip_prefix(root).map_err(|e| e.to_string())?;
+        let path = path
+            .to_str()
+            .ok_or_else(|| format!("a path is not UTF-8: {}", path.display()))?;
+        paths.push(path.replace(std::path::MAIN_SEPARATOR, "/"));
+    }
+    paths.sort_unstable();
+    Ok(paths)
 }
 
 fn git_z(root: &Path, args: &[&str]) -> Result<Vec<String>, String> {
@@ -757,17 +805,25 @@ pub fn head(root: &Path) -> Option<String> {
     (out.status.success() && !sha.is_empty()).then_some(sha)
 }
 
-/// The work-tree root that encloses `dir`, and `dir` relative to it.
+/// The enclosing Git root and relative path, or the ordinary directory itself.
 pub fn work_tree(dir: &Path) -> Result<(PathBuf, String), String> {
+    let dir = dir
+        .canonicalize()
+        .map_err(|e| format!("{}: {e}", dir.display()))?;
+    if !dir.is_dir() {
+        return Err(format!("{} is not a directory", dir.display()));
+    }
     let out = Command::new("git")
         .arg("-C")
-        .arg(dir)
+        .arg(&dir)
         .args(["rev-parse", "--show-toplevel", "--show-prefix"])
-        .output()
-        .map_err(|e| format!("git: {e}"))?;
-    if !out.status.success() {
-        return Err(format!("{} is not inside a git work tree", dir.display()));
-    }
+        .output();
+    let out = match out {
+        Ok(out) if out.status.success() => out,
+        Ok(_) => return Ok((dir, String::new())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((dir, String::new())),
+        Err(e) => return Err(format!("git: {e}")),
+    };
     let text = String::from_utf8_lossy(&out.stdout);
     let mut lines = text.lines();
     let root = PathBuf::from(lines.next().unwrap_or_default());
@@ -775,9 +831,24 @@ pub fn work_tree(dir: &Path) -> Result<(PathBuf, String), String> {
     Ok((root, prefix.to_string()))
 }
 
-/// Where the stat cache of this work tree lives (inside its git dir).
+/// Ordinary sources keep sync state outside their source tree.
 pub fn cache_path(root: &Path) -> Option<PathBuf> {
-    git_path(root, "sylphx/cas-index")
+    Some(local_path(root, "sylphx/cas-index"))
+}
+
+/// Use the Git directory when available, otherwise a per-source cache.
+pub fn local_path(root: &Path, name: &str) -> PathBuf {
+    git_path(root, name).unwrap_or_else(|| source_cache(root).join(name))
+}
+
+fn source_cache(root: &Path) -> PathBuf {
+    let base = std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))
+        .unwrap_or_else(std::env::temp_dir);
+    let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+    base.join("sylphx/build/sources")
+        .join(sha256_hex(root.as_os_str().as_encoded_bytes()))
 }
 
 /// `name` inside this work tree's git dir.
@@ -796,6 +867,153 @@ pub fn git_path(root: &Path, name: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ordinary_directory_discovery_honors_nested_ignores_and_optional_overrides() {
+        let src = Scratch::new("plain-ignores");
+        let root = &src.0;
+        write(
+            root,
+            ".gitignore",
+            "*.log
+!keep.log
+output/
+",
+        );
+        write(
+            root,
+            ".sylphxignore",
+            "fixtures/*
+!fixtures/keep.txt
+!hidden.log
+",
+        );
+        write(
+            root,
+            "src/.gitignore",
+            "private.txt
+",
+        );
+        for p in [
+            "main.rs",
+            ".hidden",
+            "hidden.log",
+            "keep.log",
+            "output/a",
+            "fixtures/drop.txt",
+            "fixtures/keep.txt",
+            "src/private.txt",
+            "src/public.txt",
+            ".sylphx/out/old",
+            ".git/HEAD",
+        ] {
+            write(root, p, "source");
+        }
+        assert_eq!(
+            directory_files(root).unwrap(),
+            vec![
+                ".gitignore",
+                ".hidden",
+                ".sylphxignore",
+                "fixtures/keep.txt",
+                "keep.log",
+                "main.rs",
+                "src/.gitignore",
+                "src/public.txt"
+            ]
+        );
+        // A negation in the advanced exclusion file cannot reinclude a Git-ignored file.
+        assert!(!directory_files(root)
+            .unwrap()
+            .contains(&"hidden.log".into()));
+    }
+
+    #[test]
+    fn source_root_preserves_git_subdirectory_context_and_plain_directory_boundaries() {
+        let src = Scratch::new("source-roots");
+        write(&src.0, "sub/main.rs", "source");
+        let sub = src.0.join("sub");
+        assert_eq!(
+            work_tree(&sub).unwrap(),
+            (sub.canonicalize().unwrap(), String::new())
+        );
+        assert!(work_tree(&sub.join("missing")).is_err());
+        assert!(work_tree(&sub.join("main.rs")).is_err());
+        git(&src.0, &["init", "-q"]);
+        assert_eq!(
+            work_tree(&sub).unwrap(),
+            (src.0.canonicalize().unwrap(), "sub".into())
+        );
+        assert_eq!(
+            local_path(&src.0, "sylphx/cas-known"),
+            git_path(&src.0, "sylphx/cas-known").unwrap()
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn plain_sources_sync_bytes_modes_deletions_and_reuse_unchanged_input() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+        let src = Scratch::new("plain-source");
+        let other = Scratch::new("plain-other");
+        let ws = Scratch::new("plain-guest");
+        let root = &src.0;
+        write(root, "keep.txt", "keep");
+        write(root, "edit.txt", "before");
+        write(root, "gone.txt", "gone");
+        write(root, "run.sh", "#!/bin/sh\ncat keep.txt\n");
+        std::fs::set_permissions(root.join("run.sh"), std::fs::Permissions::from_mode(0o755))
+            .unwrap();
+        symlink("keep.txt", root.join("link")).unwrap();
+        let index = cache_path(root).unwrap();
+        assert!(!index.starts_with(root));
+        assert_ne!(index, cache_path(&other.0).unwrap());
+        let mut cache = StatCache::default();
+        let local = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
+        cache.save(&index).unwrap();
+        assert!(apply(&ws.0, root, &local, &plan(&local, None), 1));
+        assert_eq!(
+            std::fs::read_to_string(ws.0.join("tree/edit.txt")).unwrap(),
+            "before"
+        );
+        assert_eq!(
+            std::fs::read_link(ws.0.join("tree/link")).unwrap(),
+            PathBuf::from("keep.txt")
+        );
+        assert_ne!(
+            std::fs::metadata(ws.0.join("tree/run.sh"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o111,
+            0
+        );
+        let output = Command::new("./run.sh")
+            .current_dir(ws.0.join("tree"))
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"keep");
+        let before = mtime(&ws.0.join("tree/keep.txt"));
+        let mut cache = StatCache::load(&index);
+        let unchanged = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
+        assert_eq!(plan(&unchanged, Some(&local)), Plan::default());
+        write(root, "edit.txt", "after");
+        std::fs::remove_file(root.join("gone.txt")).unwrap();
+        let changed = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
+        let diff = plan(&changed, Some(&local));
+        assert_eq!(diff.upload, vec!["edit.txt"]);
+        assert_eq!(diff.remove, vec!["gone.txt"]);
+        assert!(apply(&ws.0, root, &changed, &diff, 0));
+        assert_eq!(
+            std::fs::read_to_string(ws.0.join("tree/edit.txt")).unwrap(),
+            "after"
+        );
+        assert!(!ws.0.join("tree/gone.txt").exists());
+        assert_eq!(mtime(&ws.0.join("tree/keep.txt")), before);
+        assert!(!root.join(".git").exists());
+        std::fs::remove_dir_all(source_cache(root)).unwrap();
+    }
 
     fn e(digest: char, mode: Mode) -> Entry {
         Entry {

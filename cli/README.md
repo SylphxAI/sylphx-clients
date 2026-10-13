@@ -95,8 +95,10 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   collection after the guest unmounts. The catalog retains the current 64Gi
   workspace request. Explicit customer Sandboxes Volumes are unchanged.
 - `sylphx build run [PATH] -- <command…>` runs the command on a remote build
-  machine against this git work tree and behaves like the local command: the
-  output streams back, the exit code is the command's own, and `--artifact
+  machine against an ordinary source directory or its enclosing Git work tree
+  when present. No Git initialization or manifest is required. It behaves like
+  the local command: output streams back, the exit code is the command's own,
+  and `--artifact
   GLOB` files are copied into `--out` (`.sylphx/out/<run>/`). Every lease gets
   a fresh `/workspace`, including with an explicit `--region`; the CLI never
   lists, creates, evicts or attaches a workspace Volume before admission.
@@ -115,15 +117,27 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults and an explicit
   compiler wrapper is preserved. `--region REGION` pins placement, not a
   persistent workspace. Automatic placement remains the Sandboxes API's
-  responsibility. `--queue-timeout DURATION` (default 30m) is the longest wait for a machine:
-  it covers creating the lease (or, with `--no-tree`, the Build) and the SDK's
+  responsibility. `--queue-timeout DURATION` (default 30m) is the longest wait
+  for a machine. Keep the default budget for admission and cold boot; override
+  it only when the caller needs a different wait limit. The budget covers
+  creating the lease (or, with `--no-tree`, the Build) and the SDK's
   retries of retryable API answers while doing so, not just the wait for
   READY. Past it the run releases its lease and exits 125, retryable, with
   the server's own message when the API answered, so a caller can try
   another region. `-o json` writes NDJSON events (`queued`,
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
-  prints what a cold run would send. Files: `git ls-files` (tracked and
-  untracked, not ignored) minus `.sylphxignore`.
+  prints what a cold run would send. Git sources include `git ls-files`
+  (tracked and untracked, not ignored); ordinary directories include files
+  under PATH, including hidden files, honoring nested `.gitignore` files.
+  Optional `.sylphxignore` (Gitignore syntax) subtracts files from either
+  source type; negations do not reinclude Git-ignored files. Git metadata and
+  local `.sylphx` output/state are not uploaded from ordinary directories.
+  Both source types use the same content hashing, CAS transfer, and lease
+  execution path. For ordinary directories, stat and known-blob caches live
+  outside the source under the user cache directory, keyed by canonical PATH;
+  unchanged inputs reuse their digests and CAS presence. `--region`, `--size`,
+  `--env`, `--no-cache`, and `--no-tree` remain optional advanced overrides.
+  `--source-history` still requires actual Git history.
 - Cargo git dependencies come with the run: every git commit a `Cargo.lock`
   of the tree locks is fetched here with your git credentials (depth 1, kept
   under the repository's git directory), sent to a mirror on the workspace
