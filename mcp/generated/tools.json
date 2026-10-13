@@ -3257,6 +3257,46 @@
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
           },
+          "organization_layer": {
+            "additionalProperties": false,
+            "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. The session pins it; see AgentSession.organization_layer.",
+            "properties": {
+              "instructions": {
+                "description": "Always loaded organization instructions, at most 256 KiB.",
+                "type": "string"
+              },
+              "skills": {
+                "description": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "A discoverable organization instruction pack.",
+                  "properties": {
+                    "body": {
+                      "description": "Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "Discovery description, nonempty and at most 4 KiB.",
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description",
+                    "body"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object",
+            "writeOnly": true
+          },
           "owner_pool": {
             "description": "The OwnerPool this run owns work for. Admission refuses with\n`INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that\nmoment; later turns of the session are not re-checked.",
             "type": "string",
@@ -3715,6 +3755,47 @@
               "name": {
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}`.",
                 "type": "string"
+              },
+              "organization_layer": {
+                "additionalProperties": false,
+                "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. Admission pins it for the session's life: its\ninstructions and skill index are injected at every activation, and a\nskill body is read from the pin only when the agent loads it. Never\nreturned; organization_context shows the pin.",
+                "properties": {
+                  "instructions": {
+                    "description": "Always loaded organization instructions, at most 256 KiB.",
+                    "type": "string"
+                  },
+                  "skills": {
+                    "description": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A discoverable organization instruction pack.",
+                      "properties": {
+                        "body": {
+                          "description": "Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "Discovery description, nonempty and at most 4 KiB.",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description",
+                        "body"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object",
+                "writeOnly": true,
+                "x-sylphx-immutable": true
               },
               "profiles": {
                 "description": "Granted platform Profiles to mount when the session starts, each by\nresource name and mode. The runtime never puts profile values in events.",
@@ -44397,6 +44478,46 @@
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
           },
+          "organization_layer": {
+            "additionalProperties": false,
+            "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. The session pins it; see AgentSession.organization_layer.",
+            "properties": {
+              "instructions": {
+                "description": "Always loaded organization instructions, at most 256 KiB.",
+                "type": "string"
+              },
+              "skills": {
+                "description": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "A discoverable organization instruction pack.",
+                  "properties": {
+                    "body": {
+                      "description": "Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "Discovery description, nonempty and at most 4 KiB.",
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description",
+                    "body"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object",
+            "writeOnly": true
+          },
           "owner_pool": {
             "description": "The OwnerPool this run owns work for. Admission refuses with\n`INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that\nmoment; later turns of the session are not re-checked.",
             "type": "string",
@@ -44694,6 +44815,47 @@
               "name": {
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}`.",
                 "type": "string"
+              },
+              "organization_layer": {
+                "additionalProperties": false,
+                "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. Admission pins it for the session's life: its\ninstructions and skill index are injected at every activation, and a\nskill body is read from the pin only when the agent loads it. Never\nreturned; organization_context shows the pin.",
+                "properties": {
+                  "instructions": {
+                    "description": "Always loaded organization instructions, at most 256 KiB.",
+                    "type": "string"
+                  },
+                  "skills": {
+                    "description": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "A discoverable organization instruction pack.",
+                      "properties": {
+                        "body": {
+                          "description": "Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "Discovery description, nonempty and at most 4 KiB.",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description",
+                        "body"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object",
+                "writeOnly": true,
+                "x-sylphx-immutable": true
               },
               "profiles": {
                 "description": "Granted platform Profiles to mount when the session starts, each by\nresource name and mode. The runtime never puts profile values in events.",

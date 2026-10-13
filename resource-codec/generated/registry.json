@@ -9412,6 +9412,46 @@
             "kind": "well_known",
             "wkt": "timestamp"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The pinned organization layer: its sha256 digest, instructions and skill\nnames and descriptions. Skill bodies are never returned.",
+          "filterable": false,
+          "name": "organization_context",
+          "number": 26,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "struct"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "INPUT_ONLY",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The organization layer the caller binds at assignment, read from its own\nversioned store. Admission pins it for the session's life: its\ninstructions and skill index are injected at every activation, and a\nskill body is read from the pin only when the agent loads it. Never\nreturned; organization_context shows the pin.",
+          "filterable": false,
+          "name": "organization_layer",
+          "number": 27,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.agents.v1.OrganizationLayer"
+          }
         }
       ],
       "name": "sylphx.agents.v1.AgentSession",
@@ -13929,6 +13969,115 @@
       "package": "sylphx.agents.v1"
     },
     {
+      "doc": "The organization layer of an agent's context: always-on instructions and a\nskill index whose bodies load only on use (Agent Skills progressive\ndisclosure). Its versioned store and authoring belong to the caller (such\nas a work layer); the engine keeps only the immutable pin a session\nwas admitted with. Per-kind roles add their own instructions and skills\nabove this layer; the Agent version's instructions remain additive.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Always loaded organization instructions, at most 256 KiB.",
+          "filterable": false,
+          "name": "instructions",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
+          "filterable": false,
+          "name": "skills",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.agents.v1.OrganizationSkill"
+          }
+        }
+      ],
+      "name": "sylphx.agents.v1.OrganizationLayer",
+      "package": "sylphx.agents.v1"
+    },
+    {
+      "doc": "A discoverable organization instruction pack.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Discovery description, nonempty and at most 4 KiB.",
+          "filterable": false,
+          "name": "description",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.",
+          "filterable": false,
+          "name": "body",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.agents.v1.OrganizationSkill",
+      "package": "sylphx.agents.v1"
+    },
+    {
       "doc": "An OwnerPool is the set of Agent versions qualified to own work. A version\njoins only by passing the pool's admission suite (`:qualify`) and leaves\nautomatically when a live metric regresses past a demotion rule\n(`:observe`). `:run` with `owner_pool` admits only a qualified member. The\nsuite, the metrics and their thresholds are the caller's own; the pool\nstores no method of its own.",
       "fields": [
         {
@@ -15405,6 +15554,26 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "INPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The organization layer the caller binds at assignment, read from its own\nversioned store. The session pins it; see AgentSession.organization_layer.",
+          "filterable": false,
+          "name": "organization_layer",
+          "number": 22,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.agents.v1.OrganizationLayer"
           }
         }
       ],

@@ -1393,6 +1393,18 @@
             "description": "`orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}`.",
             "type": "string"
           },
+          "organization_context": {
+            "additionalProperties": true,
+            "description": "The pinned organization layer: its sha256 digest, instructions and skill\nnames and descriptions. Skill bodies are never returned.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "organization_layer": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.OrganizationLayer",
+            "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. Admission pins it for the session's life: its\ninstructions and skill index are injected at every activation, and a\nskill body is read from the pin only when the agent loads it. Never\nreturned; organization_context shows the pin.",
+            "writeOnly": true,
+            "x-sylphx-immutable": true
+          },
           "profiles": {
             "description": "Granted platform Profiles to mount when the session starts, each by\nresource name and mode. The runtime never puts profile values in events.",
             "items": {
@@ -3026,6 +3038,46 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.OrganizationLayer": {
+        "description": "The organization layer of an agent's context: always-on instructions and a\nskill index whose bodies load only on use (Agent Skills progressive\ndisclosure). Its versioned store and authoring belong to the caller (such\nas a work layer); the engine keeps only the immutable pin a session\nwas admitted with. Per-kind roles add their own instructions and skills\nabove this layer; the Agent version's instructions remain additive.",
+        "properties": {
+          "instructions": {
+            "description": "Always loaded organization instructions, at most 256 KiB.",
+            "type": "string"
+          },
+          "skills": {
+            "description": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.agents.v1.OrganizationSkill"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.agents.v1.OrganizationSkill": {
+        "description": "A discoverable organization instruction pack.",
+        "properties": {
+          "body": {
+            "description": "Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Discovery description, nonempty and at most 4 KiB.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "body"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.OwnerPool": {
         "description": "An OwnerPool is the set of Agent versions qualified to own work. A version\njoins only by passing the pool's admission suite (`:qualify`) and leaves\nautomatically when a live metric regresses past a demotion rule\n(`:observe`). `:run` with `owner_pool` admits only a qualified member. The\nsuite, the metrics and their thresholds are the caller's own; the pool\nstores no method of its own.",
         "properties": {
@@ -3507,6 +3559,11 @@
             "description": "The name of the agent to run under the caller's environment grant.",
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/Agent"
+          },
+          "organization_layer": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.OrganizationLayer",
+            "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. The session pins it; see AgentSession.organization_layer.",
+            "writeOnly": true
           },
           "owner_pool": {
             "description": "The OwnerPool this run owns work for. Admission refuses with\n`INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that\nmoment; later turns of the session are not re-checked.",
@@ -54339,6 +54396,11 @@
                   "message": {
                     "$ref": "#/components/schemas/sylphx.agents.v1.Message",
                     "description": "The initial task message appended atomically with session acceptance."
+                  },
+                  "organization_layer": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.OrganizationLayer",
+                    "description": "The organization layer the caller binds at assignment, read from its own\nversioned store. The session pins it; see AgentSession.organization_layer.",
+                    "writeOnly": true
                   },
                   "owner_pool": {
                     "description": "The OwnerPool this run owns work for. Admission refuses with\n`INVALID_STATE` unless `agent_version` is a `QUALIFIED` member at that\nmoment; later turns of the session are not re-checked.",

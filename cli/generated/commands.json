@@ -1960,6 +1960,12 @@
                   "repeated": true,
                   "summary": "The maker sessions this run verifies, 1 to 16; empty for an ordinary run. Admission refuses with `PERMISSION_DENIED` unless `agent_version` is read-only and its Agent differs from every maker session's Agent. The verifier session never receives a maker transcript. Set at most one of `owner_pool` and `verifies`.",
                   "type": "string"
+                },
+                {
+                  "field": "organization_layer",
+                  "flag": "--organization-layer",
+                  "summary": "The organization layer the caller binds at assignment, read from its own versioned store. The session pins it; see AgentSession.organization_layer.",
+                  "type": "json"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agents/*}:run",
@@ -2233,6 +2239,19 @@
                   "flag": "--profiles",
                   "repeated": true,
                   "summary": "Granted platform Profiles to mount when the session starts, each by resource name and mode. The runtime never puts profile values in events.",
+                  "type": "json"
+                },
+                {
+                  "field": "agent_session.organization_layer.instructions",
+                  "flag": "--organization-layer.instructions",
+                  "summary": "Always loaded organization instructions, at most 256 KiB.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session.organization_layer.skills",
+                  "flag": "--organization-layer.skills",
+                  "repeated": true,
+                  "summary": "Up to 256 skills with unique names; the layer is at most 1 MiB in total.",
                   "type": "json"
                 },
                 {

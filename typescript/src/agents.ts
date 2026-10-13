@@ -121,6 +121,19 @@ export interface AgentSession {
 	readonly verifies?: string[]
 	/** When the session was archived; unset while it is not archived. */
 	readonly archiveTime?: string
+	/**
+	 * The pinned organization layer: its sha256 digest, instructions and skill
+	 * names and descriptions. Skill bodies are never returned.
+	 */
+	readonly organizationContext?: Record<string, unknown>
+	/**
+	 * The organization layer the caller binds at assignment, read from its own
+	 * versioned store. Admission pins it for the session's life: its
+	 * instructions and skill index are injected at every activation, and a
+	 * skill body is read from the pin only when the agent loads it. Never
+	 * returned; organization_context shows the pin.
+	 */
+	organizationLayer?: OrganizationLayer
 }
 
 /**
@@ -926,6 +939,31 @@ export interface ObserveOwnerPoolMemberRequest {
 }
 
 /**
+ * The organization layer of an agent's context: always-on instructions and a
+ * skill index whose bodies load only on use (Agent Skills progressive
+ * disclosure). Its versioned store and authoring belong to the caller (such
+ * as a work layer); the engine keeps only the immutable pin a session
+ * was admitted with. Per-kind roles add their own instructions and skills
+ * above this layer; the Agent version's instructions remain additive.
+ */
+export interface OrganizationLayer {
+	/** Always loaded organization instructions, at most 256 KiB. */
+	instructions?: string
+	/** Up to 256 skills with unique names; the layer is at most 1 MiB in total. */
+	skills?: OrganizationSkill[]
+}
+
+/** A discoverable organization instruction pack. */
+export interface OrganizationSkill {
+	/** The model-facing name, [a-z0-9][a-z0-9_-]{0,62}. */
+	name?: string
+	/** Discovery description, nonempty and at most 4 KiB. */
+	description?: string
+	/** Instructions loaded by organization.skill.get, nonempty and at most 256 KiB. */
+	body?: string
+}
+
+/**
  * An OwnerPool is the set of Agent versions qualified to own work. A version
  * joins only by passing the pool's admission suite (`:qualify`) and leaves
  * automatically when a live metric regresses past a demotion rule
@@ -1199,6 +1237,11 @@ export interface RunAgentRequest {
 	 * `owner_pool` and `verifies`.
 	 */
 	verifies?: string[]
+	/**
+	 * The organization layer the caller binds at assignment, read from its own
+	 * versioned store. The session pins it; see AgentSession.organization_layer.
+	 */
+	organizationLayer?: OrganizationLayer
 }
 
 /** Durable acceptance, not task completion or sandbox readiness. */
@@ -1624,6 +1667,8 @@ runtime.registerSchemas({
 		['credentials', 'credentials', 'sylphx.agents.v1.CredentialBinding', 'map'],
 		['profiles', 'profiles', 'sylphx.agents.v1.ProfileMount'],
 		['archiveTime', 'archive_time'],
+		['organizationContext', 'organization_context', undefined, 'json'],
+		['organizationLayer', 'organization_layer', 'sylphx.agents.v1.OrganizationLayer'],
 	],
 	'sylphx.agents.v1.AgentSpec': [
 		['tools', 'tools', 'sylphx.agents.v1.Tool'],
@@ -1848,6 +1893,10 @@ runtime.registerSchemas({
 		['agentVersion', 'agent_version'],
 		['metrics', 'metrics', undefined, 'map'],
 	],
+	'sylphx.agents.v1.OrganizationLayer': [
+		['skills', 'skills', 'sylphx.agents.v1.OrganizationSkill'],
+	],
+	'sylphx.agents.v1.OrganizationSkill': [],
 	'sylphx.agents.v1.OwnerPool': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.agents.v1.OwnerPoolSpec'],
@@ -1915,6 +1964,7 @@ runtime.registerSchemas({
 		['environmentMask', 'environment_mask'],
 		['itemKey', 'item_key'],
 		['ownerPool', 'owner_pool'],
+		['organizationLayer', 'organization_layer', 'sylphx.agents.v1.OrganizationLayer'],
 	],
 	'sylphx.agents.v1.RunAgentResponse': [
 		['session', 'session', 'sylphx.agents.v1.AgentSession'],

@@ -225,6 +225,29 @@ pub struct AgentSession {
         alias = "archiveTime"
     )]
     pub archive_time: String,
+    /// The pinned organization layer: its sha256 digest, instructions and skill
+    /// names and descriptions. Skill bodies are never returned.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "organizationContext"
+    )]
+    pub organization_context: Option<serde_json::Value>,
+    /// The organization layer the caller binds at assignment, read from its own
+    /// versioned store. Admission pins it for the session's life: its
+    /// instructions and skill index are injected at every activation, and a
+    /// skill body is read from the pin only when the agent loads it. Never
+    /// returned; organization_context shows the pin.
+    ///
+    /// Field behavior: `input_only`, `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "organizationLayer"
+    )]
+    pub organization_layer: Option<OrganizationLayer>,
 }
 
 /// AgentSpec is the caller-writable definition of an Agent. An AgentVersion
@@ -1841,6 +1864,44 @@ pub struct ObserveOwnerPoolMemberRequest {
     pub samples: i64,
 }
 
+/// The organization layer of an agent's context: always-on instructions and a
+/// skill index whose bodies load only on use (Agent Skills progressive
+/// disclosure). Its versioned store and authoring belong to the caller (such
+/// as a work layer); the engine keeps only the immutable pin a session
+/// was admitted with. Per-kind roles add their own instructions and skills
+/// above this layer; the Agent version's instructions remain additive.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OrganizationLayer {
+    /// Always loaded organization instructions, at most 256 KiB.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub instructions: String,
+    /// Up to 256 skills with unique names; the layer is at most 1 MiB in total.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skills: Vec<OrganizationSkill>,
+}
+
+/// A discoverable organization instruction pack.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OrganizationSkill {
+    /// The model-facing name, [a-z0-9][a-z0-9_-]{0,62}.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Discovery description, nonempty and at most 4 KiB.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub description: String,
+    /// Instructions loaded by organization.skill.get, nonempty and at most 256 KiB.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub body: String,
+}
+
 /// An OwnerPool is the set of Agent versions qualified to own work. A version
 /// joins only by passing the pool's admission suite (`:qualify`) and leaves
 /// automatically when a live metric regresses past a demotion rule
@@ -2392,6 +2453,16 @@ pub struct RunAgentRequest {
     /// `owner_pool` and `verifies`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub verifies: Vec<String>,
+    /// The organization layer the caller binds at assignment, read from its own
+    /// versioned store. The session pins it; see AgentSession.organization_layer.
+    ///
+    /// Field behavior: `input_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "organizationLayer"
+    )]
+    pub organization_layer: Option<OrganizationLayer>,
 }
 
 /// Durable acceptance, not task completion or sandbox readiness.
