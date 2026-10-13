@@ -460,6 +460,12 @@
           "number": 5,
           "proto_name": "SESSION_STATE_FAILED",
           "wire": "failed"
+        },
+        {
+          "doc": "Archived by the caller: readable, but no new turn may start.",
+          "number": 6,
+          "proto_name": "SESSION_STATE_ARCHIVED",
+          "wire": "archived"
         }
       ]
     },
@@ -9387,6 +9393,25 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the session was archived; unset while it is not archived.",
+          "filterable": false,
+          "name": "archive_time",
+          "number": 25,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
         }
       ],
       "name": "sylphx.agents.v1.AgentSession",
@@ -9931,6 +9956,32 @@
         }
       ],
       "name": "sylphx.agents.v1.Approval",
+      "package": "sylphx.agents.v1"
+    },
+    {
+      "doc": "The request of ArchiveAgentSession.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The name of the session to archive.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "agents.sylphx.com/AgentSession",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.agents.v1.ArchiveAgentSessionRequest",
       "package": "sylphx.agents.v1"
     },
     {
@@ -127321,6 +127372,49 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "delete"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Archives a session: the session and its event log stay readable, but no\nnew turn may start and the session's captured credential handles are\nrevoked. An idle or failed session archives at once; a running turn is\nrefused with `INVALID_STATE` (interrupt it first). Repeating the call\nwith the same `Idempotency-Key` returns the same session.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+                    "pattern": "orgs/*/projects/*/envs/*/agent_sessions/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:archive"
+              },
+              "id": "agents.agent_sessions.archive",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "agents:sessions",
+              "proto": "sylphx.agents.v1.AgentsService.ArchiveAgentSession",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.agents.v1.ArchiveAgentSessionRequest",
+              "resource_field": null,
+              "response": "sylphx.agents.v1.AgentSession",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "archive"
             },
             {
               "cancellable": false,

@@ -26,6 +26,11 @@
       "number": 5,
       "proto_name": "SESSION_STATE_FAILED",
       "wire": "failed"
+    },
+    {
+      "number": 6,
+      "proto_name": "SESSION_STATE_ARCHIVED",
+      "wire": "archived"
     }
   ]
 }

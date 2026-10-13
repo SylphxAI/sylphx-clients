@@ -216,6 +216,15 @@ pub struct AgentSession {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub verifies: Vec<String>,
+    /// When the session was archived; unset while it is not archived.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "archiveTime"
+    )]
+    pub archive_time: String,
 }
 
 /// AgentSpec is the caller-writable definition of an Agent. An AgentVersion
@@ -417,6 +426,17 @@ pub struct Approval {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub reason: String,
+}
+
+/// The request of ArchiveAgentSession.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ArchiveAgentSessionRequest {
+    /// The name of the session to archive.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
 }
 
 /// A BuiltinTool is a tool the platform provides.
@@ -3665,6 +3685,8 @@ pub enum SessionState {
     AwaitingClient,
     /// The last turn failed; the next message starts a new turn.
     Failed,
+    /// Archived by the caller: readable, but no new turn may start.
+    Archived,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3678,6 +3700,7 @@ impl SessionState {
             Self::AwaitingApproval => "awaiting_approval",
             Self::AwaitingClient => "awaiting_client",
             Self::Failed => "failed",
+            Self::Archived => "archived",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3690,6 +3713,7 @@ impl SessionState {
             "awaiting_approval" => Self::AwaitingApproval,
             "awaiting_client" => Self::AwaitingClient,
             "failed" => Self::Failed,
+            "archived" => Self::Archived,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -4359,6 +4383,40 @@ impl<'a, T: crate::runtime::Transport> AgentSessionsCollection<'a, T> {
             path,
             query: query.0,
             body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Archives a session: the session and its event log stay readable, but no
+    /// new turn may start and the session's captured credential handles are
+    /// revoked. An idle or failed session archives at once; a running turn is
+    /// refused with `INVALID_STATE` (interrupt it first). Repeating the call
+    /// with the same `Idempotency-Key` returns the same session.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:archive` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn archive(
+        &self,
+        request: ArchiveAgentSessionRequest,
+    ) -> Result<AgentSession, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:archive",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

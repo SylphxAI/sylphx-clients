@@ -60,6 +60,13 @@
           "http": {
             "query_params": []
           },
+          "id": "agents.agent_sessions.archive",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "agents.agent_sessions.send",
           "kind": "custom"
         },

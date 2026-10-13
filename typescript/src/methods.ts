@@ -275,6 +275,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'access:whoami',
 	},
+	'agents.agent_sessions.archive': {
+		id: 'agents.agent_sessions.archive',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:archive',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/agent_sessions/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'agents:sessions',
+	},
 	'agents.agent_sessions.create': {
 		id: 'agents.agent_sessions.create',
 		httpMethod: 'POST',

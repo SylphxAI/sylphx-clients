@@ -2352,6 +2352,21 @@
             },
             {
               "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:archive",
+              "method": "agents.agent_sessions.archive",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
+              },
+              "summary": "Archives a session: the session and its event log stay readable, but no new turn may start and the session's captured credential handles are revoked. An idle or failed session archives at once; a running turn is refused with `INVALID_STATE` (interrupt it first). Repeating the call with the same `Idempotency-Key` returns the same session.",
+              "verb": "archive"
+            },
+            {
+              "effect": "write",
               "flags": [
                 {
                   "field": "message",

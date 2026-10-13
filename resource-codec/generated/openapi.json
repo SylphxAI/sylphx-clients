@@ -1342,6 +1342,12 @@
             "x-sylphx-immutable": true,
             "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
           },
+          "archive_time": {
+            "description": "When the session was archived; unset while it is not archived.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
           "create_time": {
             "description": "When the session was created.",
             "format": "date-time",
@@ -1619,6 +1625,20 @@
           "reject"
         ],
         "type": "string"
+      },
+      "sylphx.agents.v1.ArchiveAgentSessionRequest": {
+        "description": "The request of ArchiveAgentSession.",
+        "properties": {
+          "name": {
+            "description": "The name of the session to archive.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
       },
       "sylphx.agents.v1.BuiltinTool": {
         "description": "A BuiltinTool is a tool the platform provides.",
@@ -3784,7 +3804,8 @@
           "running",
           "awaiting_approval",
           "awaiting_client",
-          "failed"
+          "failed",
+          "archived"
         ],
         "type": "string"
       },
@@ -52435,6 +52456,113 @@
           "RESOURCE_NOT_FOUND"
         ],
         "x-sylphx-method": "agents.session_events.get",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:archive": {
+      "post": {
+        "description": "Archives a session: the session and its event log stay readable, but no\nnew turn may start and the session's captured credential handles are\nrevoked. An idle or failed session archives at once; a running turn is\nrefused with `INVALID_STATE` (interrupt it first). Repeating the call\nwith the same `Idempotency-Key` returns the same session.",
+        "operationId": "agents_agent_sessions_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSession"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Archives a session: the session and its event log stay readable, but no new turn may start and the session's captured credential handles are revoked. An idle or failed session archives at once; a running turn is refused with `INVALID_STATE` (interrupt it first). Repeating the call with the same `Idempotency-Key` returns the same session.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.agent_sessions.archive",
         "x-sylphx-permission": "agents:sessions",
         "x-sylphx-stage": "preview"
       }

@@ -119,6 +119,8 @@ export interface AgentSession {
 	 * empty for any other session.
 	 */
 	readonly verifies?: string[]
+	/** When the session was archived; unset while it is not archived. */
+	readonly archiveTime?: string
 }
 
 /**
@@ -227,6 +229,12 @@ export interface Approval {
 	readonly principal?: string
 	/** The reason given, if any. */
 	readonly reason?: string
+}
+
+/** The request of ArchiveAgentSession. */
+export interface ArchiveAgentSessionRequest {
+	/** The name of the session to archive. */
+	name: string
 }
 
 /** A BuiltinTool is a tool the platform provides. */
@@ -1588,7 +1596,7 @@ export type ResultField = 'text' | 'done' | 'next' | 'where' | 'outcome' | 'awai
 export type SessionEventType = 'user_message' | 'steer' | 'agent_message' | 'tool_call' | 'tool_result' | 'approval_requested' | 'approval_decided' | 'status' | 'compaction' | 'thought' | 'file_change' | 'response' | 'error' | 'usage' | 'sandbox' | (string & {})
 
 /** SessionState is where a session is. */
-export type SessionState = 'idle' | 'running' | 'awaiting_approval' | 'awaiting_client' | 'failed' | (string & {})
+export type SessionState = 'idle' | 'running' | 'awaiting_approval' | 'awaiting_client' | 'failed' | 'archived' | (string & {})
 
 runtime.registerSchemas({
 	'sylphx.agents.v1.Agent': [
@@ -1615,6 +1623,7 @@ runtime.registerSchemas({
 		['environment', 'environment', 'sylphx.agents.v1.EnvironmentSpec'],
 		['credentials', 'credentials', 'sylphx.agents.v1.CredentialBinding', 'map'],
 		['profiles', 'profiles', 'sylphx.agents.v1.ProfileMount'],
+		['archiveTime', 'archive_time'],
 	],
 	'sylphx.agents.v1.AgentSpec': [
 		['tools', 'tools', 'sylphx.agents.v1.Tool'],
@@ -1644,6 +1653,7 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.Approval': [
 		['callId', 'call_id'],
 	],
+	'sylphx.agents.v1.ArchiveAgentSessionRequest': [],
 	'sylphx.agents.v1.BuiltinTool': [
 		['config', 'config', undefined, 'json'],
 	],
@@ -2427,6 +2437,28 @@ export class AgentSessionsCollection {
 			method: 'DELETE',
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'name')}`,
 			query: { etag: request.etag, allow_missing: request.allowMissing, validate_only: request.validateOnly, force: request.force },
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Archives a session: the session and its event log stay readable, but no
+	 * new turn may start and the session's captured credential handles are
+	 * revoked. An idle or failed session archives at once; a running turn is
+	 * refused with `INVALID_STATE` (interrupt it first). Repeating the call
+	 * with the same `Idempotency-Key` returns the same session.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*}:archive` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async archive(request: ArchiveAgentSessionRequest): Promise<AgentSession> {
+		return this.client.call<AgentSession>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'name')}:archive`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.ArchiveAgentSessionRequest',
+			responseType: 'sylphx.agents.v1.AgentSession',
 			mutation: true,
 		})
 	}

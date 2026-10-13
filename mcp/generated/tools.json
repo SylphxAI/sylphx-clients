@@ -3908,6 +3908,37 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Archives a session: the session and its event log stay readable, but no new turn may start and the session's captured credential handles are revoked. An idle or failed session archives at once; a running turn is refused with `INVALID_STATE` (interrupt it first). Repeating the call with the same `Idempotency-Key` returns the same session."
+      },
+      "description": "Archives a session: the session and its event log stay readable, but no\nnew turn may start and the session's captured credential handles are\nrevoked. An idle or failed session archives at once; a running turn is\nrefused with `INVALID_STATE` (interrupt it first). Repeating the call\nwith the same `Idempotency-Key` returns the same session.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:archive",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ArchiveAgentSession.",
+        "properties": {
+          "name": {
+            "description": "The name of the session to archive.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.archive",
+      "permission": "agents:sessions",
+      "tool": "agents_agent_sessions_archive"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Sends a user message. On an idle or failed session it starts a new turn; while a turn runs it is refused with `INVALID_STATE` (use `:steer`). The same `Idempotency-Key` returns the same event."
       },
       "description": "Sends a user message. On an idle or failed session it starts a new turn;\nwhile a turn runs it is refused with `INVALID_STATE` (use `:steer`).\nThe same `Idempotency-Key` returns the same event.",
