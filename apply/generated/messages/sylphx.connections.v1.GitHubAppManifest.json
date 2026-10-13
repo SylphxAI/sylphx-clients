@@ -6,12 +6,12 @@
       ],
       "cli_flag": "",
       "filterable": false,
-      "name": "parent",
+      "name": "name",
       "number": 1,
       "oneof": null,
       "optional": false,
       "repeated": false,
-      "resource_reference": "connections.sylphx.com/ConnectionProvider",
+      "resource_reference": null,
       "sensitive": false,
       "type": {
         "kind": "scalar",
@@ -24,26 +24,8 @@
       ],
       "cli_flag": "",
       "filterable": false,
-      "name": "connection_provider",
+      "name": "url",
       "number": 2,
-      "oneof": null,
-      "optional": false,
-      "repeated": false,
-      "resource_reference": null,
-      "sensitive": false,
-      "type": {
-        "kind": "message",
-        "name": "sylphx.connections.v1.ConnectionProvider"
-      }
-    },
-    {
-      "behaviors": [
-        "OPTIONAL"
-      ],
-      "cli_flag": "",
-      "filterable": false,
-      "name": "connection_provider_id",
-      "number": 3,
       "oneof": null,
       "optional": false,
       "repeated": false,
@@ -60,8 +42,8 @@
       ],
       "cli_flag": "",
       "filterable": false,
-      "name": "validate_only",
-      "number": 4,
+      "name": "public",
+      "number": 3,
       "oneof": null,
       "optional": false,
       "repeated": false,
@@ -71,8 +53,65 @@
         "kind": "scalar",
         "scalar": "bool"
       }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "default_permissions",
+      "number": 4,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "map",
+        "value": {
+          "kind": "scalar",
+          "scalar": "string"
+        }
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "default_events",
+      "number": 5,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "hook_attributes",
+      "number": 6,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.connections.v1.GitHubManifestHookAttributes"
+      }
     }
   ],
-  "name": "sylphx.connections.v1.CreateConnectionProviderRequest",
+  "name": "sylphx.connections.v1.GitHubAppManifest",
   "package": "sylphx.connections.v1"
 }

@@ -6,6 +6,13 @@
           "http": {
             "query_params": []
           },
+          "id": "connections.connection_providers.begin_registration",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "connections.connection_providers.get",
           "kind": "get"
         },
@@ -20,16 +27,6 @@
           },
           "id": "connections.connection_providers.list",
           "kind": "list"
-        },
-        {
-          "http": {
-            "query_params": [
-              "connection_provider_id",
-              "validate_only"
-            ]
-          },
-          "id": "connections.connection_providers.create",
-          "kind": "create"
         },
         {
           "http": {

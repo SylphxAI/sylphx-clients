@@ -12457,12 +12457,129 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Begins an expiring, one-use GitHub manifest registration ceremony. Open registration_url to POST the bound, prefilled manifest to GitHub. github_organization selects organization ownership. The state-authorized callback is GET /v1/connections/github-manifest:callback?state=...&code=... and returns only provider metadata and an installation URL."
+      },
+      "description": "Begins an expiring, one-use GitHub manifest registration ceremony.\nOpen registration_url to POST the bound, prefilled manifest to GitHub.\ngithub_organization selects organization ownership. The state-authorized\ncallback is GET /v1/connections/github-manifest:callback?state=...&code=...\nand returns only provider metadata and an installation URL.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*}/connection_providers:beginRegistration",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "An ordinary Access admin requests a manifest ceremony in one organization.",
+        "properties": {
+          "connection_provider_id": {
+            "description": "Explicit immutable provider identity.",
+            "type": "string"
+          },
+          "expected_github_app_slug": {
+            "description": "Slug whose literal wrapped-import path has been enrolled in custody.\nRenaming the App at GitHub causes the callback to refuse before import.",
+            "type": "string"
+          },
+          "github_manifest": {
+            "additionalProperties": false,
+            "description": "Permissions, events and the declared platform webhook destination.",
+            "properties": {
+              "default_events": {
+                "description": "GitHub webhook events to subscribe to.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "default_permissions": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "GitHub read/write permissions; metadata:read is always included.",
+                "type": "object"
+              },
+              "hook_attributes": {
+                "additionalProperties": false,
+                "description": "Only declared receiving endpoints on the platform origin are accepted.",
+                "properties": {
+                  "active": {
+                    "description": "Must be true: deliveries verify the generated secret at the receiver.",
+                    "type": "boolean"
+                  },
+                  "url": {
+                    "description": "https://api.sylphx.com/v1/orgs/{org}/connection_providers/{provider}/github:webhook;\norg and provider must match this registration's parent and provider id.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url",
+                  "active"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "description": "Proposed GitHub display name.",
+                "type": "string"
+              },
+              "public": {
+                "description": "Whether other accounts may install the App. This is GitHub's own manifest\nkey, which clients must read and write verbatim; the JSON, SDK, CLI and\nTerraform names therefore stay `public` too.",
+                "type": "boolean"
+              },
+              "url": {
+                "description": "HTTPS homepage, not an OAuth callback or webhook destination.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "url",
+              "default_permissions",
+              "default_events",
+              "hook_attributes"
+            ],
+            "type": "object"
+          },
+          "github_organization": {
+            "description": "GitHub organization that will own the App; unset selects a personal account.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The organization that will own the provider and custody references.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "signing_key": {
+            "description": "Unused environment-scoped public Keys target in this organization.",
+            "type": "string",
+            "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+          },
+          "webhook_secret": {
+            "description": "Environment-scoped Secrets custody target in this organization.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+          }
+        },
+        "required": [
+          "parent",
+          "connection_provider_id",
+          "signing_key",
+          "webhook_secret",
+          "github_manifest",
+          "expected_github_app_slug"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "connections.connection_providers.begin_registration",
+      "permission": "connections:admin",
+      "tool": "connections_connection_providers_begin_registration"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
         "title": "Gets a connection provider."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a connection provider.",
+      "description": "Gets a connection provider.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/connection_providers/*}",
       "input_schema": {
@@ -12483,7 +12600,6 @@
       "long_running": false,
       "method_id": "connections.connection_providers.get",
       "permission": "connections:read",
-      "served": false,
       "tool": "connections_connection_providers_get"
     },
     {
@@ -12494,7 +12610,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's connection providers."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's connection providers.",
+      "description": "Lists an org's connection providers.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/connection_providers",
       "input_schema": {
@@ -12532,131 +12648,7 @@
       "long_running": false,
       "method_id": "connections.connection_providers.list",
       "permission": "connections:read",
-      "served": false,
       "tool": "connections_connection_providers_list"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Creates a connection provider."
-      },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a connection provider.",
-      "effect": "write",
-      "http": "POST /v1/{parent=orgs/*}/connection_providers",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of CreateConnectionProvider.",
-        "properties": {
-          "connection_provider": {
-            "additionalProperties": false,
-            "description": "The connection provider to create; only spec and caller-writable metadata are read.",
-            "properties": {
-              "meta": {
-                "additionalProperties": false,
-                "description": "Resource metadata.",
-                "properties": {
-                  "annotations": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, unindexed annotations.",
-                    "type": "object"
-                  },
-                  "display_name": {
-                    "description": "Caller-writable human-readable name.",
-                    "type": "string"
-                  },
-                  "labels": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
-                    "type": "object"
-                  }
-                },
-                "type": "object"
-              },
-              "name": {
-                "description": "`orgs/{org}/connection_providers/{connection_provider}`.",
-                "type": "string"
-              },
-              "spec": {
-                "additionalProperties": false,
-                "description": "Desired state.",
-                "properties": {
-                  "github_app": {
-                    "additionalProperties": false,
-                    "description": "A GitHub App.",
-                    "properties": {
-                      "app_id": {
-                        "description": "The App's numeric id.",
-                        "format": "int64",
-                        "type": "string",
-                        "x-sylphx-immutable": true
-                      },
-                      "client_id": {
-                        "description": "The App's OAuth client id.",
-                        "type": "string"
-                      },
-                      "signing_key": {
-                        "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the credential service may use it.",
-                        "type": "string",
-                        "x-sylphx-resource-reference": "keys.sylphx.com/Key"
-                      },
-                      "slug": {
-                        "description": "The App's slug, for example `sylphx`.",
-                        "type": "string"
-                      },
-                      "webhook_secret": {
-                        "description": "The Secret holding the webhook secret that verifies deliveries.",
-                        "type": "string",
-                        "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
-                      }
-                    },
-                    "required": [
-                      "app_id",
-                      "slug",
-                      "signing_key"
-                    ],
-                    "type": "object"
-                  }
-                },
-                "type": "object"
-              }
-            },
-            "required": [
-              "spec"
-            ],
-            "type": "object"
-          },
-          "connection_provider_id": {
-            "description": "The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
-            "type": "string"
-          },
-          "parent": {
-            "description": "The org to create in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
-          },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "parent",
-          "connection_provider"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "connections.connection_providers.create",
-      "permission": "connections:admin",
-      "served": false,
-      "tool": "connections_connection_providers_create"
     },
     {
       "annotations": {
@@ -12666,7 +12658,7 @@
         "readOnlyHint": false,
         "title": "Updates a connection provider."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a connection provider.",
+      "description": "Updates a connection provider.",
       "effect": "write",
       "http": "PATCH /v1/{connection_provider.name=orgs/*/connection_providers/*}",
       "input_schema": {
@@ -12772,7 +12764,6 @@
       "long_running": false,
       "method_id": "connections.connection_providers.update",
       "permission": "connections:admin",
-      "served": false,
       "tool": "connections_connection_providers_update"
     },
     {
@@ -12781,9 +12772,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Deletes a connection provider; it must have no connections."
+        "title": "Deletes a connection provider; force forgets its local connections only."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a connection provider; it must have no connections.",
+      "description": "Deletes a connection provider; force forgets its local connections only.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/connection_providers/*}",
       "input_schema": {
@@ -12800,7 +12791,7 @@
             "type": "string"
           },
           "force": {
-            "description": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+            "description": "Also forget every child Resource; without it a parent with children\nfails with INVALID_STATE. This never uninstalls the App at GitHub.",
             "type": "boolean"
           },
           "name": {
@@ -12822,7 +12813,6 @@
       "long_running": false,
       "method_id": "connections.connection_providers.delete",
       "permission": "connections:admin",
-      "served": false,
       "tool": "connections_connection_providers_delete"
     },
     {
@@ -12833,7 +12823,7 @@
         "readOnlyHint": true,
         "title": "Gets a connection."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a connection.",
+      "description": "Gets a connection.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/connections/*}",
       "input_schema": {
@@ -12854,7 +12844,6 @@
       "long_running": false,
       "method_id": "connections.connections.get",
       "permission": "connections:read",
-      "served": false,
       "tool": "connections_connections_get"
     },
     {
@@ -12865,7 +12854,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's connections."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's connections.",
+      "description": "Lists an org's connections.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/connections",
       "input_schema": {
@@ -12903,7 +12892,6 @@
       "long_running": false,
       "method_id": "connections.connections.list",
       "permission": "connections:read",
-      "served": false,
       "tool": "connections_connections_list"
     },
     {
@@ -12914,7 +12902,7 @@
         "readOnlyHint": false,
         "title": "Records an installation; the controller confirms it with the provider."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records an installation; the controller confirms it with the provider.",
+      "description": "Records an installation; the controller confirms it with the provider.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/connections",
       "input_schema": {
@@ -13005,7 +12993,6 @@
       "long_running": true,
       "method_id": "connections.connections.create",
       "permission": "connections:write",
-      "served": false,
       "tool": "connections_connections_create"
     },
     {
@@ -13016,7 +13003,7 @@
         "readOnlyHint": false,
         "title": "Updates a connection's metadata."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a connection's metadata.",
+      "description": "Updates a connection's metadata.",
       "effect": "write",
       "http": "PATCH /v1/{connection.name=orgs/*/connections/*}",
       "input_schema": {
@@ -13101,7 +13088,6 @@
       "long_running": true,
       "method_id": "connections.connections.update",
       "permission": "connections:write",
-      "served": false,
       "tool": "connections_connections_update"
     },
     {
@@ -13112,7 +13098,7 @@
         "readOnlyHint": false,
         "title": "Forgets a connection. The installation itself is removed at the provider."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Forgets a connection. The installation itself is removed at the provider.",
+      "description": "Forgets a connection. The installation itself is removed at the provider.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/connections/*}",
       "input_schema": {
@@ -13147,7 +13133,6 @@
       "long_running": true,
       "method_id": "connections.connections.delete",
       "permission": "connections:write",
-      "served": false,
       "tool": "connections_connections_delete"
     },
     {

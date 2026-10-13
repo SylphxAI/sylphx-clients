@@ -8803,6 +8803,63 @@
           "collection": "connection_providers",
           "commands": [
             {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "connection_provider_id",
+                  "flag": "--connection-provider-id",
+                  "required": true,
+                  "summary": "Explicit immutable provider identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "signing_key",
+                  "flag": "--signing-key",
+                  "required": true,
+                  "summary": "Unused environment-scoped public Keys target in this organization.",
+                  "type": "string"
+                },
+                {
+                  "field": "webhook_secret",
+                  "flag": "--webhook-secret",
+                  "required": true,
+                  "summary": "Environment-scoped Secrets custody target in this organization.",
+                  "type": "string"
+                },
+                {
+                  "field": "github_manifest",
+                  "flag": "--github-manifest",
+                  "required": true,
+                  "summary": "Permissions, events and the declared platform webhook destination.",
+                  "type": "json"
+                },
+                {
+                  "field": "expected_github_app_slug",
+                  "flag": "--expected-github-app-slug",
+                  "required": true,
+                  "summary": "Slug whose literal wrapped-import path has been enrolled in custody. Renaming the App at GitHub causes the callback to refuse before import.",
+                  "type": "string"
+                },
+                {
+                  "field": "github_organization",
+                  "flag": "--github-organization",
+                  "summary": "GitHub organization that will own the App; unset selects a personal account.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*}/connection_providers:beginRegistration",
+              "method": "connections.connection_providers.begin_registration",
+              "permission": "connections:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Begins an expiring, one-use GitHub manifest registration ceremony. Open registration_url to POST the bound, prefilled manifest to GitHub. github_organization selects organization ownership. The state-authorized callback is GET /v1/connections/github-manifest:callback?state=...&code=... and returns only provider metadata and an installation URL.",
+              "verb": "begin-registration"
+            },
+            {
               "effect": "read",
               "flags": [],
               "http": "GET /v1/{name=orgs/*/connection_providers/*}",
@@ -8858,87 +8915,6 @@
               },
               "summary": "Lists an org's connection providers.",
               "verb": "list"
-            },
-            {
-              "effect": "write",
-              "flags": [
-                {
-                  "default_from_context": true,
-                  "field": "parent",
-                  "flag": "--parent",
-                  "pattern": "orgs/{org}",
-                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
-                  "type": "string"
-                },
-                {
-                  "field": "connection_provider.meta.labels",
-                  "flag": "--meta.labels",
-                  "repeated": true,
-                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
-                  "type": "key=value"
-                },
-                {
-                  "field": "connection_provider.meta.annotations",
-                  "flag": "--meta.annotations",
-                  "repeated": true,
-                  "summary": "Caller-writable, unindexed annotations.",
-                  "type": "key=value"
-                },
-                {
-                  "field": "connection_provider.meta.display_name",
-                  "flag": "--meta.display-name",
-                  "summary": "Caller-writable human-readable name.",
-                  "type": "string"
-                },
-                {
-                  "field": "connection_provider.spec.github_app.app_id",
-                  "flag": "--spec.github-app.app-id",
-                  "summary": "The App's numeric id.",
-                  "type": "int"
-                },
-                {
-                  "field": "connection_provider.spec.github_app.slug",
-                  "flag": "--spec.github-app.slug",
-                  "summary": "The App's slug, for example `sylphx`.",
-                  "type": "string"
-                },
-                {
-                  "field": "connection_provider.spec.github_app.client_id",
-                  "flag": "--spec.github-app.client-id",
-                  "summary": "The App's OAuth client id.",
-                  "type": "string"
-                },
-                {
-                  "field": "connection_provider.spec.github_app.signing_key",
-                  "flag": "--spec.github-app.signing-key",
-                  "summary": "The imported, non-exportable SIGN Key (RS256) that signs App assertions; only the credential service may use it.",
-                  "type": "string"
-                },
-                {
-                  "field": "connection_provider.spec.github_app.webhook_secret",
-                  "flag": "--spec.github-app.webhook-secret",
-                  "summary": "The Secret holding the webhook secret that verifies deliveries.",
-                  "type": "string"
-                },
-                {
-                  "field": "validate_only",
-                  "flag": "--dry-run",
-                  "summary": "Validate and print the result without writing (validate_only).",
-                  "type": "bool"
-                }
-              ],
-              "http": "POST /v1/{parent=orgs/*}/connection_providers",
-              "method": "connections.connection_providers.create",
-              "permission": "connections:admin",
-              "positional": {
-                "arg": "ID",
-                "field": "connection_provider_id",
-                "optional": true,
-                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
-              },
-              "resource_field": "connection_provider",
-              "summary": "Creates a connection provider.",
-              "verb": "create"
             },
             {
               "effect": "write",
@@ -9031,7 +9007,7 @@
                 {
                   "field": "force",
                   "flag": "--force",
-                  "summary": "Also delete every child Resource; without it a parent with children fails with FAILED_PRECONDITION.",
+                  "summary": "Also forget every child Resource; without it a parent with children fails with INVALID_STATE. This never uninstalls the App at GitHub.",
                   "type": "bool"
                 }
               ],
@@ -9044,7 +9020,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/connection_providers/{connection_provider}"
               },
-              "summary": "Deletes a connection provider; it must have no connections.",
+              "summary": "Deletes a connection provider; force forgets its local connections only.",
               "verb": "delete"
             }
           ],
@@ -9273,7 +9249,6 @@
       "commands": [],
       "display_name": "Sylphx Connections",
       "noun": "connections",
-      "served": false,
       "stage": "preview"
     },
     {

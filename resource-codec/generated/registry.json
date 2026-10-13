@@ -38784,6 +38784,238 @@
       "package": "sylphx.config.v1"
     },
     {
+      "doc": "An ordinary Access admin requests a manifest ceremony in one organization.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The organization that will own the provider and custody references.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/ConnectionProvider",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Explicit immutable provider identity.",
+          "filterable": false,
+          "name": "connection_provider_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Unused environment-scoped public Keys target in this organization.",
+          "filterable": false,
+          "name": "signing_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "keys.sylphx.com/Key",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Environment-scoped Secrets custody target in this organization.",
+          "filterable": false,
+          "name": "webhook_secret",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "secrets.sylphx.com/Secret",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Permissions, events and the declared platform webhook destination.",
+          "filterable": false,
+          "name": "github_manifest",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.GitHubAppManifest"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Slug whose literal wrapped-import path has been enrolled in custody.\nRenaming the App at GitHub causes the callback to refuse before import.",
+          "filterable": false,
+          "name": "expected_github_app_slug",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "GitHub organization that will own the App; unset selects a personal account.",
+          "filterable": false,
+          "name": "github_organization",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.BeginConnectionProviderRegistrationRequest",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "An expiring manifest-launch URL and normalized intent, not a created App.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Cryptographic one-use capability; never log or persist client-side.",
+          "filterable": false,
+          "name": "state",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Actual state-authorized callback, requiring no ordinary Access bearer.",
+          "filterable": false,
+          "name": "callback_url",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Open with GET: launches the stored manifest POST to GitHub, including state.",
+          "filterable": false,
+          "name": "registration_url",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "JSON-encoded normalized intent, for inspecting the requested configuration.",
+          "filterable": false,
+          "name": "manifest",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "State expires ten minutes after begin.",
+          "filterable": false,
+          "name": "expire_time",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.BeginConnectionProviderRegistrationResponse",
+      "package": "sylphx.connections.v1"
+    },
+    {
       "doc": "A Connection is one installation of a ConnectionProvider on a\nthird-party account, for example the *Sylphx* App installed on a GitHub\norganization. The Connections controller confirms it with the provider\nthrough the credential service before it is Ready.",
       "fields": [
         {
@@ -39344,89 +39576,6 @@
       "package": "sylphx.connections.v1"
     },
     {
-      "doc": "The request of CreateConnectionProvider.",
-      "fields": [
-        {
-          "behaviors": [
-            "REQUIRED"
-          ],
-          "cli_flag": "",
-          "doc": "The org to create in.",
-          "filterable": false,
-          "name": "parent",
-          "number": 1,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": "connections.sylphx.com/ConnectionProvider",
-          "sensitive": false,
-          "type": {
-            "kind": "scalar",
-            "scalar": "string"
-          }
-        },
-        {
-          "behaviors": [
-            "REQUIRED"
-          ],
-          "cli_flag": "",
-          "doc": "The connection provider to create; only spec and caller-writable metadata are read.",
-          "filterable": false,
-          "name": "connection_provider",
-          "number": 2,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "message",
-            "name": "sylphx.connections.v1.ConnectionProvider"
-          }
-        },
-        {
-          "behaviors": [
-            "OPTIONAL"
-          ],
-          "cli_flag": "",
-          "doc": "The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
-          "filterable": false,
-          "name": "connection_provider_id",
-          "number": 3,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "scalar",
-            "scalar": "string"
-          }
-        },
-        {
-          "behaviors": [
-            "OPTIONAL"
-          ],
-          "cli_flag": "",
-          "doc": "Validate and return the result without writing anything.",
-          "filterable": false,
-          "name": "validate_only",
-          "number": 4,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "scalar",
-            "scalar": "bool"
-          }
-        }
-      ],
-      "name": "sylphx.connections.v1.CreateConnectionProviderRequest",
-      "package": "sylphx.connections.v1"
-    },
-    {
       "doc": "The request of CreateConnection.",
       "fields": [
         {
@@ -39574,7 +39723,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+          "doc": "Also forget every child Resource; without it a parent with children\nfails with INVALID_STATE. This never uninstalls the App at GitHub.",
           "filterable": false,
           "name": "force",
           "number": 4,
@@ -39873,6 +40022,175 @@
         }
       ],
       "name": "sylphx.connections.v1.GitHubAppConfig",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "Non-secret GitHub manifest intent. The server supplies redirect_url.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Proposed GitHub display name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "HTTPS homepage, not an OAuth callback or webhook destination.",
+          "filterable": false,
+          "name": "url",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Whether other accounts may install the App. This is GitHub's own manifest\nkey, which clients must read and write verbatim; the JSON, SDK, CLI and\nTerraform names therefore stay `public` too.",
+          "filterable": false,
+          "name": "public",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "GitHub read/write permissions; metadata:read is always included.",
+          "filterable": false,
+          "name": "default_permissions",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "GitHub webhook events to subscribe to.",
+          "filterable": false,
+          "name": "default_events",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Only declared receiving endpoints on the platform origin are accepted.",
+          "filterable": false,
+          "name": "hook_attributes",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.GitHubManifestHookAttributes"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.GitHubAppManifest",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "The declared platform webhook destination for this manifest.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "https://api.sylphx.com/v1/orgs/{org}/connection_providers/{provider}/github:webhook;\norg and provider must match this registration's parent and provider id.",
+          "filterable": false,
+          "name": "url",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Must be true: deliveries verify the generated secret at the receiver.",
+          "filterable": false,
+          "name": "active",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.GitHubManifestHookAttributes",
       "package": "sylphx.connections.v1"
     },
     {
@@ -133549,6 +133867,47 @@
             {
               "cancellable": false,
               "cli_verb": "",
+              "doc": "Begins an expiring, one-use GitHub manifest registration ceremony.\nOpen registration_url to POST the bound, prefilled manifest to GitHub.\ngithub_organization selects organization ownership. The state-authorized\ncallback is GET /v1/connections/github-manifest:callback?state=...&code=...\nand returns only provider metadata and an installation URL.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "RESOURCE_ALREADY_EXISTS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}",
+                    "pattern": "orgs/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*}/connection_providers:beginRegistration"
+              },
+              "id": "connections.connection_providers.begin_registration",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "connections:admin",
+              "proto": "sylphx.connections.v1.ConnectionsService.BeginConnectionProviderRegistration",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.connections.v1.BeginConnectionProviderRegistrationRequest",
+              "resource_field": null,
+              "response": "sylphx.connections.v1.BeginConnectionProviderRegistrationResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "begin_registration"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
               "doc": "Gets a connection provider.",
               "effect": "read",
               "errors": [
@@ -133636,53 +133995,6 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Creates a connection provider.",
-              "effect": "write",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "UNKNOWN_FIELD",
-                "INVALID_FIELD",
-                "RESOURCE_ALREADY_EXISTS",
-                "IDEMPOTENCY_KEY_REUSED",
-                "IDEMPOTENCY_IN_PROGRESS",
-                "PLAN_LIMIT_REACHED"
-              ],
-              "http": {
-                "body": "connection_provider",
-                "method": "POST",
-                "path_params": [
-                  {
-                    "field": "parent",
-                    "named_pattern": "orgs/{org}",
-                    "pattern": "orgs/*"
-                  }
-                ],
-                "query_params": [
-                  "connection_provider_id",
-                  "validate_only"
-                ],
-                "template": "/v1/{parent=orgs/*}/connection_providers"
-              },
-              "id": "connections.connection_providers.create",
-              "kind": "create",
-              "lro": null,
-              "mcp": "default",
-              "page": null,
-              "permission": "connections:admin",
-              "proto": "sylphx.connections.v1.ConnectionsService.CreateConnectionProvider",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.connections.v1.CreateConnectionProviderRequest",
-              "resource_field": "connection_provider",
-              "response": "sylphx.connections.v1.ConnectionProvider",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "create"
-            },
-            {
-              "cancellable": false,
-              "cli_verb": "",
               "doc": "Updates a connection provider.",
               "effect": "write",
               "errors": [
@@ -133730,7 +134042,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Deletes a connection provider; it must have no connections.",
+              "doc": "Deletes a connection provider; force forgets its local connections only.",
               "effect": "destructive",
               "errors": [
                 "UNAUTHENTICATED",
@@ -134029,7 +134341,6 @@
       "proto_services": [
         "sylphx.connections.v1.ConnectionsService"
       ],
-      "served": false,
       "stage": "preview"
     },
     {

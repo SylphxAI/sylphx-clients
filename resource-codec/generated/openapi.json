@@ -11901,6 +11901,78 @@
         ],
         "type": "object"
       },
+      "sylphx.connections.v1.BeginConnectionProviderRegistrationRequest": {
+        "description": "An ordinary Access admin requests a manifest ceremony in one organization.",
+        "properties": {
+          "connection_provider_id": {
+            "description": "Explicit immutable provider identity.",
+            "type": "string"
+          },
+          "expected_github_app_slug": {
+            "description": "Slug whose literal wrapped-import path has been enrolled in custody.\nRenaming the App at GitHub causes the callback to refuse before import.",
+            "type": "string"
+          },
+          "github_manifest": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.GitHubAppManifest",
+            "description": "Permissions, events and the declared platform webhook destination."
+          },
+          "github_organization": {
+            "description": "GitHub organization that will own the App; unset selects a personal account.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The organization that will own the provider and custody references.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "signing_key": {
+            "description": "Unused environment-scoped public Keys target in this organization.",
+            "type": "string",
+            "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+          },
+          "webhook_secret": {
+            "description": "Environment-scoped Secrets custody target in this organization.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+          }
+        },
+        "required": [
+          "parent",
+          "connection_provider_id",
+          "signing_key",
+          "webhook_secret",
+          "github_manifest",
+          "expected_github_app_slug"
+        ],
+        "type": "object"
+      },
+      "sylphx.connections.v1.BeginConnectionProviderRegistrationResponse": {
+        "description": "An expiring manifest-launch URL and normalized intent, not a created App.",
+        "properties": {
+          "callback_url": {
+            "description": "Actual state-authorized callback, requiring no ordinary Access bearer.",
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "State expires ten minutes after begin.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "manifest": {
+            "description": "JSON-encoded normalized intent, for inspecting the requested configuration.",
+            "type": "string"
+          },
+          "registration_url": {
+            "description": "Open with GET: launches the stored manifest POST to GitHub, including state.",
+            "type": "string"
+          },
+          "state": {
+            "description": "Cryptographic one-use capability; never log or persist client-side.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.connections.v1.Connection": {
         "description": "A Connection is one installation of a ConnectionProvider on a\nthird-party account, for example the *Sylphx* App installed on a GitHub\norganization. The Connections controller confirms it with the provider\nthrough the credential service before it is Ready.",
         "properties": {
@@ -12104,33 +12176,6 @@
         },
         "type": "object"
       },
-      "sylphx.connections.v1.CreateConnectionProviderRequest": {
-        "description": "The request of CreateConnectionProvider.",
-        "properties": {
-          "connection_provider": {
-            "$ref": "#/components/schemas/sylphx.connections.v1.ConnectionProvider",
-            "description": "The connection provider to create; only spec and caller-writable metadata are read."
-          },
-          "connection_provider_id": {
-            "description": "The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
-            "type": "string"
-          },
-          "parent": {
-            "description": "The org to create in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
-          },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "parent",
-          "connection_provider"
-        ],
-        "type": "object"
-      },
       "sylphx.connections.v1.CreateConnectionRequest": {
         "description": "The request of CreateConnection.",
         "properties": {
@@ -12166,7 +12211,7 @@
             "type": "string"
           },
           "force": {
-            "description": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+            "description": "Also forget every child Resource; without it a parent with children\nfails with INVALID_STATE. This never uninstalls the App at GitHub.",
             "type": "boolean"
           },
           "name": {
@@ -12295,6 +12340,67 @@
           "app_id",
           "slug",
           "signing_key"
+        ],
+        "type": "object"
+      },
+      "sylphx.connections.v1.GitHubAppManifest": {
+        "description": "Non-secret GitHub manifest intent. The server supplies redirect_url.",
+        "properties": {
+          "default_events": {
+            "description": "GitHub webhook events to subscribe to.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "default_permissions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "GitHub read/write permissions; metadata:read is always included.",
+            "type": "object"
+          },
+          "hook_attributes": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.GitHubManifestHookAttributes",
+            "description": "Only declared receiving endpoints on the platform origin are accepted."
+          },
+          "name": {
+            "description": "Proposed GitHub display name.",
+            "type": "string"
+          },
+          "public": {
+            "description": "Whether other accounts may install the App. This is GitHub's own manifest\nkey, which clients must read and write verbatim; the JSON, SDK, CLI and\nTerraform names therefore stay `public` too.",
+            "type": "boolean"
+          },
+          "url": {
+            "description": "HTTPS homepage, not an OAuth callback or webhook destination.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "default_permissions",
+          "default_events",
+          "hook_attributes"
+        ],
+        "type": "object"
+      },
+      "sylphx.connections.v1.GitHubManifestHookAttributes": {
+        "description": "The declared platform webhook destination for this manifest.",
+        "properties": {
+          "active": {
+            "description": "Must be true: deliveries verify the generated secret at the receiver.",
+            "type": "boolean"
+          },
+          "url": {
+            "description": "https://api.sylphx.com/v1/orgs/{org}/connection_providers/{provider}/github:webhook;\norg and provider must match this registration's parent and provider id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "active"
         ],
         "type": "object"
       },
@@ -46103,7 +46209,7 @@
     },
     "/v1/orgs/{org}/connection_providers": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's connection providers.",
+        "description": "Lists an org's connection providers.",
         "operationId": "connections_connection_providers_list",
         "parameters": [
           {
@@ -46192,113 +46298,12 @@
         ],
         "x-sylphx-method": "connections.connection_providers.list",
         "x-sylphx-permission": "connections:read",
-        "x-sylphx-served": false,
-        "x-sylphx-stage": "preview"
-      },
-      "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a connection provider.",
-        "operationId": "connections_connection_providers_create",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
-            "in": "query",
-            "name": "connection_provider_id",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Validate and return the result without writing anything.",
-            "in": "query",
-            "name": "validate_only",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/sylphx.connections.v1.ConnectionProvider"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.connections.v1.ConnectionProvider"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "402": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "Creates a connection provider.",
-        "tags": [
-          "connections"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "UNKNOWN_FIELD",
-          "INVALID_FIELD",
-          "RESOURCE_ALREADY_EXISTS",
-          "IDEMPOTENCY_KEY_REUSED",
-          "IDEMPOTENCY_IN_PROGRESS",
-          "PLAN_LIMIT_REACHED"
-        ],
-        "x-sylphx-method": "connections.connection_providers.create",
-        "x-sylphx-permission": "connections:admin",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/connection_providers/{connection_provider}": {
       "delete": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a connection provider; it must have no connections.",
+        "description": "Deletes a connection provider; force forgets its local connections only.",
         "operationId": "connections_connection_providers_delete",
         "parameters": [
           {
@@ -46336,7 +46341,7 @@
             }
           },
           {
-            "description": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+            "description": "Also forget every child Resource; without it a parent with children\nfails with INVALID_STATE. This never uninstalls the App at GitHub.",
             "in": "query",
             "name": "force",
             "required": false,
@@ -46384,7 +46389,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Deletes a connection provider; it must have no connections.",
+        "summary": "Deletes a connection provider; force forgets its local connections only.",
         "tags": [
           "connections"
         ],
@@ -46400,11 +46405,10 @@
         ],
         "x-sylphx-method": "connections.connection_providers.delete",
         "x-sylphx-permission": "connections:admin",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a connection provider.",
+        "description": "Gets a connection provider.",
         "operationId": "connections_connection_providers_get",
         "parameters": [
           {
@@ -46463,11 +46467,10 @@
         ],
         "x-sylphx-method": "connections.connection_providers.get",
         "x-sylphx-permission": "connections:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a connection provider.",
+        "description": "Updates a connection provider.",
         "operationId": "connections_connection_providers_update",
         "parameters": [
           {
@@ -46572,13 +46575,121 @@
         ],
         "x-sylphx-method": "connections.connection_providers.update",
         "x-sylphx-permission": "connections:admin",
-        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/connection_providers:beginRegistration": {
+      "post": {
+        "description": "Begins an expiring, one-use GitHub manifest registration ceremony.\nOpen registration_url to POST the bound, prefilled manifest to GitHub.\ngithub_organization selects organization ownership. The state-authorized\ncallback is GET /v1/connections/github-manifest:callback?state=...&code=...\nand returns only provider metadata and an installation URL.",
+        "operationId": "connections_connection_providers_begin_registration",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "connection_provider_id": {
+                    "description": "Explicit immutable provider identity.",
+                    "type": "string"
+                  },
+                  "expected_github_app_slug": {
+                    "description": "Slug whose literal wrapped-import path has been enrolled in custody.\nRenaming the App at GitHub causes the callback to refuse before import.",
+                    "type": "string"
+                  },
+                  "github_manifest": {
+                    "$ref": "#/components/schemas/sylphx.connections.v1.GitHubAppManifest",
+                    "description": "Permissions, events and the declared platform webhook destination."
+                  },
+                  "github_organization": {
+                    "description": "GitHub organization that will own the App; unset selects a personal account.",
+                    "type": "string"
+                  },
+                  "signing_key": {
+                    "description": "Unused environment-scoped public Keys target in this organization.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+                  },
+                  "webhook_secret": {
+                    "description": "Environment-scoped Secrets custody target in this organization.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                  }
+                },
+                "required": [
+                  "connection_provider_id",
+                  "signing_key",
+                  "webhook_secret",
+                  "github_manifest",
+                  "expected_github_app_slug"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.connections.v1.BeginConnectionProviderRegistrationResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Begins an expiring, one-use GitHub manifest registration ceremony. Open registration_url to POST the bound, prefilled manifest to GitHub. github_organization selects organization ownership. The state-authorized callback is GET /v1/connections/github-manifest:callback?state=...&code=... and returns only provider metadata and an installation URL.",
+        "tags": [
+          "connections"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS"
+        ],
+        "x-sylphx-method": "connections.connection_providers.begin_registration",
+        "x-sylphx-permission": "connections:admin",
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/connections": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's connections.",
+        "description": "Lists an org's connections.",
         "operationId": "connections_connections_list",
         "parameters": [
           {
@@ -46667,11 +46778,10 @@
         ],
         "x-sylphx-method": "connections.connections.list",
         "x-sylphx-permission": "connections:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRecords an installation; the controller confirms it with the provider.",
+        "description": "Records an installation; the controller confirms it with the provider.",
         "operationId": "connections_connections_create",
         "parameters": [
           {
@@ -46771,13 +46881,12 @@
         },
         "x-sylphx-method": "connections.connections.create",
         "x-sylphx-permission": "connections:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/connections/{connection}": {
       "delete": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nForgets a connection. The installation itself is removed at the provider.",
+        "description": "Forgets a connection. The installation itself is removed at the provider.",
         "operationId": "connections_connections_delete",
         "parameters": [
           {
@@ -46874,11 +46983,10 @@
         },
         "x-sylphx-method": "connections.connections.delete",
         "x-sylphx-permission": "connections:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a connection.",
+        "description": "Gets a connection.",
         "operationId": "connections_connections_get",
         "parameters": [
           {
@@ -46937,11 +47045,10 @@
         ],
         "x-sylphx-method": "connections.connections.get",
         "x-sylphx-permission": "connections:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a connection's metadata.",
+        "description": "Updates a connection's metadata.",
         "operationId": "connections_connections_update",
         "parameters": [
           {
@@ -47050,7 +47157,6 @@
         },
         "x-sylphx-method": "connections.connections.update",
         "x-sylphx-permission": "connections:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

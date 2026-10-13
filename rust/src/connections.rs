@@ -3,6 +3,103 @@
 
 #![allow(clippy::all)]
 
+/// An ordinary Access admin requests a manifest ceremony in one organization.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginConnectionProviderRegistrationRequest {
+    /// The organization that will own the provider and custody references.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Explicit immutable provider identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "connectionProviderId"
+    )]
+    pub connection_provider_id: String,
+    /// Unused environment-scoped public Keys target in this organization.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "signingKey"
+    )]
+    pub signing_key: String,
+    /// Environment-scoped Secrets custody target in this organization.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "webhookSecret"
+    )]
+    pub webhook_secret: String,
+    /// Permissions, events and the declared platform webhook destination.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "githubManifest"
+    )]
+    pub github_manifest: Option<GitHubAppManifest>,
+    /// Slug whose literal wrapped-import path has been enrolled in custody.
+    /// Renaming the App at GitHub causes the callback to refuse before import.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedGithubAppSlug"
+    )]
+    pub expected_github_app_slug: String,
+    /// GitHub organization that will own the App; unset selects a personal account.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "githubOrganization"
+    )]
+    pub github_organization: String,
+}
+
+/// An expiring manifest-launch URL and normalized intent, not a created App.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginConnectionProviderRegistrationResponse {
+    /// Cryptographic one-use capability; never log or persist client-side.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Actual state-authorized callback, requiring no ordinary Access bearer.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "callbackUrl"
+    )]
+    pub callback_url: String,
+    /// Open with GET: launches the stored manifest POST to GitHub, including state.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registrationUrl"
+    )]
+    pub registration_url: String,
+    /// JSON-encoded normalized intent, for inspecting the requested configuration.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub manifest: String,
+    /// State expires ten minutes after begin.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+}
+
 /// A Connection is one installation of a ConnectionProvider on a
 /// third-party account, for example the *Sylphx* App installed on a GitHub
 /// organization. The Connections controller confirms it with the provider
@@ -212,41 +309,6 @@ pub struct ConnectionStatus {
     pub verify_time: String,
 }
 
-/// The request of CreateConnectionProvider.
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
-pub struct CreateConnectionProviderRequest {
-    /// The org to create in.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
-    pub parent: String,
-    /// The connection provider to create; only spec and caller-writable metadata are read.
-    ///
-    /// Field behavior: `required`.
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "connectionProvider"
-    )]
-    pub connection_provider: Option<ConnectionProvider>,
-    /// The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when
-    /// empty.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "connectionProviderId"
-    )]
-    pub connection_provider_id: String,
-    /// Validate and return the result without writing anything.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "validateOnly"
-    )]
-    pub validate_only: bool,
-}
-
 /// The request of CreateConnection.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -297,8 +359,8 @@ pub struct DeleteConnectionProviderRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
-    /// Also delete every child Resource; without it a parent with children
-    /// fails with FAILED_PRECONDITION.
+    /// Also forget every child Resource; without it a parent with children
+    /// fails with INVALID_STATE. This never uninstalls the App at GitHub.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub force: bool,
 }
@@ -414,6 +476,71 @@ pub struct GitHubAppConfig {
         alias = "webhookSecret"
     )]
     pub webhook_secret: String,
+}
+
+/// Non-secret GitHub manifest intent. The server supplies redirect_url.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitHubAppManifest {
+    /// Proposed GitHub display name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// HTTPS homepage, not an OAuth callback or webhook destination.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub url: String,
+    /// Whether other accounts may install the App. This is GitHub's own manifest
+    /// key, which clients must read and write verbatim; the JSON, SDK, CLI and
+    /// Terraform names therefore stay `public` too.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub public: bool,
+    /// GitHub read/write permissions; metadata:read is always included.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "defaultPermissions"
+    )]
+    pub default_permissions: std::collections::BTreeMap<String, String>,
+    /// GitHub webhook events to subscribe to.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "defaultEvents"
+    )]
+    pub default_events: Vec<String>,
+    /// Only declared receiving endpoints on the platform origin are accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "hookAttributes"
+    )]
+    pub hook_attributes: Option<GitHubManifestHookAttributes>,
+}
+
+/// The declared platform webhook destination for this manifest.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitHubManifestHookAttributes {
+    /// https://api.sylphx.com/v1/orgs/{org}/connection_providers/{provider}/github:webhook;
+    /// org and provider must match this registration's parent and provider id.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub url: String,
+    /// Must be true: deliveries verify the generated secret at the receiver.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub active: bool,
 }
 
 /// The request of ListConnectionProviders.
@@ -774,6 +901,36 @@ pub struct ConnectionProvidersCollection<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> ConnectionProvidersCollection<'a, T> {
+    /// Begins an expiring, one-use GitHub manifest registration ceremony.
+    /// Open registration_url to POST the bound, prefilled manifest to GitHub.
+    /// github_organization selects organization ownership. The state-authorized
+    /// callback is GET /v1/connections/github-manifest:callback?state=...&code=...
+    /// and returns only provider metadata and an installation URL.
+    ///
+    /// `POST /v1/{parent=orgs/*}/connection_providers:beginRegistration` · permission `connections:admin` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`.
+    pub async fn begin_registration(
+        &self,
+        request: BeginConnectionProviderRegistrationRequest,
+    ) -> Result<BeginConnectionProviderRegistrationResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/connection_providers:beginRegistration",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
     /// Gets a connection provider.
     ///
     /// `GET /v1/{name=orgs/*/connection_providers/*}` · permission `connections:read` · effect `read`
@@ -846,34 +1003,6 @@ impl<'a, T: crate::runtime::Transport> ConnectionProvidersCollection<'a, T> {
         }
     }
 
-    /// Creates a connection provider.
-    ///
-    /// `POST /v1/{parent=orgs/*}/connection_providers` · permission `connections:admin` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
-    pub async fn create(
-        &self,
-        request: CreateConnectionProviderRequest,
-    ) -> Result<ConnectionProvider, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}/connection_providers",
-            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("connection_provider_id", &request.connection_provider_id);
-        query.push("validate_only", &request.validate_only);
-        let http = crate::runtime::HttpRequest {
-            method: "POST",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body(&request.connection_provider)?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
     /// Updates a connection provider.
     ///
     /// `PATCH /v1/{connection_provider.name=orgs/*/connection_providers/*}` · permission `connections:admin` · effect `write`
@@ -910,7 +1039,7 @@ impl<'a, T: crate::runtime::Transport> ConnectionProvidersCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Deletes a connection provider; it must have no connections.
+    /// Deletes a connection provider; force forgets its local connections only.
     ///
     /// `DELETE /v1/{name=orgs/*/connection_providers/*}` · permission `connections:admin` · effect `destructive`
     ///

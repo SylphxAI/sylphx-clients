@@ -5,6 +5,41 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/** An ordinary Access admin requests a manifest ceremony in one organization. */
+export interface BeginConnectionProviderRegistrationRequest {
+	/** The organization that will own the provider and custody references. */
+	parent: string
+	/** Explicit immutable provider identity. */
+	connectionProviderId: string
+	/** Unused environment-scoped public Keys target in this organization. */
+	signingKey: string
+	/** Environment-scoped Secrets custody target in this organization. */
+	webhookSecret: string
+	/** Permissions, events and the declared platform webhook destination. */
+	githubManifest: GitHubAppManifest
+	/**
+	 * Slug whose literal wrapped-import path has been enrolled in custody.
+	 * Renaming the App at GitHub causes the callback to refuse before import.
+	 */
+	expectedGithubAppSlug: string
+	/** GitHub organization that will own the App; unset selects a personal account. */
+	githubOrganization?: string
+}
+
+/** An expiring manifest-launch URL and normalized intent, not a created App. */
+export interface BeginConnectionProviderRegistrationResponse {
+	/** Cryptographic one-use capability; never log or persist client-side. */
+	state?: string
+	/** Actual state-authorized callback, requiring no ordinary Access bearer. */
+	callbackUrl?: string
+	/** Open with GET: launches the stored manifest POST to GitHub, including state. */
+	registrationUrl?: string
+	/** JSON-encoded normalized intent, for inspecting the requested configuration. */
+	manifest?: string
+	/** State expires ten minutes after begin. */
+	expireTime?: string
+}
+
 /**
  * A Connection is one installation of a ConnectionProvider on a
  * third-party account, for example the *Sylphx* App installed on a GitHub
@@ -105,21 +140,6 @@ export interface ConnectionStatus {
 	readonly verifyTime?: string
 }
 
-/** The request of CreateConnectionProvider. */
-export interface CreateConnectionProviderRequest {
-	/** The org to create in. */
-	parent: string
-	/** The connection provider to create; only spec and caller-writable metadata are read. */
-	connectionProvider: ConnectionProvider
-	/**
-	 * The id of the new connection provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when
-	 * empty.
-	 */
-	connectionProviderId?: string
-	/** Validate and return the result without writing anything. */
-	validateOnly?: boolean
-}
-
 /** The request of CreateConnection. */
 export interface CreateConnectionRequest {
 	/** The org to create in. */
@@ -144,8 +164,8 @@ export interface DeleteConnectionProviderRequest {
 	/** Validate without deleting anything. */
 	validateOnly?: boolean
 	/**
-	 * Also delete every child Resource; without it a parent with children
-	 * fails with FAILED_PRECONDITION.
+	 * Also forget every child Resource; without it a parent with children
+	 * fails with INVALID_STATE. This never uninstalls the App at GitHub.
 	 */
 	force?: boolean
 }
@@ -197,6 +217,37 @@ export interface GitHubAppConfig {
 	signingKey?: string
 	/** The Secret holding the webhook secret that verifies deliveries. */
 	webhookSecret?: string
+}
+
+/** Non-secret GitHub manifest intent. The server supplies redirect_url. */
+export interface GitHubAppManifest {
+	/** Proposed GitHub display name. */
+	name?: string
+	/** HTTPS homepage, not an OAuth callback or webhook destination. */
+	url?: string
+	/**
+	 * Whether other accounts may install the App. This is GitHub's own manifest
+	 * key, which clients must read and write verbatim; the JSON, SDK, CLI and
+	 * Terraform names therefore stay `public` too.
+	 */
+	public?: boolean
+	/** GitHub read/write permissions; metadata:read is always included. */
+	defaultPermissions?: Record<string, string>
+	/** GitHub webhook events to subscribe to. */
+	defaultEvents?: string[]
+	/** Only declared receiving endpoints on the platform origin are accepted. */
+	hookAttributes?: GitHubManifestHookAttributes
+}
+
+/** The declared platform webhook destination for this manifest. */
+export interface GitHubManifestHookAttributes {
+	/**
+	 * https://api.sylphx.com/v1/orgs/{org}/connection_providers/{provider}/github:webhook;
+	 * org and provider must match this registration's parent and provider id.
+	 */
+	url?: string
+	/** Must be true: deliveries verify the generated secret at the receiver. */
+	active?: boolean
 }
 
 /** The request of ListConnectionProviders. */
@@ -273,6 +324,19 @@ export type ExternalAccountKind = 'user' | 'organization' | (string & {})
 export type RepositorySelection = 'all' | 'selected' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.connections.v1.BeginConnectionProviderRegistrationRequest': [
+		['connectionProviderId', 'connection_provider_id'],
+		['signingKey', 'signing_key'],
+		['webhookSecret', 'webhook_secret'],
+		['githubManifest', 'github_manifest', 'sylphx.connections.v1.GitHubAppManifest'],
+		['expectedGithubAppSlug', 'expected_github_app_slug'],
+		['githubOrganization', 'github_organization'],
+	],
+	'sylphx.connections.v1.BeginConnectionProviderRegistrationResponse': [
+		['callbackUrl', 'callback_url'],
+		['registrationUrl', 'registration_url'],
+		['expireTime', 'expire_time'],
+	],
 	'sylphx.connections.v1.Connection': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.connections.v1.ConnectionSpec'],
@@ -304,11 +368,6 @@ runtime.registerSchemas({
 		['suspendTime', 'suspend_time'],
 		['verifyTime', 'verify_time'],
 	],
-	'sylphx.connections.v1.CreateConnectionProviderRequest': [
-		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],
-		['connectionProviderId', 'connection_provider_id'],
-		['validateOnly', 'validate_only'],
-	],
 	'sylphx.connections.v1.CreateConnectionRequest': [
 		['connection', 'connection', 'sylphx.connections.v1.Connection'],
 		['connectionId', 'connection_id'],
@@ -331,6 +390,12 @@ runtime.registerSchemas({
 		['signingKey', 'signing_key'],
 		['webhookSecret', 'webhook_secret'],
 	],
+	'sylphx.connections.v1.GitHubAppManifest': [
+		['defaultPermissions', 'default_permissions', undefined, 'map'],
+		['defaultEvents', 'default_events'],
+		['hookAttributes', 'hook_attributes', 'sylphx.connections.v1.GitHubManifestHookAttributes'],
+	],
+	'sylphx.connections.v1.GitHubManifestHookAttributes': [],
 	'sylphx.connections.v1.ListConnectionProvidersRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -388,6 +453,28 @@ export class ConnectionProvidersCollection {
 	}
 
 	/**
+	 * Begins an expiring, one-use GitHub manifest registration ceremony.
+	 * Open registration_url to POST the bound, prefilled manifest to GitHub.
+	 * github_organization selects organization ownership. The state-authorized
+	 * callback is GET /v1/connections/github-manifest:callback?state=...&code=...
+	 * and returns only provider metadata and an installation URL.
+	 *
+	 * `POST /v1/{parent=orgs/*}/connection_providers:beginRegistration` · permission `connections:admin` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`.
+	 */
+	async beginRegistration(request: BeginConnectionProviderRegistrationRequest): Promise<BeginConnectionProviderRegistrationResponse> {
+		return this.client.call<BeginConnectionProviderRegistrationResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/connection_providers:beginRegistration`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.connections.v1.BeginConnectionProviderRegistrationRequest',
+			responseType: 'sylphx.connections.v1.BeginConnectionProviderRegistrationResponse',
+			mutation: true,
+		})
+	}
+
+	/**
 	 * Gets a connection provider.
 	 *
 	 * `GET /v1/{name=orgs/*\/connection_providers/*}` · permission `connections:read` · effect `read`
@@ -432,25 +519,6 @@ export class ConnectionProvidersCollection {
 	}
 
 	/**
-	 * Creates a connection provider.
-	 *
-	 * `POST /v1/{parent=orgs/*}/connection_providers` · permission `connections:admin` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
-	 */
-	async create(request: CreateConnectionProviderRequest): Promise<ConnectionProvider> {
-		return this.client.call<ConnectionProvider>({
-			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/connection_providers`,
-			query: { connection_provider_id: request.connectionProviderId, validate_only: request.validateOnly },
-			body: request.connectionProvider ?? {},
-			bodyType: 'sylphx.connections.v1.ConnectionProvider',
-			responseType: 'sylphx.connections.v1.ConnectionProvider',
-			mutation: true,
-		})
-	}
-
-	/**
 	 * Updates a connection provider.
 	 *
 	 * `PATCH /v1/{connection_provider.name=orgs/*\/connection_providers/*}` · permission `connections:admin` · effect `write`
@@ -470,7 +538,7 @@ export class ConnectionProvidersCollection {
 	}
 
 	/**
-	 * Deletes a connection provider; it must have no connections.
+	 * Deletes a connection provider; force forgets its local connections only.
 	 *
 	 * `DELETE /v1/{name=orgs/*\/connection_providers/*}` · permission `connections:admin` · effect `destructive`
 	 *

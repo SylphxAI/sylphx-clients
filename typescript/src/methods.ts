@@ -1927,13 +1927,13 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'config:write',
 	},
-	'connections.connection_providers.create': {
-		id: 'connections.connection_providers.create',
+	'connections.connection_providers.begin_registration': {
+		id: 'connections.connection_providers.begin_registration',
 		httpMethod: 'POST',
-		template: '/v1/{parent=orgs/*}/connection_providers',
+		template: '/v1/{parent=orgs/*}/connection_providers:beginRegistration',
 		pathParams: [['parent', 'orgs/*']],
-		queryParams: ['connection_provider_id', 'validate_only'],
-		body: 'connection_provider',
+		queryParams: [],
+		body: '*',
 		longRunning: false,
 		effect: 'write',
 		permission: 'connections:admin',
