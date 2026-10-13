@@ -446,12 +446,7 @@ async fn project_of(
             let org = defaults.at("orgs/{org}").await?;
             format!("{org}/projects/{p}")
         }
-        None => defaults
-            .at("orgs/{org}/projects/{project}")
-            .await
-            .map_err(|_| {
-                Failure::Usage("no project: pass --project, or run `sylphx link --env …`".into())
-            })?,
+        None => defaults.at("orgs/{org}/projects/{project}").await?,
     };
     let full = crate::names::resolve(client, &name).await?;
     project_id(&full).ok_or_else(|| Failure::Usage(format!("`{name}` is not a project")))

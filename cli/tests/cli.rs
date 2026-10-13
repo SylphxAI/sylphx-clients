@@ -1436,20 +1436,26 @@ fn git_init(dir: &std::path::Path) {
     assert!(ok);
 }
 
-/// The whole run against a stub API and guest: a volume-free `build-large`
-/// lease, a full sync into its cold owned workspace, the command's output
-/// and exit code, and the lease released at the end.
+/// First use with an org-scoped login discovers the default context, then runs
+/// a volume-free Build end to end and preserves the command's output/exit code.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     let sb = Sandbox::new("build-run");
     git_init(&sb.dir);
     std::fs::write(sb.dir.join("main.rs"), "fn main() {}\n").unwrap();
+    unlink(&sb);
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
     let lease = format!("{ENV}/leases/l1");
     // The guest is the same stub: its address is the lease's guest_uri.
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let replies = vec![
+        json_reply(whoami_org_only()),
+        json_reply(projects_page(vec![project_row(
+            "orgs/org_a/projects/prj_a",
+            "default",
+        )])),
+        json_reply(envs_page(vec![env_row(ENV, "production")])),
         json_reply(
             json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
@@ -1464,7 +1470,8 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
     ];
     let (url2, log) = serve_bytes_on(listener, replies).await;
     assert_eq!(url, url2);
-    let out = run(
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(
         &sb,
         &url,
         &[
@@ -1485,15 +1492,11 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         String::from_utf8_lossy(&out.stdout),
         "hello from the build machine\n"
     );
-    assert!(
-        err.contains("sylphx: synced 2 files") || err.contains("sylphx: synced 1 files"),
-        "{err}"
-    );
-    assert!(err.contains("cold lease-owned workspace"), "{err}");
-    assert!(err.contains("sylphx: exit 3 in"), "{err}");
     assert_volume_free_regional_leases(&log, "hk");
 
-    let seen = log.lock();
+    assert_eq!(read_link(&sb)["env"], ENV);
+    let requests = log.lock();
+    let seen = &requests[3..];
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
     assert!(
         lines[0].starts_with(&format!("POST /v1/{ENV}/leases")),
@@ -1522,7 +1525,7 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         let head = g.head.to_ascii_lowercase();
         assert!(head.contains("e2b-sandbox-id: abcd1234"), "{}", g.head);
         assert!(head.contains("x-access-token: h.p.s"), "{}", g.head);
-        assert!(!head.contains("sylphx_sk_test"), "{}", g.head);
+        assert!(!head.contains("sylphx_sk_org_a"), "{}", g.head);
     }
     assert!(
         lines[2].starts_with("POST /process.Process/Start"),
@@ -3036,19 +3039,44 @@ async fn build_cache_env_failures_exit_125_or_2_and_say_why() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn build_cache_env_needs_a_project_and_a_key() {
-    // No linked project and a key that names none: usage, and no mint.
+async fn build_cache_env_bootstraps_the_default_project_and_needs_a_key() {
+    // No linked project and a key that names only an org: the standard default
+    // project is discovered through Access, and the cache is read for it.
     let sb = Sandbox::new("cache-env-noproject");
     std::fs::remove_file(sb.dir.join(".sylphx/project.json")).unwrap();
-    let (api, _) = serve(vec![(200, json!({"org": "orgs/org_a"}))]).await;
+    let (api, api_log) = serve(vec![
+        (200, json!({"org": "orgs/org_a"})),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+    ])
+    .await;
     let (cache, clog) = serve(vec![(200, cache_reply())]).await;
-    let out = run_with(&sb, &api, &["build", "cache", "env"], |c| {
+    let out = run_with(&sb, &api, &["build", "cache", "env", "-o", "json"], |c| {
         c.env("SYLPHX_BUILD_CACHE_URL", &cache);
     })
     .await;
-    assert_eq!(out.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&out.stderr).contains("no project"));
-    assert!(clog.lock().is_empty());
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let body: Value = serde_json::from_str(&clog.lock()[0].body).unwrap();
+    assert_eq!(body["project"], "prj_a", "{body}");
+    let seen = api_log.lock().clone();
+    assert_eq!(seen.len(), 2);
+    assert!(
+        seen[0].line.starts_with("GET /v1/whoami "),
+        "{}",
+        seen[0].line
+    );
+    assert!(
+        seen[1].line.starts_with("GET /v1/orgs/org_a/projects "),
+        "{}",
+        seen[1].line
+    );
     // Signed out: a platform failure, as for `build run`.
     let out = run_with(&sb, "http://127.0.0.1:9", &["build", "cache", "env"], |c| {
         c.env_remove("SYLPHX_API_KEY");
@@ -3183,4 +3211,777 @@ async fn events_listen_relays_a_published_event_signed_to_the_local_url() {
     let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(printed["status"], 204);
     assert_eq!(printed["type"], "order.created");
+}
+
+// ---- first-use defaults: discover or create the standard project and env ---
+
+/// The `whoami` of an org-scoped credential: the organization, and no project
+/// or environment (the key is bound to the org, not to a checkout).
+fn whoami_org_only() -> Value {
+    json!({"principal": "principal_x", "api_key": "orgs/org_a/api_keys/key_self",
+           "org": "orgs/org_a", "scopes": ["*:write"]})
+}
+
+/// Writes the stored, org-scoped credential a device `sylphx login` leaves in
+/// `SYLPHX_CONFIG_DIR` (so runs use it and not `SYLPHX_API_KEY`): one key per
+/// approved organization, with `active` selected.
+fn store_org_keys(sb: &Sandbox, url: &str, orgs: &[(&str, &str, &str)], active: &str) {
+    let orgs: Vec<Value> = orgs
+        .iter()
+        .map(|(id, slug, key)| {
+            json!({"id": id, "slug": slug,
+                   "key_name": format!("orgs/{id}/api_keys/key_cli"),
+                   "store": "file", "api_key": key})
+        })
+        .collect();
+    let creds = json!({"base_url": url, "store": "file", "active_org": active, "orgs": orgs});
+    std::fs::create_dir_all(sb.dir.join("config")).unwrap();
+    std::fs::write(sb.dir.join("config/credentials.json"), creds.to_string()).unwrap();
+}
+
+fn project_row(name: &str, slug: &str) -> Value {
+    json!({"name": name, "spec": {"slug": slug}})
+}
+
+fn env_row(name: &str, slug: &str) -> Value {
+    json!({"name": name, "spec": {"slug": slug}})
+}
+
+fn projects_page(rows: Vec<Value>) -> Value {
+    json!({"projects": rows})
+}
+
+fn envs_page(rows: Vec<Value>) -> Value {
+    json!({"envs": rows})
+}
+
+fn identity_bindings() -> Value {
+    json!({"bindings": [{"slot": "identity", "environmentId": "env_a",
+                         "providerId": "sylphx-auth", "status": "active",
+                         "config": {"organizationId": "org-1"}}]})
+}
+
+/// Removes the sandbox's default `.sylphx/project.json` so a run starts in a
+/// fresh directory (the `.sylphx` directory itself stays).
+fn unlink(sb: &Sandbox) {
+    std::fs::remove_file(sb.dir.join(".sylphx/project.json")).unwrap();
+}
+
+fn read_link(sb: &Sandbox) -> Value {
+    serde_json::from_str(&std::fs::read_to_string(sb.dir.join(".sylphx/project.json")).unwrap())
+        .unwrap()
+}
+
+/// A fresh, org-scoped checkout: the first `sylphx auth status` discovers the
+/// standard `default` project and `production` environment from Access, writes
+/// the full `.sylphx/project.json`, and reaches the binding it reports. The
+/// second run uses that link: no discovery, no create, no rewrite.
+#[tokio::test(flavor = "multi_thread")]
+async fn first_use_resolves_the_standard_defaults_and_persists_the_link() {
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+        (200, envs_page(vec![env_row(ENV, "production")])),
+        (200, identity_bindings()),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-default");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(printed["enabled"], true, "{printed}");
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a", "project": "orgs/org_a/projects/prj_a", "env": ENV})
+    );
+    let seen = log.lock().clone();
+    assert_eq!(seen.len(), 4);
+    assert!(
+        seen[0].line.starts_with("GET /v1/whoami "),
+        "{}",
+        seen[0].line
+    );
+    assert!(
+        seen[1].line.starts_with("GET /v1/orgs/org_a/projects "),
+        "{}",
+        seen[1].line
+    );
+    assert!(
+        seen[2]
+            .line
+            .starts_with("GET /v1/orgs/org_a/projects/prj_a/envs "),
+        "{}",
+        seen[2].line
+    );
+    assert!(
+        seen[3]
+            .line
+            .starts_with("GET /v1/projects/prj_a/composition/bindings "),
+        "{}",
+        seen[3].line
+    );
+    for request in &seen {
+        assert!(
+            request
+                .head
+                .to_ascii_lowercase()
+                .contains("authorization: bearer sylphx_sk_org_a"),
+            "{}",
+            request.head
+        );
+    }
+
+    // Rerun in the same checkout: the complete link is used as it is.
+    let (url2, log2) = serve(vec![(200, identity_bindings())]).await;
+    let out = run_stored(&sb, &url2, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    let seen2 = log2.lock().clone();
+    assert_eq!(
+        seen2.len(),
+        1,
+        "no whoami, list, or create on the second run"
+    );
+    assert!(
+        seen2[0]
+            .line
+            .starts_with("GET /v1/projects/prj_a/composition/bindings "),
+        "{}",
+        seen2[0].line
+    );
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a", "project": "orgs/org_a/projects/prj_a", "env": ENV})
+    );
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn first_use_with_an_unwritable_link_destination_continues_on_rerun() {
+    let sb = Sandbox::new("first-use-unwritable");
+    unlink(&sb);
+    // A directory at the file destination fails even for privileged runners.
+    let destination = sb.dir.join(".sylphx/project.json");
+    std::fs::create_dir(&destination).unwrap();
+    for _ in 0..2 {
+        let (url, log) = serve(vec![
+            (200, whoami_org_only()),
+            (
+                200,
+                projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+            ),
+            (200, envs_page(vec![env_row(ENV, "production")])),
+            (200, identity_bindings()),
+        ])
+        .await;
+        store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+        let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+        assert_success(&out);
+        let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(printed["enabled"], true, "{printed}");
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            err.contains("warning:") && err.contains("project.json"),
+            "{err}"
+        );
+        let seen = log.lock();
+        assert_eq!(seen.len(), 4);
+        assert!(
+            seen[3]
+                .line
+                .starts_with("GET /v1/projects/prj_a/composition/bindings "),
+            "{}",
+            seen[3].line
+        );
+        assert!(
+            seen.iter().all(|request| request.line.starts_with("GET ")),
+            "{seen:?}"
+        );
+        assert!(destination.is_dir());
+    }
+    // Explicit link promises persistence and must still fail at this boundary.
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+        (200, envs_page(vec![env_row(ENV, "production")])),
+    ])
+    .await;
+    let out = run_stored(&sb, &url, &["link"]).await;
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("project.json"));
+    assert!(!String::from_utf8_lossy(&out.stdout).contains("Linked"));
+    assert_eq!(log.lock().len(), 3);
+    assert!(destination.is_dir());
+}
+/// No standard slug anywhere: a lone existing project and environment are
+/// chosen, and the full link is persisted.
+#[tokio::test(flavor = "multi_thread")]
+async fn unique_existing_targets_are_used_when_no_standard_slug_exists() {
+    let (url, _log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_web", "web")]),
+        ),
+        (
+            200,
+            envs_page(vec![env_row(
+                "orgs/org_a/projects/prj_web/envs/env_stg",
+                "staging",
+            )]),
+        ),
+        (200, identity_bindings()),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-unique");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a",
+               "project": "orgs/org_a/projects/prj_web",
+               "env": "orgs/org_a/projects/prj_web/envs/env_stg"})
+    );
+}
+
+/// An empty organization: the standard `default` project is created through
+/// `access.projects.create` with `spec.slug = default`, its (auto-seeded)
+/// `production` environment is listed, and the run reaches the binding.
+#[tokio::test(flavor = "multi_thread")]
+async fn first_use_creates_the_default_project_when_the_org_is_empty() {
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (200, projects_page(vec![])),
+        (200, project_row("orgs/org_a/projects/prj_new", "default")),
+        (
+            200,
+            envs_page(vec![env_row(
+                "orgs/org_a/projects/prj_new/envs/env_prod",
+                "production",
+            )]),
+        ),
+        (200, identity_bindings()),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-create");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a",
+               "project": "orgs/org_a/projects/prj_new",
+               "env": "orgs/org_a/projects/prj_new/envs/env_prod"})
+    );
+    let seen = log.lock().clone();
+    assert_eq!(seen.len(), 5);
+    assert!(
+        seen[2].line.starts_with("POST /v1/orgs/org_a/projects "),
+        "{}",
+        seen[2].line
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(&seen[2].body).unwrap(),
+        json!({"spec": {"slug": "default"}})
+    );
+    assert!(
+        seen[3]
+            .line
+            .starts_with("GET /v1/orgs/org_a/projects/prj_new/envs "),
+        "{}",
+        seen[3].line
+    );
+    assert!(
+        seen[4]
+            .line
+            .starts_with("GET /v1/projects/prj_new/composition/bindings "),
+        "{}",
+        seen[4].line
+    );
+}
+
+/// Multiple existing targets without a standard default require a choice;
+/// discovery must not invent a target or select the first row.
+#[tokio::test(flavor = "multi_thread")]
+async fn ambiguous_defaults_fail_and_list_the_choices_without_mutating() {
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![
+                project_row("orgs/org_a/projects/prj_1", "web"),
+                project_row("orgs/org_a/projects/prj_2", "api"),
+            ]),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-ambiguous-project");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status"]).await;
+    assert!(!out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("orgs/org_a/projects/prj_1")
+            && err.contains("orgs/org_a/projects/prj_2")
+            && err.contains("choose"),
+        "{err}"
+    );
+    let seen = log.lock().clone();
+    assert_eq!(seen.len(), 2, "no create is attempted on ambiguity");
+    assert!(!seen.iter().any(|r| r.line.starts_with("POST ")));
+    assert!(
+        !sb.dir.join(".sylphx/project.json").exists(),
+        "nothing is linked on ambiguity"
+    );
+
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+        (
+            200,
+            envs_page(vec![
+                env_row("orgs/org_a/projects/prj_a/envs/env_1", "staging"),
+                env_row("orgs/org_a/projects/prj_a/envs/env_2", "development"),
+            ]),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-ambiguous-env");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status"]).await;
+    assert!(!out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("env_1") && err.contains("env_2") && err.contains("choose"),
+        "{err}"
+    );
+    assert_eq!(log.lock().len(), 3);
+    assert!(!sb.dir.join(".sylphx/project.json").exists());
+}
+
+/// An explicit full environment name resolves the target and skips discovery
+/// entirely: no `whoami`, no list, no create.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_explicit_environment_override_skips_discovery() {
+    let (url, log) = serve(vec![(
+        200,
+        json!({"status": "active", "providerId": "sylphx-auth",
+               "config": {"organizationId": "org-1"}}),
+    )])
+    .await;
+    let sb = Sandbox::new("first-use-explicit-env");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(
+        &sb,
+        &url,
+        &[
+            "auth",
+            "enable",
+            "--env",
+            "orgs/org_a/projects/prj_a/envs/env_b",
+        ],
+    )
+    .await;
+    assert_success(&out);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("org-1"));
+    let seen = log.lock().clone();
+    assert_eq!(
+        seen.len(),
+        1,
+        "an explicit environment name skips whoami and every list"
+    );
+    assert!(
+        seen[0]
+            .line
+            .starts_with("PUT /v1/projects/prj_a/composition/bindings "),
+        "{}",
+        seen[0].line
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(&seen[0].body).unwrap(),
+        json!({"capabilityId": "identity", "slot": "identity",
+               "providerId": "sylphx-auth", "environmentId": "env_b"})
+    );
+    assert!(
+        !sb.dir.join(".sylphx/project.json").exists(),
+        "an explicit target writes no link"
+    );
+}
+
+/// An explicit `--org` resolves under it, and a checkout linked to another
+/// organization is never rewritten.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_explicit_org_resolves_under_it_and_leaves_a_foreign_link_alone() {
+    let foreign = json!({"org": "orgs/org_b", "project": "orgs/org_b/projects/prj_b",
+                         "env": "orgs/org_b/projects/prj_b/envs/env_b"});
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+        (200, envs_page(vec![env_row(ENV, "production")])),
+        (
+            200,
+            json!({"name": format!("{ENV}/databases"), "databases": []}),
+        ),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-foreign-org");
+    std::fs::write(sb.dir.join(".sylphx/project.json"), foreign.to_string()).unwrap();
+    store_org_keys(
+        &sb,
+        &url,
+        &[
+            ("org_a", "acme", "sylphx_sk_org_a"),
+            ("org_b", "beta", "sylphx_sk_org_b"),
+        ],
+        "org_b",
+    );
+    let out = run_stored(
+        &sb,
+        &url,
+        &["data", "databases", "list", "--org", "acme", "-o", "json"],
+    )
+    .await;
+    assert_success(&out);
+    assert_eq!(
+        read_link(&sb),
+        foreign,
+        "the foreign checkout is left exactly as it was"
+    );
+    let seen = log.lock().clone();
+    assert_eq!(seen.len(), 4);
+    assert!(
+        seen[0].line.starts_with("GET /v1/whoami "),
+        "{}",
+        seen[0].line
+    );
+    assert!(
+        seen[0]
+            .head
+            .to_ascii_lowercase()
+            .contains("authorization: bearer sylphx_sk_org_a"),
+        "{}",
+        seen[0].head
+    );
+    assert!(
+        seen[1].line.starts_with("GET /v1/orgs/org_a/projects "),
+        "{}",
+        seen[1].line
+    );
+    assert!(
+        seen[3]
+            .line
+            .starts_with(&format!("GET /v1/{ENV}/databases ")),
+        "{}",
+        seen[3].line
+    );
+}
+
+/// A list row that is malformed, or that names a target outside the parent, is
+/// refused before any choice or create.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_list_row_outside_the_parent_is_refused() {
+    for (name, row, said) in [
+        (
+            "cross-tenant",
+            project_row("orgs/org_b/projects/prj_x", "default"),
+            "outside orgs/org_a/projects/",
+        ),
+        (
+            "nested",
+            project_row("orgs/org_a/projects/prj_x/extra", "default"),
+            "outside orgs/org_a/projects/",
+        ),
+        (
+            "nameless",
+            json!({"spec": {"slug": "default"}}),
+            "outside orgs/org_a/projects/",
+        ),
+    ] {
+        let (url, log) = serve(vec![
+            (200, whoami_org_only()),
+            (200, projects_page(vec![row])),
+        ])
+        .await;
+        let sb = Sandbox::new(&format!("first-use-row-{name}"));
+        unlink(&sb);
+        store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+        let out = run_stored(&sb, &url, &["auth", "status"]).await;
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(!out.status.success(), "{name}: {err}");
+        assert!(err.contains(said), "{name}: {err}");
+        let seen = log.lock().clone();
+        assert_eq!(seen.len(), 2, "{name}: only whoami and the list");
+        assert!(
+            !seen.iter().any(|r| r.line.starts_with("POST ")),
+            "{name}: no create"
+        );
+        assert!(!sb.dir.join(".sylphx/project.json").exists(), "{name}");
+    }
+}
+
+/// Project discovery follows pagination, so a `default` project on a later
+/// page is still found.
+#[tokio::test(flavor = "multi_thread")]
+async fn paginated_project_discovery_accounts_for_a_later_default() {
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            json!({"projects": [project_row("orgs/org_a/projects/prj_x", "api")],
+                   "next_page_token": "page2"}),
+        ),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+        (200, envs_page(vec![env_row(ENV, "production")])),
+        (200, identity_bindings()),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-paged");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    let link = read_link(&sb);
+    assert_eq!(link["project"], "orgs/org_a/projects/prj_a", "{link}");
+    let seen = log.lock().clone();
+    assert!(
+        seen[1].line.starts_with("GET /v1/orgs/org_a/projects "),
+        "{}",
+        seen[1].line
+    );
+    assert!(
+        seen[2]
+            .line
+            .starts_with("GET /v1/orgs/org_a/projects?page_token=page2 "),
+        "{}",
+        seen[2].line
+    );
+}
+
+/// No-flags `sylphx link` bootstraps the standard project and environment from
+/// the key's org and writes the full link.
+#[tokio::test(flavor = "multi_thread")]
+async fn link_without_flags_bootstraps_the_default_targets() {
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (
+            200,
+            projects_page(vec![project_row("orgs/org_a/projects/prj_a", "default")]),
+        ),
+        (200, envs_page(vec![env_row(ENV, "production")])),
+    ])
+    .await;
+    let sb = Sandbox::new("link-bootstrap");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["link"]).await;
+    assert_success(&out);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Linked "));
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a", "project": "orgs/org_a/projects/prj_a", "env": ENV})
+    );
+    let seen = log.lock().clone();
+    assert_eq!(seen.len(), 3);
+    assert!(
+        seen[0].line.starts_with("GET /v1/whoami "),
+        "{}",
+        seen[0].line
+    );
+    assert!(
+        seen[1].line.starts_with("GET /v1/orgs/org_a/projects "),
+        "{}",
+        seen[1].line
+    );
+    assert!(
+        seen[2]
+            .line
+            .starts_with("GET /v1/orgs/org_a/projects/prj_a/envs "),
+        "{}",
+        seen[2].line
+    );
+}
+
+/// The bootstrap create carries a stable `Idempotency-Key` derived from the
+/// target, so a lost reply cannot duplicate a first-use project: two separate
+/// empty-org discoveries replay the very same key.
+#[tokio::test(flavor = "multi_thread")]
+async fn bootstrap_create_replays_with_a_stable_idempotency_key() {
+    let mut keys = Vec::new();
+    for run in ["a", "b"] {
+        let (url, log) = serve(vec![
+            (200, whoami_org_only()),
+            (200, projects_page(vec![])),
+            (200, project_row("orgs/org_a/projects/prj_new", "default")),
+            (
+                200,
+                envs_page(vec![env_row(
+                    "orgs/org_a/projects/prj_new/envs/env_prod",
+                    "production",
+                )]),
+            ),
+            (200, identity_bindings()),
+        ])
+        .await;
+        let sb = Sandbox::new(&format!("bootstrap-key-{run}"));
+        unlink(&sb);
+        store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+        let out = run_stored(&sb, &url, &["auth", "status"]).await;
+        assert_success(&out);
+        let seen = log.lock().clone();
+        let create = seen
+            .iter()
+            .find(|r| r.line.starts_with("POST /v1/orgs/org_a/projects "))
+            .expect("the empty org creates the default project");
+        let key = create
+            .head
+            .to_ascii_lowercase()
+            .lines()
+            .find(|l| l.starts_with("idempotency-key:"))
+            .expect("bootstrap creation must carry a replay key")
+            .to_string();
+        keys.push(key);
+    }
+    assert_eq!(
+        keys[0], keys[1],
+        "the same discovery replays the same idempotency key"
+    );
+}
+
+/// `link --env` may name a whole environment on its own: the project comes
+/// from the name, without a `--project` flag.
+#[tokio::test(flavor = "multi_thread")]
+async fn link_accepts_a_full_environment_name_without_a_project_flag() {
+    let (url, log) = serve(vec![(200, whoami_org_only())]).await;
+    let sb = Sandbox::new("link-env-full");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(
+        &sb,
+        &url,
+        &["link", "--env", "orgs/org_a/projects/prj_a/envs/env_b"],
+    )
+    .await;
+    assert_success(&out);
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a", "project": "orgs/org_a/projects/prj_a",
+               "env": "orgs/org_a/projects/prj_a/envs/env_b"})
+    );
+    let seen = log.lock().clone();
+    assert_eq!(seen.len(), 1, "the full name needs no lookup");
+    assert!(
+        seen[0].line.starts_with("GET /v1/whoami "),
+        "{}",
+        seen[0].line
+    );
+}
+
+/// `--org` that disagrees with the credential's own `whoami` is refused before
+/// anything is discovered or written.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_explicit_org_that_disagrees_with_the_key_is_rejected() {
+    let (url, log) = serve(vec![(200, whoami_org_only())]).await;
+    let sb = Sandbox::new("org-conflict");
+    unlink(&sb);
+    store_org_keys(
+        &sb,
+        &url,
+        &[
+            ("org_a", "acme", "sylphx_sk_org_a"),
+            ("org_b", "beta", "sylphx_sk_org_b"),
+        ],
+        "org_a",
+    );
+    let out = run_stored(&sb, &url, &["auth", "status", "--org", "beta"]).await;
+    assert!(!out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("--org does not match the signed-in credential"),
+        "{err}"
+    );
+    assert_eq!(log.lock().len(), 1, "only whoami was called");
+    assert!(!sb.dir.join(".sylphx/project.json").exists());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn first_use_provisions_a_missing_production_environment() {
+    let project = "orgs/org_a/projects/prj_a";
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (200, projects_page(vec![project_row(project, "default")])),
+        (200, envs_page(vec![])),
+        (200, env_row(ENV, "production")),
+        (200, identity_bindings()),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-missing-env");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    assert_eq!(read_link(&sb)["env"], ENV);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&out.stdout).unwrap()["enabled"],
+        true
+    );
+    let seen = log.lock();
+    assert!(seen[3]
+        .line
+        .starts_with(&format!("POST /v1/{project}/envs ")));
+    assert_eq!(
+        serde_json::from_str::<Value>(&seen[3].body).unwrap(),
+        json!({"spec": {"slug": "production", "mode": "live"}})
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn concurrent_first_use_adopts_the_winning_default_project() {
+    let project = "orgs/org_a/projects/prj_a";
+    let (url, log) = serve(vec![
+        (200, whoami_org_only()),
+        (200, projects_page(vec![])),
+        (
+            409,
+            json!({"code": "RESOURCE_ALREADY_EXISTS", "status": 409,
+            "detail": "default already exists", "retryable": false}),
+        ),
+        (200, projects_page(vec![project_row(project, "default")])),
+        (200, envs_page(vec![env_row(ENV, "production")])),
+        (200, identity_bindings()),
+    ])
+    .await;
+    let sb = Sandbox::new("first-use-race");
+    unlink(&sb);
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["auth", "status", "-o", "json"]).await;
+    assert_success(&out);
+    assert_eq!(read_link(&sb)["project"], project);
+    assert_eq!(read_link(&sb)["env"], ENV);
+    assert_eq!(
+        log.lock()
+            .iter()
+            .filter(|r| r.line.starts_with("POST "))
+            .count(),
+        1
+    );
 }

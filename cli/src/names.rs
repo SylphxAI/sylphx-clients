@@ -10,19 +10,19 @@ use sylphx::Client;
 use crate::Failure;
 
 fn is_id(segment: &str, kind: &str) -> bool {
-    segment.starts_with(&format!("{kind}_"))
+    segment
+        .strip_prefix(kind)
+        .is_some_and(|rest| rest.starts_with('_'))
 }
 
 async fn pick(
     client: &Client,
-    method: &str,
     parent: &str,
     items: &str,
     want: &str,
     what: &str,
 ) -> Result<String, Failure> {
-    let listed = client.invoke(method, json!({ "parent": parent })).await?;
-    let rows = listed[items].as_array().cloned().unwrap_or_default();
+    let rows = list(client, items, parent).await?;
     let found = rows
         .iter()
         .find(|r| r["spec"]["slug"].as_str() == Some(want) || r["uid"].as_str() == Some(want));
@@ -63,29 +63,13 @@ pub async fn resolve(client: &Client, name: &str) -> Result<String, Failure> {
         out = if is_id(segs[3], "prj") {
             format!("{out}/projects/{}", segs[3])
         } else {
-            pick(
-                client,
-                "access.projects.list",
-                &out,
-                "projects",
-                segs[3],
-                "project",
-            )
-            .await?
+            pick(client, &out, "projects", segs[3], "project").await?
         };
         if segs.len() >= 6 && segs[4] == "envs" {
             out = if is_id(segs[5], "env") {
                 format!("{out}/envs/{}", segs[5])
             } else {
-                pick(
-                    client,
-                    "access.envs.list",
-                    &out,
-                    "envs",
-                    segs[5],
-                    "environment",
-                )
-                .await?
+                pick(client, &out, "envs", segs[5], "environment").await?
             };
             if segs.len() > 6 {
                 out = format!("{out}/{}", segs[6..].join("/"));
@@ -108,19 +92,215 @@ pub async fn link_names(
     env: Option<&str>,
 ) -> Result<(String, Option<String>, Option<String>), Failure> {
     let org = org_name(org);
-    let Some(project) = project else {
-        return Ok((org, None, None));
+    if let Some(full) = env.filter(|e| e.starts_with("orgs/")) {
+        let full = resolve(client, full).await?;
+        let link = crate::context::Link::from_env_name(&full)
+            .ok_or_else(|| Failure::Usage("--env must name an environment".into()))?;
+        if link.org != org {
+            return Err(Failure::Usage(
+                "--env belongs to a different organization".into(),
+            ));
+        }
+        if let Some(p) = project {
+            let segment = p.rsplit('/').next().unwrap_or(p);
+            let selected = resolve(client, &format!("{org}/projects/{segment}")).await?;
+            if selected != link.project {
+                return Err(Failure::Usage(
+                    "--project and --env name different projects".into(),
+                ));
+            }
+        }
+        return Ok((org, Some(link.project), Some(link.env)));
+    }
+    let project = match project {
+        Some(p) => {
+            if p.starts_with("orgs/") && !p.starts_with(&format!("{org}/projects/")) {
+                return Err(Failure::Usage(
+                    "--project belongs to a different organization".into(),
+                ));
+            }
+            let segment = p.rsplit('/').next().unwrap_or(p);
+            resolve(client, &format!("{org}/projects/{segment}")).await?
+        }
+        None if env.is_some() => discover_or_create(client, "projects", &org, "default").await?,
+        None => return Ok((org, None, None)),
     };
-    let project_seg = project.rsplit('/').next().unwrap_or(project);
-    let project = resolve(client, &format!("{org}/projects/{project_seg}")).await?;
     let env = match env {
         None => None,
-        Some(e) => {
-            let e = e.rsplit('/').next().unwrap_or(e);
-            Some(resolve(client, &format!("{project}/envs/{e}")).await?)
-        }
+        Some(e) => Some(resolve(client, &format!("{project}/envs/{e}")).await?),
     };
     Ok((org, Some(project), env))
+}
+
+/// Vercel/Railway first use: discover a unique target, or create the standard
+/// target through Access. Never choose an arbitrary existing project/env.
+pub async fn complete(
+    client: &Client,
+    link: &mut crate::context::Link,
+    level: usize,
+) -> Result<(), Failure> {
+    if link.org.is_empty() {
+        return Err(Failure::Usage(
+            "the signed-in credential names no organization".into(),
+        ));
+    }
+    if level >= 2 && link.project.is_empty() {
+        link.project = discover_or_create(client, "projects", &link.org, "default").await?;
+    }
+    if level >= 3 && link.env.is_empty() {
+        link.env = discover_or_create(client, "envs", &link.project, "production").await?;
+    }
+    Ok(())
+}
+
+async fn list(
+    client: &Client,
+    collection: &str,
+    parent: &str,
+) -> Result<Vec<serde_json::Value>, Failure> {
+    let mut rows = Vec::new();
+    let mut token = String::new();
+    let mut tokens = std::collections::HashSet::new();
+    loop {
+        let mut page = client
+            .invoke(
+                &format!("access.{collection}.list"),
+                json!({"parent": parent, "page_token": token}),
+            )
+            .await?;
+        let items = page
+            .get_mut(collection)
+            .and_then(serde_json::Value::as_array_mut)
+            .ok_or_else(|| {
+                Failure::Refused(format!("Access returned no {collection} list for {parent}"))
+            })?;
+        for item in items.iter() {
+            checked_name(item, parent, collection)?;
+        }
+        rows.append(items);
+        token = page["next_page_token"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        if token.is_empty() {
+            return Ok(rows);
+        }
+        if !tokens.insert(token.clone()) {
+            return Err(Failure::Refused(
+                "Access repeated a pagination token".into(),
+            ));
+        }
+    }
+}
+
+fn checked_name<'a>(
+    item: &'a serde_json::Value,
+    parent: &str,
+    collection: &str,
+) -> Result<&'a str, Failure> {
+    item["name"]
+        .as_str()
+        .filter(|name| {
+            name.strip_prefix(parent)
+                .and_then(|s| s.strip_prefix('/'))
+                .and_then(|s| s.strip_prefix(collection))
+                .and_then(|s| s.strip_prefix('/'))
+                .is_some_and(|id| !id.is_empty() && !id.contains('/'))
+        })
+        .ok_or_else(|| {
+            Failure::Refused(format!(
+                "Access returned a target outside {parent}/{collection}/"
+            ))
+        })
+}
+
+/// Stable across invocations, so a lost create reply cannot duplicate a
+/// first-use target. Access namespaces replay keys by org and principal.
+struct BootstrapTransport<'a> {
+    inner: &'a sylphx::HttpTransport,
+    headers: [(String, String); 1],
+}
+
+impl sylphx::runtime::Transport for BootstrapTransport<'_> {
+    async fn send(
+        &self,
+        request: sylphx::runtime::HttpRequest,
+    ) -> Result<sylphx::runtime::HttpResponse, sylphx::Error> {
+        self.inner.send_with_headers(request, &self.headers).await
+    }
+}
+async fn discover_or_create(
+    client: &Client,
+    collection: &str,
+    parent: &str,
+    slug: &str,
+) -> Result<String, Failure> {
+    let rows = list(client, collection, parent).await?;
+    if !rows.is_empty() {
+        return choose(&rows, parent, collection, slug);
+    }
+    let (field, spec) = if collection == "projects" {
+        ("project", json!({"slug": slug}))
+    } else {
+        ("environment", json!({"slug": slug, "mode": "live"}))
+    };
+    use sha2::Digest;
+    let key = format!(
+        "cli-bootstrap:{:x}",
+        sha2::Sha256::digest(format!("{parent}/{collection}/{slug}"))
+    );
+    let creator = Client::new(BootstrapTransport {
+        inner: client.transport(),
+        headers: [("Idempotency-Key".into(), key)],
+    });
+    let created = creator
+        .invoke(
+            &format!("access.{collection}.create"),
+            json!({"parent": parent, (field): {"spec": spec}}),
+        )
+        .await;
+    match created {
+        Ok(item) => Ok(checked_name(&item, parent, collection)?.to_string()),
+        Err(sylphx::Error::Api { status: 409, .. }) => {
+            // Another first-use client won the slug; rediscover, never create
+            // an alternative project or fall back to another tenant.
+            choose(
+                &list(client, collection, parent).await?,
+                parent,
+                collection,
+                slug,
+            )
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+fn choose(
+    rows: &[serde_json::Value],
+    parent: &str,
+    collection: &str,
+    slug: &str,
+) -> Result<String, Failure> {
+    let mut defaults = rows
+        .iter()
+        .filter(|r| r["spec"]["slug"].as_str() == Some(slug));
+    let first = defaults.next();
+    let selected = match (first, defaults.next(), rows) {
+        (Some(one), None, _) => Some(one),
+        (None, None, [one]) => Some(one),
+        _ => None,
+    };
+    if let Some(item) = selected {
+        return Ok(checked_name(item, parent, collection)?.to_string());
+    }
+    let choices = rows
+        .iter()
+        .map(|r| checked_name(r, parent, collection))
+        .collect::<Result<Vec<_>, _>>()?;
+    Err(Failure::Usage(format!(
+        "choose a target under {parent}; run sylphx link --project … --env … (choices: {})",
+        choices.join(", ")
+    )))
 }
 
 #[cfg(test)]

@@ -748,33 +748,33 @@ async fn auth_enable(
     sub: &ArgMatches,
     format: Format,
 ) -> Result<(), Failure> {
-    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
     let org = sub
         .try_get_one::<String>("org")
         .ok()
         .flatten()
         .map(String::as_str)
         .or_else(|| command_org(sub));
-    let link = match context::default_link_for(&cwd, org).map_err(Failure::Usage)? {
-        Some(l) => l,
-        None => Link::from_whoami(&client.invoke("access.whoami", json!({})).await?),
+    let given = sub.try_get_one::<String>("env").ok().flatten();
+    let mut defaults = Defaults {
+        client,
+        link: None,
+        org: org.map(str::to_string),
     };
-    // Full names may carry slugs; resolve them to ids first.
-    let given = sub.try_get_one::<String>("env").ok().flatten().cloned();
-    let (project, env) = match given {
-        Some(e) if e.starts_with("orgs/") => {
-            let full = names::resolve(client, &e).await?;
-            let project = full.split("/envs/").next().unwrap_or_default().to_string();
-            (project, full)
+    let env = match given {
+        Some(e) if e.starts_with("orgs/") => names::resolve(client, e).await?,
+        Some(e) => {
+            let project = defaults.at("orgs/{org}/projects/{project}").await?;
+            names::resolve(client, &format!("{project}/envs/{e}")).await?
         }
-        Some(e) => (link.project.clone(), e),
-        None => (link.project.clone(), link.env.clone()),
+        None => {
+            defaults
+                .at("orgs/{org}/projects/{project}/envs/{env}")
+                .await?
+        }
     };
-    if project.is_empty() || env.is_empty() {
-        return Err(Failure::Usage(
-            "no environment: pass --env, or run `sylphx link --env …`".into(),
-        ));
-    }
+    let link = Link::from_env_name(&env)
+        .ok_or_else(|| Failure::Usage("--env must name an environment".into()))?;
+    let project = link.project;
     let path = enable::bindings_path(&project);
     let render = |v: &Value| {
         output::render(
@@ -993,20 +993,31 @@ fn transient_whoami(e: &Error) -> bool {
 async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {
     let me = client.invoke("access.whoami", json!({})).await?;
     let mine = Link::from_whoami(&me);
-    let org = sub
-        .get_one::<String>("org")
-        .cloned()
-        .unwrap_or(mine.org.clone());
+    let org = mine.org.clone();
+    if let Some(selected) = sub.get_one::<String>("org") {
+        let credentials = context::load_credentials();
+        let selected = context::selected_org(&credentials, Some(selected))
+            .map(|o| names::org_name(&o.id))
+            .unwrap_or_else(|| names::org_name(selected));
+        if selected != org {
+            return Err(Failure::Usage(
+                "--org does not match the signed-in credential".into(),
+            ));
+        }
+    }
     if org.is_empty() {
         return Err(Failure::Usage("the key names no org; pass --org".into()));
     }
     let project = sub.get_one::<String>("project").cloned();
     let env = sub.get_one::<String>("env").cloned();
     // Flags may be slugs, ids, or full names; the link stores full names.
-    let l = if project.is_none() && env.is_none() && sub.get_one::<String>("org").is_none() {
+    let mut l = if project.is_none() && env.is_none() && sub.get_one::<String>("org").is_none() {
         mine
     } else {
-        let project = project.or_else(|| (!mine.project.is_empty()).then(|| mine.project.clone()));
+        let project = project.or_else(|| {
+            (!mine.project.is_empty() && env.as_ref().is_none_or(|e| !e.starts_with("orgs/")))
+                .then(|| mine.project.clone())
+        });
         let (org, project, env) =
             names::link_names(client, &org, project.as_deref(), env.as_deref()).await?;
         Link {
@@ -1015,6 +1026,7 @@ async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {
             env: env.unwrap_or_default(),
         }
     };
+    names::complete(client, &mut l, 3).await?;
     let dir = std::env::current_dir().map_err(|e| e.to_string())?;
     let p = context::write_link(&dir, &l)?;
     println!(
@@ -1040,8 +1052,8 @@ fn read_json_arg(s: &str) -> Result<Value, String> {
     serde_json::from_str(&text).map_err(|e| format!("not JSON: {e}"))
 }
 
-/// Defaults for names and parents: `SYLPHX_ENVIRONMENT`, else the linked project, else
-/// the key's scope.
+/// Defaults: process override, nearest link, then credential scope completed
+/// through public Access discovery/provisioning on first use.
 struct Defaults<'c> {
     client: &'c Client,
     link: Option<Link>,
@@ -1061,20 +1073,52 @@ impl Defaults<'_> {
                 {
                     Some(l) => l,
                     None => {
-                        Link::from_whoami(&self.client.invoke("access.whoami", json!({})).await?)
+                        let mine = Link::from_whoami(
+                            &self.client.invoke("access.whoami", json!({})).await?,
+                        );
+                        if let Some(selected) = self.org.as_deref() {
+                            let credentials = context::load_credentials();
+                            let selected = context::selected_org(&credentials, Some(selected))
+                                .map(|o| names::org_name(&o.id))
+                                .unwrap_or_else(|| names::org_name(selected));
+                            if selected != mine.org {
+                                return Err(Failure::Usage(
+                                    "--org does not match the signed-in credential".into(),
+                                ));
+                            }
+                        }
+                        mine
                     }
                 },
             );
         }
-        self.link
+        if self.link.as_ref().and_then(|l| l.at(level)).is_none() {
+            let link = self.link.as_mut().expect("initialized above");
+            names::complete(self.client, link, level).await?;
+            // Do not rewrite a checkout belonging to another organization, or
+            // persist a process-only override into it.
+            let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+            if std::env::var(context::ENV_VAR)
+                .unwrap_or_default()
+                .trim()
+                .is_empty()
+                && context::find_link(&cwd).is_none_or(|(_, existing)| existing.org == link.org)
+            {
+                if let Err(error) = context::write_link(&cwd, link) {
+                    eprintln!("warning: could not persist default context: {error}; continuing with the resolved context");
+                }
+            }
+        }
+        let name = self
+            .link
             .as_ref()
             .and_then(|l| l.at(level))
-            .map(str::to_string)
             .ok_or_else(|| {
                 Failure::Usage(format!(
                     "no default for {pattern}: pass it explicitly or run `sylphx link --env …`"
                 ))
-            })
+            })?;
+        names::resolve(self.client, name).await
     }
 
     /// A full name from a full name or a bare id below the default parent.

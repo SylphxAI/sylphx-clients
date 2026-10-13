@@ -13,7 +13,8 @@ sylphx org use acme                   # active org when no --org, resource name,
 sylphx whoami --org beta              # use beta's stored credential for this command only
 sylphx logout                         # revoke and forget the selected org; keep other org logins
 sylphx logout --all                   # revoke and forget every stored credential
-sylphx link --env orgs/…/envs/…       # defaults for this directory (.sylphx/project.json)
+sylphx auth status                   # first use discovers/provisions the default project and production environment
+sylphx link --env orgs/…/envs/…       # optional advanced target override for this directory
 sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
@@ -40,13 +41,27 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
 - `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]`: flags
   are the spec fields in dotted kebab-case (`--spec.compute-units`);
   `--from-file` takes a whole request; `--output table|json|yaml|name`.
-- A bare id (`main`) expands below the linked env; parents default to the
-  linked project, else the key's scope. The link is the nearest
-  `.sylphx/project.json` naming an org, project or env; a file in another
-  shape (such as `{orgId, projectId}`) is skipped with a warning.
-  `SYLPHX_ENVIRONMENT=orgs/…/projects/…/envs/…` (a full name) overrides the
-  link for that process, so a CI job or a build wrapper never depends on the
-  checkout's `.sylphx/project.json`.
+- First use follows the Vercel/Railway project-discovery pattern. After sign-in,
+  an environment-scoped command (including `auth status`) discovers the
+  selected org's `default` project and its `production` environment. When
+  there is no standard target, a single existing target is reused; an empty
+  collection is provisioned through public Access. Creation uses stable
+  idempotency keys, and a concurrent slug conflict is rediscovered.
+  The resolved full names are kept in `.sylphx/project.json`; reruns reuse them.
+  Automatic persistence is best-effort: if the destination cannot be written,
+  the command warns and uses the resolved context in memory; subsequent runs
+  rediscover it. An explicit `sylphx link` still fails if it cannot write the link.
+  Build's project-scoped commands bootstrap the project the same way.
+  Sylphx's own projects use this same public path, with no tenant special case.
+- Multiple existing projects/environments without a standard default require
+  a choice: the error lists their full names. Select one with
+  `sylphx link --project web --env production`, or pass an explicit full name.
+  Discovery never crosses the selected org/project, and `--org` does not
+  overwrite a checkout's link to another organization.
+- A bare id (`main`) expands below the resolved environment. Explicit resource
+  names and `--env` remain advanced overrides; `SYLPHX_ENVIRONMENT=orgs/…/projects/…/envs/…`
+  overrides the nearest link for that process and is never persisted. A link
+  in another shape (such as `{orgId, projectId}`) is skipped with a warning.
 - Mutations wait for their Operation (`--no-wait` to skip); `--dry-run` sets
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
