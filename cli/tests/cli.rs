@@ -1521,6 +1521,12 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         envd_process("hello from the build machine\n", 3),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
     ];
+    assert!(
+        TcpListener::bind(url.strip_prefix("http://").unwrap())
+            .await
+            .is_err(),
+        "the stub address must remain reserved during reply setup"
+    );
     let (url2, log) = serve_bytes_on(listener, replies).await;
     assert_eq!(url, url2);
     store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
