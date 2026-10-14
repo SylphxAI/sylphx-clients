@@ -55,6 +55,11 @@ request id.
 
 ## Develop
 
+`go.mod` owns the exact Go toolchain used by the provider release and the shared
+generator CI lane. That lane also builds the pinned AIP linter, so the Go pin
+must satisfy its minimum version. The runner's system Go only bootstraps the
+selected toolchain through `GOTOOLCHAIN`.
+
 ```sh
 go build ./... && go vet ./...
 go test ./...   # with a terraform CLI on PATH (or TF_ACC_TERRAFORM_PATH), the
