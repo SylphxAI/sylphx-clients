@@ -871,8 +871,9 @@ export interface MemoryProvenance {
 
 /**
  * A MemoryStore holds long-term memory records with provenance, recalled by
- * hybrid full-text and vector search. Agents name the stores they use; a
- * store may be shared by many agents.
+ * hybrid full-text and vector search. The records are Sylphx Knowledge
+ * episodes in the store's Knowledge spaces, read and written as the caller.
+ * Agents name the stores they use; a store may be shared by many agents.
  */
 export interface MemoryStore {
 	/** `orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}`. */
@@ -895,12 +896,15 @@ export interface MemoryStoreSpec {
 	scope?: MemoryScope
 	/**
 	 * Memories older than this since their last update are deleted, 1d to
-	 * 3650d; unset keeps them until deleted.
+	 * 3650d; unset keeps them until deleted. Not accepted yet: memories are
+	 * Knowledge episodes and Knowledge has no time-based deletion, so a set
+	 * value is refused with `INVALID_FIELD`.
 	 */
 	retention?: string
 	/**
 	 * Whether agents write memories themselves after each turn; otherwise
-	 * only callers write them.
+	 * only callers write them. Not accepted yet: the turn runtime has no
+	 * after-turn memory hook, so `true` is refused with `INVALID_FIELD`.
 	 */
 	agentWrites?: boolean
 }
@@ -913,7 +917,7 @@ export interface MemoryStoreStatus {
 	readonly conditions?: common.Condition[]
 	/** The number of memories. */
 	readonly memoryCount?: string
-	/** Bytes stored, content and index together; the billed quantity. */
+	/** Bytes of the memories' current content. Knowledge meters their storage. */
 	readonly storedBytes?: string
 }
 
@@ -1440,7 +1444,7 @@ export interface Tool {
 	inputSchema?: Record<string, unknown>
 	/**
 	 * A platform tool: `shell`, `files`, `browser`, `computer`, `web_fetch`,
-	 * `web_search` or `memory`.
+	 * `web_search`, `remember`, `recall`, `knowledge_search` or `skill_load`.
 	 */
 	builtin?: BuiltinTool
 	/** An HTTP API described by OpenAPI. */

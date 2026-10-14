@@ -10,7 +10,10 @@
 //!   `sylphx_call`;
 //! - **two docs tools**, `docs_search` and `docs_read`, when the server is
 //!   given a docs index (`SYLPHX_DOCS_INDEX`): Markdown indexed by heading in
-//!   a Sylphx Data search index, read through the Search API ([`docs`]).
+//!   a Sylphx Data search index, read through the Search API ([`docs`]);
+//! - **agent-native tools**, `knowledge_search` over the generated Knowledge
+//!   recall contract and `skill_load` over one immutable AgentVersion. They
+//!   preserve the catalog's served flags and the remote read-only boundary.
 //!
 //! Every call goes through the generated Rust SDK's one dynamic entry point
 //! ([`sylphx::Client::invoke`]); destructive methods require `confirm: true`.
@@ -27,6 +30,7 @@ use serde_json::{json, Map, Value};
 use sylphx::{Client, Error, HttpRequest, Transport};
 
 pub mod docs;
+mod knowledge;
 #[cfg(feature = "stdio")]
 mod stdio;
 #[cfg(feature = "stdio")]
@@ -229,6 +233,7 @@ impl<T: Transport> Server<T> {
         if self.docs.is_some() {
             tools.extend(docs_tools());
         }
+        tools.extend(self.agent_knowledge_tools());
         tools
     }
 
@@ -311,6 +316,7 @@ impl<T: Transport> Server<T> {
         };
         match name {
             "docs_search" | "docs_read" => Ok(self.call_docs(name, &args).await),
+            "knowledge_search" | "skill_load" => Ok(self.call_agent_knowledge(name, args).await),
             "sylphx_search_methods" => {
                 let query = args
                     .get("query")

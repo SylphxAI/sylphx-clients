@@ -99,7 +99,7 @@
       "name": "max_hops",
       "number": 6,
       "oneof": null,
-      "optional": false,
+      "optional": true,
       "repeated": false,
       "resource_reference": null,
       "sensitive": false,

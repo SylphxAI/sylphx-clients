@@ -39,6 +39,11 @@ async fn main() -> Result<(), sylphx::Error> {
   retry that would start past it returns the last answer instead (so its
   server message reaches the caller), and it never widens a shorter
   per-call `timeout` — whichever deadline ends first bounds the call.
+  The default HTTP client has a 5 s connect timeout and a 120 s whole-call
+  budget. Local socket deadlines include response bodies and retries on every
+  origin, including Data; protocol calls still omit Resource API headers.
+  A supplied HTTP client should set its own connect timeout; the transport
+  still enforces the configured or default whole-call budget.
 - `Client::invoke("data.databases.get", json!({"name": "…"}))` calls any
   method by id with wire JSON.
 - Sylphx Data's objects, key-value entries (strings, counters, hashes, lists,

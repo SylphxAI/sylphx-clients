@@ -2780,6 +2780,25 @@
       ]
     },
     {
+      "doc": "Whether a pinned claim is still current at its source.",
+      "name": "sylphx.knowledge.v1.ClaimFreshness",
+      "package": "sylphx.knowledge.v1",
+      "values": [
+        {
+          "doc": "The source exists at the pinned version.",
+          "number": 1,
+          "proto_name": "CLAIM_FRESHNESS_CURRENT",
+          "wire": "current"
+        },
+        {
+          "doc": "The source advanced, was deleted, or cannot be verified.",
+          "number": 2,
+          "proto_name": "CLAIM_FRESHNESS_STALE",
+          "wire": "stale"
+        }
+      ]
+    },
+    {
       "doc": "EntityLifecycle is whether an entity stands on its own.",
       "name": "sylphx.knowledge.v1.EntityLifecycle",
       "package": "sylphx.knowledge.v1",
@@ -13589,7 +13608,7 @@
       "package": "sylphx.agents.v1"
     },
     {
-      "doc": "A MemoryStore holds long-term memory records with provenance, recalled by\nhybrid full-text and vector search. Agents name the stores they use; a\nstore may be shared by many agents.",
+      "doc": "A MemoryStore holds long-term memory records with provenance, recalled by\nhybrid full-text and vector search. The records are Sylphx Knowledge\nepisodes in the store's Knowledge spaces, read and written as the caller.\nAgents name the stores they use; a store may be shared by many agents.",
       "fields": [
         {
           "behaviors": [
@@ -13736,7 +13755,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Memories older than this since their last update are deleted, 1d to\n3650d; unset keeps them until deleted.",
+          "doc": "Memories older than this since their last update are deleted, 1d to\n3650d; unset keeps them until deleted. Not accepted yet: memories are\nKnowledge episodes and Knowledge has no time-based deletion, so a set\nvalue is refused with `INVALID_FIELD`.",
           "filterable": false,
           "name": "retention",
           "number": 3,
@@ -13755,7 +13774,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Whether agents write memories themselves after each turn; otherwise\nonly callers write them.",
+          "doc": "Whether agents write memories themselves after each turn; otherwise\nonly callers write them. Not accepted yet: the turn runtime has no\nafter-turn memory hook, so `true` is refused with `INVALID_FIELD`.",
           "filterable": false,
           "name": "agent_writes",
           "number": 4,
@@ -13838,7 +13857,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Bytes stored, content and index together; the billed quantity.",
+          "doc": "Bytes of the memories' current content. Knowledge meters their storage.",
           "filterable": false,
           "name": "stored_bytes",
           "number": 11,
@@ -16805,7 +16824,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "A platform tool: `shell`, `files`, `browser`, `computer`, `web_fetch`,\n`web_search` or `memory`.",
+          "doc": "A platform tool: `shell`, `files`, `browser`, `computer`, `web_fetch`,\n`web_search`, `remember`, `recall`, `knowledge_search` or `skill_load`.",
           "filterable": false,
           "name": "builtin",
           "number": 4,
@@ -61932,9 +61951,126 @@
             "kind": "well_known",
             "wkt": "timestamp"
           }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Source pointers and their read-time freshness.",
+          "filterable": false,
+          "name": "sources",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.knowledge.v1.ClaimSource"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The facts this citation supports; answers cite their actual claims.",
+          "filterable": false,
+          "name": "claims",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": "knowledge.sylphx.com/Relation",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.knowledge.v1.Citation",
+      "package": "sylphx.knowledge.v1"
+    },
+    {
+      "doc": "Read-time state of a claim's source. Stale sources require re-reading.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The source pointer, including the version observed at ingestion.",
+          "filterable": false,
+          "name": "source",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.knowledge.v1.SourceRef"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The current version, empty when deleted or not verifiable.",
+          "filterable": false,
+          "name": "current_version",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Current only when the pinned and current source versions match.",
+          "filterable": false,
+          "name": "freshness",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.knowledge.v1.ClaimFreshness"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The consumer must open the source again before using the claim as current.",
+          "filterable": false,
+          "name": "reread_required",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.knowledge.v1.ClaimSource",
       "package": "sylphx.knowledge.v1"
     },
     {
@@ -62053,6 +62189,23 @@
           "type": {
             "kind": "message",
             "name": "sylphx.knowledge.v1.Citation"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "True when embeddings were unavailable and only lexical recall was used.",
+          "filterable": false,
+          "name": "semantic_unavailable",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],
@@ -65071,7 +65224,7 @@
           "name": "max_hops",
           "number": 6,
           "oneof": null,
-          "optional": false,
+          "optional": true,
           "repeated": false,
           "resource_reference": null,
           "sensitive": false,
@@ -65414,6 +65567,25 @@
             "kind": "well_known",
             "wkt": "timestamp"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Read-time verification of each supporting source; never persisted as authority.",
+          "filterable": false,
+          "name": "sources",
+          "number": 22,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.knowledge.v1.ClaimSource"
+          }
         }
       ],
       "name": "sylphx.knowledge.v1.Relation",
@@ -65533,6 +65705,25 @@
           "filterable": false,
           "name": "label",
           "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Immutable version of the source observed when this claim was recorded.",
+          "filterable": false,
+          "name": "pinned_version",
+          "number": 3,
           "oneof": null,
           "optional": false,
           "repeated": false,
@@ -128047,7 +128238,6 @@
               "request": "sylphx.agents.v1.GetMemoryStoreRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.MemoryStore",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -128096,7 +128286,6 @@
               "request": "sylphx.agents.v1.ListMemoryStoresRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.ListMemoryStoresResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -128144,7 +128333,6 @@
               "request": "sylphx.agents.v1.CreateMemoryStoreRequest",
               "resource_field": "memory_store",
               "response": "sylphx.agents.v1.MemoryStore",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "create"
@@ -128193,7 +128381,6 @@
               "request": "sylphx.agents.v1.UpdateMemoryStoreRequest",
               "resource_field": "memory_store",
               "response": "sylphx.agents.v1.MemoryStore",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "update"
@@ -128243,7 +128430,6 @@
               "request": "sylphx.agents.v1.DeleteMemoryStoreRequest",
               "resource_field": null,
               "response": "google.protobuf.Empty",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "delete"
@@ -128289,7 +128475,6 @@
               "request": "sylphx.agents.v1.GetMemoryRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.Memory",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -128338,7 +128523,6 @@
               "request": "sylphx.agents.v1.ListMemoriesRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.ListMemoriesResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -128386,7 +128570,6 @@
               "request": "sylphx.agents.v1.CreateMemoryRequest",
               "resource_field": "memory",
               "response": "sylphx.agents.v1.Memory",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "create"
@@ -128434,7 +128617,6 @@
               "request": "sylphx.agents.v1.UpdateMemoryRequest",
               "resource_field": "memory",
               "response": "sylphx.agents.v1.Memory",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "update"
@@ -128482,7 +128664,6 @@
               "request": "sylphx.agents.v1.DeleteMemoryRequest",
               "resource_field": null,
               "response": "google.protobuf.Empty",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "delete"
@@ -128523,7 +128704,6 @@
               "request": "sylphx.agents.v1.SearchMemoriesRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.SearchMemoriesResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "search"
@@ -142165,7 +142345,9 @@
                 "RATE_LIMITED",
                 "SPEND_LIMIT_REACHED",
                 "IDEMPOTENCY_KEY_REUSED",
-                "IDEMPOTENCY_IN_PROGRESS"
+                "IDEMPOTENCY_IN_PROGRESS",
+                "INVALID_STATE",
+                "UNAVAILABLE"
               ],
               "http": {
                 "body": "episode",
@@ -142187,7 +142369,7 @@
               "id": "knowledge.episodes.create",
               "kind": "create",
               "lro": null,
-              "mcp": "default",
+              "mcp": "core",
               "page": null,
               "permission": "knowledge:write",
               "porcelain": {
@@ -142354,7 +142536,9 @@
                 "INVALID_FIELD",
                 "RESOURCE_ALREADY_EXISTS",
                 "IDEMPOTENCY_KEY_REUSED",
-                "IDEMPOTENCY_IN_PROGRESS"
+                "IDEMPOTENCY_IN_PROGRESS",
+                "INVALID_STATE",
+                "UNAVAILABLE"
               ],
               "http": {
                 "body": "entity",
@@ -142622,7 +142806,10 @@
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
                 "INVALID_FIELD",
-                "RATE_LIMITED"
+                "RATE_LIMITED",
+                "INVALID_STATE",
+                "UNAVAILABLE",
+                "RESOURCE_NOT_FOUND"
               ],
               "http": {
                 "body": "*",
@@ -142640,7 +142827,7 @@
               "id": "knowledge.entities.recall",
               "kind": "custom",
               "lro": null,
-              "mcp": "default",
+              "mcp": "core",
               "page": null,
               "permission": "knowledge:read",
               "porcelain": {
@@ -142667,7 +142854,10 @@
                 "PERMISSION_DENIED",
                 "INVALID_FIELD",
                 "RATE_LIMITED",
-                "SPEND_LIMIT_REACHED"
+                "SPEND_LIMIT_REACHED",
+                "INVALID_STATE",
+                "UNAVAILABLE",
+                "RESOURCE_NOT_FOUND"
               ],
               "http": {
                 "body": "*",
@@ -142808,7 +142998,9 @@
                 "INVALID_FIELD",
                 "RESOURCE_ALREADY_EXISTS",
                 "IDEMPOTENCY_KEY_REUSED",
-                "IDEMPOTENCY_IN_PROGRESS"
+                "IDEMPOTENCY_IN_PROGRESS",
+                "INVALID_STATE",
+                "UNAVAILABLE"
               ],
               "http": {
                 "body": "relation",
@@ -142953,7 +143145,6 @@
       "proto_services": [
         "sylphx.knowledge.v1.KnowledgeService"
       ],
-      "served": false,
       "stage": "preview"
     },
     {

@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.knowledge.v1.ClaimFreshness",
+  "package": "sylphx.knowledge.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CLAIM_FRESHNESS_CURRENT",
+      "wire": "current"
+    },
+    {
+      "number": 2,
+      "proto_name": "CLAIM_FRESHNESS_STALE",
+      "wire": "stale"
+    }
+  ]
+}

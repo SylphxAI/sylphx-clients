@@ -618,6 +618,9 @@ fn lookup<'v>(
     Some(cur)
 }
 
+#[cfg(feature = "http")]
+const DEFAULT_SOCKET_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+
 /// The production transport: HTTPS to `https://api.sylphx.com` (spec §3.1).
 #[cfg(feature = "http")]
 #[derive(Debug, Clone)]
@@ -669,7 +672,9 @@ impl HttpTransportBuilder {
         self.api_version = Some(date.into());
         self
     }
-    /// The whole-call deadline, retries included; sent as `Sylphx-Request-Timeout`.
+    /// The whole-call deadline, including response bodies and retries, for every
+    /// origin (default 120s). Explicit deadlines are sent as
+    /// `Sylphx-Request-Timeout` only to the Resource API.
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = Some(timeout);
         self
@@ -679,7 +684,8 @@ impl HttpTransportBuilder {
         self.max_retries = Some(n);
         self
     }
-    /// A preconfigured reqwest client (proxies, extra roots).
+    /// A preconfigured reqwest client (proxies, extra roots). Configure its
+    /// connect and total socket timeouts; `timeout` still bounds the whole call.
     pub fn http_client(mut self, client: reqwest::Client) -> Self {
         self.http = Some(client);
         self
@@ -689,6 +695,8 @@ impl HttpTransportBuilder {
             Some(c) => c,
             None => reqwest::Client::builder()
                 .user_agent(concat!("sylphx-rust/", env!("CARGO_PKG_VERSION")))
+                .connect_timeout(std::time::Duration::from_secs(5))
+                .timeout(DEFAULT_SOCKET_TIMEOUT)
                 .build()
                 .map_err(|e| Error::Transport(e.to_string()))?,
         };
@@ -833,16 +841,19 @@ impl HttpTransport {
         {
             rb = rb.header(k.as_str(), v.as_str());
         }
-        if let Some(deadline) = deadline.filter(|_| !protocol) {
+        if let Some(deadline) = deadline {
             let left = deadline.saturating_duration_since(std::time::Instant::now());
             if left.is_zero() {
                 return Err(Error::Transport(
                     "deadline exceeded before the request was sent".into(),
                 ));
             }
-            rb = rb
-                .timeout(left)
-                .header("Sylphx-Request-Timeout", left.as_millis().to_string());
+            // A protocol origin omits Resource API headers, not local socket
+            // deadlines. Reqwest's request timeout includes the response body.
+            rb = rb.timeout(left);
+            if !protocol && (self.timeout.is_some() || self.deadline.is_some()) {
+                rb = rb.header("Sylphx-Request-Timeout", left.as_millis().to_string());
+            }
         }
         if let Some(body) = &request.body {
             rb = rb.json(body);
@@ -913,7 +924,7 @@ impl HttpTransport {
             (Some(d), Some(t)) => Some(d.min(std::time::Instant::now() + t)),
             (Some(d), None) => Some(d),
             (None, Some(t)) => Some(std::time::Instant::now() + t),
-            (None, None) => None,
+            (None, None) => Some(std::time::Instant::now() + DEFAULT_SOCKET_TIMEOUT),
         };
         let mut attempt = 0u32;
         loop {

@@ -45,6 +45,22 @@ export interface Citation {
 	score?: number
 	/** When the episode happened. */
 	occurTime?: string
+	/** Source pointers and their read-time freshness. */
+	sources?: ClaimSource[]
+	/** The facts this citation supports; answers cite their actual claims. */
+	claims?: string[]
+}
+
+/** Read-time state of a claim's source. Stale sources require re-reading. */
+export interface ClaimSource {
+	/** The source pointer, including the version observed at ingestion. */
+	readonly source?: SourceRef
+	/** The current version, empty when deleted or not verifiable. */
+	readonly currentVersion?: string
+	/** Current only when the pinned and current source versions match. */
+	readonly freshness?: ClaimFreshness
+	/** The consumer must open the source again before using the claim as current. */
+	readonly rereadRequired?: boolean
 }
 
 /** The request of CloseRelation. */
@@ -68,6 +84,8 @@ export interface ContextPack {
 	facts?: Relation[]
 	/** The episodes the facts and entities come from. */
 	citations?: Citation[]
+	/** True when embeddings were unavailable and only lexical recall was used. */
+	semanticUnavailable?: boolean
 }
 
 /** The request of CreateEntity. */
@@ -666,6 +684,8 @@ export interface Relation {
 	readonly createTime?: string
 	/** When the fact was replaced by a newer record; unset while current. */
 	readonly supersedeTime?: string
+	/** Read-time verification of each supporting source; never persisted as authority. */
+	readonly sources?: ClaimSource[]
 }
 
 /** A RelationTypeDefinition is one relation type of a schema. */
@@ -689,6 +709,8 @@ export interface SourceRef {
 	uri?: string
 	/** A short label to show with a citation. */
 	label?: string
+	/** Immutable version of the source observed when this claim was recorded. */
+	pinnedVersion?: string
 }
 
 /**
@@ -830,6 +852,9 @@ export interface UpdateSpaceRequest {
 /** Channel is the path a write took. */
 export type Channel = 'api' | 'tool' | 'import' | 'extraction' | (string & {})
 
+/** Whether a pinned claim is still current at its source. */
+export type ClaimFreshness = 'current' | 'stale' | (string & {})
+
 /** EntityLifecycle is whether an entity stands on its own. */
 export type EntityLifecycle = 'active' | 'merged' | (string & {})
 
@@ -858,6 +883,12 @@ runtime.registerSchemas({
 	],
 	'sylphx.knowledge.v1.Citation': [
 		['occurTime', 'occur_time'],
+		['sources', 'sources', 'sylphx.knowledge.v1.ClaimSource'],
+	],
+	'sylphx.knowledge.v1.ClaimSource': [
+		['source', 'source', 'sylphx.knowledge.v1.SourceRef'],
+		['currentVersion', 'current_version'],
+		['rereadRequired', 'reread_required'],
 	],
 	'sylphx.knowledge.v1.CloseRelationRequest': [
 		['validEndTime', 'valid_end_time'],
@@ -866,6 +897,7 @@ runtime.registerSchemas({
 		['entities', 'entities', 'sylphx.knowledge.v1.Entity'],
 		['facts', 'facts', 'sylphx.knowledge.v1.Relation'],
 		['citations', 'citations', 'sylphx.knowledge.v1.Citation'],
+		['semanticUnavailable', 'semantic_unavailable'],
 	],
 	'sylphx.knowledge.v1.CreateEntityRequest': [
 		['entityId', 'entity_id'],
@@ -1029,12 +1061,15 @@ runtime.registerSchemas({
 		['provenance', 'provenance', 'sylphx.knowledge.v1.Provenance'],
 		['createTime', 'create_time'],
 		['supersedeTime', 'supersede_time'],
+		['sources', 'sources', 'sylphx.knowledge.v1.ClaimSource'],
 	],
 	'sylphx.knowledge.v1.RelationTypeDefinition': [
 		['subjectTypes', 'subject_types'],
 		['objectTypes', 'object_types'],
 	],
-	'sylphx.knowledge.v1.SourceRef': [],
+	'sylphx.knowledge.v1.SourceRef': [
+		['pinnedVersion', 'pinned_version'],
+	],
 	'sylphx.knowledge.v1.Space': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.knowledge.v1.SpaceSpec'],
@@ -1115,7 +1150,7 @@ export class KnowledgeApi {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/spaces/*}/episodes` · permission `knowledge:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
 	 *
 	 * Short name of `sx.knowledge.episodes.create`.
 	 */
@@ -1162,7 +1197,7 @@ export class KnowledgeApi {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/entities:recall` · permission `knowledge:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
 	 *
 	 * Short name of `sx.knowledge.entities.recall`.
 	 */
@@ -1183,7 +1218,7 @@ export class KnowledgeApi {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/entities:ask` · permission `knowledge:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
 	 *
 	 * Short name of `sx.knowledge.entities.ask`.
 	 */
@@ -1205,7 +1240,7 @@ export class KnowledgeApi {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/spaces/*}/relations` · permission `knowledge:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
 	 *
 	 * Short name of `sx.knowledge.relations.create`.
 	 */
@@ -1522,7 +1557,7 @@ export class EpisodesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/spaces/*}/episodes` · permission `knowledge:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
 	 *
 	 * Also `sx.knowledge.remember`.
 	 */
@@ -1616,7 +1651,7 @@ export class EntitiesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/entities` · permission `knowledge:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
 	 */
 	async create(request: CreateEntityRequest): Promise<Entity> {
 		return this.client.call<Entity>({
@@ -1739,7 +1774,7 @@ export class EntitiesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/entities:recall` · permission `knowledge:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
 	 *
 	 * Also `sx.knowledge.recall`.
 	 */
@@ -1760,7 +1795,7 @@ export class EntitiesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/entities:ask` · permission `knowledge:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
 	 *
 	 * Also `sx.knowledge.ask`.
 	 */
@@ -1837,7 +1872,7 @@ export class RelationsCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/spaces/*}/relations` · permission `knowledge:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
 	 *
 	 * Also `sx.knowledge.relate`.
 	 */

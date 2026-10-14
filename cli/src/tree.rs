@@ -499,7 +499,8 @@ mod tests {
             .iter()
             .find(|c| c.collection == "memories")
             .unwrap();
-        assert!(memories.commands.iter().all(|m| !m.served));
+        // Memory is served over Sylphx Knowledge.
+        assert!(memories.commands.iter().all(|m| m.served));
         let management = agents
             .collections
             .iter()

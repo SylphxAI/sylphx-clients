@@ -2619,7 +2619,6 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
-              "served": false,
               "summary": "Gets a memory store.",
               "verb": "get"
             },
@@ -2662,7 +2661,6 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
-              "served": false,
               "summary": "Lists memory stores.",
               "verb": "list"
             },
@@ -2718,13 +2716,13 @@
                 {
                   "field": "memory_store.spec.retention",
                   "flag": "--spec.retention",
-                  "summary": "Memories older than this since their last update are deleted, 1d to 3650d; unset keeps them until deleted.",
+                  "summary": "Memories older than this since their last update are deleted, 1d to 3650d; unset keeps them until deleted. Not accepted yet: memories are Knowledge episodes and Knowledge has no time-based deletion, so a set value is refused with `INVALID_FIELD`.",
                   "type": "duration"
                 },
                 {
                   "field": "memory_store.spec.agent_writes",
                   "flag": "--spec.agent-writes",
-                  "summary": "Whether agents write memories themselves after each turn; otherwise only callers write them.",
+                  "summary": "Whether agents write memories themselves after each turn; otherwise only callers write them. Not accepted yet: the turn runtime has no after-turn memory hook, so `true` is refused with `INVALID_FIELD`.",
                   "type": "bool"
                 },
                 {
@@ -2744,7 +2742,6 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "memory_store",
-              "served": false,
               "summary": "Creates a memory store.",
               "verb": "create"
             },
@@ -2792,13 +2789,13 @@
                 {
                   "field": "memory_store.spec.retention",
                   "flag": "--spec.retention",
-                  "summary": "Memories older than this since their last update are deleted, 1d to 3650d; unset keeps them until deleted.",
+                  "summary": "Memories older than this since their last update are deleted, 1d to 3650d; unset keeps them until deleted. Not accepted yet: memories are Knowledge episodes and Knowledge has no time-based deletion, so a set value is refused with `INVALID_FIELD`.",
                   "type": "duration"
                 },
                 {
                   "field": "memory_store.spec.agent_writes",
                   "flag": "--spec.agent-writes",
-                  "summary": "Whether agents write memories themselves after each turn; otherwise only callers write them.",
+                  "summary": "Whether agents write memories themselves after each turn; otherwise only callers write them. Not accepted yet: the turn runtime has no after-turn memory hook, so `true` is refused with `INVALID_FIELD`.",
                   "type": "bool"
                 },
                 {
@@ -2825,7 +2822,6 @@
               },
               "resource_field": "memory_store",
               "sends_etag": true,
-              "served": false,
               "summary": "Updates a memory store.",
               "update_mask": "from-flags",
               "verb": "update"
@@ -2871,7 +2867,6 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
-              "served": false,
               "summary": "Deletes a memory store. A store an agent names is refused with `RESOURCE_IN_USE`; a store with memories is refused with `INVALID_STATE` unless `force` is set, which deletes them too.",
               "verb": "delete"
             }
@@ -2894,7 +2889,6 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}"
               },
-              "served": false,
               "summary": "Gets a memory.",
               "verb": "get"
             },
@@ -2931,7 +2925,6 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
-              "served": false,
               "summary": "Lists a store's memories, newest first. With a publishable key, only the caller's end user's memories.",
               "verb": "list"
             },
@@ -3002,7 +2995,6 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "memory",
-              "served": false,
               "summary": "Writes a memory.",
               "verb": "create"
             },
@@ -3054,7 +3046,6 @@
               },
               "resource_field": "memory",
               "sends_etag": true,
-              "served": false,
               "summary": "Changes a memory's content.",
               "update_mask": "from-flags",
               "verb": "update"
@@ -3094,7 +3085,6 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}/memories/{memory}"
               },
-              "served": false,
               "summary": "Deletes a memory. An end user may delete their own.",
               "verb": "delete"
             },
@@ -3142,7 +3132,6 @@
                 "field": "parent",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/memory_stores/{memory_store}"
               },
-              "served": false,
               "summary": "Recalls the memories that best match a query, by hybrid full-text and vector search. With a publishable key, only the caller's end user's memories. A read with a request body, like a query.",
               "verb": "search"
             }
@@ -16353,7 +16342,6 @@
           "verb": "close-fact"
         }
       ],
-      "served": false,
       "stage": "preview"
     },
     {

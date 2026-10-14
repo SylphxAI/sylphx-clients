@@ -69,6 +69,46 @@ pub struct Citation {
         alias = "occurTime"
     )]
     pub occur_time: String,
+    /// Source pointers and their read-time freshness.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<ClaimSource>,
+    /// The facts this citation supports; answers cite their actual claims.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub claims: Vec<String>,
+}
+
+/// Read-time state of a claim's source. Stale sources require re-reading.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ClaimSource {
+    /// The source pointer, including the version observed at ingestion.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<SourceRef>,
+    /// The current version, empty when deleted or not verifiable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currentVersion"
+    )]
+    pub current_version: String,
+    /// Current only when the pinned and current source versions match.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freshness: Option<ClaimFreshness>,
+    /// The consumer must open the source again before using the claim as current.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "rereadRequired"
+    )]
+    pub reread_required: bool,
 }
 
 /// The request of CloseRelation.
@@ -106,6 +146,13 @@ pub struct ContextPack {
     /// The episodes the facts and entities come from.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub citations: Vec<Citation>,
+    /// True when embeddings were unavailable and only lexical recall was used.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "semanticUnavailable"
+    )]
+    pub semantic_unavailable: bool,
 }
 
 /// The request of CreateEntity.
@@ -1161,12 +1208,8 @@ pub struct RecallEntitiesRequest {
     )]
     pub valid_time: String,
     /// How many hops to expand from the top entities, 0 to 2; default 2.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "maxHops"
-    )]
-    pub max_hops: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "maxHops")]
+    pub max_hops: Option<i32>,
     /// At most this many facts in the pack; default 30, clamped to 200.
     #[serde(
         default,
@@ -1273,6 +1316,11 @@ pub struct Relation {
         alias = "supersedeTime"
     )]
     pub supersede_time: String,
+    /// Read-time verification of each supporting source; never persisted as authority.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<ClaimSource>,
 }
 
 /// A RelationTypeDefinition is one relation type of a schema.
@@ -1308,6 +1356,13 @@ pub struct SourceRef {
     /// A short label to show with a citation.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub label: String,
+    /// Immutable version of the source observed when this claim was recorded.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pinnedVersion"
+    )]
+    pub pinned_version: String,
 }
 
 /// A Space is the permission container of the graph: a workspace, a project, a
@@ -1629,6 +1684,57 @@ impl<'de> serde::Deserialize<'de> for Channel {
 }
 
 impl crate::runtime::QueryValue for Channel {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Whether a pinned claim is still current at its source.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ClaimFreshness {
+    /// The source exists at the pinned version.
+    Current,
+    /// The source advanced, was deleted, or cannot be verified.
+    Stale,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl ClaimFreshness {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Current => "current",
+            Self::Stale => "stale",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "current" => Self::Current,
+            "stale" => Self::Stale,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for ClaimFreshness {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ClaimFreshness {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for ClaimFreshness {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
@@ -2016,7 +2122,7 @@ impl<'a, T: crate::runtime::Transport> KnowledgeApi<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/episodes` · permission `knowledge:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
     ///
     /// Short name of `sx.knowledge().episodes().create()`.
     pub async fn remember(
@@ -2089,7 +2195,7 @@ impl<'a, T: crate::runtime::Transport> KnowledgeApi<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:recall` · permission `knowledge:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
     ///
     /// Short name of `sx.knowledge().entities().recall()`.
     pub async fn recall(
@@ -2118,7 +2224,7 @@ impl<'a, T: crate::runtime::Transport> KnowledgeApi<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:ask` · permission `knowledge:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
     ///
     /// Short name of `sx.knowledge().entities().ask()`.
     pub async fn ask(
@@ -2148,7 +2254,7 @@ impl<'a, T: crate::runtime::Transport> KnowledgeApi<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/relations` · permission `knowledge:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
     ///
     /// Short name of `sx.knowledge().relations().create()`.
     pub async fn relate(
@@ -2693,7 +2799,7 @@ impl<'a, T: crate::runtime::Transport> EpisodesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/episodes` · permission `knowledge:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
     ///
     /// Also `sx.knowledge().remember()`.
     pub async fn create(
@@ -2844,7 +2950,7 @@ impl<'a, T: crate::runtime::Transport> EntitiesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entities` · permission `knowledge:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
     pub async fn create(
         &self,
         request: CreateEntityRequest,
@@ -3048,7 +3154,7 @@ impl<'a, T: crate::runtime::Transport> EntitiesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:recall` · permission `knowledge:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
     ///
     /// Also `sx.knowledge().recall()`.
     pub async fn recall(
@@ -3077,7 +3183,7 @@ impl<'a, T: crate::runtime::Transport> EntitiesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:ask` · permission `knowledge:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RATE_LIMITED`, `SPEND_LIMIT_REACHED`, `INVALID_STATE`, `UNAVAILABLE`, `RESOURCE_NOT_FOUND`.
     ///
     /// Also `sx.knowledge().ask()`.
     pub async fn ask(
@@ -3197,7 +3303,7 @@ impl<'a, T: crate::runtime::Transport> RelationsCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/relations` · permission `knowledge:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `INVALID_STATE`, `UNAVAILABLE`.
     ///
     /// Also `sx.knowledge().relate()`.
     pub async fn create(

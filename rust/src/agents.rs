@@ -1721,8 +1721,9 @@ pub struct MemoryProvenance {
 }
 
 /// A MemoryStore holds long-term memory records with provenance, recalled by
-/// hybrid full-text and vector search. Agents name the stores they use; a
-/// store may be shared by many agents.
+/// hybrid full-text and vector search. The records are Sylphx Knowledge
+/// episodes in the store's Knowledge spaces, read and written as the caller.
+/// Agents name the stores they use; a store may be shared by many agents.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct MemoryStore {
@@ -1764,11 +1765,14 @@ pub struct MemoryStoreSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<MemoryScope>,
     /// Memories older than this since their last update are deleted, 1d to
-    /// 3650d; unset keeps them until deleted.
+    /// 3650d; unset keeps them until deleted. Not accepted yet: memories are
+    /// Knowledge episodes and Knowledge has no time-based deletion, so a set
+    /// value is refused with `INVALID_FIELD`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub retention: String,
     /// Whether agents write memories themselves after each turn; otherwise
-    /// only callers write them.
+    /// only callers write them. Not accepted yet: the turn runtime has no
+    /// after-turn memory hook, so `true` is refused with `INVALID_FIELD`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -1806,7 +1810,7 @@ pub struct MemoryStoreStatus {
         alias = "memoryCount"
     )]
     pub memory_count: i64,
-    /// Bytes stored, content and index together; the billed quantity.
+    /// Bytes of the memories' current content. Knowledge meters their storage.
     ///
     /// Field behavior: `output_only`.
     #[serde(
@@ -2906,7 +2910,7 @@ pub struct Tool {
     )]
     pub input_schema: Option<serde_json::Value>,
     /// A platform tool: `shell`, `files`, `browser`, `computer`, `web_fetch`,
-    /// `web_search` or `memory`.
+    /// `web_search`, `remember`, `recall`, `knowledge_search` or `skill_load`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub builtin: Option<BuiltinTool>,
     /// An HTTP API described by OpenAPI.

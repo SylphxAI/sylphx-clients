@@ -28,6 +28,15 @@ Or by hand (stdio):
   every other method without flooding the context.
 - Tool annotations come from each method's effect; destructive calls need
   `confirm: true`.
+- `knowledge_remember` and `knowledge_recall` expose the generated Knowledge
+  episode/recall requests directly. `knowledge_search` uses the same recall
+  contract: readable spaces only, bounded expansion, episode citations, and
+  source freshness. A stale claim is a pointer to re-read, not a current fact.
+- `skill_load` takes `agent_version` (the immutable version pinned by the
+  session) and `name`, returning only that version's selected skill. It never
+  fetches mutable instructions from an arbitrary URL. Remote MCP keeps search,
+  recall, and skill loading read-only; remembering requires a local API-key
+  connection and the ordinary Knowledge write permission.
 - `docs_search` and `docs_read`, read-only, when `SYLPHX_DOCS_INDEX` names a
   search index of the key's environment (and `SYLPHX_DOCS_SOURCE` a source,
   when the index holds several): Markdown docs chunked by heading, answered

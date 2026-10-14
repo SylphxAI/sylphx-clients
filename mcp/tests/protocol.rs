@@ -365,3 +365,70 @@ async fn remote_refuses_writes_and_unserved_methods_and_hides_them() {
         .iter()
         .all(|t| t["name"] != "data_databases_create"));
 }
+
+#[tokio::test]
+async fn skill_load_returns_one_pinned_skill_not_the_other_instructions() {
+    let version = "orgs/o/projects/p/envs/e/agents/a/agent_versions/v";
+    let s = server(vec![(
+        200,
+        json!({"name":version,"spec":{"skills":[
+        {"name":"delivery","instructions":"immutable delivery instructions"},
+        {"name":"other","instructions":"not requested"}]}}),
+    )]);
+    let r = call(
+        &s,
+        "tools/call",
+        json!({"name":"skill_load","arguments":{
+        "agent_version":version,"name":"delivery"}}),
+    )
+    .await;
+    assert_eq!(r["result"]["isError"], false);
+    assert_eq!(
+        r["result"]["structuredContent"]["skill"]["instructions"],
+        "immutable delivery instructions"
+    );
+    assert_eq!(r["result"]["structuredContent"]["agent_version"], version);
+    assert!(!r["result"]["content"].to_string().contains("not requested"));
+}
+
+#[tokio::test]
+async fn skill_load_rejects_mutable_agent_reference() {
+    let s = server(vec![]);
+    let r = call(
+        &s,
+        "tools/call",
+        json!({"name":"skill_load","arguments":{
+        "agent_version":"orgs/o/projects/p/envs/e/agents/a","name":"delivery"}}),
+    )
+    .await;
+    assert_eq!(r["result"]["isError"], true);
+}
+
+#[tokio::test]
+async fn knowledge_search_uses_generated_recall_with_citations() {
+    let s = server(vec![(
+        200,
+        json!({"context":{"citations":[{"episode":"readable"}]}}),
+    )]);
+    let r = call(&s,"tools/call",json!({"name":"knowledge_search","arguments":{
+        "parent":"orgs/o/projects/p/envs/e","query":"customer preference","max_hops":0,"max_facts":2}})).await;
+    assert_eq!(r["result"]["isError"], false);
+    assert_eq!(
+        r["result"]["structuredContent"]["context"]["citations"][0]["episode"],
+        "readable"
+    );
+}
+
+#[tokio::test]
+async fn remote_knowledge_tools_are_read_only() {
+    let s = Server::remote(None::<Client<Recorder>>);
+    let names: Vec<Value> = s
+        .tools()
+        .into_iter()
+        .map(|tool| tool["name"].clone())
+        .collect();
+    assert!(names.contains(&json!("knowledge_search")));
+    assert!(names.contains(&json!("knowledge_recall")));
+    assert!(names.contains(&json!("skill_load")));
+    assert!(!names.contains(&json!("knowledge_remember")));
+}

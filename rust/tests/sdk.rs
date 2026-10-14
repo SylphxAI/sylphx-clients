@@ -375,21 +375,48 @@ mod http {
         body: String,
     }
 
+    enum Reply {
+        Json {
+            status: u16,
+            extra: &'static str,
+            body: serde_json::Value,
+            delay: std::time::Duration,
+        },
+        StallHeaders,
+        StallBody,
+    }
+
     /// Serves `replies` in order, one per connection, recording requests.
     async fn serve(
         replies: Vec<(u16, &'static str, serde_json::Value)>,
     ) -> (String, Arc<Mutex<Vec<Seen>>>) {
+        serve_script(
+            replies
+                .into_iter()
+                .map(|(status, extra, body)| Reply::Json {
+                    status,
+                    extra,
+                    body,
+                    delay: std::time::Duration::ZERO,
+                })
+                .collect(),
+        )
+        .await
+    }
+
+    async fn serve_script(replies: Vec<Reply>) -> (String, Arc<Mutex<Vec<Seen>>>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let seen = Arc::new(Mutex::new(Vec::new()));
         let log = seen.clone();
         tokio::spawn(async move {
-            for (status, extra, body) in replies {
+            for reply in replies {
                 let (mut sock, _) = listener.accept().await.unwrap();
                 let mut buf = Vec::new();
                 let mut chunk = [0u8; 4096];
                 let (head, body_in) = loop {
                     let n = sock.read(&mut chunk).await.unwrap();
+                    assert_ne!(n, 0, "client disconnected before sending its request");
                     buf.extend_from_slice(&chunk[..n]);
                     let text = String::from_utf8_lossy(&buf).to_string();
                     if let Some(i) = text.find("\r\n\r\n") {
@@ -404,6 +431,7 @@ mod http {
                             .unwrap_or(0);
                         while buf.len() < i + 4 + len {
                             let n = sock.read(&mut chunk).await.unwrap();
+                            assert_ne!(n, 0, "client disconnected before sending its body");
                             buf.extend_from_slice(&chunk[..n]);
                         }
                         break (
@@ -416,6 +444,26 @@ mod http {
                     head,
                     body: body_in,
                 });
+                let (status, extra, body) = match reply {
+                    Reply::Json {
+                        status,
+                        extra,
+                        body,
+                        delay,
+                    } => {
+                        tokio::time::sleep(delay).await;
+                        (status, extra, body)
+                    }
+                    Reply::StallHeaders | Reply::StallBody => {
+                        if matches!(reply, Reply::StallBody) {
+                            sock.write_all(b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 100\r\nconnection: close\r\n\r\n{").await.unwrap();
+                        }
+                        // Keep the response incomplete until the client deadline
+                        // closes the socket, without a server-side timer.
+                        let _ = sock.read_to_end(&mut Vec::new()).await;
+                        continue;
+                    }
+                };
                 let payload = body.to_string();
                 let ctype = if status >= 400 {
                     "application/problem+json"
@@ -426,7 +474,9 @@ mod http {
                     "HTTP/1.1 {status} X\r\ncontent-type: {ctype}\r\ncontent-length: {}\r\nsylphx-request-id: req_{status}\r\nconnection: close\r\n{extra}\r\n{payload}",
                     payload.len()
                 );
-                sock.write_all(resp.as_bytes()).await.unwrap();
+                if sock.write_all(resp.as_bytes()).await.is_err() {
+                    break;
+                }
                 sock.shutdown().await.ok();
             }
         });
@@ -600,6 +650,165 @@ mod http {
             }
             other => panic!("{other}"),
         }
+        assert_eq!(seen.lock().unwrap().len(), 1);
+    }
+
+    async fn deadline_read(client: &Client, protocol: bool) -> Result<(), Error> {
+        if protocol {
+            let mut request = sylphx::data::GetValueRequest::default();
+            request.namespace_id = "deadlines".into();
+            request.key = "test".into();
+            client.data().kv().get(request).await.map(|_| ())
+        } else {
+            client.invoke("access.whoami", json!({})).await.map(|_| ())
+        }
+    }
+
+    #[tokio::test]
+    async fn socket_deadlines_cover_stalled_headers_and_bodies_on_every_origin() {
+        use std::time::{Duration, Instant};
+
+        for protocol in [false, true] {
+            for custom_http in [false, true] {
+                for shared_deadline in [false, true] {
+                    for stall_body in [false, true] {
+                        let reply = if stall_body {
+                            Reply::StallBody
+                        } else {
+                            Reply::StallHeaders
+                        };
+                        let (url, seen) = serve_script(vec![reply]).await;
+                        let mut builder = HttpTransport::builder()
+                            .base_url(&url)
+                            .origin("https://api.data.sylphx.com", &url)
+                            .api_key("sylphx_sk_test")
+                            .api_version("2026-10-01")
+                            .max_retries(0);
+                        if custom_http {
+                            // No client-level timeout: the transport's call budget
+                            // must work even with a caller-supplied HTTP client.
+                            builder = builder.http_client(
+                                reqwest::Client::builder().no_proxy().build().unwrap(),
+                            );
+                        }
+                        if !shared_deadline {
+                            builder = builder.timeout(Duration::from_millis(100));
+                        }
+                        let client = Client::new(builder.build().unwrap()).with_deadline(
+                            Instant::now()
+                                + if shared_deadline {
+                                    Duration::from_millis(100)
+                                } else {
+                                    Duration::from_secs(60)
+                                },
+                        );
+                        let error = tokio::time::timeout(
+                            Duration::from_secs(2),
+                            deadline_read(&client, protocol),
+                        )
+                        .await
+                        .expect("a stalled socket must obey the call deadline")
+                        .unwrap_err();
+                        assert!(matches!(error, Error::Transport(_)), "{error}");
+                        let seen = seen.lock().unwrap();
+                        assert_eq!(seen.len(), 1);
+                        assert_eq!(header(&seen[0].head, "sylphx-version").is_some(), !protocol);
+                        let budget = header(&seen[0].head, "sylphx-request-timeout");
+                        if protocol {
+                            assert!(
+                                budget.is_none(),
+                                "protocol headers stay separate from local deadlines"
+                            );
+                            assert!(header(&seen[0].head, "idempotency-key").is_none());
+                        } else {
+                            assert!(budget.unwrap().parse::<u64>().unwrap() <= 100);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn retries_share_the_remaining_socket_budget_on_every_origin() {
+        use std::time::Duration;
+
+        for protocol in [false, true] {
+            let (url, seen) = serve_script(vec![
+                Reply::Json {
+                    status: 503,
+                    extra: "retry-after: 0\r\n",
+                    body: json!({}),
+                    delay: Duration::from_millis(600),
+                },
+                // This succeeds if each attempt incorrectly gets a fresh 1200ms.
+                Reply::Json {
+                    status: 200,
+                    extra: "",
+                    body: json!({}),
+                    delay: Duration::from_millis(900),
+                },
+            ])
+            .await;
+            let client = Client::new(
+                HttpTransport::builder()
+                    .base_url(&url)
+                    .origin("https://api.data.sylphx.com", &url)
+                    .http_client(reqwest::Client::builder().no_proxy().build().unwrap())
+                    .timeout(Duration::from_millis(1200))
+                    .max_retries(1)
+                    .build()
+                    .unwrap(),
+            );
+            let error =
+                tokio::time::timeout(Duration::from_secs(3), deadline_read(&client, protocol))
+                    .await
+                    .expect("retries must not extend the call budget")
+                    .unwrap_err();
+            assert!(matches!(error, Error::Transport(_)), "{error}");
+            let seen = seen.lock().unwrap();
+            assert_eq!(seen.len(), 2, "the retry must actually reach the server");
+            if protocol {
+                assert!(seen
+                    .iter()
+                    .all(|request| header(&request.head, "sylphx-request-timeout").is_none()));
+            } else {
+                let first: u64 = header(&seen[0].head, "sylphx-request-timeout")
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                let second: u64 = header(&seen[1].head, "sylphx-request-timeout")
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                assert!(second < first, "retry budget must shrink");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn protocol_retry_after_outside_the_budget_keeps_the_server_answer() {
+        use std::time::Duration;
+
+        let (url, seen) = serve(vec![(
+            503,
+            "retry-after: 30\r\n",
+            json!({"error":{"code":"unavailable","message":"retry later"}}),
+        )])
+        .await;
+        let client = Client::new(
+            HttpTransport::builder()
+                .origin("https://api.data.sylphx.com", &url)
+                .timeout(Duration::from_millis(100))
+                .max_retries(3)
+                .build()
+                .unwrap(),
+        );
+        let error = tokio::time::timeout(Duration::from_secs(2), deadline_read(&client, true))
+            .await
+            .expect("Retry-After must not be slept past the deadline")
+            .unwrap_err();
+        assert!(matches!(error, Error::Api { status: 503, .. }), "{error}");
         assert_eq!(seen.lock().unwrap().len(), 1);
     }
 
