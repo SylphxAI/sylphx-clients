@@ -70,6 +70,11 @@ pub fn forwarded(key: &str) -> bool {
             | "SYLPHX_OCI_MIRROR"
             | "SYLPHX_APT_MIRROR"
             | "SYLPHX_UPSTREAM_MIRROR"
+            | "SYLPHX_NPM_MIRROR"
+            | "SYLPHX_PYPI_MIRROR"
+            | "SYLPHX_GOPROXY"
+            | "SYLPHX_PIP_TRUSTED_HOST"
+            | "CARGO_REGISTRIES_CRATES_IO_INDEX"
             | "PIP_INDEX_URL"
             | "PIP_TRUSTED_HOST"
             | "UV_INDEX_URL"
@@ -829,6 +834,7 @@ mod tests {
             "PIP_TRUSTED_HOST",
             "GOPROXY",
             "MISE_URL_REPLACEMENTS",
+            "CARGO_REGISTRIES_CRATES_IO_INDEX",
         ] {
             assert!(forwarded(k), "{k}");
         }

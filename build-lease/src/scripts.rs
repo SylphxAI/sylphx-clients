@@ -95,7 +95,7 @@ fi
 /// workspace (`$W`) so a warm machine reuses them.
 macro_rules! guest_dirs {
     () => {
-        r#"export CARGO_TARGET_DIR="$W/target" CARGO_HOME="$W/cargo" SCCACHE_DIR="$W/sccache"
+        r#"export CARGO_TARGET_DIR="${CARGO_TARGET_DIR-$W/target}" CARGO_HOME="${CARGO_HOME-$W/cargo}" SCCACHE_DIR="$W/sccache"
 export PATH="$W/cargo/bin:$PATH"
 "#
     };
@@ -287,12 +287,22 @@ pub fn provision_env(
 /// profiles (`CARGO_PROFILE_DEV_DEBUG=0`). Caller settings (`--env`), including
 /// an explicit compiler wrapper or an empty value, win.
 ///
-/// Crates come through the build cache's registry mirror
-/// (`SYLPHX_CRATES_MIRROR`, from the cache token) when it answers: Cargo reads
-/// `$W/.cargo/config.toml` as an ancestor of the tree, and the file is removed
-/// when the mirror is absent, so Cargo then reaches crates.io directly, which
-/// a lease reaches only with `--allow-host`. npm, bun and pnpm read the
-/// token's `NPM_CONFIG_REGISTRY` themselves.
+/// Crates come through the managed guest's registry mirror or the cache token's
+/// `SYLPHX_CRATES_MIRROR`, which Cargo reads in `$W/.cargo/config.toml`, an
+/// ancestor of the tree: no network preflight decides it, so a mirror that
+/// answers nothing yet cannot silently send an isolated lease to crates.io,
+/// which its egress does not allow. That file is written unless the Cargo
+/// home explicitly defines crates-io in `[source]`, which our nearer ancestor
+/// would shadow. A native CARGO_REGISTRIES_CRATES_IO_INDEX (even empty) also
+/// withholds replacement without claiming that Cargo honors it for locked sources.
+/// Cargo prefers a legacy `config` over `config.toml`, so only whichever it reads
+/// counts.
+/// Unrelated settings there (a `[build]` table, `[registries.crates-io]`'s
+/// protocol, another source's `registry` naming crates-io) are not replacements
+/// and stay effective. An explicit empty mirror removes the generated
+/// replacement; project Cargo configuration still wins.
+/// npm global, Bun/pip/uv/Go user configs receive native defaults below; their
+/// project, site, CLI and explicit environment settings retain precedence.
 ///
 /// The synced tree is a git work tree before the command starts, so tests
 /// and build scripts that call `git` behave as they do locally (see
@@ -321,13 +331,44 @@ if [ "${CARGO_INCREMENTAL:-0}" != 1 ] && [ -z "${RUSTC_WRAPPER:-}" ] && command 
 fi
 mkdir -p "$W/.cargo"
 M=${SYLPHX_CRATES_MIRROR:-}
-if [ -n "$M" ] && curl -fsS -m 10 -o /dev/null "${M#sparse+}config.json" 2>/dev/null; then
+if [ "${CARGO_REGISTRIES_CRATES_IO_INDEX+x}" = x ]; then M=; fi
+# The nearer workspace config must not shadow a caller's source definition.
+# Any exact source.crates-io definition counts, including registry without
+# replace-with; unrelated registries.crates-io protocol does not.
+# Cargo prefers legacy config over config.toml.
+defines_crates_io() {
+  [ -e "$1" ] || return 3
+  # template:build carries Python 3.12; parse TOML rather than guessing
+  # source precedence from section names or substrings.
+  python3 -c '
+import sys
+import tomllib
+with open(sys.argv[1], "rb") as config:
+    parsed = tomllib.load(config)
+sys.exit(0 if "crates-io" in parsed.get("source", {}) else 3)
+' "$1"
+}
+CARGO_HOME_CONFIG="$CARGO_HOME/config.toml"
+if [ -e "$CARGO_HOME/config" ]; then CARGO_HOME_CONFIG="$CARGO_HOME/config"; fi
+SOURCE_OVERRIDE=0
+if [ -n "$M" ]; then
+  if defines_crates_io "$CARGO_HOME_CONFIG"; then
+    SOURCE_OVERRIDE=1
+  else
+    case "$?" in
+      3) ;;
+      *) echo "sylphx: cannot read Cargo source configuration" >&2; exit 125 ;;
+    esac
+  fi
+fi
+if [ -n "$M" ] && [ "$SOURCE_OVERRIDE" = 0 ]; then
   printf '[source.crates-io]\nreplace-with = "sylphx-mirror"\n\n[source.sylphx-mirror]\nregistry = "%s"\n' "$M" > "$W/.cargo/config.toml"
 else
   rm -f "$W/.cargo/config.toml"
 fi
 cd "$W/tree/$R" || exit 125
 "#,
+    include_str!("registry-defaults.sh"),
     guest_toolchain!(),
     r#"if [ -n "$SC" ]; then
   TO=

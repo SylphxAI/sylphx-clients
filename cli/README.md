@@ -180,6 +180,14 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   run with 125 before a machine is leased. Git prints `warning: rejected
   refs/commit/… because shallow roots are not allowed to be updated` once per
   new commit; the build is unaffected.
+- Public dependency routing is supplied by the managed guest before any command
+  or toolchain provisioning, independently of the compiler-cache token. No
+  registry environment is required from the caller. npm/Bun, pip/uv and Go
+  managed hints become native config defaults rather than registry
+  environment overrides, so project config and explicit environment/CLI
+  choices keep normal precedence. Existing user registry/index choices are
+  preserved. Cargo `CARGO_HOME` and `CARGO_TARGET_DIR` overrides are retained.
+  `--no-cache` skips compiler/result caches, not the guest dependency mirrors.
 - The run also gets the project's shared build cache (sccache, Turbo): the
   CLI mints a cache token with your key before the command starts and merges
   the cache's environment into the command's (your `--env` wins). If the

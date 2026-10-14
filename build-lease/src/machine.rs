@@ -21,7 +21,7 @@ pub const TOKEN_TTL: Duration = Duration::from_secs(3600);
 
 /// The `build-packages` egress preset: no internet package host. Crates and
 /// npm tarballs come through the build cache's mirrors (the cache token's
-/// `SYLPHX_CRATES_MIRROR` and `NPM_CONFIG_REGISTRY`), toolchains, PyPI and Go
+/// `SYLPHX_CRATES_MIRROR` and `SYLPHX_NPM_MIRROR`), toolchains, PyPI and Go
 /// modules through its upstream doors, all of which a build lease reaches in
 /// the cell; the pinned Rust toolchain is in the lease image. The one name
 /// here is the build-cache gateway's public name (a lease on the public

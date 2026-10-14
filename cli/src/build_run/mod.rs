@@ -1080,7 +1080,8 @@ impl Run<'_> {
             WS,
             self.rel(),
         ]);
-        let env = provision_env(cache);
+        let mut env = provision_env(cache);
+        env.extend(provision_env(&self.o.env));
         let ran = tokio::time::timeout(PROVISION_TIMEOUT, g.run(USER, &args, &env)).await;
         match ran {
             Err(_) => Err(Attempt::Done(Outcome::platform(
@@ -2822,28 +2823,6 @@ mod tests {
         // It does not: the workspace's rustup home, installed there.
         let home = run_prelude("$W/rustup", None, false, "echo $RUSTUP_HOME");
         assert!(home.trim_end().ends_with("/ws/rustup"), "{home}");
-    }
-
-    #[test]
-    fn crates_come_through_the_mirror_only_while_it_answers() {
-        let m = "sparse+http://build-cache.env-1.svc.cluster.local/crates/index/";
-        let cfg = run_prelude("/opt/rustup", Some(m), true, "cat ../../.cargo/config.toml");
-        assert_eq!(
-            cfg,
-            format!(
-                "[source.crates-io]\nreplace-with = \"sylphx-mirror\"\n\n[source.sylphx-mirror]\nregistry = \"{m}\"\n"
-            )
-        );
-        // Unreachable or not offered: no replacement, Cargo goes direct.
-        for (mirror, up) in [(Some(m), false), (None, true)] {
-            let out = run_prelude(
-                "/opt/rustup",
-                mirror,
-                up,
-                "test -e ../../.cargo/config.toml && echo present || echo absent",
-            );
-            assert_eq!(out, "absent\n");
-        }
     }
 
     #[test]
