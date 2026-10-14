@@ -3959,6 +3959,126 @@ async fn link_accepts_a_full_environment_name_without_a_project_flag() {
     );
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn link_reuses_the_selected_context_and_resolves_bare_environment_names() {
+    for (index, env) in [None, Some("env_b"), Some("preview")]
+        .into_iter()
+        .enumerate()
+    {
+        let mut replies = vec![(200, whoami_org_only())];
+        if env == Some("preview") {
+            // Public Resources need only name and spec, not a second uid.
+            replies.push((
+                200,
+                envs_page(vec![json!({
+                    "name": "orgs/org_a/projects/prj_a/envs/env_b",
+                    "spec": {"slug": "preview"}
+                })]),
+            ));
+        }
+        let (url, _log) = serve(replies).await;
+        let sb = Sandbox::new(&format!("link-selected-{index}"));
+        let mut args = vec!["link"];
+        if let Some(env) = env {
+            args.extend(["--env", env]);
+        }
+        assert_success(&run(&sb, &url, &args).await);
+        let expected = if env.is_some() {
+            "orgs/org_a/projects/prj_a/envs/env_b"
+        } else {
+            ENV
+        };
+        assert_eq!(
+            read_link(&sb),
+            json!({"org": "orgs/org_a",
+            "project": "orgs/org_a/projects/prj_a", "env": expected})
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn link_process_context_is_explicitly_persisted_but_target_flags_win() {
+    let (url, _log) = serve(vec![(200, whoami_org_only()); 2]).await;
+    let sb = Sandbox::new("link-process-context");
+    let other = "orgs/org_a/projects/prj_b/envs/env_b";
+    let mut command = sb.cmd(&url, &["link"]);
+    command.env("SYLPHX_ENVIRONMENT", other);
+    assert_success(
+        &tokio::task::spawn_blocking(move || command.output().unwrap())
+            .await
+            .unwrap(),
+    );
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a",
+        "project": "orgs/org_a/projects/prj_b", "env": other})
+    );
+    let mut command = sb.cmd(&url, &["link", "--env", ENV]);
+    command.env("SYLPHX_ENVIRONMENT", "invalid");
+    assert_success(
+        &tokio::task::spawn_blocking(move || command.output().unwrap())
+            .await
+            .unwrap(),
+    );
+    assert_eq!(
+        read_link(&sb),
+        json!({"org": "orgs/org_a",
+        "project": "orgs/org_a/projects/prj_a", "env": ENV})
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn link_project_override_discards_the_old_environment() {
+    let project = "orgs/org_a/projects/prj_b";
+    for (index, flag) in ["web", "prj_b", project].into_iter().enumerate() {
+        let mut replies = vec![(200, whoami_org_only())];
+        if flag == "web" {
+            replies.push((200, projects_page(vec![project_row(project, "web")])));
+        }
+        let env = format!("{project}/envs/env_b");
+        replies.push((200, envs_page(vec![env_row(&env, "production")])));
+        let (url, _log) = serve(replies).await;
+        let sb = Sandbox::new(&format!("link-project-change-{index}"));
+        assert_success(&run(&sb, &url, &["link", "--project", flag]).await);
+        assert_eq!(
+            read_link(&sb),
+            json!({"org": "orgs/org_a", "project": project, "env": env})
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn link_refuses_conflicting_or_malformed_explicit_targets_without_rewriting() {
+    let cases: &[&[&str]] = &[
+        &["--project", "orgs/org_b/projects/prj_a", "--env", ENV],
+        &["--project", "prj_b", "--env", ENV],
+        &["--project", "orgs/org_a/projects/prj_a/envs/env_a"],
+        &["--project", "projects/prj_a"],
+        &["--env", "envs/env_a"],
+        &["--env", "orgs/org_a/projects/prj_a/envs/env_a/extra"],
+        &["--env", "orgs/org_a/projects/prj_a/envs/"],
+    ];
+    for (index, flags) in cases.iter().enumerate() {
+        let (url, _log) = serve(vec![(200, whoami_org_only())]).await;
+        let sb = Sandbox::new(&format!("link-invalid-{index}"));
+        let before = std::fs::read(sb.dir.join(".sylphx/project.json")).unwrap();
+        let args: Vec<&str> = std::iter::once("link")
+            .chain(flags.iter().copied())
+            .collect();
+        let out = run(&sb, &url, &args).await;
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(
+            std::fs::read(sb.dir.join(".sylphx/project.json")).unwrap(),
+            before
+        );
+    }
+}
+
 /// `--org` that disagrees with the credential's own `whoami` is refused before
 /// anything is discovered or written.
 #[tokio::test(flavor = "multi_thread")]

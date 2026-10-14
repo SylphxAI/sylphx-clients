@@ -374,22 +374,47 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 pub const ENV_VAR: &str = "SYLPHX_ENVIRONMENT";
 
 impl Link {
-    /// The link a full environment name implies:
-    /// `orgs/{org}/projects/{project}/envs/{env}`, every segment non-empty.
-    pub fn from_env_name(name: &str) -> Option<Self> {
-        let parts: Vec<&str> = name.split('/').collect();
-        match parts.as_slice() {
-            ["orgs", o, "projects", p, "envs", e]
-                if !o.is_empty() && !p.is_empty() && !e.is_empty() =>
-            {
-                Some(Self {
-                    org: format!("orgs/{o}"),
-                    project: format!("orgs/{o}/projects/{p}"),
-                    env: name.to_string(),
-                })
-            }
-            _ => None,
+    pub fn project_org(name: &str) -> Option<&str> {
+        let (org, project) = name.rsplit_once("/projects/")?;
+        let id = org.strip_prefix("orgs/")?;
+        (!id.is_empty() && !id.contains('/') && !project.is_empty() && !project.contains('/'))
+            .then_some(org)
+    }
+
+    pub fn environment_project(name: &str) -> Option<&str> {
+        let (project, env) = name.rsplit_once("/envs/")?;
+        Self::project_org(project)?;
+        (!env.is_empty() && !env.contains('/')).then_some(project)
+    }
+
+    /// Discovery may persist a project-only link; an environment carries both parents.
+    pub fn validate(&self) -> Result<(), String> {
+        if self
+            .org
+            .strip_prefix("orgs/")
+            .is_none_or(|o| o.is_empty() || o.contains('/'))
+        {
+            return Err("link must name an organization".into());
         }
+        if !self.project.is_empty() && Self::project_org(&self.project) != Some(self.org.as_str()) {
+            return Err("link project must belong to the selected organization".into());
+        }
+        if !self.env.is_empty()
+            && Self::environment_project(&self.env) != Some(self.project.as_str())
+        {
+            return Err("link environment must belong to the selected project".into());
+        }
+        Ok(())
+    }
+
+    /// A complete context derived from one authoritative environment name.
+    pub fn from_env_name(name: &str) -> Option<Self> {
+        let project = Self::environment_project(name)?;
+        Some(Self {
+            org: Self::project_org(project)?.to_string(),
+            project: project.to_string(),
+            env: name.to_string(),
+        })
     }
 }
 
@@ -446,6 +471,7 @@ pub fn find_link(start: &Path) -> Option<(PathBuf, Link)> {
 }
 
 pub fn write_link(dir: &Path, link: &Link) -> Result<PathBuf, String> {
+    link.validate()?;
     let d = dir.join(".sylphx");
     std::fs::create_dir_all(&d).map_err(|e| format!("{}: {e}", d.display()))?;
     let p = d.join("project.json");

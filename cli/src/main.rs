@@ -1008,18 +1008,24 @@ async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {
     if org.is_empty() {
         return Err(Failure::Usage("the key names no org; pass --org".into()));
     }
-    let project = sub.get_one::<String>("project").cloned();
-    let env = sub.get_one::<String>("env").cloned();
-    // Flags may be slugs, ids, or full names; the link stores full names.
-    let mut l = if project.is_none() && env.is_none() && sub.get_one::<String>("org").is_none() {
+    let dir = std::env::current_dir().map_err(|e| e.to_string())?;
+    let project = sub.get_one::<String>("project");
+    let env = sub.get_one::<String>("env");
+    let selected = if project.is_some() || env.is_some_and(|e| e.starts_with("orgs/")) {
         mine
     } else {
-        let project = project.or_else(|| {
-            (!mine.project.is_empty() && env.as_ref().is_none_or(|e| !e.starts_with("orgs/")))
-                .then(|| mine.project.clone())
+        context::default_link_for(&dir, Some(&org))?.unwrap_or(mine)
+    };
+    // Full environment names select their own project, not the old link.
+    let mut l = if project.is_none() && env.is_none() {
+        selected
+    } else {
+        let project = project.map(String::as_str).or_else(|| {
+            (!selected.project.is_empty() && env.is_none_or(|e| !e.starts_with("orgs/")))
+                .then_some(selected.project.as_str())
         });
         let (org, project, env) =
-            names::link_names(client, &org, project.as_deref(), env.as_deref()).await?;
+            names::link_names(client, &org, project, env.map(String::as_str)).await?;
         Link {
             org,
             project: project.unwrap_or_default(),
@@ -1027,7 +1033,11 @@ async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {
         }
     };
     names::complete(client, &mut l, 3).await?;
-    let dir = std::env::current_dir().map_err(|e| e.to_string())?;
+    if l.at(3).is_none() {
+        return Err(Failure::Usage(
+            "link requires a selected environment".into(),
+        ));
+    }
     let p = context::write_link(&dir, &l)?;
     println!(
         "Linked {} to {}.",

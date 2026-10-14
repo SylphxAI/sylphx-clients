@@ -59,9 +59,23 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `sylphx link --project web --env production`, or pass an explicit full name.
   Discovery never crosses the selected org/project, and `--org` does not
   overwrite a checkout's link to another organization.
+- Linking follows [Vercel project linking](https://vercel.com/docs/cli/link):
+  an explicit target is authoritative, not a hint. `link --env` accepts a full
+  environment name without `--project`; a slug or environment id uses the
+  selected project. `--project` accepts a slug, id, or exact project name.
+  Conflicting parents and malformed names fail before the link is written.
+  Without target flags, linking reuses `SYLPHX_ENVIRONMENT`, then the nearest
+  link in the selected organization, then the credential scope and public
+  discovery above. Changing project clears the old environment; changing only
+  environment retains the selected project. No list-order choice is made.
+  A successful link writes all three full names (`org`, `project`, `env`) to
+  `.sylphx/project.json`; an incomplete selection is never reported as success.
+  Explicit linking intentionally persists the selected process context; other
+  commands never persist a process-only override. Build reads this same context
+  and leaves machine shape, region, grants, and admission to the public platform.
 - A bare id (`main`) expands below the resolved environment. Explicit resource
   names and `--env` remain advanced overrides; `SYLPHX_ENVIRONMENT=orgs/…/projects/…/envs/…`
-  overrides the nearest link for that process and is never persisted. A link
+  overrides the nearest link for that process; only an explicit `link` persists it. A link
   in another shape (such as `{orgId, projectId}`) is skipped with a warning.
 - Mutations wait for their Operation (`--no-wait` to skip); `--dry-run` sets
   `validate_only`; updates send the etag they read and a mask of the flags

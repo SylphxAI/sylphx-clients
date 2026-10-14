@@ -23,9 +23,10 @@ async fn pick(
     what: &str,
 ) -> Result<String, Failure> {
     let rows = list(client, items, parent).await?;
-    let found = rows
-        .iter()
-        .find(|r| r["spec"]["slug"].as_str() == Some(want) || r["uid"].as_str() == Some(want));
+    let found = rows.iter().find(|r| {
+        r["spec"]["slug"].as_str() == Some(want)
+            || r["name"].as_str().and_then(|n| n.rsplit('/').next()) == Some(want)
+    });
     match found.and_then(|r| r["name"].as_str()) {
         Some(n) => Ok(n.to_string()),
         None => {
@@ -83,6 +84,27 @@ pub async fn resolve(client: &Client, name: &str) -> Result<String, Failure> {
     Ok(out)
 }
 
+async fn project_name(client: &Client, org: &str, value: &str) -> Result<String, Failure> {
+    let name = if value.starts_with("orgs/") {
+        let parent = crate::context::Link::project_org(value)
+            .ok_or_else(|| Failure::Usage("--project must name a project".into()))?;
+        if parent != org {
+            return Err(Failure::Usage(
+                "--project belongs to a different organization".into(),
+            ));
+        }
+        value.to_string()
+    } else {
+        if value.is_empty() || value.contains('/') {
+            return Err(Failure::Usage(
+                "--project must be a slug, id, or full project name".into(),
+            ));
+        }
+        format!("{org}/projects/{value}")
+    };
+    resolve(client, &name).await
+}
+
 /// `link`'s three flags into full names (each may be a slug, an id, or a
 /// full name), resolved in order.
 pub async fn link_names(
@@ -93,6 +115,9 @@ pub async fn link_names(
 ) -> Result<(String, Option<String>, Option<String>), Failure> {
     let org = org_name(org);
     if let Some(full) = env.filter(|e| e.starts_with("orgs/")) {
+        if crate::context::Link::environment_project(full).is_none() {
+            return Err(Failure::Usage("--env must name an environment".into()));
+        }
         let full = resolve(client, full).await?;
         let link = crate::context::Link::from_env_name(&full)
             .ok_or_else(|| Failure::Usage("--env must name an environment".into()))?;
@@ -102,8 +127,7 @@ pub async fn link_names(
             ));
         }
         if let Some(p) = project {
-            let segment = p.rsplit('/').next().unwrap_or(p);
-            let selected = resolve(client, &format!("{org}/projects/{segment}")).await?;
+            let selected = project_name(client, &org, p).await?;
             if selected != link.project {
                 return Err(Failure::Usage(
                     "--project and --env name different projects".into(),
@@ -112,16 +136,13 @@ pub async fn link_names(
         }
         return Ok((org, Some(link.project), Some(link.env)));
     }
+    if env.is_some_and(|e| e.is_empty() || e.contains('/')) {
+        return Err(Failure::Usage(
+            "--env must be a slug, id, or full environment name".into(),
+        ));
+    }
     let project = match project {
-        Some(p) => {
-            if p.starts_with("orgs/") && !p.starts_with(&format!("{org}/projects/")) {
-                return Err(Failure::Usage(
-                    "--project belongs to a different organization".into(),
-                ));
-            }
-            let segment = p.rsplit('/').next().unwrap_or(p);
-            resolve(client, &format!("{org}/projects/{segment}")).await?
-        }
+        Some(p) => project_name(client, &org, p).await?,
         None if env.is_some() => discover_or_create(client, "projects", &org, "default").await?,
         None => return Ok((org, None, None)),
     };
