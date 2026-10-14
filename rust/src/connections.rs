@@ -3,6 +3,51 @@
 
 #![allow(clippy::all)]
 
+/// The request of AdoptConnectionProvider. Custody selectors are resolved by the
+/// server from the exact App identity, never supplied as bare handles or aliases.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AdoptConnectionProviderRequest {
+    /// Organization owning both the provider and the public SIGN Key target.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Explicit immutable provider identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "connectionProviderId"
+    )]
+    pub connection_provider_id: String,
+    /// Existing App identity and unused full environment-scoped SIGN Key target.
+    /// An optional webhook_secret must already name this organization's Secret.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "githubApp")]
+    pub github_app: Option<GitHubAppConfig>,
+    /// Accountable operator's reason for adopting the existing App.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
+/// The verified provider; its SIGN Key exposes public metadata only.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AdoptConnectionProviderResponse {
+    /// Provider ready for ordinary CreateConnection installation verification.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "connectionProvider"
+    )]
+    pub connection_provider: Option<ConnectionProvider>,
+}
+
 /// An ordinary Access admin requests a manifest ceremony in one organization.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -916,6 +961,34 @@ impl<'a, T: crate::runtime::Transport> ConnectionProvidersCollection<'a, T> {
     ) -> Result<BeginConnectionProviderRegistrationResponse, crate::runtime::Error> {
         let path = format!(
             "/v1/{}/connection_providers:beginRegistration",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Adopts an existing GitHub App whose non-exportable custody already exists.
+    /// The server observes public SPKI metadata and verifies signed GET /app before
+    /// atomically registering the SIGN Key and provider. No private key is accepted.
+    ///
+    /// `POST /v1/{parent=orgs/*}/connection_providers:adopt` · permission `connections:admin` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn adopt(
+        &self,
+        request: AdoptConnectionProviderRequest,
+    ) -> Result<AdoptConnectionProviderResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/connection_providers:adopt",
             crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
         );
         let query = crate::runtime::Query::default();

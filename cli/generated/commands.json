@@ -8904,6 +8904,43 @@
               "verb": "begin-registration"
             },
             {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "connection_provider_id",
+                  "flag": "--connection-provider-id",
+                  "required": true,
+                  "summary": "Explicit immutable provider identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "github_app",
+                  "flag": "--github-app",
+                  "required": true,
+                  "summary": "Existing App identity and unused full environment-scoped SIGN Key target. An optional webhook_secret must already name this organization's Secret.",
+                  "type": "json"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "required": true,
+                  "summary": "Accountable operator's reason for adopting the existing App.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*}/connection_providers:adopt",
+              "method": "connections.connection_providers.adopt",
+              "permission": "connections:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Adopts an existing GitHub App whose non-exportable custody already exists. The server observes public SPKI metadata and verifies signed GET /app before atomically registering the SIGN Key and provider. No private key is accepted.",
+              "verb": "adopt"
+            },
+            {
               "effect": "read",
               "flags": [],
               "http": "GET /v1/{name=orgs/*/connection_providers/*}",

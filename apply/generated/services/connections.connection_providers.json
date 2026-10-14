@@ -13,6 +13,13 @@
           "http": {
             "query_params": []
           },
+          "id": "connections.connection_providers.adopt",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "connections.connection_providers.get",
           "kind": "get"
         },

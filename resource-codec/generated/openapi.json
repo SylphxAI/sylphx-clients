@@ -12033,6 +12033,45 @@
         ],
         "type": "object"
       },
+      "sylphx.connections.v1.AdoptConnectionProviderRequest": {
+        "description": "The request of AdoptConnectionProvider. Custody selectors are resolved by the\nserver from the exact App identity, never supplied as bare handles or aliases.",
+        "properties": {
+          "connection_provider_id": {
+            "description": "Explicit immutable provider identity.",
+            "type": "string"
+          },
+          "github_app": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.GitHubAppConfig",
+            "description": "Existing App identity and unused full environment-scoped SIGN Key target.\nAn optional webhook_secret must already name this organization's Secret."
+          },
+          "parent": {
+            "description": "Organization owning both the provider and the public SIGN Key target.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "reason": {
+            "description": "Accountable operator's reason for adopting the existing App.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "connection_provider_id",
+          "github_app",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "sylphx.connections.v1.AdoptConnectionProviderResponse": {
+        "description": "The verified provider; its SIGN Key exposes public metadata only.",
+        "properties": {
+          "connection_provider": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.ConnectionProvider",
+            "description": "Provider ready for ordinary CreateConnection installation verification."
+          }
+        },
+        "type": "object"
+      },
       "sylphx.connections.v1.BeginConnectionProviderRegistrationRequest": {
         "description": "An ordinary Access admin requests a manifest ceremony in one organization.",
         "properties": {
@@ -46764,6 +46803,104 @@
           "IDEMPOTENCY_IN_PROGRESS"
         ],
         "x-sylphx-method": "connections.connection_providers.update",
+        "x-sylphx-permission": "connections:admin",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/connection_providers:adopt": {
+      "post": {
+        "description": "Adopts an existing GitHub App whose non-exportable custody already exists.\nThe server observes public SPKI metadata and verifies signed GET /app before\natomically registering the SIGN Key and provider. No private key is accepted.",
+        "operationId": "connections_connection_providers_adopt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "connection_provider_id": {
+                    "description": "Explicit immutable provider identity.",
+                    "type": "string"
+                  },
+                  "github_app": {
+                    "$ref": "#/components/schemas/sylphx.connections.v1.GitHubAppConfig",
+                    "description": "Existing App identity and unused full environment-scoped SIGN Key target.\nAn optional webhook_secret must already name this organization's Secret."
+                  },
+                  "reason": {
+                    "description": "Accountable operator's reason for adopting the existing App.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "connection_provider_id",
+                  "github_app",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.connections.v1.AdoptConnectionProviderResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Adopts an existing GitHub App whose non-exportable custody already exists. The server observes public SPKI metadata and verifies signed GET /app before atomically registering the SIGN Key and provider. No private key is accepted.",
+        "tags": [
+          "connections"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "connections.connection_providers.adopt",
         "x-sylphx-permission": "connections:admin",
         "x-sylphx-stage": "preview"
       }

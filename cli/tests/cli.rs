@@ -102,7 +102,8 @@ async fn serve_bytes_on(
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let seen = log.clone();
     tokio::spawn(async move {
-        for (status, content_type, body) in replies {
+        let mut replies = replies.into_iter().peekable();
+        while replies.peek().is_some() {
             let (mut sock, _) = listener.accept().await.unwrap();
             let mut buf = Vec::new();
             let mut chunk = [0u8; 8192];
@@ -131,6 +132,14 @@ async fn serve_bytes_on(
                 }
             };
             let line = head.lines().next().unwrap_or_default().to_string();
+            // A recovered expired deadline may signal the guest before release.
+            // That guest call must not consume the next platform API response.
+            let (status, content_type, body) =
+                if line.starts_with("POST /process.Process/SendSignal ") {
+                    (200, "application/json", b"{}".to_vec())
+                } else {
+                    replies.next().unwrap()
+                };
             seen.lock().push(Seen {
                 line,
                 head,
@@ -146,6 +155,46 @@ async fn serve_bytes_on(
         }
     });
     (url, log)
+}
+
+#[tokio::test]
+async fn guest_signal_does_not_consume_the_lease_release_reply() {
+    let (url, log) = serve_bytes(vec![ended()]).await;
+    let http = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .unwrap();
+    let signal: Value = http
+        .post(format!("{url}/process.Process/SendSignal"))
+        .json(&json!({"process":{"pid":7},"signal":"SIGNAL_SIGKILL"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        signal,
+        json!({}),
+        "a signal must not consume the queued release response"
+    );
+    let released: Value = http
+        .post(format!("{url}/v1/{ENV}/leases/l1:release"))
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(released["status"]["state"], "ending");
+    assert_eq!(
+        log.lock()
+            .iter()
+            .filter(|seen| seen.line.contains(":release"))
+            .count(),
+        1
+    );
 }
 
 struct Sandbox {

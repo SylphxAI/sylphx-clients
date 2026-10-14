@@ -12710,6 +12710,84 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Adopts an existing GitHub App whose non-exportable custody already exists. The server observes public SPKI metadata and verifies signed GET /app before atomically registering the SIGN Key and provider. No private key is accepted."
+      },
+      "description": "Adopts an existing GitHub App whose non-exportable custody already exists.\nThe server observes public SPKI metadata and verifies signed GET /app before\natomically registering the SIGN Key and provider. No private key is accepted.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*}/connection_providers:adopt",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AdoptConnectionProvider. Custody selectors are resolved by the\nserver from the exact App identity, never supplied as bare handles or aliases.",
+        "properties": {
+          "connection_provider_id": {
+            "description": "Explicit immutable provider identity.",
+            "type": "string"
+          },
+          "github_app": {
+            "additionalProperties": false,
+            "description": "Existing App identity and unused full environment-scoped SIGN Key target.\nAn optional webhook_secret must already name this organization's Secret.",
+            "properties": {
+              "app_id": {
+                "description": "The App's numeric id.",
+                "format": "int64",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "client_id": {
+                "description": "The App's OAuth client id.",
+                "type": "string"
+              },
+              "signing_key": {
+                "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the credential service may use it.",
+                "type": "string",
+                "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+              },
+              "slug": {
+                "description": "The App's slug, for example `sylphx`.",
+                "type": "string"
+              },
+              "webhook_secret": {
+                "description": "The Secret holding the webhook secret that verifies deliveries.",
+                "type": "string",
+                "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+              }
+            },
+            "required": [
+              "app_id",
+              "slug",
+              "signing_key"
+            ],
+            "type": "object"
+          },
+          "parent": {
+            "description": "Organization owning both the provider and the public SIGN Key target.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "reason": {
+            "description": "Accountable operator's reason for adopting the existing App.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "connection_provider_id",
+          "github_app",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "connections.connection_providers.adopt",
+      "permission": "connections:admin",
+      "tool": "connections_connection_providers_adopt"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,

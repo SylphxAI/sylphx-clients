@@ -5,6 +5,30 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/**
+ * The request of AdoptConnectionProvider. Custody selectors are resolved by the
+ * server from the exact App identity, never supplied as bare handles or aliases.
+ */
+export interface AdoptConnectionProviderRequest {
+	/** Organization owning both the provider and the public SIGN Key target. */
+	parent: string
+	/** Explicit immutable provider identity. */
+	connectionProviderId: string
+	/**
+	 * Existing App identity and unused full environment-scoped SIGN Key target.
+	 * An optional webhook_secret must already name this organization's Secret.
+	 */
+	githubApp: GitHubAppConfig
+	/** Accountable operator's reason for adopting the existing App. */
+	reason: string
+}
+
+/** The verified provider; its SIGN Key exposes public metadata only. */
+export interface AdoptConnectionProviderResponse {
+	/** Provider ready for ordinary CreateConnection installation verification. */
+	connectionProvider?: ConnectionProvider
+}
+
 /** An ordinary Access admin requests a manifest ceremony in one organization. */
 export interface BeginConnectionProviderRegistrationRequest {
 	/** The organization that will own the provider and custody references. */
@@ -324,6 +348,13 @@ export type ExternalAccountKind = 'user' | 'organization' | (string & {})
 export type RepositorySelection = 'all' | 'selected' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.connections.v1.AdoptConnectionProviderRequest': [
+		['connectionProviderId', 'connection_provider_id'],
+		['githubApp', 'github_app', 'sylphx.connections.v1.GitHubAppConfig'],
+	],
+	'sylphx.connections.v1.AdoptConnectionProviderResponse': [
+		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],
+	],
 	'sylphx.connections.v1.BeginConnectionProviderRegistrationRequest': [
 		['connectionProviderId', 'connection_provider_id'],
 		['signingKey', 'signing_key'],
@@ -470,6 +501,26 @@ export class ConnectionProvidersCollection {
 			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.connections.v1.BeginConnectionProviderRegistrationRequest',
 			responseType: 'sylphx.connections.v1.BeginConnectionProviderRegistrationResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Adopts an existing GitHub App whose non-exportable custody already exists.
+	 * The server observes public SPKI metadata and verifies signed GET /app before
+	 * atomically registering the SIGN Key and provider. No private key is accepted.
+	 *
+	 * `POST /v1/{parent=orgs/*}/connection_providers:adopt` · permission `connections:admin` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async adopt(request: AdoptConnectionProviderRequest): Promise<AdoptConnectionProviderResponse> {
+		return this.client.call<AdoptConnectionProviderResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/connection_providers:adopt`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.connections.v1.AdoptConnectionProviderRequest',
+			responseType: 'sylphx.connections.v1.AdoptConnectionProviderResponse',
 			mutation: true,
 		})
 	}

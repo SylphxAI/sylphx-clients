@@ -1949,6 +1949,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'config:write',
 	},
+	'connections.connection_providers.adopt': {
+		id: 'connections.connection_providers.adopt',
+		httpMethod: 'POST',
+		template: '/v1/{parent=orgs/*}/connection_providers:adopt',
+		pathParams: [['parent', 'orgs/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'connections:admin',
+	},
 	'connections.connection_providers.begin_registration': {
 		id: 'connections.connection_providers.begin_registration',
 		httpMethod: 'POST',
