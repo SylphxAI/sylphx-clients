@@ -32,7 +32,7 @@ const URL_ENV: &str = "SYLPHX_BUILD_CACHE_URL";
 const CLUSTER_REGION: &str = "hk";
 /// A cache that does not answer this fast only slows the build: give up.
 const MINT_TIMEOUT: Duration = Duration::from_secs(5);
-/// The longest token the gateway mints (a 6 h run and 15 minutes of slack).
+/// The gateway's write-token limit, unchanged by pre-READY minting.
 const MAX_TTL_SECONDS: u64 = 22_500;
 const RUN_SLACK_SECONDS: u64 = 900;
 /// A local read-only token lives half a day.
@@ -75,9 +75,24 @@ impl Request {
     }
 }
 
-/// The token's lifetime for a run of `timeout`: the run and slack, capped.
-pub fn run_ttl_seconds(timeout: Duration) -> u64 {
-    (timeout.as_secs() + RUN_SLACK_SECONDS).min(MAX_TTL_SECONDS)
+/// Pre-READY credentials cover admission, setup and the entire command.
+/// If the gateway cap removes some admission budget, refresh at READY when
+/// [`run_needs_refresh`] says the remaining lifetime is insufficient.
+pub fn run_ttl_seconds(timeout: Duration, queue_timeout: Duration) -> u64 {
+    timeout
+        .as_secs()
+        .saturating_add(queue_timeout.as_secs())
+        .saturating_add(RUN_SLACK_SECONDS)
+        .min(MAX_TTL_SECONDS)
+}
+
+/// Whether admission consumed lifetime needed for setup and the command.
+/// `elapsed` starts before minting, conservatively accounting for mint latency;
+/// the refreshed credential uses zero admission budget and the same scope.
+pub fn run_needs_refresh(timeout: Duration, queue_timeout: Duration, elapsed: Duration) -> bool {
+    let required = Duration::from_secs(run_ttl_seconds(timeout, Duration::ZERO));
+    let minted = Duration::from_secs(run_ttl_seconds(timeout, queue_timeout));
+    elapsed > minted.saturating_sub(required)
 }
 
 /// The request for a local, read-only environment.
@@ -95,6 +110,7 @@ pub fn local_request(project: String) -> Request {
 pub fn run_request(
     project: String,
     timeout: Duration,
+    queue_timeout: Duration,
     lease: &sylphx::sandboxes::Lease,
 ) -> Request {
     Request {
@@ -104,7 +120,7 @@ pub fn run_request(
             Some(CLUSTER_REGION) => Network::Cluster,
             _ => Network::Public,
         },
-        ttl_seconds: run_ttl_seconds(timeout),
+        ttl_seconds: run_ttl_seconds(timeout, queue_timeout),
     }
 }
 
@@ -502,10 +518,78 @@ mod tests {
     }
 
     #[test]
-    fn ttl_is_the_run_plus_slack_capped() {
-        assert_eq!(run_ttl_seconds(Duration::from_secs(3600)), 4500);
-        assert_eq!(run_ttl_seconds(Duration::from_secs(6 * 3600)), 22_500);
-        assert_eq!(run_ttl_seconds(Duration::from_secs(7 * 3600)), 22_500);
+    fn ttl_covers_queue_setup_and_command_without_extending_gateway_scope() {
+        for (command, queue, ttl) in [
+            (3600, 1800, 6300),
+            (1, 1800, 2701),
+            (1, 6 * 3600, 22_500),
+            (6 * 3600, 1800, 22_500),
+            (6 * 3600, 0, 22_500),
+            (u64::MAX, u64::MAX, 22_500),
+        ] {
+            assert_eq!(
+                run_ttl_seconds(Duration::from_secs(command), Duration::from_secs(queue)),
+                ttl
+            );
+        }
+    }
+
+    #[test]
+    fn delayed_ready_keeps_setup_and_command_valid_for_the_full_queue_budget() {
+        let command = Duration::from_secs(1);
+        let queue = Duration::from_secs(1800);
+        let ttl = Duration::from_secs(run_ttl_seconds(command, queue));
+        for ready_after in [1000, 1800] {
+            let elapsed = Duration::from_secs(ready_after);
+            assert!(!run_needs_refresh(command, queue, elapsed));
+            assert!(ttl >= elapsed + Duration::from_secs(RUN_SLACK_SECONDS) + command);
+        }
+    }
+
+    #[test]
+    fn capped_credentials_refresh_before_insufficient_lifetime_or_expiry() {
+        let command = Duration::from_secs(1);
+        let queue = Duration::from_secs(6 * 3600);
+        let last_valid_ready = Duration::from_secs(22_500 - RUN_SLACK_SECONDS - 1);
+        assert!(!run_needs_refresh(command, queue, last_valid_ready));
+        assert!(run_needs_refresh(
+            command,
+            queue,
+            last_valid_ready + Duration::from_nanos(1)
+        ));
+        assert!(run_needs_refresh(command, queue, queue));
+        assert!(run_needs_refresh(
+            command,
+            queue,
+            Duration::from_secs(22_500)
+        ));
+        let longest_command = Duration::from_secs(6 * 3600);
+        assert!(!run_needs_refresh(longest_command, queue, Duration::ZERO));
+        assert!(run_needs_refresh(
+            longest_command,
+            queue,
+            Duration::from_secs(1)
+        ));
+    }
+
+    #[test]
+    fn refreshed_request_preserves_project_access_and_accepted_placement() {
+        let mut lease = sylphx::sandboxes::Lease::default();
+        let mut spec = sylphx::sandboxes::LeaseSpec::default();
+        spec.region = CLUSTER_REGION.into();
+        lease.spec = Some(spec);
+        let command = Duration::from_secs(1);
+        let before_ready = run_request(
+            "prj_a".into(),
+            command,
+            Duration::from_secs(6 * 3600),
+            &lease,
+        );
+        let refreshed = run_request("prj_a".into(), command, Duration::ZERO, &lease);
+        assert_eq!(refreshed.project, before_ready.project);
+        assert_eq!(refreshed.access, before_ready.access);
+        assert_eq!(refreshed.network, before_ready.network);
+        assert_eq!(refreshed.ttl_seconds, RUN_SLACK_SECONDS + command.as_secs());
     }
 
     #[test]
@@ -514,10 +598,15 @@ mod tests {
         let mut spec = sylphx::sandboxes::LeaseSpec::default();
         spec.region = CLUSTER_REGION.into();
         lease.spec = Some(spec);
-        let r = run_request("prj_a".into(), Duration::from_secs(60), &lease);
+        let r = run_request(
+            "prj_a".into(),
+            Duration::from_secs(60),
+            Duration::from_secs(1800),
+            &lease,
+        );
         assert_eq!(
             r.body(),
-            json!({"project": "prj_a", "access": "write", "ttl_seconds": 960, "network": "cluster"})
+            json!({"project": "prj_a", "access": "write", "ttl_seconds": 2760, "network": "cluster"})
         );
         assert_eq!(
             local_request("prj_a".into()).body(),
@@ -547,15 +636,26 @@ mod tests {
             lease.spec = Some(spec);
             // The API's accepted placement replaces the request's region.
             lease.spec.as_mut().unwrap().region = returned.into();
-            let req = run_request("prj_a".into(), Duration::from_secs(60), &lease);
+            let req = run_request(
+                "prj_a".into(),
+                Duration::from_secs(60),
+                Duration::from_secs(1800),
+                &lease,
+            );
             assert_eq!(req.network, expected, "{requested:?} -> {returned:?}");
             assert_eq!(req.project, "prj_a");
             assert_eq!(req.access, Access::Write);
-            assert_eq!(req.ttl_seconds, 960);
+            assert_eq!(req.ttl_seconds, 2760);
         }
         let lease = sylphx::sandboxes::Lease::default();
         assert_eq!(
-            run_request("prj_a".into(), Duration::from_secs(60), &lease).network,
+            run_request(
+                "prj_a".into(),
+                Duration::from_secs(60),
+                Duration::from_secs(1800),
+                &lease,
+            )
+            .network,
             Network::Public
         );
     }

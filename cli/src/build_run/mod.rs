@@ -7,13 +7,13 @@
 //! The workspace is created only after admission, belongs to the lease's
 //! workload, and is reclaimed when the lease ends. Scoped remote build caches
 //! reuse build outputs without retaining a local workspace.
-//! Every run releases the lease. Before the command starts, a preempted or lost
-//! machine, or a broken stream, is retried once after a short backoff, and
-//! anything that fails (the machine, the sync, the toolchain install) is a
-//! platform failure, 125. Once the command has started it is never run
-//! again: its own status is the exit code, a broken output stream is
-//! reattached to the running command (`Guest::reattach`), and a machine lost
-//! under it ends the run with 137, as a killed process.
+//! Every run releases the lease. Before the guest action launches, a lost
+//! machine or broken sync stream is retried once after a short backoff.
+//! Known setup failures are platform failures, 125. Once an action launches
+//! it is never replayed: a broken stream reattaches to that process, and losing
+//! it is 137 because its command may have run while the stream was down.
+//! The private guest start marker distinguishes a setup failure from the
+//! command's own exit status, including 125.
 //!
 //! `--region` pins placement to that Cell; otherwise the API selects Build
 //! capacity. Neither path creates or reserves a persistent workspace Volume.
@@ -53,10 +53,10 @@ use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
-use sylphx_build_lease::scripts::{provision_env, ARTIFACTS, BOOTSTRAP, PROVISION, RUN};
+use sylphx_build_lease::scripts::{start_script, Startup, ARTIFACTS};
 use sylphx_build_lease::{
-    allowed_domains, judge, lease_request, provision_failure, wait_ready, LeaseParams, Ready,
-    Verdict, BUILD_CACHE_HOST, WS,
+    allowed_domains, judge, lease_request, wait_ready, LeaseParams, Ready, Verdict,
+    BUILD_CACHE_HOST, WS,
 };
 
 /// `sylphx build image`'s arguments.
@@ -851,16 +851,22 @@ impl Retries {
 
 /// Why [`Run::exec`] lost the command, and whether it had started: only a
 /// command that never started may be run again.
-struct ExecFault {
-    started: bool,
-    fault: Fault,
+enum ExecFault {
+    Before(Fault),
+    Setup(Fault),
+    Launched(Fault),
 }
 
 impl ExecFault {
     fn before(fault: Fault) -> Self {
-        ExecFault {
-            started: false,
-            fault,
+        Self::Before(fault)
+    }
+
+    fn after(launched: bool, fault: Fault) -> Self {
+        if launched {
+            Self::Launched(fault)
+        } else {
+            Self::Before(fault)
         }
     }
 }
@@ -897,6 +903,9 @@ struct Run<'a> {
 /// A ready machine with its workspace.
 struct Machine {
     lease: sbx::Lease,
+    cache: BTreeMap<String, String>,
+    store: Option<store::Store>,
+    guest: Option<Guest>,
 }
 
 /// The managed publication the platform minted for one image build: where
@@ -932,41 +941,33 @@ impl Run<'_> {
     }
 
     async fn attempt(&mut self) -> Attempt {
-        let m = match self.acquire().await {
+        let warned_before = self.cache_warned.load(Ordering::Relaxed);
+        let mut m = match self.acquire().await {
             Ok(m) => m,
             Err(a) => return a,
         };
         let name = m.lease.name.clone();
-        let mut guest = match self.guest(&m.lease).await {
-            Ok(g) => g,
-            Err(e) => return self.lost_or(&name, e).await,
+        let mut guest = match m.guest.take() {
+            Some(g) => g,
+            None => match self.guest(&m.lease).await {
+                Ok(g) => g,
+                Err(e) => return self.lost_or(&name, e).await,
+            },
         };
         let mut minted = Instant::now();
-        let warned_before = self.cache_warned.load(Ordering::Relaxed);
-        // Minted before the sync: the build store takes the sync's files.
-        let (cache, store) = self.cache(&m.lease).await;
-        match self.sync(&guest, store.as_ref()).await {
+        match self.sync(&guest, m.store.as_ref()).await {
             Ok(()) => {}
             Err(e) if workspace_full(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
         }
-        let git_env = match self.send_git_deps(&guest).await {
+        let (git_env, mut setup) = match self.send_git_deps(&guest).await {
             Ok(e) => e,
             Err(e) if out_of_space(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
-        // An image build needs no Rust toolchain.
-        if self.o.image.is_none() {
-            if let Err(a) = self.provision(&guest, &name, &cache).await {
-                if matches!(&a, Attempt::Done(Outcome::Platform { reason, .. }) if out_of_space(reason))
-                {
-                    return self.out_of_space(&m).await;
-                }
-                return a;
-            }
-        }
-        if let Err(e) = self.send_source_history(&guest).await {
-            return self.lost_or(&name, e).await;
+        match self.send_source_history(&guest).await {
+            Ok(script) => setup.push_str(&script),
+            Err(e) => return self.lost_or(&name, e).await,
         }
         let shape = format!("build-{}", self.o.size);
         let warned = !warned_before && self.cache_warned.load(Ordering::Relaxed);
@@ -977,14 +978,17 @@ impl Run<'_> {
                 self.where_()
             ));
         }
-        self.out.event(
-            json!({"type": "running", "lease": name, "size": self.o.size, "region": m.lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "workspace": "cold", "volume": false, "cache": !cache.is_empty()}),
-        );
         if let Err(e) = self.send_auth(&guest).await {
             return self.lost_or(&name, e).await;
         }
+        if self
+            .held
+            .with(|h| h.publish.as_ref().is_some_and(|p| p.auth))
+        {
+            setup.push_str(&shell_call(&["chmod", "600", &image::auth_path()]));
+        }
         let ran = self
-            .exec(&mut guest, &mut minted, &name, cache, git_env)
+            .exec(&mut guest, &mut minted, &name, m.cache, git_env, &setup)
             .await;
         // The credentials are gone before anything else is asked of the
         // machine, whatever the build's end.
@@ -992,14 +996,11 @@ impl Run<'_> {
         let code = match ran {
             Ok(Some(c)) => c,
             Ok(None) => return Attempt::Done(Outcome::TimedOut),
-            Err(ExecFault {
-                started: false,
-                fault,
-            }) => return self.lost_or(&name, fault).await,
-            Err(ExecFault {
-                started: true,
-                fault,
-            }) => return self.lost_after_start(&name, fault).await,
+            Err(ExecFault::Before(fault)) => return self.lost_or(&name, fault).await,
+            Err(ExecFault::Setup(fault)) => {
+                return Attempt::Done(Outcome::platform(fault.text().to_string(), true))
+            }
+            Err(ExecFault::Launched(fault)) => return self.lost_after_start(&name, fault).await,
         };
         if self.o.image.is_some() && code == 0 {
             if let Err(o) = self.collect_image(&guest, &name).await {
@@ -1022,13 +1023,17 @@ impl Run<'_> {
     /// with `--no-cache`, and when no token
     /// can be had (a cache that is missing only slows the build). The build
     /// store, when the token reaches it, takes the sync's files.
-    async fn cache(&self, lease: &sbx::Lease) -> (BTreeMap<String, String>, Option<store::Store>) {
+    async fn cache(
+        &self,
+        lease: &sbx::Lease,
+        queue_timeout: Duration,
+    ) -> (BTreeMap<String, String>, Option<store::Store>) {
         if self.o.no_cache {
             return (BTreeMap::new(), None);
         }
         let minted = match (self.key, build_cache::project_id(&self.parent)) {
             (Some(key), Some(project)) => {
-                let req = build_cache::run_request(project, self.o.timeout, lease);
+                let req = build_cache::run_request(project, self.o.timeout, queue_timeout, lease);
                 build_cache::mint(&self.cache_url, key, &req).await
             }
             (None, _) => Err(build_cache::MintError::NoProject("not signed in".into())),
@@ -1061,42 +1066,6 @@ impl Run<'_> {
                 }
                 (BTreeMap::new(), None)
             }
-        }
-    }
-
-    /// Installs what the command needs before it starts. Any failure here is
-    /// a platform failure (125, retryable), never the command's own status.
-    async fn provision(
-        &self,
-        g: &Guest,
-        name: &str,
-        cache: &BTreeMap<String, String>,
-    ) -> Result<(), Attempt> {
-        let args = argv(&[
-            "/bin/sh",
-            "-c",
-            PROVISION,
-            "sylphx-provision",
-            WS,
-            self.rel(),
-        ]);
-        let mut env = provision_env(cache);
-        env.extend(provision_env(&self.o.env));
-        let ran = tokio::time::timeout(PROVISION_TIMEOUT, g.run(USER, &args, &env)).await;
-        match ran {
-            Err(_) => Err(Attempt::Done(Outcome::platform(
-                format!(
-                    "preparing the build machine took longer than {}s",
-                    PROVISION_TIMEOUT.as_secs()
-                ),
-                true,
-            ))),
-            Ok(Ok((0, _, _))) => Ok(()),
-            Ok(Ok((code, _, err))) => Err(Attempt::Done(Outcome::platform(
-                provision_failure(code, &err),
-                true,
-            ))),
-            Ok(Err(f)) => Err(self.lost_or(name, f).await),
         }
     }
 
@@ -1191,12 +1160,44 @@ impl Run<'_> {
         self.out.event(
             json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "volume": false}),
         );
-        // Readiness polls on the unbounded client: `wait_ready` enforces the
-        // queue budget itself and reports QueueTimeout, which a deadline-bounded
-        // client would turn into a transport error.
-        self.ready(self.client, lease, deadline)
-            .await
-            .map(|lease| Machine { lease })
+        // Cache credentials depend on accepted placement, not readiness.
+        // Mint while the machine is admitted/booted, through the public cache API.
+        let cache_started = Instant::now();
+        let (ready, (mut cache, mut store), guest) = tokio::join!(
+            self.ready(self.client, lease.clone(), deadline),
+            self.cache(&lease, self.o.queue_timeout),
+            async {
+                // A queued lease cannot mint a token. A warm READY answer can
+                // mint in parallel with the cache instead of serializing it.
+                if state(&lease) == sbx::LeaseState::Ready {
+                    self.guest(&lease).await.map(Some)
+                } else {
+                    Ok(None)
+                }
+            },
+        );
+        let lease = ready?;
+        // Only a capped token can lose its setup/command lifetime in admission.
+        // Refresh that exceptional path, never serialize normal READY setup.
+        if !cache.is_empty()
+            && build_cache::run_needs_refresh(
+                self.o.timeout,
+                self.o.queue_timeout,
+                cache_started.elapsed(),
+            )
+        {
+            (cache, store) = self.cache(&lease, Duration::ZERO).await;
+        }
+        let guest = match guest {
+            Ok(g) => g,
+            Err(e) => return Err(self.lost_or(&lease.name, e).await),
+        };
+        Ok(Machine {
+            lease,
+            cache,
+            store,
+            guest,
+        })
     }
 
     /// Create a Build lease with no pre-created or attached workspace Volume.
@@ -1283,19 +1284,6 @@ impl Run<'_> {
     async fn sync(&self, g: &Guest, store: Option<&store::Store>) -> Result<(), Fault> {
         let t = Instant::now();
         let none = BTreeMap::new();
-        let (code, _, err) = g
-            .run(
-                "root",
-                &argv(&["/bin/sh", "-c", BOOTSTRAP, "bootstrap", WS, "0", "0"]),
-                &none,
-            )
-            .await?;
-        if code != 0 {
-            return Err(Fault::Other(format!(
-                "{BOOTSTRAP_FAILED}: {}",
-                String::from_utf8_lossy(&err).trim()
-            )));
-        }
         // The admitted workload owns a newly created workspace: no previous
         // lease's manifest or build state is available, even with --region.
         let plan = sync::plan(&self.tree, None);
@@ -1365,13 +1353,24 @@ impl Run<'_> {
             (false, true) => "1",
             (false, false) => "0",
         };
+        // Credentials are uploaded only into a private directory. Prepare it
+        // in the existing sync-apply action, never as another round trip.
+        let apply = if self.o.image.is_some() {
+            format!(
+                "set -eu\numask 077\nmkdir -m 700 {}\n{}",
+                shell_word(&image::private_dir()),
+                sync::APPLY
+            )
+        } else {
+            sync::APPLY.to_string()
+        };
         let (code, _, err) = g
             .run(
                 USER,
                 &argv(&[
                     "/bin/sh",
                     "-c",
-                    sync::APPLY,
+                    &apply,
                     "apply",
                     WS,
                     full,
@@ -1417,75 +1416,42 @@ impl Run<'_> {
         Ok(())
     }
 
-    /// Puts the git dependencies the workspace lacks into its mirrors
-    /// ([`git_deps`]) and answers the command's environment for them. A
-    /// machine without git gets none and one warning: the build then fails
-    /// where it would have.
-    async fn send_git_deps(&self, g: &Guest) -> Result<BTreeMap<String, String>, Fault> {
-        if self.git_deps.is_empty() {
-            return Ok(BTreeMap::new());
-        }
-        let none = BTreeMap::new();
-        let names: Vec<String> = self.git_deps.iter().map(|(d, _)| d.name()).collect();
-        let mut args = argv(&["/bin/sh", "-c", git_deps::HAVE, "git-deps-have", WS]);
-        args.extend(names.iter().cloned());
-        let (code, out, err) = g.run(USER, &args, &none).await?;
-        if code == 3 {
-            eprintln!("sylphx: warning: the build machine has no git; git dependencies not sent");
-            return Ok(BTreeMap::new());
-        }
-        if code != 0 {
-            return Err(Fault::Other(format!(
-                "preparing the git dependencies failed: {}",
-                String::from_utf8_lossy(&err).trim()
-            )));
-        }
-        let missing: Vec<String> = String::from_utf8_lossy(&out)
-            .lines()
-            .filter(|l| names.iter().any(|n| n == l))
-            .map(str::to_string)
-            .collect();
+    /// Cold lease inputs need no remote HAVE query; install all locked mirrors
+    /// as part of the action, after uploading their packs with the tree inputs.
+    async fn send_git_deps(&self, g: &Guest) -> Result<(BTreeMap<String, String>, String), Fault> {
         let mut up = 0u64;
-        for (d, tgz) in &self.git_deps {
-            let n = d.name();
-            if !missing.contains(&n) {
-                continue;
-            }
+        let mut args = vec!["/bin/sh", "-c", git_deps::APPLY, "git-deps-apply", WS];
+        let names: Vec<String> = self.git_deps.iter().map(|(d, _)| d.name()).collect();
+        for ((_, tgz), n) in self.git_deps.iter().zip(&names) {
             let bytes = std::fs::read(tgz)
                 .map_err(|e| Fault::Other(format!("reading {}: {e}", tgz.display())))?;
             g.upload(&format!("{WS}/{}/in/{n}.tgz", git_deps::DIR), USER, &bytes)
                 .await?;
             up += bytes.len() as u64;
         }
-        if !missing.is_empty() {
-            let mut args = argv(&["/bin/sh", "-c", git_deps::APPLY, "git-deps-apply", WS]);
-            args.extend(missing.iter().cloned());
-            let (code, _, err) = g.run(USER, &args, &none).await?;
-            if code != 0 {
-                return Err(Fault::Other(format!(
-                    "adding the git dependencies failed: {}",
-                    String::from_utf8_lossy(&err).trim()
-                )));
-            }
-        }
+        args.extend(names.iter().map(String::as_str));
         self.add(|s| s.bytes_up += up);
-        self.out.event(json!({
-            "type": "git_deps",
-            "deps": names.len(),
-            "sent": missing.len(),
-            "bytes_up": up,
-        }));
+        if !names.is_empty() {
+            self.out.event(json!({"type": "git_deps", "deps": names.len(), "sent": names.len(), "bytes_up": up}));
+        }
         let deps: Vec<git_deps::Dep> = self.git_deps.iter().map(|(d, _)| d.clone()).collect();
-        Ok(git_deps::env(&deps, WS))
+        Ok((
+            git_deps::env(&deps, WS),
+            if names.is_empty() {
+                String::new()
+            } else {
+                shell_call(&args)
+            },
+        ))
     }
 
-    async fn send_source_history(&self, g: &Guest) -> Result<(), Fault> {
+    async fn send_source_history(&self, g: &Guest) -> Result<String, Fault> {
         let Some((reference, bundle)) = &self.source_history else {
-            return Ok(());
+            return Ok(String::new());
         };
         g.upload(&format!("{WS}/.sylphx/source.bundle"), USER, bundle)
             .await?;
-        let args = argv(&[
+        let script = shell_call(&[
             "/bin/sh",
             "-c",
             history::APPLY,
@@ -1493,18 +1459,11 @@ impl Run<'_> {
             WS,
             reference,
         ]);
-        let (code, _, err) = g.run(USER, &args, &BTreeMap::new()).await?;
-        if code != 0 {
-            return Err(Fault::Other(format!(
-                "installing source history: {}",
-                String::from_utf8_lossy(&err).trim()
-            )));
-        }
         self.add(|s| s.bytes_up += bundle.len() as u64);
         self.out.event(
             json!({"type": "source_history", "reference": reference, "bytes_up": bundle.len()}),
         );
-        Ok(())
+        Ok(script)
     }
 
     /// Runs the command, streaming its output; `None` when `--timeout` hit.
@@ -1517,11 +1476,12 @@ impl Run<'_> {
         lease: &str,
         cache: BTreeMap<String, String>,
         git_env: BTreeMap<String, String>,
+        setup: &str,
     ) -> Result<Option<i32>, ExecFault> {
         let mut args = vec![
             "/bin/sh".to_string(),
             "-c".into(),
-            RUN.into(),
+            start_script(setup, self.o.image.is_none()),
             "sylphx-run".into(),
             WS.into(),
             self.rel().to_string(),
@@ -1536,6 +1496,7 @@ impl Run<'_> {
         });
         args.extend(command);
         // The command's own `--env` wins over the cache's and ours.
+        let cached = !cache.is_empty();
         let mut env = cache;
         if let Some(img) = &self.o.image {
             // An image build gets the cache's mirror addresses, never its
@@ -1555,11 +1516,17 @@ impl Run<'_> {
         } else {
             env.remove("SYLPHX_BUILD_SOURCE_HISTORY");
         }
+        let action_state = format!(
+            "/tmp/sylphx-action-{:016x}",
+            sylphx_build_lease::guest::rand_u64()
+        );
+        env.insert("SYLPHX_BUILD_ACTION_STATE".into(), action_state.clone());
         let mut p = g
             .start(USER, &args, "", &env)
             .await
             .map_err(ExecFault::before)?;
-        let deadline = tokio::time::Instant::now() + self.o.timeout;
+        let mut startup = Startup::default();
+        let mut deadline = tokio::time::Instant::now() + Duration::from_secs(900);
         let mut tick = tokio::time::interval(KEEPALIVE);
         tick.tick().await;
         let mut registry_minted = Instant::now();
@@ -1572,11 +1539,28 @@ impl Run<'_> {
                         self.held.with(|h| h.proc = Some((g2, pid)));
                     }
                     Ok(Some(Event::Stdout(b))) => self.out.stdout(&b),
-                    Ok(Some(Event::Stderr(b))) => self.out.stderr(&b),
-                    Ok(Some(Event::End(c))) => break Some(c),
+                    Ok(Some(Event::Stderr(b))) => {
+                        let before = startup.started();
+                        let bytes = startup.push(&b);
+                        if !before && startup.started() {
+                            deadline = tokio::time::Instant::now() + self.o.timeout;
+                            self.out.event(json!({"type": "running", "lease": lease, "size": self.o.size, "region": self.region(), "workspace": "cold", "volume": false, "cache": cached}));
+                        }
+                        if !bytes.is_empty() { self.out.stderr(&bytes); }
+                    }
+                    Ok(Some(Event::End(c))) => {
+                        let pending = startup.finish();
+                        if !pending.is_empty() { self.out.stderr(&pending); }
+                        if !startup.started() {
+                            return Err(ExecFault::Setup(Fault::Other(format!("preparing the build machine failed (status {c}); see its stderr"))));
+                        }
+                        // An exit buffered while detached cannot outrun the
+                        // original command deadline recovered from the guest.
+                        break if tokio::time::Instant::now() >= deadline { None } else { Some(c) };
+                    }
                     Ok(Some(Event::Error(m))) => {
                         let f = Fault::Other(format!("the command could not run: {m}"));
-                        return Err(ExecFault { started: p.pid.is_some(), fault: f });
+                        return Err(ExecFault::after(p.pid.is_some(), f));
                     }
                     Ok(None) | Err(Fault::Stream(_)) => {
                         // A proxy on the way restarted: follow the same
@@ -1600,6 +1584,17 @@ impl Run<'_> {
                         };
                         match reattach {
                             Ok(Reattach::Attached) => {
+                                if !startup.started() {
+                                    let elapsed = tokio::time::timeout_at(deadline, g.command_elapsed(&action_state))
+                                        .await
+                                        .map_err(|_| ExecFault::Setup(Fault::Other("recovering command-start state timed out".into())))?
+                                        .map_err(|f| ExecFault::after(true, f))?;
+                                    if let Some(elapsed) = elapsed {
+                                        startup.recover();
+                                        deadline = tokio::time::Instant::now() + self.o.timeout.saturating_sub(elapsed);
+                                        self.out.event(json!({"type": "running", "lease": lease, "size": self.o.size, "region": self.region(), "workspace": "cold", "volume": false, "cache": cached}));
+                                    }
+                                }
                                 let gap = broke.elapsed().as_millis() as u64;
                                 self.out.event(json!({"type": "reattached", "gap_ms": gap}));
                                 if !reattached {
@@ -1612,12 +1607,12 @@ impl Run<'_> {
                             }
                             Ok(Reattach::NotRunning) => {
                                 let f = Fault::Stream("the output stream broke and the command is no longer on the machine".into());
-                                return Err(ExecFault { started: p.pid.is_some(), fault: f });
+                                return Err(ExecFault::after(p.pid.is_some(), f));
                             }
-                            Err(f) => return Err(ExecFault { started: p.pid.is_some(), fault: f }),
+                            Err(f) => return Err(ExecFault::after(p.pid.is_some(), f)),
                         }
                     }
-                    Err(f) => return Err(ExecFault { started: p.pid.is_some(), fault: f }),
+                    Err(f) => return Err(ExecFault::after(p.pid.is_some(), f)),
                 },
                 _ = tick.tick() => {
                     if minted.elapsed() >= TOKEN_RENEW {
@@ -1633,16 +1628,18 @@ impl Run<'_> {
                             if let Some(pid) = p.pid {
                                 let _ = g.signal(pid, "SIGKILL").await;
                             }
-                            return Err(ExecFault { started: p.pid.is_some(), fault });
+                            return Err(ExecFault::after(p.pid.is_some(), fault));
                         }
                         registry_minted = Instant::now();
                     }
                     let _ = g.touch(WS).await;
                 }
                 _ = tokio::time::sleep_until(deadline) => {
-                    let pid = self.held.with(|h| h.proc.as_ref().map(|(_, p)| *p));
-                    if let Some(pid) = pid {
+                    if let Some(pid) = p.pid {
                         let _ = g.signal(pid, "SIGKILL").await;
+                    }
+                    if !startup.started() {
+                        return Err(ExecFault::Setup(Fault::Other("preparing the build machine took longer than 900s".into())));
                     }
                     break None;
                 }
@@ -1688,33 +1685,8 @@ impl Run<'_> {
             h.secrets
                 .extend(image::auth_secrets(&String::from_utf8_lossy(&bytes)))
         });
-        let none = BTreeMap::new();
-        let dir = image::private_dir();
-        let prep = r#"set -eu
-umask 077
-rm -rf "$1"
-mkdir -m 700 "$1"
-"#;
-        let (code, _, _) = g
-            .run(
-                USER,
-                &argv(&["/bin/sh", "-c", prep, "private", &dir]),
-                &none,
-            )
-            .await?;
-        if code != 0 {
-            return Err(Fault::Other(
-                "preparing the private directory failed".into(),
-            ));
-        }
         let path = image::auth_path();
         g.upload(&path, USER, &bytes).await?;
-        let (code, _, _) = g.run(USER, &argv(&["chmod", "600", &path]), &none).await?;
-        if code != 0 {
-            return Err(Fault::Other(
-                "securing the registry credentials failed".into(),
-            ));
-        }
         self.held.with(|h| h.publish = Some(publish));
         Ok(())
     }
@@ -2129,9 +2101,6 @@ fn prepare_git_deps(
         .collect()
 }
 
-/// How long preparing the machine (the toolchain install) may take.
-const PROVISION_TIMEOUT: Duration = Duration::from_secs(15 * 60);
-
 /// A refused API call as a platform failure; retryable as the API says, and
 /// always when the API could not be reached.
 fn api(what: &str, e: &sylphx::Error) -> Outcome {
@@ -2166,8 +2135,7 @@ fn out_of_space(text: &str) -> bool {
         || text.contains("not enough inodes")
 }
 
-/// How [`Run::sync`] names a failed bootstrap or apply step.
-const BOOTSTRAP_FAILED: &str = "preparing the workspace failed";
+/// How [`Run::sync`] names a failed apply step.
 const APPLY_FAILED: &str = "applying the sync failed";
 
 /// A sync failure the run treats as a full workspace: one that says so, or
@@ -2177,7 +2145,22 @@ const APPLY_FAILED: &str = "applying the sync failed";
 /// emptied workspace (a cold sync) rather than a second try on the same
 /// state. A second failure is 125, retryable, as any loss before the start.
 fn workspace_full(text: &str) -> bool {
-    out_of_space(text) || text.starts_with(BOOTSTRAP_FAILED) || text.starts_with(APPLY_FAILED)
+    out_of_space(text) || text.starts_with(APPLY_FAILED)
+}
+
+/// One shell command, preserving every argument without interpolation.
+fn shell_word(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
+fn shell_call(args: &[&str]) -> String {
+    format!(
+        "{}\n",
+        args.iter()
+            .map(|s| shell_word(s))
+            .collect::<Vec<_>>()
+            .join(" ")
+    )
 }
 
 fn argv(a: &[&str]) -> Vec<String> {
@@ -2211,26 +2194,8 @@ fn artifact_path(dir: &Path, remote: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sylphx_build_lease::BUILD_PACKAGES;
-
-    #[test]
-    fn a_failed_bootstrap_retries_before_the_command_starts() {
-        assert!(workspace_full(
-            "preparing the workspace failed: gzip: stdin: unexpected end of file"
-        ));
-        assert!(workspace_full(
-            "preparing the workspace failed: gzip: No space left on device"
-        ));
-        assert!(workspace_full("preparing the workspace failed: "));
-        assert!(!workspace_full("guest answered 503"));
-        let mut retries = Retries::default();
-        let failed = || Attempt::Lost("the workspace ran out of space".into());
-        assert!(matches!(retries.next(failed()), Step::Again { .. }));
-        match retries.next(failed()) {
-            Step::Done(outcome) => assert_eq!(outcome.code(), 125),
-            Step::Again { .. } => panic!("a bootstrap failure must not retry indefinitely"),
-        }
-    }
+    use sylphx_build_lease::scripts::{PROVISION, RUN};
+    use sylphx_build_lease::{provision_failure, BUILD_PACKAGES};
 
     fn parse(args: &[&str]) -> Result<Opts, String> {
         let mut root = Command::new("sylphx").arg(
@@ -2654,177 +2619,6 @@ mod tests {
         .is_err());
     }
 
-    /// Runs [`RUN`] the way the guest does (`sh -c RUN … -- <command>`) in a
-    /// scratch workspace, with `rustup` and `curl` replaced by stubs: the stub
-    /// rustup answers `which` only under `ok_home`, the stub curl succeeds
-    /// when `mirror_up`. The workspace starts with a stale Cargo config from
-    /// an earlier run. Returns the command's stdout.
-    fn run_prelude(ok_home: &str, mirror: Option<&str>, mirror_up: bool, cmd: &str) -> String {
-        run_prelude_env(ok_home, mirror, mirror_up, cmd, &[]).0
-    }
-
-    /// [`run_prelude`] with extra environment, returning stdout and stderr.
-    /// `sccache` is a stub too, so no real server starts: `--start-server`
-    /// exits `$STUB_SCCACHE_START` (default 0) and says why on stderr.
-    fn run_prelude_env(
-        ok_home: &str,
-        mirror: Option<&str>,
-        mirror_up: bool,
-        cmd: &str,
-        env: &[(&str, &str)],
-    ) -> (String, String) {
-        let base = std::env::temp_dir().join(format!(
-            "sylphx-build-run-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        let (ws, bin) = (base.join("ws"), base.join("bin"));
-        std::fs::create_dir_all(ws.join("tree/crate")).unwrap();
-        std::fs::create_dir_all(ws.join(".sylphx")).unwrap();
-        // A replacement left by an earlier run on this workspace.
-        std::fs::create_dir_all(ws.join(".cargo")).unwrap();
-        std::fs::write(ws.join(".cargo/config.toml"), "stale\n").unwrap();
-        std::fs::create_dir_all(&bin).unwrap();
-        let ok_home = ok_home.replace("$W", ws.to_str().unwrap());
-        let stubs = [
-            (
-                "rustup",
-                format!(
-                    "#!/bin/sh\n[ \"$1\" = which ] && [ \"$RUSTUP_HOME\" = \"{ok_home}\" ] && exit 0\n[ \"$1\" = which ] && exit 1\nexit 0\n"
-                ),
-            ),
-            (
-                "curl",
-                format!("#!/bin/sh\nexit {}\n", if mirror_up { 0 } else { 7 }),
-            ),
-            (
-                "sccache",
-                "#!/bin/sh\nif [ \"$1\" = --start-server ]; then\n  echo 'sccache: Starting the server...'\n  [ \"${STUB_SCCACHE_START:-0}\" = 0 ] && exit 0\n  printf '\\nsccache: error: Server startup failed: cache storage failed to read\\n\\nContext:\\n' >&2\n  exit \"$STUB_SCCACHE_START\"\nfi\nexit 0\n"
-                    .to_string(),
-            ),
-        ];
-        for (name, body) in stubs {
-            let f = bin.join(name);
-            std::fs::write(&f, body).unwrap();
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&f, std::fs::Permissions::from_mode(0o755)).unwrap();
-        }
-        let mut c = std::process::Command::new("sh");
-        c.args(["-c", RUN, "sylphx-run"])
-            .arg(&ws)
-            .args(["crate", "1", "sh", "-c", cmd])
-            .env_clear()
-            .env("PATH", format!("{}:/usr/bin:/bin", bin.display()));
-        if let Some(m) = mirror {
-            c.env("SYLPHX_CRATES_MIRROR", m);
-        }
-        c.envs(env.iter().copied());
-        let out = c.output().unwrap();
-        let _ = std::fs::remove_dir_all(&base);
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        (
-            String::from_utf8(out.stdout).unwrap(),
-            String::from_utf8(out.stderr).unwrap(),
-        )
-    }
-
-    #[test]
-    fn incremental_compilation_does_not_use_sccache() {
-        let (out, err) = run_prelude_env(
-            "/opt/rustup",
-            None,
-            false,
-            "echo \"${CARGO_INCREMENTAL}:${RUSTC_WRAPPER:-}\"",
-            &[("CARGO_INCREMENTAL", "1"), ("STUB_SCCACHE_START", "2")],
-        );
-        assert_eq!(out, "1:\n");
-        assert!(!err.contains("sylphx: warning: the build cache"), "{err}");
-    }
-
-    #[test]
-    fn lease_owned_targets_use_sccache_without_incremental_by_default() {
-        let show = "echo \"${CARGO_INCREMENTAL}:${RUSTC_WRAPPER:-}\"";
-        let (out, _) = run_prelude_env("/opt/rustup", None, false, show, &[]);
-        assert_eq!(out, "0:\n");
-        let (out, _) = run_prelude_env(
-            "/opt/rustup",
-            None,
-            false,
-            show,
-            &[("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache")],
-        );
-        assert_eq!(out, "0:sccache\n");
-    }
-
-    #[test]
-    fn a_build_cache_that_does_not_answer_never_fails_the_build() {
-        let wrapper = "echo \"[${RUSTC_WRAPPER:-}]\"";
-        let webdav = ("SCCACHE_WEBDAV_ENDPOINT", "http://build-cache.test/sccache");
-        // The cache answers: compiles go through sccache, nothing is said.
-        let (out, err) = run_prelude_env(
-            "/opt/rustup",
-            None,
-            false,
-            wrapper,
-            &[webdav, ("CARGO_INCREMENTAL", "0")],
-        );
-        assert_eq!(out, "[sccache]\n");
-        assert!(!err.contains("sylphx: warning: the build cache"), "{err}");
-        // sccache's server refuses to start (its backend is down): the run
-        // compiles without it and says so once, with sccache's reason.
-        let (out, err) = run_prelude_env(
-            "/opt/rustup",
-            None,
-            false,
-            wrapper,
-            &[
-                webdav,
-                ("CARGO_INCREMENTAL", "0"),
-                ("STUB_SCCACHE_START", "2"),
-            ],
-        );
-        assert_eq!(out, "[]\n");
-        assert_eq!(
-            err.matches("sylphx: warning: the build cache did not answer, so this run compiles without it: sccache: error: Server startup failed: cache storage failed to read\n").count(),
-            1,
-            "{err}"
-        );
-        // A caller's own wrapper is left alone and no server is started.
-        let (out, _) = run_prelude_env(
-            "/opt/rustup",
-            None,
-            false,
-            wrapper,
-            &[
-                webdav,
-                ("STUB_SCCACHE_START", "2"),
-                ("RUSTC_WRAPPER", "mine"),
-            ],
-        );
-        assert_eq!(out, "[mine]\n");
-    }
-
-    #[test]
-    fn the_template_toolchain_is_used_when_it_serves_the_tree() {
-        // The guest inherits no RUSTUP_HOME (envd passes only PATH, HOME,
-        // USER and LOGNAME): the template's home is still chosen when it
-        // holds the tree's toolchain.
-        assert_eq!(
-            run_prelude("/opt/rustup", None, false, "echo $RUSTUP_HOME"),
-            "/opt/rustup\n"
-        );
-        // It does not: the workspace's rustup home, installed there.
-        let home = run_prelude("$W/rustup", None, false, "echo $RUSTUP_HOME");
-        assert!(home.trim_end().ends_with("/ws/rustup"), "{home}");
-    }
-
     #[test]
     fn lease_egress_is_the_cache_gateway_plus_allow_hosts_only() {
         // No internet package host by default: the mirrors serve them.
@@ -3156,28 +2950,8 @@ esac
         assert!(!w.0.join("tree/.git").exists());
     }
 
-    fn bootstrap(w: &Ws, path: &str, args: &[&str]) -> (i32, String, String) {
-        let out = std::process::Command::new("/bin/sh")
-            .args(["-c", BOOTSTRAP, "bootstrap"])
-            .arg(w.0.join("ws"))
-            .args(args)
-            .env_clear()
-            .env("PATH", path)
-            .output()
-            .unwrap();
-        (
-            out.status.code().unwrap_or(-1),
-            String::from_utf8_lossy(&out.stdout).into_owned(),
-            String::from_utf8_lossy(&out.stderr).into_owned(),
-        )
-    }
-
     #[test]
-    fn the_bootstrap_floor_matches_the_named_limits() {
-        use sylphx_build_lease::scripts::{WORKSPACE_MIN_FREE_GIB, WORKSPACE_MIN_FREE_PERCENT};
-        assert!(BOOTSTRAP.contains(&format!(
-            "MIN_GIB={WORKSPACE_MIN_FREE_GIB} MIN_PCT={WORKSPACE_MIN_FREE_PERCENT}"
-        )));
+    fn disk_full_messages_are_distinguished_from_other_guest_errors() {
         assert!(out_of_space("gzip: stdout: No space left on device"));
         assert!(!out_of_space("guest answered 503"));
     }
@@ -3195,129 +2969,6 @@ esac
         assert!(out_of_space("not enough inodes available: no space"));
         assert!(!workspace_full("guest answered 503 Service Unavailable"));
         assert!(!workspace_full("preparing the git dependencies failed: x"));
-    }
-
-    /// A gzip tarball of one file, `name`, as the client sends it, with
-    /// incompressible content so that a cut-off copy ends mid-stream.
-    fn tarball(w: &Ws, name: &str, bytes: usize) -> Vec<u8> {
-        let mut x: u64 = 0x9e37_79b9_7f4a_7c15;
-        let body: String = (0..bytes)
-            .map(|_| {
-                x ^= x << 13;
-                x ^= x >> 7;
-                x ^= x << 17;
-                char::from(b'!' + (x % 90) as u8)
-            })
-            .collect();
-        w.file(&format!("src/{name}"), &body);
-        let out = std::process::Command::new("tar")
-            .args(["-czf", "-", "-C"])
-            .arg(w.0.join("src"))
-            .arg(name)
-            .output()
-            .unwrap();
-        assert!(out.status.success());
-        out.stdout
-    }
-
-    fn apply(w: &Ws, full: &str) -> (bool, String) {
-        let out = std::process::Command::new("/bin/sh")
-            .args(["-c", sync::APPLY, "apply"])
-            .arg(w.0.join("ws"))
-            .args([full, "0"])
-            .env_clear()
-            .env("PATH", SYS_PATH)
-            .output()
-            .unwrap();
-        (
-            out.status.success(),
-            String::from_utf8_lossy(&out.stderr).into_owned(),
-        )
-    }
-
-    /// 2026-10-06 21:54Z: two runs on a full workspace had envd answer 507
-    /// partway through an upload, which leaves the part it wrote; at 21:59Z
-    /// the next run pruned `target/`, sent its own tarball, and its apply
-    /// read the leftover too: `gzip: stdin: unexpected end of file`. The
-    /// bootstrap now clears every leftover before the sync, so the same
-    /// state applies cleanly; a leftover `remove` list would otherwise have
-    /// deleted a tree file without failing.
-    #[test]
-    fn a_truncated_upload_left_by_an_earlier_run_never_reaches_the_next_apply() {
-        let w = Ws::new("ws-leftover");
-        let fresh = tarball(&w, "new.rs", 64);
-        let cut = tarball(&w, "old.rs", 256 << 10);
-        let leftover = |w: &Ws| {
-            w.file("ws/tree/keep.rs", "fn keep() {}\n");
-            let s = w.0.join("ws/.sylphx");
-            std::fs::create_dir_all(&s).unwrap();
-            // keep.rs is input, not a file generated by an earlier build.
-            std::fs::write(
-                s.join("manifest"),
-                format!("{}\n{} 100644 keep.rs\n", sync::HEADER, "0".repeat(64)),
-            )
-            .unwrap();
-            std::fs::write(s.join("in-0003.tar.gz"), &cut[..cut.len() / 2]).unwrap();
-            std::fs::write(s.join("remove"), b"keep.rs\0").unwrap();
-        };
-        let send = |w: &Ws| {
-            std::fs::write(w.0.join("ws/.sylphx/in-0000.tar.gz"), &fresh).unwrap();
-        };
-
-        // The failure as it was: the apply meets the cut-off tarball.
-        leftover(&w);
-        send(&w);
-        let (ok, err) = apply(&w, "0");
-        assert!(!ok);
-        assert!(err.contains("unexpected end of file"), "{err}");
-        assert!(workspace_full(&format!("{APPLY_FAILED}: {}", err.trim())));
-
-        // The same leftovers with the bootstrap first: a clean apply.
-        let w = Ws::new("ws-leftover-fixed");
-        leftover(&w);
-        let (code, _, err) = bootstrap(&w, SYS_PATH, &["0", "0"]);
-        assert_eq!(code, 0, "{err}");
-        send(&w);
-        let (ok, err) = apply(&w, "0");
-        assert!(ok, "{err}");
-        assert!(w.0.join("ws/tree/new.rs").exists());
-        assert!(w.0.join("ws/tree/keep.rs").exists(), "no stale remove list");
-        assert!(!w.0.join("ws/tree/old.rs").exists());
-    }
-
-    /// Every file a sync stages before its apply is removed by the
-    /// bootstrap; the manifest, the tree and the caches stay.
-    #[test]
-    fn the_bootstrap_clears_every_sync_leftover_and_keeps_the_workspace() {
-        use sylphx_build_lease::scripts::SYNC_LEFTOVERS;
-        let w = Ws::new("ws-clear");
-        for l in SYNC_LEFTOVERS {
-            let p = l.replace('*', "0007");
-            if p.ends_with("fill") || p.ends_with("/in") {
-                w.file(&format!("ws/{p}/x"), "x");
-            } else {
-                w.file(&format!("ws/{p}"), "x");
-            }
-        }
-        w.file("ws/.sylphx/manifest", "a.rs\n");
-        w.file("ws/tree/a.rs", "fn a() {}\n");
-        w.file("ws/target/debug/a", "x");
-        w.file("ws/git-deps/0123456789abcdef.git/HEAD", "x");
-        let (code, _, err) = bootstrap(&w, SYS_PATH, &["0", "0"]);
-        assert_eq!(code, 0, "{err}");
-        for l in SYNC_LEFTOVERS {
-            let p = l.replace('*', "0007");
-            assert!(!w.0.join("ws").join(&p).exists(), "{p} is left");
-        }
-        for keep in [
-            ".sylphx/manifest",
-            ".sylphx/manifest.gz",
-            "tree/a.rs",
-            "target/debug/a",
-            "git-deps/0123456789abcdef.git/HEAD",
-        ] {
-            assert!(w.0.join("ws").join(keep).exists(), "{keep} is gone");
-        }
     }
 
     #[test]
@@ -3538,23 +3189,14 @@ esac
         let cache: BTreeMap<String, String> = [
             ("RUSTUP_DIST_SERVER", dist.to_string()),
             ("RUSTUP_UPDATE_ROOT", format!("{dist}/rustup")),
-            ("SCCACHE_WEBDAV_TOKEN", "a-run-token".to_string()),
-            (
-                "SYLPHX_CRATES_MIRROR",
-                "sparse+http://x/crates/index/".to_string(),
-            ),
         ]
         .into_iter()
         .map(|(k, v)| (k.to_string(), v))
         .collect();
-        // Only the toolchain tier's addresses; the run token stays out.
-        let env = provision_env(&cache);
-        assert_eq!(
-            env.keys().map(String::as_str).collect::<Vec<_>>(),
-            ["RUSTUP_DIST_SERVER", "RUSTUP_UPDATE_ROOT"]
-        );
-        assert!(provision_env(&BTreeMap::new()).is_empty());
-        let pairs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        let pairs: Vec<(&str, &str)> = cache
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
         for (down, want) in [(false, dist), (true, "direct")] {
             let w = Ws::new("tc-tier");
             w.file("tree/Cargo.toml", "[workspace]\n");

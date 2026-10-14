@@ -2,94 +2,90 @@
 //! toolchain, running the command, listing artifacts. Shared by the CLI and
 //! the Build service so both run a command the same way.
 
-/// The free space a warm workspace keeps before a sync, whichever is larger
-/// ([`BOOTSTRAP`] holds the same numbers). Sized from a measured peak: a
-/// clean `cargo build --workspace --all-targets` plus `cargo clippy
-/// --workspace --all-targets` of SylphxAI/cloud on a lease (2026-10-06,
-/// incremental off, no debug info) grew an empty `target/` to 9.0 GiB, with
-/// a 0.54 GiB Cargo home and a 0.28 GiB tree: 9.8 GiB for one whole state,
-/// so 15 GiB leaves 50 % over it. sccache writes to the remote build cache
-/// whenever the run has one, so its local directory stays empty. The 100 GiB
-/// Volume (`VOLUME_GIB` in the CLI) therefore keeps about eight such states
-/// before a prune, and stays as it is. `target/` is what fills it: read on
-/// two of SylphxAI/cloud's warm workspaces (2026-10-06 22:03Z and 22:10Z),
-/// everything else came to 0.97 and 1.42 GiB (the Cargo registry 0.66-1.0,
-/// the tree 0.31, its git repository 0.07; sccache, git dependencies and
-/// rustup empty), while one `target/` held 30.3 GiB after five hours, 17.3
-/// GiB of it `debug/incremental` written before builds ran with incremental
-/// compilation off.
-pub const WORKSPACE_MIN_FREE_GIB: u64 = 15;
-pub const WORKSPACE_MIN_FREE_PERCENT: u64 = 15;
-/// The files a sync puts on the workspace before its apply step consumes
-/// them (`$W/.sylphx/in-*.tar.gz`, the `drop`, `add` and `remove` lists, the
-/// build store's `fill` and `fill.gz`) and the git dependencies' uploads
-/// (`$W/git-deps/in`). [`BOOTSTRAP`] removes them before each sync.
-pub const SYNC_LEFTOVERS: &[&str] = &[
-    ".sylphx/in-*.tar.gz",
-    ".sylphx/drop",
-    ".sylphx/add",
-    ".sylphx/remove",
-    ".sylphx/fill",
-    ".sylphx/fill.gz",
-    "git-deps/in",
-];
-/// [`BOOTSTRAP`]'s status for a workspace too small even when empty.
-pub const BOOTSTRAP_TOO_SMALL: i32 = 75;
+use std::borrow::Cow;
+macro_rules! command_started {
+    () => {
+        "\x1esylphx-command-started\x1f\n"
+    };
+}
 
-/// Prepares the workspace as root: the mount root belongs to the guest user,
-/// and the manifest is offered compressed for the client to read.
-///
-/// `$2` = 1 on a warm workspace Volume: everything on it is a cache (the
-/// synced tree, `target/`, the Cargo home, sccache, toolchains), and
-/// `target/` grows without bound (Cargo never collects old artifacts), so a
-/// Volume fills until every run fails before its command. Before the sync
-/// the free space must be at least [`WORKSPACE_MIN_FREE_GIB`] or
-/// [`WORKSPACE_MIN_FREE_PERCENT`] of the Volume, whichever is larger. Short
-/// of it, `target/` is removed (sccache refills it); still short, the whole
-/// workspace is emptied, which makes it a fresh one (no manifest, so the
-/// client syncs it cold). Still short when empty: exit 75. `$3` = 1 empties
-/// it first anyway: the client asks for that on its one retry after a run
-/// ran out of space before its command started. Prints `pruned` or `emptied`
-/// on stdout when it did either.
-///
-/// First it removes whatever an earlier run's sync left before its apply
-/// finished ([`SYNC_LEFTOVERS`]): the client sends a whole new set after this
-/// script, and the apply step reads every `in-*.tar.gz`, list and fill it
-/// finds. envd keeps the part of an upload it wrote before the disk filled
-/// (its 507 "not enough disk space available"), so a leftover can be a
-/// truncated tarball: on 2026-10-06 one failed the next run's apply on a
-/// pruned workspace with `gzip: stdin: unexpected end of file`. A leftover
-/// `remove` or `add` list would also delete tree files or misstate the
-/// manifest without failing anything.
-pub const BOOTSTRAP: &str = r#"set -eu
-W=$1 CHECK=${2:-0} EMPTY=${3:-0} MIN_GIB=15 MIN_PCT=15
-mkdir -p "$W/.sylphx"
-rm -rf "$W/.sylphx"/in-*.tar.gz "$W/.sylphx/drop" "$W/.sylphx/add" "$W/.sylphx/remove" "$W/.sylphx/fill" "$W/.sylphx/fill.gz" "$W/git-deps/in"
-room() {
-  df -Pk "$W" | awk -v gib="$MIN_GIB" -v pct="$MIN_PCT" 'NR == 2 { need = $2 * pct / 100; if (need < gib * 1048576) need = gib * 1048576; exit !($4 >= need) }'
+/// Private guest protocol line, removed from stderr by [`Startup`].
+pub const COMMAND_STARTED: &str = command_started!();
+
+/// Tracks command admission while forwarding stderr without its protocol line.
+/// Only a possible marker prefix is buffered; arbitrary output bytes are kept.
+#[derive(Default)]
+pub struct Startup {
+    matched: usize,
+    started: bool,
 }
-empty() {
-  find "$W" -mindepth 1 -maxdepth 1 ! -name lost+found -exec rm -rf {} +
-  mkdir -p "$W/.sylphx"
-  echo emptied
+
+impl Startup {
+    pub fn started(&self) -> bool {
+        self.started
+    }
+    /// Recovers admission from durable guest state after detached output was
+    /// lost. A partial protocol marker is not user stderr.
+    pub fn recover(&mut self) {
+        self.started = true;
+        self.matched = 0;
+    }
+    pub fn push<'a>(&mut self, stderr: &'a [u8]) -> Cow<'a, [u8]> {
+        let marker = COMMAND_STARTED.as_bytes();
+        if self.matched == 0 && !stderr.contains(&marker[0]) {
+            return Cow::Borrowed(stderr);
+        }
+        let mut output = Vec::with_capacity(stderr.len() + self.matched);
+        for (index, &byte) in stderr.iter().enumerate() {
+            if byte == marker[self.matched] {
+                self.matched += 1;
+            } else {
+                output.extend_from_slice(&marker[..self.matched]);
+                // The marker's initial record separator occurs nowhere else in it.
+                self.matched = usize::from(byte == marker[0]);
+                if self.matched == 0 {
+                    output.push(byte);
+                }
+            }
+            if self.matched == marker.len() {
+                self.matched = 0;
+                self.started = true;
+                output.extend_from_slice(&stderr[index + 1..]);
+                break;
+            }
+        }
+        Cow::Owned(output)
+    }
+
+    /// Forwards an incomplete marker prefix when the process stream ends.
+    pub fn finish(&mut self) -> Vec<u8> {
+        let remainder = COMMAND_STARTED.as_bytes()[..self.matched].to_vec();
+        self.matched = 0;
+        remainder
+    }
 }
-if [ "$EMPTY" = 1 ]; then
-  empty
-elif [ "$CHECK" = 1 ] && ! room; then
-  rm -rf "$W/target"
-  if room; then echo pruned; else empty; fi
-fi
-if [ "$CHECK" = 1 ] && ! room; then
-  echo "the workspace has too little free space even when empty: $(df -Ph "$W" | awk 'NR == 2 { print $4 " of " $2 " free" }')" >&2
-  exit 75
-fi
-chown user:user "$W" "$W/.sylphx" 2>/dev/null || true
-rm -f "$W/.sylphx/manifest.gz"
-if [ -f "$W/.sylphx/manifest" ]; then
-  gzip -c "$W/.sylphx/manifest" > "$W/.sylphx/manifest.gz"
-  chown user:user "$W/.sylphx/manifest.gz" 2>/dev/null || true
-fi
-"#;
+
+/// One guest action, with positional arguments `W, R, E, command…`.
+/// Client-quoted setup executes in a subshell before bounded provisioning.
+/// Startup failures are 125; command exits, including 125, retain their status.
+pub fn start_script(setup: &str, provision: bool) -> String {
+    fn quoted(script: &str) -> String {
+        format!("'{}'", script.replace('\'', "'\\''"))
+    }
+    let mut script = format!(
+        "set -e\ntrap 'exit 125' 0\nexport W=$1 R=$2 E=$3\n( sh -c {} sylphx-setup \"$@\" ) || exit 125\n",
+        quoted(&format!("set -eu\n{setup}\n")),
+    );
+    if provision {
+        script.push_str(&format!(
+            "rm -f \"$W/.sylphx/provisioned-rustup-home\"\ntimeout 900 sh -c {} sylphx-provision \"$W\" \"$R\" || exit 125\nif [ -f \"$W/.sylphx/provisioned-rustup-home\" ]; then export RUSTUP_HOME=$(cat \"$W/.sylphx/provisioned-rustup-home\"); rm -f \"$W/.sylphx/provisioned-rustup-home\"; fi\n",
+            quoted(PROVISION),
+        ));
+    }
+    script.push_str("export SYLPHX_BUILD_START_MARKER=1\n");
+    script.push_str(RUN);
+    script
+}
 
 /// The directories both guest scripts share: the build caches live on the
 /// workspace (`$W`) so a warm machine reuses them.
@@ -122,7 +118,7 @@ macro_rules! template_rustup_home {
 macro_rules! guest_toolchain {
     () => {
         concat!(
-            r#"if command -v rustup >/dev/null 2>&1; then
+            r#"if [ "${RUSTUP_HOME+x}" != x ] && command -v rustup >/dev/null 2>&1; then
   if RUSTUP_HOME=""#,
             template_rustup_home!(),
             r#"" RUSTUP_AUTO_INSTALL=0 rustup which rustc >/dev/null 2>&1; then
@@ -190,8 +186,8 @@ fi
 /// list is left out, so a `rustup component add` in a command does not count
 /// as damage (the files it adds are not listed, so they are not checked). One with no checksums
 /// (installed by an older client) is installed again once. Installs go
-/// through the build cache's toolchain tier (`RUSTUP_DIST_SERVER`, from
-/// [`provision_env`]) and directly from static.rust-lang.org when the tier
+/// through the build cache's toolchain tier (`RUSTUP_DIST_SERVER`) and
+/// directly from static.rust-lang.org when the tier
 /// fails. The log is `$W/.sylphx/toolchain.log`; its tail goes to stderr on
 /// failure. When the template's toolchain runs, its same-named workspace
 /// copy and update hash are removed; other workspace toolchains are kept.
@@ -201,10 +197,7 @@ pub const PROVISION: &str = concat!(
     guest_dirs!(),
     r#"cd "$W/tree/$R" || { echo "the work tree is missing on the machine" >&2; exit 3; }
 "#,
-    guest_toolchain!(),
-    r#"L="$W/.sylphx/toolchain.log"
-: > "$L"
-rust_tree() {
+    r#"rust_tree() {
   d=$PWD
   while :; do
     if [ -e "$d/rust-toolchain.toml" ] || [ -e "$d/rust-toolchain" ] || [ -e "$d/Cargo.toml" ]; then return 0; fi
@@ -212,6 +205,11 @@ rust_tree() {
     d=$(dirname "$d")
   done
 }
+rust_tree || exit 0
+"#,
+    guest_toolchain!(),
+    r#"L="$W/.sylphx/toolchain.log"
+: > "$L"
 tc_dir() { t=$(RUSTUP_AUTO_INSTALL=0 rustup which rustc 2>/dev/null) && [ -n "$t" ] && echo "${t%/bin/rustc}"; }
 works() { T=$(tc_dir) && "$T/bin/rustc" -vV >> "$L" 2>&1 && "$T/bin/cargo" -V >> "$L" 2>&1; }
 sealed() { [ "$RUSTUP_HOME" != "$W/rustup" ] || ( cd "$T" && sha256sum -c --quiet --status .sylphx-sha256 ) >> "$L" 2>&1; }
@@ -252,69 +250,18 @@ if [ "$RUSTUP_HOME" = ""#,
   N=${T##*/}
   rm -rf "$W/rustup/toolchains/$N" "$W/rustup/update-hashes/$N"
 fi
+if command -v rustup >/dev/null 2>&1; then printf '%s\n' "$RUSTUP_HOME" > "$W/.sylphx/provisioned-rustup-home" || exit 4; fi
 exit 0
 "#
 );
 
-/// [`PROVISION`]'s environment: only the cache environment's toolchain tier
-/// (`RUSTUP_DIST_SERVER`, `RUSTUP_UPDATE_ROOT`: the build cache's
-/// `/upstream/static.rust-lang.org`, public content checked there against
-/// upstream's checksums and shared by every lease), never its tokens. Empty
-/// with `--no-cache` or no cache: rustup fetches directly.
-pub fn provision_env(
-    cache: &std::collections::BTreeMap<String, String>,
-) -> std::collections::BTreeMap<String, String> {
-    cache
-        .iter()
-        .filter(|(k, _)| matches!(k.as_str(), "RUSTUP_DIST_SERVER" | "RUSTUP_UPDATE_ROOT"))
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect()
-}
-
-/// Runs the command (`$4…`) in `$W/tree/$R` with the build caches on the
-/// workspace: `target/`, the Cargo home, sccache, and rustup's toolchains
-/// ([`PROVISION`] has installed them; [`guest_toolchain`] picks the same
-/// rustup home). `$3` is 1 on a machine without a Volume: its disk ends with
-/// the lease, so sccache runs only against a remote cache the machine is
-/// given, never a local directory that would double `target/` on the same
-/// disk. The command's exit status is the script's.
-///
-/// Persistent workspaces use incremental compilation (`CARGO_INCREMENTAL=1`)
-/// so their target directory speeds up source edits. Ephemeral machines keep
-/// CI's `CARGO_INCREMENTAL=0` and use sccache instead. sccache refuses
-/// incremental compilation, so it is automatically enabled only when
-/// incremental compilation is off. No debug info is emitted for dev and test
-/// profiles (`CARGO_PROFILE_DEV_DEBUG=0`). Caller settings (`--env`), including
-/// an explicit compiler wrapper or an empty value, win.
-///
-/// Crates come through the managed guest's registry mirror or the cache token's
-/// `SYLPHX_CRATES_MIRROR`, which Cargo reads in `$W/.cargo/config.toml`, an
-/// ancestor of the tree: no network preflight decides it, so a mirror that
-/// answers nothing yet cannot silently send an isolated lease to crates.io,
-/// which its egress does not allow. That file is written unless the Cargo
-/// home explicitly defines crates-io in `[source]`, which our nearer ancestor
-/// would shadow. A native CARGO_REGISTRIES_CRATES_IO_INDEX (even empty) also
-/// withholds replacement without claiming that Cargo honors it for locked sources.
-/// Cargo prefers a legacy `config` over `config.toml`, so only whichever it reads
-/// counts.
-/// Unrelated settings there (a `[build]` table, `[registries.crates-io]`'s
-/// protocol, another source's `registry` naming crates-io) are not replacements
-/// and stay effective. An explicit empty mirror removes the generated
-/// replacement; project Cargo configuration still wins.
-/// npm global, Bun/pip/uv/Go user configs receive native defaults below; their
-/// project, site, CLI and explicit environment settings retain precedence.
-///
-/// The synced tree is a git work tree before the command starts, so tests
-/// and build scripts that call `git` behave as they do locally (see
-/// [`git_tree`]).
-///
-/// The cache only speeds a build up, so its outage never fails one. sccache
-/// refuses to start its server when the cache backend does not answer (0.18:
-/// "Server startup failed: cache storage failed to read"), and every compile
-/// it wraps then exits 2, which Cargo reports as a failed `sccache <rustc>
-/// -vV`. So the server is started here, after the toolchain is chosen, and
-/// the command runs without `RUSTC_WRAPPER` and with one `sylphx: warning:`
-/// line when it will not start. A server already running answers at once.
+/// Runs the command ($4…) in $W/tree/$R with workspace caches. $3 is 1
+/// for an ephemeral workspace. Caller settings, including an explicitly empty
+/// RUSTC_WRAPPER, win. Compiler-cache startup is deferred until compilation;
+/// an outage compiles directly with one warning, without replaying compiler errors.
+/// Cargo uses native source replacement, respecting explicit Cargo home source
+/// definitions and CARGO_REGISTRIES_CRATES_IO_INDEX. No network preflight or
+/// subcommand parsing can bypass the isolated lease's mirror route.
 pub const RUN: &str = concat!(
     r#"W=$1 R=$2 E=$3
 shift 3
@@ -322,14 +269,10 @@ shift 3
     guest_dirs!(),
     git_tree!(),
     r#"export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-20G}"
-SC=
 I=1
 if [ "$E" = 1 ]; then I=0; fi
 export CARGO_INCREMENTAL="${CARGO_INCREMENTAL-$I}" CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG-0}"
-if [ "${CARGO_INCREMENTAL:-0}" != 1 ] && [ -z "${RUSTC_WRAPPER:-}" ] && command -v sccache >/dev/null 2>&1; then
-  if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then SC=1; fi
-fi
-mkdir -p "$W/.cargo"
+mkdir -p "$W/.cargo" "$W/.sylphx"
 M=${SYLPHX_CRATES_MIRROR:-}
 if [ "${CARGO_REGISTRIES_CRATES_IO_INDEX+x}" = x ]; then M=; fi
 # The nearer workspace config must not shadow a caller's source definition.
@@ -370,15 +313,63 @@ cd "$W/tree/$R" || exit 125
 "#,
     include_str!("registry-defaults.sh"),
     guest_toolchain!(),
-    r#"if [ -n "$SC" ]; then
-  TO=
-  if command -v timeout >/dev/null 2>&1; then TO="timeout 60"; fi
-  if SE=$($TO sccache --start-server 2>&1 >/dev/null); then
-    export RUSTC_WRAPPER=sccache
-  else
-    echo "sylphx: warning: the build cache did not answer, so this run compiles without it: $(printf '%s\n' "$SE" | grep -m 1 -v '^[[:space:]]*$')" >&2
+    r#"# A workspace has one leased command; rustc processes share its state.
+export SYLPHX_BUILD_CACHE_STATE="$W/.sylphx/lazy-cache"
+rm -rf "$SYLPHX_BUILD_CACHE_STATE"
+mkdir -p "$SYLPHX_BUILD_CACHE_STATE/bin"
+if [ "${CARGO_INCREMENTAL:-0}" != 1 ] && [ "${RUSTC_WRAPPER+x}" != x ] && command -v sccache >/dev/null 2>&1; then
+  if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then
+    export SYLPHX_BUILD_SCCACHE=$(command -v sccache)
+    cat > "$SYLPHX_BUILD_CACHE_STATE/bin/rustc-wrapper" <<'SYLPHX_RUSTC'
+#!/bin/sh
+S=$SYLPHX_BUILD_CACHE_STATE
+warn() {
+  # Cargo suppresses stderr from successful rustc metadata probes. Do not
+  # consume the one warning until a real compile can show it to the caller.
+  for a in "$@"; do
+    case "$a" in -vV|-V|--version|--print|--print=*) return 0 ;; esac
+  done
+  if mkdir "$S/warned" 2>/dev/null; then
+    echo "sylphx: warning: the build cache did not answer, so this run compiles without it: $(grep -m 1 -v '^[[:space:]]*$' "$S/start.log" 2>/dev/null)" >&2
+  fi
+}
+if [ ! -e "$S/ready" ] && [ ! -e "$S/failed" ]; then
+  (
+    flock -w 70 9 || exit 1
+    [ ! -e "$S/ready" ] && [ ! -e "$S/failed" ] || exit 0
+    # Check the gateway only at first compilation, never at command startup.
+    reachable() {
+      [ -z "${SCCACHE_WEBDAV_ENDPOINT:-}" ] || curl -sS --connect-timeout 3 -m 5 -o /dev/null "$SCCACHE_WEBDAV_ENDPOINT"
+    }
+    if reachable 2> "$S/start.log" && timeout 60 "$SYLPHX_BUILD_SCCACHE" --start-server > /dev/null 2>> "$S/start.log"; then
+      : > "$S/ready"
+    else
+      : > "$S/failed"
+    fi
+  ) 9> "$S/start.lock" || { warn "$@"; exec "$@"; }
+fi
+if [ -e "$S/failed" ]; then warn "$@"; exec "$@"; fi
+# Server I/O errors fail open inside sccache. Compiler errors are never retried.
+export SCCACHE_IGNORE_SERVER_IO_ERROR=1
+exec "$SYLPHX_BUILD_SCCACHE" "$@"
+SYLPHX_RUSTC
+    chmod +x "$SYLPHX_BUILD_CACHE_STATE/bin/rustc-wrapper"
+    export RUSTC_WRAPPER="$SYLPHX_BUILD_CACHE_STATE/bin/rustc-wrapper"
   fi
 fi
+
+if [ "${SYLPHX_BUILD_START_MARKER:-}" = 1 ]; then
+  if [ -n "${SYLPHX_BUILD_ACTION_STATE:-}" ]; then
+    read SYLPHX_COMMAND_UPTIME _ < /proc/uptime
+    printf '%s\n' "$SYLPHX_COMMAND_UPTIME" > "$SYLPHX_BUILD_ACTION_STATE.tmp"
+    mv "$SYLPHX_BUILD_ACTION_STATE.tmp" "$SYLPHX_BUILD_ACTION_STATE"
+  fi
+  trap - 0
+"#,
+    "  printf '%s' '",
+    command_started!(),
+    "' >&2\n",
+    r#"fi
 exec "$@"
 "#
 );
@@ -396,3 +387,7 @@ for g in "$@"; do
 done
 exit 0
 "#;
+
+#[cfg(test)]
+#[path = "scripts_tests.rs"]
+mod tests;

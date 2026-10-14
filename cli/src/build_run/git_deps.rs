@@ -10,9 +10,8 @@
 //! repositories): this machine holds the git credentials, fetches each locked
 //! commit once (`--depth 1`: about 12 MB where the full history is 114 MB),
 //! and keeps it as a small bare repository in a tarball under the repository's
-//! git directory. The workspace keeps one shallow mirror per URL at
-//! `$W/git-deps/<key>.git` holding every commit sent so far ([`HAVE`] asks
-//! which are missing, [`APPLY`] adds them), and the command runs with
+//! git directory. Every cold lease receives the locked packs into shallow
+//! mirrors at `$W/git-deps/<key>.git` ([`APPLY`]), and the command runs with
 //! `CARGO_NET_GIT_FETCH_WITH_CLI=true` and one `url.<mirror>.insteadOf <url>`
 //! per dependency ([`env`]), so Cargo's own fetch reads the mirror and its
 //! lock file, source ids and caches stay as they are. Git prints one
@@ -231,21 +230,6 @@ fn run(c: &mut Command) -> Result<(), String> {
     let tail: Vec<&str> = err.lines().rev().take(3).collect();
     Err(tail.into_iter().rev().collect::<Vec<_>>().join(" / "))
 }
-
-/// Lists the dependencies (`$2…`, each `<key>-<rev>`) the workspace `$1`
-/// lacks, one per line, and makes the upload directory. Exit 3: no git on
-/// the machine (nothing can be sent to it).
-pub const HAVE: &str = r#"W=$1
-shift
-command -v git >/dev/null 2>&1 || exit 3
-D=$W/git-deps
-mkdir -p "$D/in" || exit 1
-for n in "$@"; do
-  k=${n%%-*} r=${n#*-}
-  git -C "$D/$k.git" cat-file -e "$r^{commit}" 2>/dev/null || printf '%s\n' "$n"
-done
-exit 0
-"#;
 
 /// Adds each uploaded dependency (`$2…`, each `<key>-<rev>`, its tarball at
 /// `$1/git-deps/in/<key>-<rev>.tgz`) to its URL's mirror `<key>.git`: the
@@ -563,27 +547,18 @@ source = "git+https://github.com/o/short?rev=abc#abc"
         let ws = s.0.join("ws");
         let w = ws.to_str().unwrap();
         let send = |deps: &[&Dep], tgz: &[&PathBuf]| {
+            std::fs::create_dir_all(ws.join(DIR).join("in")).unwrap();
             let names: Vec<String> = deps.iter().map(|d| d.name()).collect();
-            let mut args = vec![w];
-            args.extend(names.iter().map(String::as_str));
-            let (code, out, err) = sh(HAVE, &args);
-            assert_eq!(code, 0, "{err}");
-            let missing: Vec<String> = out.lines().map(str::to_string).collect();
             for (d, t) in deps.iter().zip(tgz) {
-                if missing.contains(&d.name()) {
-                    std::fs::copy(t, ws.join(DIR).join("in").join(format!("{}.tgz", d.name())))
-                        .unwrap();
-                }
+                std::fs::copy(t, ws.join(DIR).join("in").join(format!("{}.tgz", d.name())))
+                    .unwrap();
             }
             let mut args = vec![w];
-            args.extend(missing.iter().map(String::as_str));
+            args.extend(names.iter().map(String::as_str));
             let (code, _, err) = sh(APPLY, &args);
             assert_eq!(code, 0, "{err}");
-            missing
         };
-        assert_eq!(send(&[&one], &[&p1]), [one.name()]);
-        assert_eq!(send(&[&one, &three], &[&p1, &p3]), [three.name()]);
-        assert!(send(&[&one, &three], &[&p1, &p3]).is_empty());
+        send(&[&one, &three], &[&p1, &p3]);
         assert!(std::fs::read_dir(ws.join(DIR).join("in"))
             .unwrap()
             .next()

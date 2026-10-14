@@ -158,6 +158,36 @@ fn signal_number(name: &str) -> i32 {
     }
 }
 
+fn command_elapsed(output: &[u8]) -> Result<Option<Duration>, Fault> {
+    if output.is_empty() {
+        return Ok(None);
+    }
+    let invalid = || Fault::Other("invalid command-start state".into());
+    let text = std::str::from_utf8(output).map_err(|_| invalid())?;
+    let uptime = |value: &str| -> Result<Duration, Fault> {
+        let (seconds, fraction) = value.split_once('.').unwrap_or((value, "0"));
+        if seconds.is_empty()
+            || !seconds.bytes().all(|b| b.is_ascii_digit())
+            || fraction.is_empty()
+            || fraction.len() > 9
+            || !fraction.bytes().all(|b| b.is_ascii_digit())
+        {
+            return Err(invalid());
+        }
+        let seconds = seconds.parse::<u64>().map_err(|_| invalid())?;
+        let nanos =
+            fraction.parse::<u32>().map_err(|_| invalid())? * 10u32.pow(9 - fraction.len() as u32);
+        Ok(Duration::new(seconds, nanos))
+    };
+    let mut times = text.lines().map(uptime);
+    let started = times.next().ok_or_else(invalid)??;
+    let now = times.next().ok_or_else(invalid)??;
+    if times.next().is_some() {
+        return Err(invalid());
+    }
+    now.checked_sub(started).map(Some).ok_or_else(invalid)
+}
+
 fn basic(user: &str) -> String {
     format!("Basic {}", B64.encode(format!("{user}:")))
 }
@@ -297,6 +327,21 @@ impl Guest {
 
     pub fn set_token(&mut self, token: &str) {
         self.token = token.to_string();
+    }
+
+    /// Recovers admission using the guest's monotonic clock. Detached output
+    /// is not replayed; caller/guest wall clocks need not agree.
+    pub async fn command_elapsed(&self, state: &str) -> Result<Option<Duration>, Fault> {
+        let args = [
+            "/bin/sh", "-c",
+            "if [ -f \"$1\" ]; then cat \"$1\"; read now _ < /proc/uptime; printf '%s\\n' \"$now\"; fi",
+            "sylphx-command-state", state,
+        ].map(str::to_owned);
+        let (code, output, _) = self.run("user", &args, &BTreeMap::new()).await?;
+        if code != 0 {
+            return Err(Fault::Other("reading command-start state failed".into()));
+        }
+        command_elapsed(&output)
     }
 
     fn req(&self, method: reqwest::Method, path: &str, user: &str) -> reqwest::RequestBuilder {
@@ -564,6 +609,22 @@ pub fn rand_u64() -> u64 {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn command_age_is_guest_monotonic_time_and_invalid_state_fails_closed() {
+        assert_eq!(super::command_elapsed(b"").expect("missing state"), None);
+        assert_eq!(
+            super::command_elapsed(b"100.25\n102.75\n").expect("monotonic state"),
+            Some(std::time::Duration::from_millis(2500))
+        );
+        for output in [
+            b"100\n99\n".as_slice(),
+            b"NaN\n102\n",
+            b"100\n",
+            b"100\n102\n103\n",
+        ] {
+            assert!(super::command_elapsed(output).is_err());
+        }
+    }
     use super::*;
 
     fn frame(flags: u8, v: Value) -> Vec<u8> {

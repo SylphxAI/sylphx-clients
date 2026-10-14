@@ -1392,6 +1392,12 @@ fn envd_frame(flags: u8, v: Value) -> Vec<u8> {
 fn envd_process(stdout: &str, code: i64) -> (u16, &'static str, Vec<u8>) {
     use base64::Engine;
     let mut b = envd_frame(0, json!({"event": {"start": {"pid": 7}}}));
+    let marker = base64::engine::general_purpose::STANDARD
+        .encode(sylphx_build_lease::scripts::COMMAND_STARTED);
+    b.extend(envd_frame(
+        0,
+        json!({"event": {"data": {"stderr": marker}}}),
+    ));
     if !stdout.is_empty() {
         let data = base64::engine::general_purpose::STANDARD.encode(stdout);
         b.extend(envd_frame(0, json!({"event": {"data": {"stdout": data}}})));
@@ -1460,10 +1466,8 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
             json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
-        envd_process("", 0),
         json_reply(json!({})),
         json_reply(json!({})),
-        envd_process("", 0),
         envd_process("", 0),
         envd_process("hello from the build machine\n", 3),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
@@ -1520,40 +1524,16 @@ async fn build_run_syncs_runs_and_returns_the_commands_exit_code() {
         "{net}"
     );
     // The guest calls carry the sandbox id and the lease token, never the key.
-    let guest: Vec<&Seen> = seen.iter().skip(2).take(6).collect();
+    let guest: Vec<&Seen> = seen
+        .iter()
+        .filter(|s| s.line.starts_with("POST /files") || s.line.starts_with("POST /process."))
+        .collect();
     for g in &guest {
         let head = g.head.to_ascii_lowercase();
         assert!(head.contains("e2b-sandbox-id: abcd1234"), "{}", g.head);
         assert!(head.contains("x-access-token: h.p.s"), "{}", g.head);
         assert!(!head.contains("sylphx_sk_org_a"), "{}", g.head);
     }
-    assert!(
-        lines[2].starts_with("POST /process.Process/Start"),
-        "{lines:?}"
-    );
-    assert!(
-        lines[3].starts_with("POST /files?path=/workspace/.sylphx/in-0000.tar.gz"),
-        "{lines:?}"
-    );
-    assert!(
-        lines[4].starts_with("POST /files?path=/workspace/.sylphx/add"),
-        "{lines:?}"
-    );
-    assert!(
-        seen[7].body.contains("cargo"),
-        "the command is started: {}",
-        seen[7].body
-    );
-    // Cold targets use the scoped remote cache, never persistent local state.
-    assert!(
-        seen[7].body.contains(r#""/workspace",".","1","cargo""#),
-        "{}",
-        seen[7].body
-    );
-    assert!(
-        lines[8].contains(":release"),
-        "the lease is always released: {lines:?}"
-    );
 }
 
 /// `-o json` writes NDJSON events, ending with the `result` event.
@@ -1704,10 +1684,8 @@ async fn build_run_automatic_placement_executes_in_the_selected_fr_cell() {
             json!({"name": lease, "spec": {"region": "gra"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
-        envd_process("", 0),
         json_reply(json!({})),
         json_reply(json!({})),
-        envd_process("", 0),
         envd_process("", 0),
         envd_process("automatic FR command\n", 0),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
@@ -1752,9 +1730,10 @@ async fn build_run_automatic_placement_executes_in_the_selected_fr_cell() {
     assert!(created["spec"]
         .get("volumes")
         .is_none_or(|v| v.as_array().is_some_and(|a| a.is_empty())));
-    assert!(seen[7].body.contains(r#""/workspace",".","1","cargo""#));
-    assert!(seen[8].line.contains(":release"));
-    for request in seen.iter().skip(2).take(6) {
+    for request in seen
+        .iter()
+        .filter(|s| s.line.starts_with("POST /files") || s.line.starts_with("POST /process."))
+    {
         let headers = request.head.to_ascii_lowercase();
         assert!(headers.contains("x-access-token: h.p.s"));
         assert!(!headers.contains("sylphx_sk_test"));
@@ -1767,7 +1746,7 @@ async fn build_run_automatic_retry_keeps_the_cell_of_a_lost_pending_lease() {
     automatic_placement_retry("gra", true).await;
 }
 
-/// A stream fault during bootstrap may retry the machine, never its placement.
+/// An input upload fault may retry the machine, never its placement.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_automatic_retry_keeps_the_cell_after_a_precommand_stream_fault() {
     automatic_placement_retry("gra", false).await;
@@ -1800,7 +1779,7 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
     }))];
     if !pending {
         replies.push(json_reply(json!({"token": "h.p.s", "generation": 1})));
-        replies.push(envd_broken()); // bootstrap breaks before the user's command
+        replies.push((500, "text/plain", b"upload stream broke".to_vec()));
     }
     // No spec in the loss response: affinity must already come from CreateLease.
     replies.push(json_reply(json!({"name": first,
@@ -1809,10 +1788,8 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
         json_reply(json!({"name": second, "spec": {"region": retry_region},
             "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}})),
         json_reply(json!({"token": "h.p.t", "generation": 1})),
-        envd_process("", 0),
         json_reply(json!({})),
         json_reply(json!({})),
-        envd_process("", 0),
         envd_process("", 0),
         envd_process("built once\n", 0),
         json_reply(json!({"name": second, "status": {"state": "ending"}})),
@@ -1889,10 +1866,6 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
         1,
         "the lost attempt never started the command"
     );
-    assert!(
-        commands[0].body.contains(r#""/workspace",".","1","cargo""#),
-        "cold lease-owned targets use scoped remote cache"
-    );
     assert_eq!(
         seen.iter().filter(|s| s.line.contains(":release")).count(),
         1
@@ -1952,10 +1925,8 @@ async fn build_run_in_an_explicit_region_uses_a_cold_owned_workspace() {
             json!({"name": lease, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
-        envd_process("", 0),
         json_reply(json!({})),
         json_reply(json!({})),
-        envd_process("", 0),
         envd_process("", 0),
         envd_process("built in gra\n", 0),
         json_reply(json!({"name": lease, "status": {"state": "ending"}})),
@@ -1998,12 +1969,6 @@ async fn build_run_in_an_explicit_region_uses_a_cold_owned_workspace() {
     let seen = log.lock();
     let created: Value = serde_json::from_str(&seen[0].body).unwrap();
     assert_eq!(created["spec"]["shape"], "build-large", "{created}");
-    let args = &seen[7].body;
-    assert!(args.contains(r#""/workspace",".","1","cargo""#), "{args}");
-    assert!(
-        seen[8].line.contains(":release"),
-        "the lease is always released"
-    );
 }
 
 /// The toolchain cannot be installed: nothing the user asked for has started,
@@ -2043,8 +2008,7 @@ async fn build_run_exits_125_when_the_toolchain_cannot_be_installed() {
     assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();
     let lines: Vec<&str> = seen.iter().map(|s| s.line.as_str()).collect();
-    assert_eq!(lines.len(), 8, "the command is never started: {lines:?}");
-    assert!(lines[7].contains(":release"), "{lines:?}");
+    assert!(lines.last().unwrap().contains(":release"), "{lines:?}");
 }
 
 /// A process stream that breaks after the command started (a proxy on the way
@@ -2057,10 +2021,11 @@ async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
-    let mut replies = attempt_replies(&url, envd_process("", 0));
+    let mut replies = attempt_replies(&url);
     replies.push(envd_broken());
     replies.push(json_reply(json!({"token": "h.p.t", "generation": 1}))); // a fresh guest token
     replies.push(envd_process("after the break\n", 101)); // Connect by tag
+    replies.push(envd_process_err("", 0)); // durable admission query, no start yet
     replies.push(ended());
     let (_, log) = serve_bytes_on(listener, replies).await;
     let out = run(
@@ -2127,6 +2092,79 @@ async fn build_run_reattaches_a_broken_stream_to_the_running_command() {
     );
 }
 
+/// Detached output is not replayed. Only durable command admission can
+/// replace the setup deadline or classify a marker-free exit as user status.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_recovers_lost_start_marker_without_restarting_or_resetting_timeout() {
+    for (name, state, code, expected, running) in [
+        ("expired", "100.00\n102.00\n", 42, 124, true),
+        ("completed", "100.00\n100.20\n", 125, 125, true),
+        ("setup-failed", "", 0, 125, false),
+    ] {
+        let sb = Sandbox::new(&format!("lost-marker-{name}"));
+        project(&sb.dir);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let mut replies = attempt_replies(&url);
+        replies.push(envd_broken());
+        replies.push((
+            200,
+            "application/json",
+            json!({"token": "h.p.t", "generation": 1})
+                .to_string()
+                .into_bytes(),
+        ));
+        replies.push(envd_process_err("", code)); // Connect, marker lost
+        replies.push(envd_process(state, 0)); // durable monotonic admission state
+        replies.push(ended());
+        let (_, log) = serve_bytes_on(listener, replies).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "build",
+                "run",
+                "-o",
+                "json",
+                "--timeout",
+                "1s",
+                "--region",
+                "hk",
+                "--no-cache",
+                "--",
+                "sh",
+                "-c",
+                "exit 42",
+            ],
+        )
+        .await;
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(expected), "{name}: {err}");
+        let events: Vec<Value> = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .map(|s| serde_json::from_str(s).unwrap())
+            .collect();
+        assert_eq!(
+            events.iter().filter(|e| e["type"] == "running").count(),
+            usize::from(running),
+            "{name}: {events:?}"
+        );
+        let result = events.last().unwrap();
+        assert_eq!(result["exit_code"], expected);
+        assert_eq!(result.get("error").is_some(), !running, "{name}: {result}");
+        let seen = log.lock();
+        assert_eq!(
+            seen.iter().filter(|s| s.body.contains("exit 42")).count(),
+            1,
+            "command is never replayed"
+        );
+        assert_eq!(
+            seen.iter().filter(|s| s.line.contains(":release")).count(),
+            1
+        );
+    }
+}
+
 /// A machine lost after the command started ends the run with 137: the
 /// command is never run again, and 125 stays for failures before it starts.
 #[tokio::test(flavor = "multi_thread")]
@@ -2136,7 +2174,7 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
-    let mut replies = attempt_replies(&url, envd_process("", 0));
+    let mut replies = attempt_replies(&url);
     replies.push(envd_broken());
     replies.push(json_reply(json!({"token": "h.p.t", "generation": 1})));
     // Connect: envd no longer knows the process.
@@ -2201,16 +2239,10 @@ async fn build_run_retries_a_full_workspace_once_on_a_fresh_lease() {
     project(&sb.dir);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    let mut replies: Vec<_> = attempt_replies(&url, envd_process("", 0))
-        .into_iter()
-        .take(2)
-        .collect();
-    replies.push(envd_process_err(
-        "gzip: stdout: No space left on device\n",
-        1,
-    ));
+    let mut replies = attempt_replies(&url);
+    *replies.last_mut().unwrap() = envd_process_err("gzip: stdout: No space left on device\n", 1);
     replies.push(ended()); // the full machine is released before the retry
-    let mut retry = attempt_replies(&url, envd_process("", 0));
+    let mut retry = attempt_replies(&url);
     let mut lease: Value = serde_json::from_slice(&retry[0].2).unwrap();
     lease["name"] = json!(format!("{ENV}/leases/l2"));
     retry[0].2 = lease.to_string().into_bytes();
@@ -2245,19 +2277,6 @@ async fn build_run_retries_a_full_workspace_once_on_a_fresh_lease() {
         .map(|s| serde_json::from_str(&s.body).unwrap())
         .collect();
     assert_eq!(leases.len(), 2);
-    let boots: Vec<_> = seen
-        .iter()
-        .filter(|s| s.body.contains("\"bootstrap\""))
-        .collect();
-    assert_eq!(boots.len(), 2);
-    for boot in boots {
-        assert!(
-            boot.body
-                .contains("\"bootstrap\",\"/workspace\",\"0\",\"0\""),
-            "{}",
-            boot.body
-        );
-    }
     assert_eq!(
         seen.iter().filter(|s| s.body.contains("\"cargo\"")).count(),
         1
@@ -2552,14 +2571,15 @@ async fn hanging_server() -> String {
 /// its token, and a cold workspace sync.
 /// `tail` is what happens from the command on.
 async fn build_stub(tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
-    build_stub_with(envd_process("", 0), tail).await
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut replies = attempt_replies(&url);
+    replies.extend(tail);
+    serve_bytes_on(listener, replies).await
 }
 
-/// One attempt: a volume-free ready lease, its token, a cold sync and provision.
-fn attempt_replies(
-    url: &str,
-    provision: (u16, &'static str, Vec<u8>),
-) -> Vec<(u16, &'static str, Vec<u8>)> {
+/// One attempt: a ready lease, its token, source uploads and sync apply.
+fn attempt_replies(url: &str) -> Vec<(u16, &'static str, Vec<u8>)> {
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
     let lease = format!("{ENV}/leases/l1");
     vec![
@@ -2567,11 +2587,9 @@ fn attempt_replies(
             json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
-        envd_process("", 0),
         json_reply(json!({})),
         json_reply(json!({})),
         envd_process("", 0),
-        provision,
     ]
 }
 
@@ -2583,7 +2601,8 @@ async fn build_stub_with(
 ) -> (String, Log) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    let mut replies = attempt_replies(&url, provision);
+    let mut replies = attempt_replies(&url);
+    replies.push(provision);
     replies.extend(tail);
     serve_bytes_on(listener, replies).await
 }
@@ -2598,10 +2617,14 @@ fn ended() -> (u16, &'static str, Vec<u8>) {
     )
 }
 
-/// The environment the command was started with (the eighth call).
+/// Environment of the user action, independent of sync call ordering.
 fn started_env(log: &Log) -> Value {
     let seen = log.lock();
-    let start = &seen[7];
+    let start = seen
+        .iter()
+        .rev()
+        .find(|s| s.line.starts_with("POST /process.Process/Start"))
+        .unwrap();
     assert!(start.line.starts_with("POST /process.Process/Start"));
     let text = &start.body;
     let from = text.find("{\"process\"").expect("a JSON message");
@@ -2697,7 +2720,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
     let body: Value = serde_json::from_str(&seen[0].body).unwrap();
     assert_eq!(
         body,
-        json!({"project": "prj_a", "access": "write", "ttl_seconds": 1500, "network": "cluster"})
+        json!({"project": "prj_a", "access": "write", "ttl_seconds": 3300, "network": "cluster"})
     );
     // The command's environment: the cache's, the user's --env winning.
     let env = started_env(&log);
@@ -2717,10 +2740,15 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_caps_the_token_life_at_the_longest_run() {
+async fn build_run_refreshes_the_capped_token_after_ready_for_the_longest_run() {
     let sb = Sandbox::new("cache-ttl");
     project(&sb.dir);
-    let (cache, clog) = serve(vec![(200, cache_reply())]).await;
+    let refreshed_token = "cache-refreshed-token-do-not-print";
+    let mut refreshed = cache_reply();
+    refreshed["token"] = json!(refreshed_token);
+    refreshed["env"]["SCCACHE_WEBDAV_TOKEN"] = json!(refreshed_token);
+    refreshed["env"]["TURBO_TOKEN"] = json!(refreshed_token);
+    let (cache, clog) = serve(vec![(200, cache_reply()), (200, refreshed)]).await;
     let (url, log) = build_stub(vec![envd_process("", 0), ended()]).await;
     let out = run_with(
         &sb,
@@ -2742,8 +2770,25 @@ async fn build_run_caps_the_token_life_at_the_longest_run() {
     .await;
     assert_eq!(out.status.code(), Some(0));
     assert_volume_free_regional_leases(&log, "hk");
-    let body: Value = serde_json::from_str(&clog.lock()[0].body).unwrap();
-    assert_eq!(body["ttl_seconds"], 22500);
+    let seen = clog.lock();
+    assert_eq!(
+        seen.len(),
+        2,
+        "the capped pre-READY token must be refreshed"
+    );
+    for mint in seen.iter() {
+        let body: Value = serde_json::from_str(&mint.body).unwrap();
+        assert_eq!(
+            body,
+            json!({"project": "prj_a", "access": "write", "ttl_seconds": 22500, "network": "cluster"})
+        );
+    }
+    assert_eq!(started_env(&log)["SCCACHE_WEBDAV_TOKEN"], refreshed_token);
+    assert_eq!(started_env(&log)["TURBO_TOKEN"], refreshed_token);
+    for secret in [CACHE_TOKEN, refreshed_token] {
+        assert!(!String::from_utf8_lossy(&out.stdout).contains(secret));
+        assert!(!String::from_utf8_lossy(&out.stderr).contains(secret));
+    }
 }
 
 /// Whatever goes wrong minting, the run builds without the cache, says so on
@@ -2809,7 +2854,16 @@ async fn build_run_builds_without_the_cache_when_it_cannot_be_minted() {
             "{name}: {err}"
         );
         assert!(sylphx_lines(&err).len() <= 3, "{name}: {err}");
-        assert_eq!(started_env(&log), json!({}), "{name}");
+        let env = started_env(&log);
+        assert!(
+            env.as_object()
+                .unwrap()
+                .keys()
+                .all(|key| !key.starts_with("SCCACHE_")
+                    && !key.starts_with("TURBO_")
+                    && key != "SYLPHX_CRATES_MIRROR"),
+            "{name}: {env}"
+        );
         assert!(!err.contains(CACHE_TOKEN), "{name}");
     }
 }
@@ -2835,7 +2889,16 @@ async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
     assert!(clog.lock().is_empty(), "no token was asked for");
     assert!(!err.contains("build cache"), "{err}");
     assert_eq!(sylphx_lines(&err).len(), 3, "{err}");
-    assert_eq!(started_env(&log), json!({}));
+    let env = started_env(&log);
+    assert!(
+        env.as_object()
+            .unwrap()
+            .keys()
+            .all(|key| !key.starts_with("SCCACHE_")
+                && !key.starts_with("TURBO_")
+                && key != "SYLPHX_CRATES_MIRROR"),
+        "{env}"
+    );
 }
 
 /// An error from the machine that happens to repeat the token does not

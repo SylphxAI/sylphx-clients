@@ -137,12 +137,15 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   for the whole tree. This applies to both `build run` and `build image`.
   Exit codes: the command's own, 2 usage, 124
   `--timeout`, 125 platform failure (`retryable` in the `-o json` `result`
-  event; anything that fails before the command starts, such as the sync or the
-  toolchain install or a toolchain that fails its check, is 125, and a machine
-  lost or a stream broken before the command starts is retried once after a
-  short backoff first), 130 interrupted, 137 the machine was lost after the
-  command started. A started command is never run twice: a broken output
-  stream is reattached to the running command. Cargo uses
+  event; sync or known toolchain setup failures are 125). A lost machine or
+  broken sync stream before the guest action launches is retried once after a
+  short backoff. Once the action launches it is never replayed: a broken stream
+  reattaches to that process, and losing it is 137 because the command may have
+  run even if its start marker was lost. Reattachment recovers admission from
+  a per-action guest monotonic timestamp; it restores `running` and the original
+  command deadline without treating marker-free setup exits as user exits.
+  Setup diagnostics precede `running`; the command's own status remains its
+  exit code. Cargo uses
   `CARGO_INCREMENTAL=0` with sccache when a remote cache is available, and
   `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults and an explicit
   compiler wrapper is preserved. `--region REGION` pins placement, not a
@@ -171,10 +174,10 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `--source-history` still requires actual Git history.
 - Cargo git dependencies come with the run: every git commit a `Cargo.lock`
   of the tree locks is fetched here with your git credentials (depth 1, kept
-  under the repository's git directory), sent to a mirror on the workspace
-  only when it lacks it (`git_deps` event), and Cargo's fetch reads that
-  mirror, so a private dependency builds with no egress and no token on the
-  machine. A lock that names the `ssh://` spelling of a GitHub repository is
+  under the repository's git directory), uploaded to the cold lease
+  (`git_deps` event), and installed by the guest action. Cargo's fetch reads
+  those mirrors, with no git-host egress or credential on the machine.
+  A lock that names the `ssh://` spelling of a GitHub repository is
   retried over `https://` when the machine has no ssh key for it, since the two
   spellings name the same repository. One that cannot be fetched here stops the
   run with 125 before a machine is leased. Git prints `warning: rejected
@@ -189,14 +192,21 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   preserved. Cargo `CARGO_HOME` and `CARGO_TARGET_DIR` overrides are retained.
   `--no-cache` skips compiler/result caches, not the guest dependency mirrors.
 - The run also gets the project's shared build cache (sccache, Turbo): the
-  CLI mints a cache token with your key before the command starts and merges
+  CLI mints a cache token with your key concurrently with admission. Its
+  lifetime includes the queue budget, setup and command; if the gateway's
+  lifetime cap removes admission headroom, it refreshes once at READY. It merges
   the cache's environment into the command's (your `--env` wins). If the
   cache cannot be reached the run builds without it and prints one
   `sylphx: warning: build cache unavailable (…)` line; `--no-cache` skips it.
-  The same holds when sccache's server will not start on the machine because
-  the cache stops answering after the token is minted: the command then runs
-  without `RUSTC_WRAPPER` and the warning says so, rather than every compile
-  failing with sccache's exit 2.
+  Cache-server startup is lazy: `echo OK` does not start it. Cargo receives
+  native source replacement without a network preflight, so aliases and global
+  options cannot bypass routing and version/help queries never probe a mirror.
+  The first compile initializes sccache once across concurrent
+  compiler processes; on outage the wrapper executes the compiler directly
+  and prints one warning on an actual compile, not a metadata probe Cargo
+  suppresses. An explicit `RUSTC_WRAPPER`, including an empty value, wins.
+  Provisioning, offline git inputs, source history and credential permissions
+  are one guest start action after source sync, through public Sandboxes APIs.
   The token is never printed, logged or put in an event.
 - `sylphx build cache env [--project ID] [-o json]` mints a read-only token
   (12 h) and prints `export NAME='value'` lines for a POSIX shell (plus
