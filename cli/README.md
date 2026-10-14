@@ -187,10 +187,15 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `--env`, `--no-cache`, and `--no-tree` remain optional advanced overrides.
   `--source-history` still requires actual Git history.
 - Cargo git dependencies come with the run: every git commit a `Cargo.lock`
-  of the tree locks is fetched here with your git credentials (depth 1, kept
-  under the repository's git directory), uploaded to the cold lease
-  (`git_deps` event), and installed by the guest action. Cargo's fetch reads
-  those mirrors, with no git-host egress or credential on the machine.
+  of the tree locks is fetched here with your git credentials (depth 1, no tags).
+  Like Cargo's locked source cache, immutable URL-and-commit archives live in
+  the existing per-source user cache (`$XDG_CACHE_HOME/sylphx/build/sources`,
+  otherwise `~/.cache/sylphx/build/sources`), outside the source Git directory.
+  Fetches run in a fresh owned bare repository, never the caller's repository
+  or shared history. Only the pinned commit and its tree travel, not unrelated
+  refs, ancestor history, or Git credentials. The archive is uploaded to the
+  cold lease (`git_deps` event) and installed by the guest action. Cargo's fetch
+  reads those mirrors, with no git-host egress or credential on the machine.
   A lock that names the `ssh://` spelling of a GitHub repository is
   retried over `https://` when the machine has no ssh key for it, since the two
   spellings name the same repository. One that cannot be fetched here stops the

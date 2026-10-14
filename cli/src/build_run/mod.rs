@@ -2094,7 +2094,7 @@ fn prepare_git_deps(
     if deps.is_empty() {
         return Ok(Vec::new());
     }
-    let cache = sync::local_path(root, "sylphx/git-deps");
+    let cache = sync::source_cache(root).join("git-deps");
     std::fs::create_dir_all(&cache).map_err(|e| format!("preparing {}: {e}", cache.display()))?;
     deps.into_iter()
         .map(|d| git_deps::pack(&cache, &d).map(|p| (d, p)))

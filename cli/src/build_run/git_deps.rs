@@ -9,9 +9,10 @@
 //! instead, as a remote-execution client sends them (Bazel's external
 //! repositories): this machine holds the git credentials, fetches each locked
 //! commit once (`--depth 1`: about 12 MB where the full history is 114 MB),
-//! and keeps it as a small bare repository in a tarball under the repository's
-//! git directory. Every cold lease receives the locked packs into shallow
-//! mirrors at `$W/git-deps/<key>.git` ([`APPLY`]), and the command runs with
+//! and keeps it as a small bare repository in a tarball in the per-source
+//! user cache, outside Git metadata. Every cold lease receives the locked
+//! packs into shallow mirrors at `$W/git-deps/<key>.git` ([`APPLY`]), and the
+//! command runs with
 //! `CARGO_NET_GIT_FETCH_WITH_CLI=true` and one `url.<mirror>.insteadOf <url>`
 //! per dependency ([`env`]), so Cargo's own fetch reads the mirror and its
 //! lock file, source ids and caches stay as they are. Git prints one
@@ -169,17 +170,21 @@ pub fn pack(cache: &Path, dep: &Dep) -> Result<PathBuf, String> {
     let _ = std::fs::remove_dir_all(&work);
     let repo = work.join("repo.git");
     std::fs::create_dir_all(&repo).map_err(|e| fail("preparing the cache", e.to_string()))?;
+    let repo = repo
+        .canonicalize()
+        .map_err(|e| fail("locating the cache", e.to_string()))?;
     let made = (|| {
-        run(Command::new("git")
+        run(owned_git(&repo)
             .arg("init")
             .arg("-q")
             .arg("--bare")
+            .arg("--template=")
             .arg(&repo))
         .map_err(|e| fail("git init", e))?;
         let mut last = String::new();
         let mut fetched = false;
         for url in fetch_urls(&dep.url) {
-            let one = run(Command::new("git")
+            let one = run(owned_git(&repo)
                 .env("GIT_TERMINAL_PROMPT", "0")
                 .arg("-C")
                 .arg(&repo)
@@ -190,6 +195,7 @@ pub fn pack(cache: &Path, dep: &Dep) -> Result<PathBuf, String> {
                     "http.lowSpeedTime=60",
                     "fetch",
                     "-q",
+                    "--no-tags",
                     "--depth",
                     "1",
                     "--",
@@ -219,6 +225,24 @@ pub fn pack(cache: &Path, dep: &Dep) -> Result<PathBuf, String> {
     })();
     let _ = std::fs::remove_dir_all(&work);
     made.map(|()| out)
+}
+
+/// Ignore inherited repository selection, retaining transport and credentials.
+fn owned_git(repo: &Path) -> Command {
+    let mut c = Command::new("git");
+    c.current_dir(repo);
+    for name in [
+        "GIT_DIR",
+        "GIT_COMMON_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_SHALLOW_FILE",
+    ] {
+        c.env_remove(name);
+    }
+    c
 }
 
 fn run(c: &mut Command) -> Result<(), String> {
@@ -506,6 +530,87 @@ source = "git+https://github.com/o/short?rev=abc#abc"
         )
     }
 
+    #[test]
+    fn packaging_owns_its_cache_despite_inherited_worktree_state() {
+        const CHILD: &str = "SYLPHX_TEST_PACK_ROOT";
+        if let Some(root) = std::env::var_os(CHILD) {
+            let root = PathBuf::from(root);
+            let mut tree = Tree::new();
+            tree.insert(
+                "Cargo.lock".into(),
+                super::super::sync::Entry {
+                    digest: String::new(),
+                    mode: super::super::sync::Mode::File,
+                    size: 0,
+                },
+            );
+            let packed = super::super::prepare_git_deps(&root, &tree, "").unwrap();
+            assert!(!packed[0]
+                .1
+                .starts_with(std::env::var_os("GIT_COMMON_DIR").unwrap()));
+            let unpacked = root.join("unpacked");
+            std::fs::create_dir_all(&unpacked).unwrap();
+            run(Command::new("tar")
+                .arg("-xzf")
+                .arg(&packed[0].1)
+                .arg("-C")
+                .arg(&unpacked))
+            .unwrap();
+            let repo = unpacked.join("repo.git");
+            let mut show = owned_git(&repo);
+            let o = show
+                .args(["show", &format!("{}:f", packed[0].0.rev)])
+                .output()
+                .unwrap();
+            assert!(o.status.success());
+            assert_eq!(String::from_utf8_lossy(&o.stdout), "pinned snapshot");
+            return;
+        }
+        let s = Scratch(std::env::temp_dir().join(format!(
+            "sylphx-owned-source-{}-{}",
+            std::process::id(),
+            unique()
+        )));
+        let hub = s.0.join("hub");
+        std::fs::create_dir_all(&hub).unwrap();
+        git(&hub, &["init", "-q", "-b", "main"]);
+        std::fs::write(hub.join("f"), "pinned snapshot").unwrap();
+        git(&hub, &["add", "-A"]);
+        git(&hub, &["commit", "-qm", "pinned"]);
+        let rev = git(&hub, &["rev-parse", "HEAD"]);
+        let before = git(&hub, &["show-ref"]);
+        let root = s.0.join("worktree");
+        git(
+            &hub,
+            &["worktree", "add", "-q", "--detach", root.to_str().unwrap()],
+        );
+        std::fs::write(
+            root.join("Cargo.lock"),
+            format!("source = \"git+file://{}#{}\"\n", hub.display(), rev),
+        )
+        .unwrap();
+        let common = hub.join(".git");
+        let o = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "build_run::git_deps::tests::packaging_owns_its_cache_despite_inherited_worktree_state", "--nocapture"])
+            .env(CHILD, &root)
+            .env("XDG_CACHE_HOME", s.0.join("cache"))
+            .env("GIT_DIR", &common)
+            .env("GIT_COMMON_DIR", &common)
+            .env("GIT_WORK_TREE", &hub)
+            .env("GIT_OBJECT_DIRECTORY", common.join("objects"))
+            .env("GIT_INDEX_FILE", common.join("index"))
+            .output().unwrap();
+        assert!(
+            o.status.success(),
+            "{} {}",
+            String::from_utf8_lossy(&o.stdout),
+            String::from_utf8_lossy(&o.stderr)
+        );
+        assert_eq!(git(&hub, &["show-ref"]), before);
+        assert_eq!(git(&hub, &["rev-parse", "HEAD"]), rev);
+        assert!(!common.join("shallow").exists());
+    }
+
     /// The whole path with real git: three commits upstream, two of them
     /// locked; each is packed here, the workspace takes what it lacks into one
     /// mirror, and Cargo's own fetch (`git fetch <url> +<rev>:refs/commit/<rev>`
@@ -522,12 +627,22 @@ source = "git+https://github.com/o/short?rev=abc#abc"
         std::fs::create_dir_all(&up).unwrap();
         git(&up, &["init", "-q", "-b", "main"]);
         let mut revs = Vec::new();
+        std::fs::write(
+            up.join("private-old-file"),
+            "not part of the pinned snapshot",
+        )
+        .unwrap();
+        git(&up, &["add", "-A"]);
+        git(&up, &["commit", "-qm", "private ancestor"]);
+        let private = git(&up, &["rev-parse", "HEAD:private-old-file"]);
+        std::fs::remove_file(up.join("private-old-file")).unwrap();
         for i in 1..=3 {
             std::fs::write(up.join("f"), format!("{i}\n")).unwrap();
             git(&up, &["add", "-A"]);
             git(&up, &["commit", "-qm", &i.to_string()]);
             revs.push(git(&up, &["rev-parse", "HEAD"]));
         }
+        git(&up, &["tag", "unrelated-history", "HEAD~3"]);
         let url = format!("file://{}", up.display());
         let dep = |r: &str| Dep {
             url: url.clone(),
@@ -543,6 +658,35 @@ source = "git+https://github.com/o/short?rev=abc#abc"
         assert_eq!(pack(&cache, &one).unwrap(), p1);
         std::fs::rename(&away, &up).unwrap();
         let p3 = pack(&cache, &three).unwrap();
+        let unpacked = s.0.join("unpacked");
+        std::fs::create_dir_all(&unpacked).unwrap();
+        run(Command::new("tar")
+            .arg("-xzf")
+            .arg(&p3)
+            .arg("-C")
+            .arg(&unpacked))
+        .unwrap();
+        let packed = unpacked.join("repo.git");
+        assert_eq!(
+            git(
+                &packed,
+                &["rev-parse", &format!("refs/commit/{}", three.rev)]
+            ),
+            three.rev
+        );
+        assert_eq!(git(&packed, &["show", &format!("{}:f", three.rev)]), "3");
+        assert_eq!(git(&packed, &["rev-list", "--all", "--count"]), "1");
+        assert_eq!(git(&packed, &["tag", "--list"]), "");
+        let absent = Command::new("git")
+            .arg("-C")
+            .arg(&packed)
+            .args(["cat-file", "-e", &private])
+            .output()
+            .unwrap();
+        assert!(
+            !absent.status.success(),
+            "ancestor-only private blob was packaged"
+        );
 
         let ws = s.0.join("ws");
         let w = ws.to_str().unwrap();

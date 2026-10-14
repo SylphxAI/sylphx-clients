@@ -906,7 +906,7 @@ pub fn local_path(root: &Path, name: &str) -> PathBuf {
     git_path(root, name).unwrap_or_else(|| source_cache(root).join(name))
 }
 
-fn source_cache(root: &Path) -> PathBuf {
+pub(super) fn source_cache(root: &Path) -> PathBuf {
     let base = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))
