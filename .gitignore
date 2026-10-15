@@ -1,0 +1,11 @@
+# The mirror splits `clients/` out of SylphxAI/cloud, where the repository's
+# root .gitignore carries these; without this file a build here (CI, or a
+# release) leaves the output showing as an untracked change.
+target/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.next/
+.turbo/
+*.tgz

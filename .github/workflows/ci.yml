@@ -1,0 +1,188 @@
+# The gate that verifies the generated clients in the published mirror.
+#
+# This file travels: release-clients.yml splits `clients/`
+# (scripts/mirror-split.sh) and fast-forwards SylphxAI/sylphx-clients to it,
+# so this workflow is the mirror's `.github/workflows/ci.yml` too, and it is
+# written for that repository — the mirror is where the clients are built and
+# published, and where nothing verified them before.
+#
+# The mirror takes no pull requests — its `main` only ever moves by that
+# fast-forward — so a `pull_request` trigger would never fire. The push
+# trigger is what makes it a gate: it runs on the fast-forward that moves
+# `main`, which is the commit the release tag then names. The check is named
+# `ci-ok` (the job's `name:`, which is what GitHub resolves a required
+# context from), and the mirror's default branch requires that context; that
+# ruleset is a repository setting on SylphxAI/sylphx-clients.
+#
+# In this repository the same file runs on a push to main, and it is not the
+# whole cloud-side proof: release-clients.yml's `verify` job already checks
+# the clients from the root bun workspace before it mirrors anything, which
+# is also why the npm job below is written for a repository where `clients/`
+# is the root and no outer workspace exists.
+name: CI
+
+# No `paths` filter: the split re-roots the tree, so this file's directory
+# does not exist in the mirror (`clients/**` matches nothing there) and a
+# filtered push trigger would never fire, which is the whole point of the
+# gate. It runs on every push to the default branch, here and there.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  # A proof is never cancelled by a later push: each pushed commit keeps its
+  # own verdict, and only the head of `main` is required to carry one.
+  cancel-in-progress: false
+
+jobs:
+  # The publishable Rust crates: the release's own locked test, plus the
+  # formatting and the declared lint flags (`.ci-clippy-args`).
+  rust:
+    name: rust
+    runs-on: sylphx-linux-standard
+    timeout-minutes: 60
+    # `clients/` is this job's working directory inside cloud; in the mirror
+    # the split has already re-rooted the tree and the directory is `.`.
+    defaults:
+      run:
+        working-directory: ${{ github.repository == 'SylphxAI/cloud' && 'clients' || '.' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        timeout-minutes: 10
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.0
+
+      # `rust/tests/ids.rs` reads its golden vectors from
+      # `contracts/fixtures/ids.json` (`rust/tests/ids.rs:11`), a path outside
+      # this workspace. The fixture is present in cloud, where the test runs;
+      # the split building the mirror carries only `clients/`, so it is absent
+      # there and the test cannot pass. The step decides from the fixture's
+      # presence, not from the repository name, so each copy runs exactly what
+      # it can and says which it did.
+      - name: Rust tests
+        run: |
+          set -euo pipefail
+          targets=(rust/tests/*.rs)
+          # `git rev-parse --show-toplevel` is the checkout root in both
+          # layouts; cloud keeps the fixture above clients/, where it is.
+          top="$(git rev-parse --show-toplevel)"
+          if [ ! -f "$top/contracts/fixtures/ids.json" ]; then
+            echo "ids vectors are absent (mirror split): rust/tests/ids.rs is excluded"
+            targets=("${targets[@]/rust\/tests\/ids.rs}")
+          fi
+          tests=()
+          for t in "${targets[@]}"; do
+            [ -n "$t" ] || continue
+            tests+=(--test "$(basename "$t" .rs)")
+          done
+          echo "integration targets:${tests[*]/#/ }"
+          cargo test --locked -p sylphx --lib
+          cargo test --locked -p sylphx "${tests[@]}"
+          cargo test --locked --workspace --exclude sylphx
+
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        run: |
+          set -euo pipefail
+          args="$(grep -v '^#' .ci-clippy-args | tr '\n' ' ')"
+          cargo clippy --locked --workspace $args
+
+      # The release's publish-set proof: the not-yet-published crates staged
+      # in dependency order by one locked `cargo publish --dry-run`.
+      - name: Publish set (release dry run)
+        run: |
+          set -euo pipefail
+          python3 -I scripts/test-check-publish-set.py
+          python3 -I scripts/check-publish-set.py
+
+  # The two npm packages the release publishes; the release packs them with
+  # `npm pack --dry-run`, which fails on a package.json the registry refuses.
+  npm:
+    name: npm
+    runs-on: sylphx-linux-standard
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ${{ github.repository == 'SylphxAI/cloud' && 'clients' || '.' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        timeout-minutes: 10
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@f4d14e03ff726c06358e5557344e1da148b56cf7 # v2
+
+      # No lockfile is committed for either package (the release installs the
+      # same way), so this is a plain install.
+      - name: Typecheck and pack
+        run: |
+          set -euo pipefail
+          for d in typescript next; do
+            echo "::group::$d"
+            (cd "$d" && bun install --no-save && bun run typecheck && npm pack --dry-run)
+            echo "::endgroup::"
+          done
+
+  # Every shell script the release runs, syntax-checked here: a broken script
+  # in this directory is only found by a release otherwise.
+  scripts:
+    name: scripts
+    runs-on: sylphx-linux-standard
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ github.repository == 'SylphxAI/cloud' && 'clients' || '.' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        timeout-minutes: 10
+        with:
+          persist-credentials: false
+
+      - name: Shell syntax
+        run: |
+          set -euo pipefail
+          for f in scripts/*.sh; do bash -n "$f"; echo "ok: $f"; done
+
+      - name: Python scripts compile
+        run: python3 -m compileall -q scripts
+
+      # The workflow is YAML the release depends on, and every workflow here
+      # is a release path.
+      - name: Every workflow is valid YAML
+        run: |
+          set -euo pipefail
+          python3 -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))['name'])" .github/workflows/*.yml
+
+  # The one check the mirror's default branch marks required. It runs on the
+  # reserved control pool and names every lane's result.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [rust, npm, scripts]
+    runs-on: sylphx-linux-control
+    timeout-minutes: 3
+    steps:
+      - name: Every job succeeded or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS"])
+          failed = {job: v["result"] for job, v in needs.items() if v["result"] not in ("success", "skipped")}
+          for job, v in sorted(needs.items()):
+              print(f"{job}: {v['result']}")
+          if failed:
+              sys.exit(f"ci-ok: not green: {failed}")
+          PY
