@@ -31,6 +31,7 @@
 mod git_deps;
 mod history;
 mod image;
+mod labels;
 mod pack_guest;
 mod packs;
 mod remote;
@@ -119,6 +120,8 @@ pub fn command() -> Command {
             .help("Where artifacts land (default .sylphx/out/<run id>/)"))
         .arg(Arg::new("env").long("env").value_name("NAME=VALUE").action(ArgAction::Append)
             .help("Non-secret environment for the command (repeatable)"))
+        .arg(Arg::new("label").long("label").value_name("KEY=VALUE").action(ArgAction::Append)
+            .help("Attribution label on the leased machine, for accounting (repeatable; lower-case letters, digits, `_`, `-`)"))
         .arg(Arg::new("no-cache").long("no-cache").action(ArgAction::SetTrue)
             .help("Do not use the shared build cache (no token is minted)"))
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
@@ -132,7 +135,7 @@ pub fn command() -> Command {
         .arg(Arg::new("quiet").long("quiet").short('q').action(ArgAction::SetTrue)
             .help("No `sylphx:` progress lines on stderr"))
         .arg(Arg::new("no-tree").long("no-tree").action(ArgAction::SetTrue)
-            .conflicts_with_all(["path", "artifact", "out", "env", "region", "fresh", "no-cache", "dry-run", "source-history"])
+            .conflicts_with_all(["path", "artifact", "out", "env", "label", "region", "fresh", "no-cache", "dry-run", "source-history"])
             .help("Run on the Build service with no input tree: the run is a Build record, its output streams back from its log"))
         .arg(Arg::new("no-wait").long("no-wait").action(ArgAction::SetTrue).requires("no-tree")
             .help("Create the Build and print it without waiting; read the output later with `sylphx build logs`"))
@@ -197,6 +200,9 @@ pub struct Opts {
     artifacts: Vec<String>,
     out: Option<PathBuf>,
     env: BTreeMap<String, String>,
+    /// The caller's own attribution labels, sorted, carried on the lease's
+    /// metadata beside `purpose` (see [`labels::parse`]).
+    labels: Vec<(String, String)>,
     org: Option<String>,
     allow_hosts: Vec<String>,
     fresh: bool,
@@ -323,6 +329,13 @@ impl Opts {
             }
             env.insert(k.to_string(), v.to_string());
         }
+        let labels = labels::collect(
+            m.get_many::<String>("label")
+                .into_iter()
+                .flatten()
+                .map(|kv| labels::parse(kv))
+                .collect::<Result<Vec<_>, _>>()?,
+        )?;
         Ok(Self {
             org: m.try_get_one::<String>("org").ok().flatten().cloned(),
             root: sh.root,
@@ -338,6 +351,7 @@ impl Opts {
                 .unwrap_or_default(),
             out: m.get_one::<String>("out").map(PathBuf::from),
             env,
+            labels,
             allow_hosts: sh.allow_hosts,
             fresh: m.get_flag("fresh"),
             source_history: m.get_one::<String>("source-history").cloned(),
@@ -370,6 +384,7 @@ impl Opts {
             artifacts: Vec::new(),
             out: None,
             env: BTreeMap::new(),
+            labels: Vec::new(),
             allow_hosts: sh.allow_hosts,
             fresh: false,
             source_history: None,
@@ -808,7 +823,7 @@ async fn execute(
             Step::Done(outcome) => return outcome,
             Step::Again { reason, backoff } => {
                 out.progress(&format!("{reason}; retrying once"));
-                out.event(json!({"type": "queued", "retry": true, "reason": reason}));
+                out.event(json!({"type": "queued", "retry": true, "reason": reason, "labels": {}}));
                 tokio::time::sleep(backoff).await;
             }
         }
@@ -1157,8 +1172,15 @@ impl Run<'_> {
         let deadline = Instant::now() + self.o.queue_timeout;
         let bounded = self.client.with_deadline(deadline);
         let lease = self.lease(&bounded).await.map_err(Attempt::Done)?;
+        // The lease's own labels, as the platform holds them: the run's
+        // `worktree`/`source` and the caller's `--label` beside `purpose`.
+        let labels = lease
+            .meta
+            .as_ref()
+            .map(|m| m.labels.clone())
+            .unwrap_or_default();
         self.out.event(
-            json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "volume": false}),
+            json!({"type": "queued", "lease": lease.name, "size": self.o.size, "region": lease.spec.as_ref().map(|s| s.region.as_str()).unwrap_or(self.region()), "volume": false, "labels": labels}),
         );
         // Cache credentials depend on accepted placement, not readiness.
         // Mint while the machine is admitted/booted, through the public cache API.
@@ -1203,6 +1225,14 @@ impl Run<'_> {
     /// Create a Build lease with no pre-created or attached workspace Volume.
     async fn lease(&mut self, client: &Client) -> Result<sbx::Lease, Outcome> {
         let domains = lease_domains(self.o);
+        // The run's own worktree and repository name every reservation it
+        // holds, so a held lease reads back as whose it is; the caller's
+        // `--label` values apply on top. A `--no-tree` run has no work tree.
+        let labels = if self.o.no_tree {
+            self.o.labels.clone()
+        } else {
+            labels::merge(labels::defaults(&self.o.root), self.o.labels.clone())
+        };
         let req = lease_request(
             &self.parent,
             &LeaseParams {
@@ -1210,6 +1240,7 @@ impl Run<'_> {
                 region: self.region(),
                 timeout: self.o.timeout,
                 domains: &domains,
+                labels: &labels,
             },
         );
         let lease = client
@@ -3397,6 +3428,34 @@ esac
     }
 
     #[test]
+    fn attribution_labels_parse_and_are_sorted_for_the_lease() {
+        let tree = GitTree::new();
+        let o = parse(&[
+            "sylphx",
+            "build",
+            "run",
+            "--label",
+            "worktree=w-22292",
+            "--label",
+            "source=sylphxai-cloud",
+            tree.path(),
+            "--",
+            "true",
+        ])
+        .unwrap();
+        assert_eq!(
+            o.labels,
+            vec![
+                ("source".into(), "sylphxai-cloud".into()),
+                ("worktree".into(), "w-22292".into()),
+            ]
+        );
+        // No label is the default: the platform's own `purpose` is all there is.
+        let plain = parse(&["sylphx", "build", "run", tree.path(), "--", "true"]).unwrap();
+        assert!(plain.labels.is_empty());
+    }
+
+    #[test]
     fn usage_errors_are_caught_before_anything_is_created() {
         assert!(parse(&["sylphx", "build", "run"]).is_err(), "no command");
         assert!(
@@ -3418,6 +3477,10 @@ esac
             &["--env", "NOVALUE"],
             &["--env", "1X=y"],
             &["--env", "SYLPHX_ENVIRONMENT=orgs/o/projects/p/envs/e"],
+            &["--label", "NOVALUE"],
+            &["--label", "Key=v"],
+            &["--label", "k=V"],
+            &["--label", "purpose=other"],
             &["--allow-host", "a b"],
             &["/nonexistent-dir-for-test"],
         ] {
@@ -3471,7 +3534,7 @@ esac
                     ("bytes", Value::is_u64),
                     ("full", Value::is_boolean),
                 ],
-                "queued" => &[],
+                "queued" => &[("labels", Value::is_object)],
                 "running" => &[("workspace", Value::is_string)],
                 "stdout" | "stderr" => &[("data", Value::is_string)],
                 "artifact" => &[

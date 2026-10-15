@@ -57,6 +57,10 @@ pub struct LeaseParams<'a> {
     /// The egress allow-list, whole: [`allowed_domains`] for a command
     /// build, the caller's own list for another kind of build.
     pub domains: &'a [String],
+    /// The caller's own attribution labels (worktree, run id, source), which
+    /// land beside `purpose` on the lease's metadata so one held reservation
+    /// reads back as whose it is. Sorted keys, validated by the caller.
+    pub labels: &'a [(String, String)],
 }
 
 /// The request that leases a build machine below `parent` (an environment).
@@ -74,6 +78,9 @@ pub fn lease_request(parent: &str, p: &LeaseParams<'_>) -> sbx::CreateLeaseReque
     spec.network = Some(net);
     let mut meta = sylphx::common::ResourceMeta::default();
     meta.labels.insert("purpose".into(), "build-run".into());
+    for (k, v) in p.labels {
+        meta.labels.insert(k.clone(), v.clone());
+    }
     let mut lease = sbx::Lease::default();
     lease.meta = Some(meta);
     lease.spec = Some(spec);
@@ -305,6 +312,7 @@ mod tests {
             region: "",
             timeout: Duration::from_secs(60),
             domains: &hosts,
+            labels: &[],
         };
         let r = lease_request("orgs/o/projects/p/envs/e", &p);
         let spec = r.lease.unwrap().spec.unwrap();
@@ -315,6 +323,26 @@ mod tests {
         let spec = lease_request("x", &p).lease.unwrap().spec.unwrap();
         assert_eq!(spec.region, "hk");
         assert!(spec.volumes.is_empty());
+    }
+
+    #[test]
+    fn the_callers_labels_land_beside_the_purpose_label() {
+        let hosts = allowed_domains(&[]);
+        let labels = [
+            ("worktree".to_string(), "w-22292".to_string()),
+            ("source".to_string(), "sylphxai-cloud".to_string()),
+        ];
+        let p = LeaseParams {
+            size: "standard",
+            region: "",
+            timeout: Duration::from_secs(60),
+            domains: &hosts,
+            labels: &labels,
+        };
+        let meta = lease_request("x", &p).lease.unwrap().meta.unwrap();
+        assert_eq!(meta.labels["purpose"], "build-run");
+        assert_eq!(meta.labels["worktree"], "w-22292");
+        assert_eq!(meta.labels["source"], "sylphxai-cloud");
     }
 
     #[test]
