@@ -4337,6 +4337,16 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'billing:read',
 	},
+	'money.entitlement_grants.snapshot': {
+		id: 'money.entitlement_grants.snapshot',
+		httpMethod: 'GET',
+		template: '/v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants:snapshot',
+		pathParams: [['parent', 'orgs/*/projects/*/envs/*']],
+		queryParams: ['page_size', 'page_token', 'filter', 'snapshot_revision'],
+		longRunning: false,
+		effect: 'read',
+		permission: 'billing:read',
+	},
 	'money.exchange_rates.list': {
 		id: 'money.exchange_rates.list',
 		httpMethod: 'GET',

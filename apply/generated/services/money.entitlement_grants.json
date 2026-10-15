@@ -22,6 +22,18 @@
         },
         {
           "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "snapshot_revision"
+            ]
+          },
+          "id": "money.entitlement_grants.snapshot",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": []
           },
           "id": "money.entitlement_grants.check",

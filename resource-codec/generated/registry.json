@@ -78996,6 +78996,168 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "The request of SnapshotEntitlementGrants.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The environment whose entitlement collection is read.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/EntitlementGrant",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "At most this many; default 50, clamped to 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "`next_page_token` of the previous page of this snapshot.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "AIP-160 filter over entitlement grant fields.",
+          "filterable": false,
+          "name": "filter",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Expected environment-wide collection revision, as a canonical decimal\nstring. Empty selects the current source snapshot; any nonempty value,\nincluding \"0\", requires equality or returns HTTP 409 ETAG_MISMATCH.\nSend the first response's revision on every subsequent page. Page tokens\nalso fence that revision and cannot be reused after a collection change.",
+          "filterable": false,
+          "name": "snapshot_revision",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.SnapshotEntitlementGrantsRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The response of SnapshotEntitlementGrants.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The page.",
+          "filterable": false,
+          "name": "entitlement_grants",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.EntitlementGrant"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The token of the next page; empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Always present as a canonical decimal string, including \"0\" for a source\nwith no committed grant mutations. Versions all grants in the environment,\nregardless of filter, including deletion of the last grant. Not a clock\nor resource etag. Rows and revision are read in one database snapshot.",
+          "filterable": false,
+          "name": "snapshot_revision",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.SnapshotEntitlementGrantsResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "A source named on a summary because it reports late.",
       "fields": [
         {
@@ -144980,13 +145142,14 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists entitlement grants.",
+              "doc": "Lists entitlement grants. Continuation tokens reject collection changes\nwith ETAG_MISMATCH; restart without a page token after a conflict.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
                 "INVALID_FIELD",
-                "PAGE_TOKEN_MISMATCH"
+                "PAGE_TOKEN_MISMATCH",
+                "ETAG_MISMATCH"
               ],
               "http": {
                 "body": null,
@@ -145023,6 +145186,52 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Reads a coherent entitlement snapshot with an environment-wide source\nrevision. Discard every page and restart after ETAG_MISMATCH.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH",
+                "ETAG_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "filter",
+                  "snapshot_revision"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants:snapshot"
+              },
+              "id": "money.entitlement_grants.snapshot",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:read",
+              "proto": "sylphx.money.v1.MoneyService.SnapshotEntitlementGrants",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.SnapshotEntitlementGrantsRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.SnapshotEntitlementGrantsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "snapshot"
             },
             {
               "cancellable": false,

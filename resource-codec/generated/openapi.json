@@ -26070,6 +26070,59 @@
         ],
         "type": "object"
       },
+      "sylphx.money.v1.SnapshotEntitlementGrantsRequest": {
+        "description": "The request of SnapshotEntitlementGrants.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over entitlement grant fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page of this snapshot.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment whose entitlement collection is read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/EntitlementGrant"
+          },
+          "snapshot_revision": {
+            "description": "Expected environment-wide collection revision, as a canonical decimal\nstring. Empty selects the current source snapshot; any nonempty value,\nincluding \"0\", requires equality or returns HTTP 409 ETAG_MISMATCH.\nSend the first response's revision on every subsequent page. Page tokens\nalso fence that revision and cannot be reused after a collection change.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.SnapshotEntitlementGrantsResponse": {
+        "description": "The response of SnapshotEntitlementGrants.",
+        "properties": {
+          "entitlement_grants": {
+            "description": "The page.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.EntitlementGrant"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          },
+          "snapshot_revision": {
+            "description": "Always present as a canonical decimal string, including \"0\" for a source\nwith no committed grant mutations. Versions all grants in the environment,\nregardless of filter, including deletion of the last grant. Not a clock\nor resource etag. Rows and revision are read in one database snapshot.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.StaleRevenueSource": {
         "description": "A source named on a summary because it reports late.",
         "properties": {
@@ -70330,7 +70383,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entitlement_grants": {
       "get": {
-        "description": "Lists entitlement grants.",
+        "description": "Lists entitlement grants. Continuation tokens reject collection changes\nwith ETAG_MISMATCH; restart without a page token after a conflict.",
         "operationId": "money_entitlement_grants_list",
         "parameters": [
           {
@@ -70409,11 +70462,14 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Lists entitlement grants.",
+        "summary": "Lists entitlement grants. Continuation tokens reject collection changes with ETAG_MISMATCH; restart without a page token after a conflict.",
         "tags": [
           "money"
         ],
@@ -70422,7 +70478,8 @@
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
           "INVALID_FIELD",
-          "PAGE_TOKEN_MISMATCH"
+          "PAGE_TOKEN_MISMATCH",
+          "ETAG_MISMATCH"
         ],
         "x-sylphx-method": "money.entitlement_grants.list",
         "x-sylphx-permission": "billing:read",
@@ -70701,6 +70758,120 @@
           "INVALID_FIELD"
         ],
         "x-sylphx-method": "money.entitlement_grants.check",
+        "x-sylphx-permission": "billing:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/entitlement_grants:snapshot": {
+      "get": {
+        "description": "Reads a coherent entitlement snapshot with an environment-wide source\nrevision. Discard every page and restart after ETAG_MISMATCH.",
+        "operationId": "money_entitlement_grants_snapshot",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page of this snapshot.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter over entitlement grant fields.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Expected environment-wide collection revision, as a canonical decimal\nstring. Empty selects the current source snapshot; any nonempty value,\nincluding \"0\", requires equality or returns HTTP 409 ETAG_MISMATCH.\nSend the first response's revision on every subsequent page. Page tokens\nalso fence that revision and cannot be reused after a collection change.",
+            "in": "query",
+            "name": "snapshot_revision",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.SnapshotEntitlementGrantsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads a coherent entitlement snapshot with an environment-wide source revision. Discard every page and restart after ETAG_MISMATCH.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH",
+          "ETAG_MISMATCH"
+        ],
+        "x-sylphx-method": "money.entitlement_grants.snapshot",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-stage": "preview"
       }

@@ -25030,9 +25030,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Lists entitlement grants."
+        "title": "Lists entitlement grants. Continuation tokens reject collection changes with ETAG_MISMATCH; restart without a page token after a conflict."
       },
-      "description": "Lists entitlement grants.",
+      "description": "Lists entitlement grants. Continuation tokens reject collection changes\nwith ETAG_MISMATCH; restart without a page token after a conflict.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants",
       "input_schema": {
@@ -25067,6 +25067,54 @@
       "method_id": "money.entitlement_grants.list",
       "permission": "billing:read",
       "tool": "money_entitlement_grants_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a coherent entitlement snapshot with an environment-wide source revision. Discard every page and restart after ETAG_MISMATCH."
+      },
+      "description": "Reads a coherent entitlement snapshot with an environment-wide source\nrevision. Discard every page and restart after ETAG_MISMATCH.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants:snapshot",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SnapshotEntitlementGrants.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over entitlement grant fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page of this snapshot.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment whose entitlement collection is read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/EntitlementGrant"
+          },
+          "snapshot_revision": {
+            "description": "Expected environment-wide collection revision, as a canonical decimal\nstring. Empty selects the current source snapshot; any nonempty value,\nincluding \"0\", requires equality or returns HTTP 409 ETAG_MISMATCH.\nSend the first response's revision on every subsequent page. Page tokens\nalso fence that revision and cannot be reused after a collection change.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.entitlement_grants.snapshot",
+      "permission": "billing:read",
+      "tool": "money_entitlement_grants_snapshot"
     },
     {
       "annotations": {

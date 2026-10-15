@@ -3560,6 +3560,77 @@ pub struct SettleUsageReservationRequest {
     pub occurred_time: String,
 }
 
+/// The request of SnapshotEntitlementGrants.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SnapshotEntitlementGrantsRequest {
+    /// The environment whose entitlement collection is read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page of this snapshot.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter over entitlement grant fields.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Expected environment-wide collection revision, as a canonical decimal
+    /// string. Empty selects the current source snapshot; any nonempty value,
+    /// including "0", requires equality or returns HTTP 409 ETAG_MISMATCH.
+    /// Send the first response's revision on every subsequent page. Page tokens
+    /// also fence that revision and cannot be reused after a collection change.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "snapshotRevision"
+    )]
+    pub snapshot_revision: String,
+}
+
+/// The response of SnapshotEntitlementGrants.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SnapshotEntitlementGrantsResponse {
+    /// The page.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "entitlementGrants"
+    )]
+    pub entitlement_grants: Vec<EntitlementGrant>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+    /// Always present as a canonical decimal string, including "0" for a source
+    /// with no committed grant mutations. Versions all grants in the environment,
+    /// regardless of filter, including deletion of the last grant. Not a clock
+    /// or resource etag. Rows and revision are read in one database snapshot.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "snapshotRevision"
+    )]
+    pub snapshot_revision: String,
+}
+
 /// A source named on a summary because it reports late.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -6173,11 +6244,12 @@ impl<'a, T: crate::runtime::Transport> EntitlementGrantsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists entitlement grants.
+    /// Lists entitlement grants. Continuation tokens reject collection changes
+    /// with ETAG_MISMATCH; restart without a page token after a conflict.
     ///
     /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants` · permission `billing:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `ETAG_MISMATCH`.
     pub async fn list(
         &self,
         request: ListEntitlementGrantsRequest,
@@ -6216,6 +6288,37 @@ impl<'a, T: crate::runtime::Transport> EntitlementGrantsCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Reads a coherent entitlement snapshot with an environment-wide source
+    /// revision. Discard every page and restart after ETAG_MISMATCH.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants:snapshot` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `ETAG_MISMATCH`.
+    pub async fn snapshot(
+        &self,
+        request: SnapshotEntitlementGrantsRequest,
+    ) -> Result<SnapshotEntitlementGrantsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/entitlement_grants:snapshot",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("snapshot_revision", &request.snapshot_revision);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 
     /// Answers whether a subject holds a feature now, and how much of it.

@@ -1721,6 +1721,41 @@ export interface SettleUsageReservationRequest {
 	occurredTime?: string
 }
 
+/** The request of SnapshotEntitlementGrants. */
+export interface SnapshotEntitlementGrantsRequest {
+	/** The environment whose entitlement collection is read. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page of this snapshot. */
+	pageToken?: string
+	/** AIP-160 filter over entitlement grant fields. */
+	filter?: string
+	/**
+	 * Expected environment-wide collection revision, as a canonical decimal
+	 * string. Empty selects the current source snapshot; any nonempty value,
+	 * including "0", requires equality or returns HTTP 409 ETAG_MISMATCH.
+	 * Send the first response's revision on every subsequent page. Page tokens
+	 * also fence that revision and cannot be reused after a collection change.
+	 */
+	snapshotRevision?: string
+}
+
+/** The response of SnapshotEntitlementGrants. */
+export interface SnapshotEntitlementGrantsResponse {
+	/** The page. */
+	entitlementGrants?: EntitlementGrant[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+	/**
+	 * Always present as a canonical decimal string, including "0" for a source
+	 * with no committed grant mutations. Versions all grants in the environment,
+	 * regardless of filter, including deletion of the last grant. Not a clock
+	 * or resource etag. Rows and revision are read in one database snapshot.
+	 */
+	readonly snapshotRevision?: string
+}
+
 /** A source named on a summary because it reports late. */
 export interface StaleRevenueSource {
 	/** `orgs/{org}/revenue_sources/{id}`. */
@@ -2856,6 +2891,16 @@ runtime.registerSchemas({
 		['quantityUsed', 'quantity_used'],
 		['occurredTime', 'occurred_time'],
 	],
+	'sylphx.money.v1.SnapshotEntitlementGrantsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['snapshotRevision', 'snapshot_revision'],
+	],
+	'sylphx.money.v1.SnapshotEntitlementGrantsResponse': [
+		['entitlementGrants', 'entitlement_grants', 'sylphx.money.v1.EntitlementGrant'],
+		['nextPageToken', 'next_page_token'],
+		['snapshotRevision', 'snapshot_revision'],
+	],
 	'sylphx.money.v1.StaleRevenueSource': [
 		['displayName', 'display_name'],
 		['newestDay', 'newest_day'],
@@ -3609,11 +3654,12 @@ export class EntitlementGrantsCollection {
 	}
 
 	/**
-	 * Lists entitlement grants.
+	 * Lists entitlement grants. Continuation tokens reject collection changes
+	 * with ETAG_MISMATCH; restart without a page token after a conflict.
 	 *
 	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/entitlement_grants` · permission `billing:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `ETAG_MISMATCH`.
 	 */
 	async list(request: ListEntitlementGrantsRequest): Promise<ListEntitlementGrantsResponse> {
 		return this.client.call<ListEntitlementGrantsResponse>({
@@ -3634,6 +3680,24 @@ export class EntitlementGrantsCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Reads a coherent entitlement snapshot with an environment-wide source
+	 * revision. Discard every page and restart after ETAG_MISMATCH.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/entitlement_grants:snapshot` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `ETAG_MISMATCH`.
+	 */
+	async snapshot(request: SnapshotEntitlementGrantsRequest): Promise<SnapshotEntitlementGrantsResponse> {
+		return this.client.call<SnapshotEntitlementGrantsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/entitlement_grants:snapshot`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, snapshot_revision: request.snapshotRevision },
+			responseType: 'sylphx.money.v1.SnapshotEntitlementGrantsResponse',
+			mutation: false,
+		})
 	}
 
 	/**
