@@ -139,7 +139,8 @@ jobs:
   # on public repositories; arm64 is cross-compiled and has no smoke run. Only
   # the public mirror runs this job (if:), so a repository turned private, or a
   # copy of this workflow elsewhere, can never bill hosted minutes. Never use a
-  # larger or paid macOS label here.
+  # larger or paid macOS label here (scripts/check-no-github-hosted-runners.ts
+  # rejects -large, -xlarge and gpu labels in these workflows).
   build-macos:
     needs: check
     if: github.repository == 'SylphxAI/sylphx-clients' && github.event.repository.private == false
