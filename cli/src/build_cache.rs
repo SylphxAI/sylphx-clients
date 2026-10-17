@@ -26,10 +26,10 @@ use crate::{Defaults, Failure};
 /// Where the gateway is, unless `SYLPHX_BUILD_CACHE_URL` says otherwise.
 pub const DEFAULT_URL: &str = "https://build-cache.sylphx.net";
 const URL_ENV: &str = "SYLPHX_BUILD_CACHE_URL";
-/// The cache's DE Cell is exposed by Sandboxes as the canonical region `hk`
+/// The cache's DE Cell is exposed by Sandboxes as the canonical region `fsn1`
 /// (`sandboxes-api::config::DEFAULT_REGION`). Its cluster-local route is not
 /// reachable from other Cells. Keep this aligned with the cache deployment.
-const CLUSTER_REGION: &str = "hk";
+const CLUSTER_REGION: &str = "fsn1";
 /// A cache that does not answer this fast only slows the build: give up.
 const MINT_TIMEOUT: Duration = Duration::from_secs(5);
 /// The gateway's write-token limit, unchanged by pre-READY minting.
@@ -618,16 +618,18 @@ mod tests {
     fn run_network_uses_actual_returned_placement() {
         // The API projects persisted placed-region authority over the stored
         // request spec, including legacy empty automatic home specs. Empty
-        // request -> actual hk is local; empty request -> gra is public.
+        // The API projects persisted placed-region authority over the stored
+        // request spec, including legacy empty automatic home specs. Empty
+        // request -> actual fsn1 is local; empty request -> gra is public.
         // Neither explicit requests nor a project home override that answer.
         for (requested, returned, expected) in [
-            ("hk", "hk", Network::Cluster),
-            ("", "hk", Network::Cluster),
+            ("fsn1", "fsn1", Network::Cluster),
+            ("", "fsn1", Network::Cluster),
             ("gra", "gra", Network::Public),
             ("", "gra", Network::Public),
-            ("hk", "gra", Network::Public),
-            ("gra", "hk", Network::Cluster),
-            ("hk", "", Network::Public),
+            ("fsn1", "gra", Network::Public),
+            ("gra", "fsn1", Network::Cluster),
+            ("fsn1", "", Network::Public),
             ("", "unknown", Network::Public),
         ] {
             let mut lease = sylphx::sandboxes::Lease::default();

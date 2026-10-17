@@ -1821,7 +1821,7 @@ async fn automatic_placement_retry(accepted_region: &str, pending: bool) {
     let first = format!("{ENV}/leases/first");
     let second = format!("{ENV}/leases/second");
     let retry_region = if accepted_region.is_empty() {
-        "hk"
+        "fsn1"
     } else {
         accepted_region
     };
@@ -2626,20 +2626,31 @@ async fn hanging_server() -> String {
 /// its token, and a cold workspace sync.
 /// `tail` is what happens from the command on.
 async fn build_stub(tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
+    build_stub_at("hk", tail).await
+}
+
+/// [`build_stub`] with the lease's accepted region. The cache a run uses is
+/// the Cell it actually landed in, not the region it asked for, so a test
+/// that pins the home region needs the home spelling here.
+async fn build_stub_at(region: &str, tail: Vec<(u16, &'static str, Vec<u8>)>) -> (String, Log) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    let mut replies = attempt_replies(&url);
+    let mut replies = attempt_replies_at(&url, region);
     replies.extend(tail);
     serve_bytes_on(listener, replies).await
 }
 
 /// One attempt: a ready lease, its token, source uploads and sync apply.
 fn attempt_replies(url: &str) -> Vec<(u16, &'static str, Vec<u8>)> {
+    attempt_replies_at(url, "hk")
+}
+
+fn attempt_replies_at(url: &str, region: &str) -> Vec<(u16, &'static str, Vec<u8>)> {
     let json_reply = |v: Value| (200u16, "application/json", v.to_string().into_bytes());
     let lease = format!("{ENV}/leases/l1");
     vec![
         json_reply(
-            json!({"name": lease, "spec": {"region": "hk"}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
+            json!({"name": lease, "spec": {"region": region}, "status": {"state": "ready", "endpoints": {"guestUri": url, "e2bSandboxId": "ABCD1234"}}}),
         ),
         json_reply(json!({"token": "h.p.s", "generation": 1})),
         json_reply(json!({})),
@@ -2729,7 +2740,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
     let sb = Sandbox::new("cache-run");
     project(&sb.dir);
     let (cache, clog) = serve(vec![(200, cache_reply())]).await;
-    let (url, log) = build_stub(vec![envd_process("built\n", 0), ended()]).await;
+    let (url, log) = build_stub_at("fsn1", vec![envd_process("built\n", 0), ended()]).await;
     let out = run_with(
         &sb,
         &url,
@@ -2737,7 +2748,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
             "build",
             "run",
             "--region",
-            "hk",
+            "fsn1",
             "-o",
             "json",
             "--timeout",
@@ -2755,7 +2766,7 @@ async fn build_run_mints_a_write_token_and_gives_the_command_the_cache_env() {
     let err = String::from_utf8_lossy(&out.stderr);
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(out.status.code(), Some(0), "{err}");
-    assert_volume_free_regional_leases(&log, "hk");
+    assert_volume_free_regional_leases(&log, "fsn1");
     // The mint: the key as a bearer, and the run's access, network and life.
     let seen = clog.lock();
     assert_eq!(seen.len(), 1);
@@ -2804,7 +2815,7 @@ async fn build_run_refreshes_the_capped_token_after_ready_for_the_longest_run() 
     refreshed["env"]["SCCACHE_WEBDAV_TOKEN"] = json!(refreshed_token);
     refreshed["env"]["TURBO_TOKEN"] = json!(refreshed_token);
     let (cache, clog) = serve(vec![(200, cache_reply()), (200, refreshed)]).await;
-    let (url, log) = build_stub(vec![envd_process("", 0), ended()]).await;
+    let (url, log) = build_stub_at("fsn1", vec![envd_process("", 0), ended()]).await;
     let out = run_with(
         &sb,
         &url,
@@ -2812,7 +2823,7 @@ async fn build_run_refreshes_the_capped_token_after_ready_for_the_longest_run() 
             "build",
             "run",
             "--region",
-            "hk",
+            "fsn1",
             "--timeout",
             "6h",
             "--",
@@ -2824,7 +2835,7 @@ async fn build_run_refreshes_the_capped_token_after_ready_for_the_longest_run() 
     )
     .await;
     assert_eq!(out.status.code(), Some(0));
-    assert_volume_free_regional_leases(&log, "hk");
+    assert_volume_free_regional_leases(&log, "fsn1");
     let seen = clog.lock();
     assert_eq!(
         seen.len(),

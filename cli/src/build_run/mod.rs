@@ -937,7 +937,7 @@ impl Run<'_> {
     fn region(&self) -> &str {
         match self.accepted_region.as_deref() {
             // An empty CreateLease region would select automatically again.
-            Some("") => "hk",
+            Some("") => "fsn1",
             Some(region) => region,
             None => self.o.region.as_deref().unwrap_or(""),
         }
@@ -2368,7 +2368,7 @@ mod tests {
     async fn queued_run_and_image_leases_never_reserve_volumes_and_keep_region_binding() {
         use tokio::io::AsyncWriteExt;
         for image_build in [false, true] {
-            for region in [None, Some("hk")] {
+            for region in [None, Some("fsn1")] {
                 let tree = GitTree::new();
                 let mut args = vec![
                     "sylphx",
