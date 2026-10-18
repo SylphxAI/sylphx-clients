@@ -35,6 +35,96 @@ pub struct Bucket {
     pub status: Option<BucketStatus>,
 }
 
+/// BucketCorsRule lets one set of browser origins call the bucket's S3
+/// endpoint (presigned GET, single PUT, multipart parts).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BucketCorsRule {
+    /// Origins as `scheme://host[:port]`, for example `https://app.example.com`,
+    /// with at most one `*` in the host (`https://*.example.com`), or a lone
+    /// `*`. Required; at most 20.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "allowedOrigins"
+    )]
+    pub allowed_origins: Vec<String>,
+    /// Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "allowedMethods"
+    )]
+    pub allowed_methods: Vec<String>,
+    /// Request headers the browser may send, or `*`. A presigned PUT needs
+    /// `Content-Type`; a multipart part needs none.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "allowedHeaders"
+    )]
+    pub allowed_headers: Vec<String>,
+    /// Response headers the page may read. Data adds `ETag` to a rule that
+    /// allows `PUT` or `POST`, because a browser multipart upload cannot
+    /// complete without each part's ETag, so a read of the rule always lists it.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "exposeHeaders"
+    )]
+    pub expose_headers: Vec<String>,
+    /// How long a browser may cache the preflight answer; default `3600s`,
+    /// at most `86400s`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maxAge"
+    )]
+    pub max_age: String,
+}
+
+/// BucketExpirationRule expires the objects under one key prefix.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BucketExpirationRule {
+    /// Applies to keys that start with this prefix, at most 1024 bytes; empty is
+    /// the whole bucket.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub prefix: String,
+    /// Expire an object this many days after it was written: 1 to 36500.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub days: i32,
+}
+
+/// BucketLifecycle removes objects and abandoned uploads on a schedule.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BucketLifecycle {
+    /// Abort a multipart upload that has not completed this many days after it
+    /// started, and free its parts: 1 to 365. 0 keeps incomplete uploads until
+    /// someone aborts them (and they are billed as stored bytes until then).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "abortIncompleteMultipartDays"
+    )]
+    pub abort_incomplete_multipart_days: i32,
+    /// Expire current objects by key prefix, at most 50 rules with distinct
+    /// prefixes. On a versioned bucket an expiry writes a delete marker.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "expirationRules"
+    )]
+    pub expiration_rules: Vec<BucketExpirationRule>,
+}
+
 /// BucketSpec is the caller-writable state of a Bucket.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -60,6 +150,14 @@ pub struct BucketSpec {
         alias = "deletionProtection"
     )]
     pub deletion_protection: bool,
+    /// Browser access (CORS) rules for the bucket's S3 endpoint, in order; the
+    /// first rule matching an origin and method answers. Empty answers no
+    /// cross-origin request. At most 20 rules.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cors: Vec<BucketCorsRule>,
+    /// Rules that remove what a bucket no longer needs. Unset keeps everything.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lifecycle: Option<BucketLifecycle>,
 }
 
 /// BucketStatus is the observed state of a Bucket.
@@ -132,19 +230,32 @@ pub struct ConnectBucketRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+    /// How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`.
+    /// Ask for what the work needs (a server that signs 7-day URLs asks for
+    /// `604800s`); connect again for fresh keys, they are cheap.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "credentialTtl"
+    )]
+    pub credential_ttl: String,
 }
 
 /// The response of ConnectBucket.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ConnectBucketResponse {
-    /// How to connect.
+    /// How to reach the bucket through the Data API.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         alias = "connectionInfo"
     )]
     pub connection_info: Option<ConnectionInfo>,
+    /// How to reach the same bucket over S3, with keys minted by this call.
+    /// Unset while the bucket is not served over S3.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub s3: Option<S3Connection>,
 }
 
 /// The request of ConnectDatabase.
@@ -2219,6 +2330,130 @@ pub struct RotateSearchIndexCredentialsRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// S3Connection is how a client reaches one bucket over the S3 protocol (SigV4):
+/// aws-sdk, rclone, DuckDB, restic, or hand-signed requests. The keys are
+/// minted for this call, scoped to this one bucket in this one environment, and
+/// stop working at `expire_time`, on `RotateBucketCredentials`, or when the
+/// bucket is deleted. They are not API keys and are returned only here.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct S3Connection {
+    /// The S3 endpoint URL, for example `https://s3.sylphx.net`. One endpoint
+    /// serves every bucket.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub endpoint: String,
+    /// The SigV4 region name to sign with.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub region: String,
+    /// True: address the bucket in the path (`{endpoint}/{bucket}/{key}`); the
+    /// endpoint has no per-bucket DNS name, so a client that defaults to
+    /// virtual-hosted style must be told to use path style.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pathStyle"
+    )]
+    pub path_style: bool,
+    /// The S3 bucket name to put in the path and in signed requests.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub bucket: String,
+    /// The access key id.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accessKeyId"
+    )]
+    pub access_key_id: String,
+    /// The secret access key.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "secretAccessKey"
+    )]
+    pub secret_access_key: String,
+    /// The session token to send as `X-Amz-Security-Token`; empty when the keys
+    /// are not temporary credentials of a session.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sessionToken"
+    )]
+    pub session_token: String,
+    /// When the keys stop working; always set. A presigned URL made with them
+    /// stops working then too, whatever its own expiry says.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+    /// What presigned URLs and multipart uploads may do on this endpoint.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presign: Option<S3PresignRules>,
+}
+
+/// S3PresignRules are the limits on presigned URLs (SigV4 query signing) and
+/// multipart uploads for every bucket. A presigned URL is valid for its own
+/// `X-Amz-Expires` or until the keys that signed it expire, whichever comes
+/// first; the endpoint refuses a longer `X-Amz-Expires` than `max_expires`.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct S3PresignRules {
+    /// The longest `X-Amz-Expires` accepted: `604800s` (7 days). Keys that live
+    /// shorter cut a URL's life short; ask `credential_ttl` for a longer
+    /// lifetime when a URL must outlive the default keys.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maxExpires"
+    )]
+    pub max_expires: String,
+    /// Methods a presigned URL may sign on an object: `GET` and `HEAD` to read,
+    /// `PUT` to write in one request.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub methods: Vec<String>,
+    /// A single `PUT` carries at most this many bytes (5 GiB); larger bodies
+    /// use multipart.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "maxSinglePutBytes"
+    )]
+    pub max_single_put_bytes: i64,
+    /// A multipart upload presigns each of `CreateMultipartUpload` (`POST
+    /// ?uploads`), `UploadPart` (`PUT ?partNumber&uploadId`), `ListParts` (`GET
+    /// ?uploadId`, to resume after a dropped part), `CompleteMultipartUpload`
+    /// (`POST ?uploadId`) and `AbortMultipartUpload` (`DELETE ?uploadId`). Every
+    /// part but the last is at least this many bytes (5 MiB).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "minPartBytes"
+    )]
+    pub min_part_bytes: i64,
+    /// A part is at most this many bytes (5 GiB).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "maxPartBytes"
+    )]
+    pub max_part_bytes: i64,
+    /// An upload has at most this many parts (10000, numbered from 1).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maxParts"
+    )]
+    pub max_parts: i32,
 }
 
 /// The request of ScanValues.
@@ -4478,7 +4713,9 @@ impl<'a, T: crate::runtime::Transport> BucketsCollection<'a, T> {
         Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
-    /// Updates a bucket.
+    /// Updates a bucket's `spec.deletion_protection`, `spec.cors` and
+    /// `spec.lifecycle`; every other field is fixed at creation. A mask path
+    /// replaces the whole field (`spec.cors` replaces every rule).
     ///
     /// `PATCH /v1/{bucket.name=orgs/*/projects/*/envs/*/buckets/*}` · permission `data:write` · effect `write`
     ///
@@ -4551,12 +4788,14 @@ impl<'a, T: crate::runtime::Transport> BucketsCollection<'a, T> {
         Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
-    /// Returns how to connect to the bucket: its endpoint and its own engine
-    /// credentials. The credentials are not API keys and are returned only here.
+    /// Returns how to connect to the bucket: the Data API address, and, once the
+    /// bucket is served over S3, an S3 endpoint with keys scoped to this one
+    /// bucket (`s3`). The credentials are not API keys and are returned only
+    /// here; each call mints new S3 keys.
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:connect` · permission `data:write` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
     pub async fn connect(
         &self,
         request: ConnectBucketRequest,
@@ -4582,8 +4821,8 @@ impl<'a, T: crate::runtime::Transport> BucketsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Replaces the bucket's engine credentials; the old ones stop working once
-    /// the new ones are served.
+    /// Revokes every S3 key `:connect` minted for the bucket, at once; connect
+    /// again for new ones. Keys of other buckets are untouched.
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:rotateCredentials` · permission `data:write` · effect `write`
     ///

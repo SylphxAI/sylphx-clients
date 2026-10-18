@@ -24,6 +24,63 @@ export interface Bucket {
 	readonly status?: BucketStatus
 }
 
+/**
+ * BucketCorsRule lets one set of browser origins call the bucket's S3
+ * endpoint (presigned GET, single PUT, multipart parts).
+ */
+export interface BucketCorsRule {
+	/**
+	 * Origins as `scheme://host[:port]`, for example `https://app.example.com`,
+	 * with at most one `*` in the host (`https://*.example.com`), or a lone
+	 * `*`. Required; at most 20.
+	 */
+	allowedOrigins?: string[]
+	/** Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required. */
+	allowedMethods?: string[]
+	/**
+	 * Request headers the browser may send, or `*`. A presigned PUT needs
+	 * `Content-Type`; a multipart part needs none.
+	 */
+	allowedHeaders?: string[]
+	/**
+	 * Response headers the page may read. Data adds `ETag` to a rule that
+	 * allows `PUT` or `POST`, because a browser multipart upload cannot
+	 * complete without each part's ETag, so a read of the rule always lists it.
+	 */
+	exposeHeaders?: string[]
+	/**
+	 * How long a browser may cache the preflight answer; default `3600s`,
+	 * at most `86400s`.
+	 */
+	maxAge?: string
+}
+
+/** BucketExpirationRule expires the objects under one key prefix. */
+export interface BucketExpirationRule {
+	/**
+	 * Applies to keys that start with this prefix, at most 1024 bytes; empty is
+	 * the whole bucket.
+	 */
+	prefix?: string
+	/** Expire an object this many days after it was written: 1 to 36500. */
+	days?: number
+}
+
+/** BucketLifecycle removes objects and abandoned uploads on a schedule. */
+export interface BucketLifecycle {
+	/**
+	 * Abort a multipart upload that has not completed this many days after it
+	 * started, and free its parts: 1 to 365. 0 keeps incomplete uploads until
+	 * someone aborts them (and they are billed as stored bytes until then).
+	 */
+	abortIncompleteMultipartDays?: number
+	/**
+	 * Expire current objects by key prefix, at most 50 rules with distinct
+	 * prefixes. On a versioned bucket an expiry writes a delete marker.
+	 */
+	expirationRules?: BucketExpirationRule[]
+}
+
 /** BucketSpec is the caller-writable state of a Bucket. */
 export interface BucketSpec {
 	/** Keep every version and write delete markers. */
@@ -37,6 +94,14 @@ export interface BucketSpec {
 	region?: string
 	/** While set, Delete fails with DELETION_PROTECTED. */
 	deletionProtection?: boolean
+	/**
+	 * Browser access (CORS) rules for the bucket's S3 endpoint, in order; the
+	 * first rule matching an origin and method answers. Empty answers no
+	 * cross-origin request. At most 20 rules.
+	 */
+	cors?: BucketCorsRule[]
+	/** Rules that remove what a bucket no longer needs. Unset keeps everything. */
+	lifecycle?: BucketLifecycle
 }
 
 /** BucketStatus is the observed state of a Bucket. */
@@ -63,12 +128,23 @@ export interface BucketStatus {
 export interface ConnectBucketRequest {
 	/** The name of the bucket. */
 	name: string
+	/**
+	 * How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`.
+	 * Ask for what the work needs (a server that signs 7-day URLs asks for
+	 * `604800s`); connect again for fresh keys, they are cheap.
+	 */
+	credentialTtl?: string
 }
 
 /** The response of ConnectBucket. */
 export interface ConnectBucketResponse {
-	/** How to connect. */
+	/** How to reach the bucket through the Data API. */
 	connectionInfo?: ConnectionInfo
+	/**
+	 * How to reach the same bucket over S3, with keys minted by this call.
+	 * Unset while the bucket is not served over S3.
+	 */
+	s3?: S3Connection
 }
 
 /** The request of ConnectDatabase. */
@@ -992,6 +1068,84 @@ export interface RotateSearchIndexCredentialsRequest {
 	validateOnly?: boolean
 }
 
+/**
+ * S3Connection is how a client reaches one bucket over the S3 protocol (SigV4):
+ * aws-sdk, rclone, DuckDB, restic, or hand-signed requests. The keys are
+ * minted for this call, scoped to this one bucket in this one environment, and
+ * stop working at `expire_time`, on `RotateBucketCredentials`, or when the
+ * bucket is deleted. They are not API keys and are returned only here.
+ */
+export interface S3Connection {
+	/**
+	 * The S3 endpoint URL, for example `https://s3.sylphx.net`. One endpoint
+	 * serves every bucket.
+	 */
+	endpoint?: string
+	/** The SigV4 region name to sign with. */
+	region?: string
+	/**
+	 * True: address the bucket in the path (`{endpoint}/{bucket}/{key}`); the
+	 * endpoint has no per-bucket DNS name, so a client that defaults to
+	 * virtual-hosted style must be told to use path style.
+	 */
+	pathStyle?: boolean
+	/** The S3 bucket name to put in the path and in signed requests. */
+	bucket?: string
+	/** The access key id. */
+	accessKeyId?: string
+	/** The secret access key. */
+	secretAccessKey?: string
+	/**
+	 * The session token to send as `X-Amz-Security-Token`; empty when the keys
+	 * are not temporary credentials of a session.
+	 */
+	sessionToken?: string
+	/**
+	 * When the keys stop working; always set. A presigned URL made with them
+	 * stops working then too, whatever its own expiry says.
+	 */
+	expireTime?: string
+	/** What presigned URLs and multipart uploads may do on this endpoint. */
+	presign?: S3PresignRules
+}
+
+/**
+ * S3PresignRules are the limits on presigned URLs (SigV4 query signing) and
+ * multipart uploads for every bucket. A presigned URL is valid for its own
+ * `X-Amz-Expires` or until the keys that signed it expire, whichever comes
+ * first; the endpoint refuses a longer `X-Amz-Expires` than `max_expires`.
+ */
+export interface S3PresignRules {
+	/**
+	 * The longest `X-Amz-Expires` accepted: `604800s` (7 days). Keys that live
+	 * shorter cut a URL's life short; ask `credential_ttl` for a longer
+	 * lifetime when a URL must outlive the default keys.
+	 */
+	maxExpires?: string
+	/**
+	 * Methods a presigned URL may sign on an object: `GET` and `HEAD` to read,
+	 * `PUT` to write in one request.
+	 */
+	methods?: string[]
+	/**
+	 * A single `PUT` carries at most this many bytes (5 GiB); larger bodies
+	 * use multipart.
+	 */
+	maxSinglePutBytes?: string
+	/**
+	 * A multipart upload presigns each of `CreateMultipartUpload` (`POST
+	 * ?uploads`), `UploadPart` (`PUT ?partNumber&uploadId`), `ListParts` (`GET
+	 * ?uploadId`, to resume after a dropped part), `CompleteMultipartUpload`
+	 * (`POST ?uploadId`) and `AbortMultipartUpload` (`DELETE ?uploadId`). Every
+	 * part but the last is at least this many bytes (5 MiB).
+	 */
+	minPartBytes?: string
+	/** A part is at most this many bytes (5 GiB). */
+	maxPartBytes?: string
+	/** An upload has at most this many parts (10000, numbered from 1). */
+	maxParts?: number
+}
+
 /** The request of ScanValues. */
 export interface ScanValuesRequest {
 	/** The namespace's id. */
@@ -1294,9 +1448,23 @@ runtime.registerSchemas({
 		['spec', 'spec', 'sylphx.data.v1.BucketSpec'],
 		['status', 'status', 'sylphx.data.v1.BucketStatus'],
 	],
+	'sylphx.data.v1.BucketCorsRule': [
+		['allowedOrigins', 'allowed_origins'],
+		['allowedMethods', 'allowed_methods'],
+		['allowedHeaders', 'allowed_headers'],
+		['exposeHeaders', 'expose_headers'],
+		['maxAge', 'max_age'],
+	],
+	'sylphx.data.v1.BucketExpirationRule': [],
+	'sylphx.data.v1.BucketLifecycle': [
+		['abortIncompleteMultipartDays', 'abort_incomplete_multipart_days'],
+		['expirationRules', 'expiration_rules', 'sylphx.data.v1.BucketExpirationRule'],
+	],
 	'sylphx.data.v1.BucketSpec': [
 		['versioningEnabled', 'versioning_enabled'],
 		['deletionProtection', 'deletion_protection'],
+		['cors', 'cors', 'sylphx.data.v1.BucketCorsRule'],
+		['lifecycle', 'lifecycle', 'sylphx.data.v1.BucketLifecycle'],
 	],
 	'sylphx.data.v1.BucketStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -1304,9 +1472,12 @@ runtime.registerSchemas({
 		['storageBytes', 'storage_bytes'],
 		['objectCount', 'object_count'],
 	],
-	'sylphx.data.v1.ConnectBucketRequest': [],
+	'sylphx.data.v1.ConnectBucketRequest': [
+		['credentialTtl', 'credential_ttl'],
+	],
 	'sylphx.data.v1.ConnectBucketResponse': [
 		['connectionInfo', 'connection_info', 'sylphx.data.v1.ConnectionInfo'],
+		['s3', 's3', 'sylphx.data.v1.S3Connection'],
 	],
 	'sylphx.data.v1.ConnectDatabaseRequest': [],
 	'sylphx.data.v1.ConnectDatabaseResponse': [
@@ -1610,6 +1781,21 @@ runtime.registerSchemas({
 	],
 	'sylphx.data.v1.RotateSearchIndexCredentialsRequest': [
 		['validateOnly', 'validate_only'],
+	],
+	'sylphx.data.v1.S3Connection': [
+		['pathStyle', 'path_style'],
+		['accessKeyId', 'access_key_id'],
+		['secretAccessKey', 'secret_access_key'],
+		['sessionToken', 'session_token'],
+		['expireTime', 'expire_time'],
+		['presign', 'presign', 'sylphx.data.v1.S3PresignRules'],
+	],
+	'sylphx.data.v1.S3PresignRules': [
+		['maxExpires', 'max_expires'],
+		['maxSinglePutBytes', 'max_single_put_bytes'],
+		['minPartBytes', 'min_part_bytes'],
+		['maxPartBytes', 'max_part_bytes'],
+		['maxParts', 'max_parts'],
 	],
 	'sylphx.data.v1.ScanValuesRequest': [
 		['namespaceId', 'namespace_id'],
@@ -2776,7 +2962,9 @@ export class BucketsCollection {
 	}
 
 	/**
-	 * Updates a bucket.
+	 * Updates a bucket's `spec.deletion_protection`, `spec.cors` and
+	 * `spec.lifecycle`; every other field is fixed at creation. A mask path
+	 * replaces the whole field (`spec.cors` replaces every rule).
 	 *
 	 * `PATCH /v1/{bucket.name=orgs/*\/projects/*\/envs/*\/buckets/*}` · permission `data:write` · effect `write`
 	 *
@@ -2814,12 +3002,14 @@ export class BucketsCollection {
 	}
 
 	/**
-	 * Returns how to connect to the bucket: its endpoint and its own engine
-	 * credentials. The credentials are not API keys and are returned only here.
+	 * Returns how to connect to the bucket: the Data API address, and, once the
+	 * bucket is served over S3, an S3 endpoint with keys scoped to this one
+	 * bucket (`s3`). The credentials are not API keys and are returned only
+	 * here; each call mints new S3 keys.
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/buckets/*}:connect` · permission `data:write` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
 	 */
 	async connect(request: ConnectBucketRequest): Promise<ConnectBucketResponse> {
 		return this.client.call<ConnectBucketResponse>({
@@ -2833,8 +3023,8 @@ export class BucketsCollection {
 	}
 
 	/**
-	 * Replaces the bucket's engine credentials; the old ones stop working once
-	 * the new ones are served.
+	 * Revokes every S3 key `:connect` minted for the bucket, at once; connect
+	 * again for new ones. Keys of other buckets are untouched.
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/buckets/*}:rotateCredentials` · permission `data:write` · effect `write`
 	 *

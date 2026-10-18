@@ -323,6 +323,33 @@ func connectionsGitHubAppConfig() []def.Field {
 	}
 }
 
+// dataBucketCorsRule is `sylphx.data.v1.BucketCorsRule`.
+func dataBucketCorsRule() []def.Field {
+	return []def.Field{
+		{Name: "allowed_origins", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "Origins as `scheme://host[:port]`, for example `https://app.example.com`, with at most one `*` in the host (`https://*.example.com`), or a lone `*`. Required; at most 20."},
+		{Name: "allowed_methods", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required."},
+		{Name: "allowed_headers", Kind: def.String, Repeated: true, Doc: "Request headers the browser may send, or `*`. A presigned PUT needs `Content-Type`; a multipart part needs none."},
+		{Name: "expose_headers", Kind: def.String, Repeated: true, Doc: "Response headers the page may read. Data adds `ETag` to a rule that allows `PUT` or `POST`, because a browser multipart upload cannot complete without each part's ETag, so a read of the rule always lists it."},
+		{Name: "max_age", Kind: def.Duration, Doc: "How long a browser may cache the preflight answer; default `3600s`, at most `86400s`."},
+	}
+}
+
+// dataBucketExpirationRule is `sylphx.data.v1.BucketExpirationRule`.
+func dataBucketExpirationRule() []def.Field {
+	return []def.Field{
+		{Name: "prefix", Kind: def.String, Doc: "Applies to keys that start with this prefix, at most 1024 bytes; empty is the whole bucket."},
+		{Name: "days", Kind: def.Int32, Flags: def.Required, Doc: "Expire an object this many days after it was written: 1 to 36500."},
+	}
+}
+
+// dataBucketLifecycle is `sylphx.data.v1.BucketLifecycle`.
+func dataBucketLifecycle() []def.Field {
+	return []def.Field{
+		{Name: "abort_incomplete_multipart_days", Kind: def.Int32, Doc: "Abort a multipart upload that has not completed this many days after it started, and free its parts: 1 to 365. 0 keeps incomplete uploads until someone aborts them (and they are billed as stored bytes until then)."},
+		{Name: "expiration_rules", Kind: def.Message, Msg: dataBucketExpirationRule, Repeated: true, Doc: "Expire current objects by key prefix, at most 50 rules with distinct prefixes. On a versioned bucket an expiry writes a delete marker."},
+	}
+}
+
 // dataBucketSpec is `sylphx.data.v1.BucketSpec`.
 func dataBucketSpec() []def.Field {
 	return []def.Field{
@@ -330,6 +357,8 @@ func dataBucketSpec() []def.Field {
 		{Name: "retention", Kind: def.Duration, Doc: "Versions are kept at least this long; unset keeps no minimum."},
 		{Name: "region", Kind: def.String, Doc: "The region; default the project's home region. Changing it moves the data by signed export and import."},
 		{Name: "deletion_protection", Kind: def.Bool, Doc: "While set, Delete fails with DELETION_PROTECTED."},
+		{Name: "cors", Kind: def.Message, Msg: dataBucketCorsRule, Repeated: true, Doc: "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the first rule matching an origin and method answers. Empty answers no cross-origin request. At most 20 rules."},
+		{Name: "lifecycle", Kind: def.Message, Msg: dataBucketLifecycle, Doc: "Rules that remove what a bucket no longer needs. Unset keeps everything."},
 	}
 }
 

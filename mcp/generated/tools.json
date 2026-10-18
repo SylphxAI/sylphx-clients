@@ -14341,9 +14341,92 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "cors": {
+                    "description": "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the\nfirst rule matching an origin and method answers. Empty answers no\ncross-origin request. At most 20 rules.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "BucketCorsRule lets one set of browser origins call the bucket's S3\nendpoint (presigned GET, single PUT, multipart parts).",
+                      "properties": {
+                        "allowed_headers": {
+                          "description": "Request headers the browser may send, or `*`. A presigned PUT needs\n`Content-Type`; a multipart part needs none.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_methods": {
+                          "description": "Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_origins": {
+                          "description": "Origins as `scheme://host[:port]`, for example `https://app.example.com`,\nwith at most one `*` in the host (`https://*.example.com`), or a lone\n`*`. Required; at most 20.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "expose_headers": {
+                          "description": "Response headers the page may read. Data adds `ETag` to a rule that\nallows `PUT` or `POST`, because a browser multipart upload cannot\ncomplete without each part's ETag, so a read of the rule always lists it.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "max_age": {
+                          "description": "How long a browser may cache the preflight answer; default `3600s`,\nat most `86400s`.",
+                          "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "allowed_origins",
+                        "allowed_methods"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "deletion_protection": {
                     "description": "While set, Delete fails with DELETION_PROTECTED.",
                     "type": "boolean"
+                  },
+                  "lifecycle": {
+                    "additionalProperties": false,
+                    "description": "Rules that remove what a bucket no longer needs. Unset keeps everything.",
+                    "properties": {
+                      "abort_incomplete_multipart_days": {
+                        "description": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "expiration_rules": {
+                        "description": "Expire current objects by key prefix, at most 50 rules with distinct\nprefixes. On a versioned bucket an expiry writes a delete marker.",
+                        "items": {
+                          "additionalProperties": false,
+                          "description": "BucketExpirationRule expires the objects under one key prefix.",
+                          "properties": {
+                            "days": {
+                              "description": "Expire an object this many days after it was written: 1 to 36500.",
+                              "format": "int32",
+                              "type": "integer"
+                            },
+                            "prefix": {
+                              "description": "Applies to keys that start with this prefix, at most 1024 bytes; empty is\nthe whole bucket.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "days"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
                   },
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
@@ -14398,9 +14481,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Updates a bucket."
+        "title": "Updates a bucket's `spec.deletion_protection`, `spec.cors` and `spec.lifecycle`; every other field is fixed at creation. A mask path replaces the whole field (`spec.cors` replaces every rule)."
       },
-      "description": "Updates a bucket.",
+      "description": "Updates a bucket's `spec.deletion_protection`, `spec.cors` and\n`spec.lifecycle`; every other field is fixed at creation. A mask path\nreplaces the whole field (`spec.cors` replaces every rule).",
       "effect": "write",
       "http": "PATCH /v1/{bucket.name=orgs/*/projects/*/envs/*/buckets/*}",
       "input_schema": {
@@ -14448,9 +14531,92 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "cors": {
+                    "description": "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the\nfirst rule matching an origin and method answers. Empty answers no\ncross-origin request. At most 20 rules.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "BucketCorsRule lets one set of browser origins call the bucket's S3\nendpoint (presigned GET, single PUT, multipart parts).",
+                      "properties": {
+                        "allowed_headers": {
+                          "description": "Request headers the browser may send, or `*`. A presigned PUT needs\n`Content-Type`; a multipart part needs none.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_methods": {
+                          "description": "Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_origins": {
+                          "description": "Origins as `scheme://host[:port]`, for example `https://app.example.com`,\nwith at most one `*` in the host (`https://*.example.com`), or a lone\n`*`. Required; at most 20.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "expose_headers": {
+                          "description": "Response headers the page may read. Data adds `ETag` to a rule that\nallows `PUT` or `POST`, because a browser multipart upload cannot\ncomplete without each part's ETag, so a read of the rule always lists it.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "max_age": {
+                          "description": "How long a browser may cache the preflight answer; default `3600s`,\nat most `86400s`.",
+                          "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "allowed_origins",
+                        "allowed_methods"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "deletion_protection": {
                     "description": "While set, Delete fails with DELETION_PROTECTED.",
                     "type": "boolean"
+                  },
+                  "lifecycle": {
+                    "additionalProperties": false,
+                    "description": "Rules that remove what a bucket no longer needs. Unset keeps everything.",
+                    "properties": {
+                      "abort_incomplete_multipart_days": {
+                        "description": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "expiration_rules": {
+                        "description": "Expire current objects by key prefix, at most 50 rules with distinct\nprefixes. On a versioned bucket an expiry writes a delete marker.",
+                        "items": {
+                          "additionalProperties": false,
+                          "description": "BucketExpirationRule expires the objects under one key prefix.",
+                          "properties": {
+                            "days": {
+                              "description": "Expire an object this many days after it was written: 1 to 36500.",
+                              "format": "int32",
+                              "type": "integer"
+                            },
+                            "prefix": {
+                              "description": "Applies to keys that start with this prefix, at most 1024 bytes; empty is\nthe whole bucket.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "days"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
                   },
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
@@ -14548,15 +14714,20 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Returns how to connect to the bucket: its endpoint and its own engine credentials. The credentials are not API keys and are returned only here."
+        "title": "Returns how to connect to the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). The credentials are not API keys and are returned only here; each call mints new S3 keys."
       },
-      "description": "Returns how to connect to the bucket: its endpoint and its own engine\ncredentials. The credentials are not API keys and are returned only here.",
+      "description": "Returns how to connect to the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). The credentials are not API keys and are returned only\nhere; each call mints new S3 keys.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:connect",
       "input_schema": {
         "additionalProperties": false,
         "description": "The request of ConnectBucket.",
         "properties": {
+          "credential_ttl": {
+            "description": "How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`.\nAsk for what the work needs (a server that signs 7-day URLs asks for\n`604800s`); connect again for fresh keys, they are cheap.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
           "name": {
             "description": "The name of the bucket.",
             "type": "string",
@@ -14579,9 +14750,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Replaces the bucket's engine credentials; the old ones stop working once the new ones are served."
+        "title": "Revokes every S3 key `:connect` minted for the bucket, at once; connect again for new ones. Keys of other buckets are untouched."
       },
-      "description": "Replaces the bucket's engine credentials; the old ones stop working once\nthe new ones are served.",
+      "description": "Revokes every S3 key `:connect` minted for the bucket, at once; connect\nagain for new ones. Keys of other buckets are untouched.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:rotateCredentials",
       "input_schema": {

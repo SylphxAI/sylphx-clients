@@ -10114,6 +10114,26 @@
                   "type": "bool"
                 },
                 {
+                  "field": "bucket.spec.cors",
+                  "flag": "--spec.cors",
+                  "repeated": true,
+                  "summary": "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the first rule matching an origin and method answers. Empty answers no cross-origin request. At most 20 rules.",
+                  "type": "json"
+                },
+                {
+                  "field": "bucket.spec.lifecycle.abort_incomplete_multipart_days",
+                  "flag": "--spec.lifecycle.abort-incomplete-multipart-days",
+                  "summary": "Abort a multipart upload that has not completed this many days after it started, and free its parts: 1 to 365. 0 keeps incomplete uploads until someone aborts them (and they are billed as stored bytes until then).",
+                  "type": "int"
+                },
+                {
+                  "field": "bucket.spec.lifecycle.expiration_rules",
+                  "flag": "--spec.lifecycle.expiration-rules",
+                  "repeated": true,
+                  "summary": "Expire current objects by key prefix, at most 50 rules with distinct prefixes. On a versioned bucket an expiry writes a delete marker.",
+                  "type": "json"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10185,6 +10205,26 @@
                   "type": "bool"
                 },
                 {
+                  "field": "bucket.spec.cors",
+                  "flag": "--spec.cors",
+                  "repeated": true,
+                  "summary": "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the first rule matching an origin and method answers. Empty answers no cross-origin request. At most 20 rules.",
+                  "type": "json"
+                },
+                {
+                  "field": "bucket.spec.lifecycle.abort_incomplete_multipart_days",
+                  "flag": "--spec.lifecycle.abort-incomplete-multipart-days",
+                  "summary": "Abort a multipart upload that has not completed this many days after it started, and free its parts: 1 to 365. 0 keeps incomplete uploads until someone aborts them (and they are billed as stored bytes until then).",
+                  "type": "int"
+                },
+                {
+                  "field": "bucket.spec.lifecycle.expiration_rules",
+                  "flag": "--spec.lifecycle.expiration-rules",
+                  "repeated": true,
+                  "summary": "Expire current objects by key prefix, at most 50 rules with distinct prefixes. On a versioned bucket an expiry writes a delete marker.",
+                  "type": "json"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the Resource when it does not exist (declarative upsert).",
@@ -10208,7 +10248,7 @@
               },
               "resource_field": "bucket",
               "sends_etag": true,
-              "summary": "Updates a bucket.",
+              "summary": "Updates a bucket's `spec.deletion_protection`, `spec.cors` and `spec.lifecycle`; every other field is fixed at creation. A mask path replaces the whole field (`spec.cors` replaces every rule).",
               "update_mask": "from-flags",
               "verb": "update",
               "waits": {
@@ -10260,7 +10300,14 @@
             },
             {
               "effect": "read",
-              "flags": [],
+              "flags": [
+                {
+                  "field": "credential_ttl",
+                  "flag": "--credential-ttl",
+                  "summary": "How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`. Ask for what the work needs (a server that signs 7-day URLs asks for `604800s`); connect again for fresh keys, they are cheap.",
+                  "type": "duration"
+                }
+              ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:connect",
               "method": "data.buckets.connect",
               "permission": "data:write",
@@ -10270,7 +10317,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}"
               },
-              "summary": "Returns how to connect to the bucket: its endpoint and its own engine credentials. The credentials are not API keys and are returned only here.",
+              "summary": "Returns how to connect to the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). The credentials are not API keys and are returned only here; each call mints new S3 keys.",
               "verb": "connect"
             },
             {
@@ -10298,7 +10345,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}"
               },
-              "summary": "Replaces the bucket's engine credentials; the old ones stop working once the new ones are served.",
+              "summary": "Revokes every S3 key `:connect` minted for the bucket, at once; connect again for new ones. Keys of other buckets are untouched.",
               "verb": "rotate-credentials",
               "waits": {
                 "default": true,

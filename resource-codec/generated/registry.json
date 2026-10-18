@@ -41223,6 +41223,198 @@
       "package": "sylphx.data.v1"
     },
     {
+      "doc": "BucketCorsRule lets one set of browser origins call the bucket's S3\nendpoint (presigned GET, single PUT, multipart parts).",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Origins as `scheme://host[:port]`, for example `https://app.example.com`,\nwith at most one `*` in the host (`https://*.example.com`), or a lone\n`*`. Required; at most 20.",
+          "filterable": false,
+          "name": "allowed_origins",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required.",
+          "filterable": false,
+          "name": "allowed_methods",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Request headers the browser may send, or `*`. A presigned PUT needs\n`Content-Type`; a multipart part needs none.",
+          "filterable": false,
+          "name": "allowed_headers",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Response headers the page may read. Data adds `ETag` to a rule that\nallows `PUT` or `POST`, because a browser multipart upload cannot\ncomplete without each part's ETag, so a read of the rule always lists it.",
+          "filterable": false,
+          "name": "expose_headers",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "How long a browser may cache the preflight answer; default `3600s`,\nat most `86400s`.",
+          "filterable": false,
+          "name": "max_age",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.BucketCorsRule",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "BucketExpirationRule expires the objects under one key prefix.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Applies to keys that start with this prefix, at most 1024 bytes; empty is\nthe whole bucket.",
+          "filterable": false,
+          "name": "prefix",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Expire an object this many days after it was written: 1 to 36500.",
+          "filterable": false,
+          "name": "days",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.BucketExpirationRule",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "BucketLifecycle removes objects and abandoned uploads on a schedule.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
+          "filterable": false,
+          "name": "abort_incomplete_multipart_days",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Expire current objects by key prefix, at most 50 rules with distinct\nprefixes. On a versioned bucket an expiry writes a delete marker.",
+          "filterable": false,
+          "name": "expiration_rules",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.BucketExpirationRule"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.BucketLifecycle",
+      "package": "sylphx.data.v1"
+    },
+    {
       "doc": "BucketSpec is the caller-writable state of a Bucket.",
       "fields": [
         {
@@ -41299,6 +41491,44 @@
           "type": {
             "kind": "scalar",
             "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the\nfirst rule matching an origin and method answers. Empty answers no\ncross-origin request. At most 20 rules.",
+          "filterable": false,
+          "name": "cors",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.BucketCorsRule"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Rules that remove what a bucket no longer needs. Unset keeps everything.",
+          "filterable": false,
+          "name": "lifecycle",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.BucketLifecycle"
           }
         }
       ],
@@ -41485,6 +41715,25 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`.\nAsk for what the work needs (a server that signs 7-day URLs asks for\n`604800s`); connect again for fresh keys, they are cheap.",
+          "filterable": false,
+          "name": "credential_ttl",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          }
         }
       ],
       "name": "sylphx.data.v1.ConnectBucketRequest",
@@ -41496,7 +41745,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "How to connect.",
+          "doc": "How to reach the bucket through the Data API.",
           "filterable": false,
           "name": "connection_info",
           "number": 1,
@@ -41508,6 +41757,23 @@
           "type": {
             "kind": "message",
             "name": "sylphx.data.v1.ConnectionInfo"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "How to reach the same bucket over S3, with keys minted by this call.\nUnset while the bucket is not served over S3.",
+          "filterable": false,
+          "name": "s3",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.S3Connection"
           }
         }
       ],
@@ -46919,6 +47185,275 @@
         }
       ],
       "name": "sylphx.data.v1.RotateSearchIndexCredentialsRequest",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "S3Connection is how a client reaches one bucket over the S3 protocol (SigV4):\naws-sdk, rclone, DuckDB, restic, or hand-signed requests. The keys are\nminted for this call, scoped to this one bucket in this one environment, and\nstop working at `expire_time`, on `RotateBucketCredentials`, or when the\nbucket is deleted. They are not API keys and are returned only here.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The S3 endpoint URL, for example `https://s3.sylphx.net`. One endpoint\nserves every bucket.",
+          "filterable": false,
+          "name": "endpoint",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The SigV4 region name to sign with.",
+          "filterable": false,
+          "name": "region",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "True: address the bucket in the path (`{endpoint}/{bucket}/{key}`); the\nendpoint has no per-bucket DNS name, so a client that defaults to\nvirtual-hosted style must be told to use path style.",
+          "filterable": false,
+          "name": "path_style",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The S3 bucket name to put in the path and in signed requests.",
+          "filterable": false,
+          "name": "bucket",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The access key id.",
+          "filterable": false,
+          "name": "access_key_id",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The secret access key.",
+          "filterable": false,
+          "name": "secret_access_key",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The session token to send as `X-Amz-Security-Token`; empty when the keys\nare not temporary credentials of a session.",
+          "filterable": false,
+          "name": "session_token",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "When the keys stop working; always set. A presigned URL made with them\nstops working then too, whatever its own expiry says.",
+          "filterable": false,
+          "name": "expire_time",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "What presigned URLs and multipart uploads may do on this endpoint.",
+          "filterable": false,
+          "name": "presign",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.S3PresignRules"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.S3Connection",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "S3PresignRules are the limits on presigned URLs (SigV4 query signing) and\nmultipart uploads for every bucket. A presigned URL is valid for its own\n`X-Amz-Expires` or until the keys that signed it expire, whichever comes\nfirst; the endpoint refuses a longer `X-Amz-Expires` than `max_expires`.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The longest `X-Amz-Expires` accepted: `604800s` (7 days). Keys that live\nshorter cut a URL's life short; ask `credential_ttl` for a longer\nlifetime when a URL must outlive the default keys.",
+          "filterable": false,
+          "name": "max_expires",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Methods a presigned URL may sign on an object: `GET` and `HEAD` to read,\n`PUT` to write in one request.",
+          "filterable": false,
+          "name": "methods",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "A single `PUT` carries at most this many bytes (5 GiB); larger bodies\nuse multipart.",
+          "filterable": false,
+          "name": "max_single_put_bytes",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "A multipart upload presigns each of `CreateMultipartUpload` (`POST\n?uploads`), `UploadPart` (`PUT ?partNumber&uploadId`), `ListParts` (`GET\n?uploadId`, to resume after a dropped part), `CompleteMultipartUpload`\n(`POST ?uploadId`) and `AbortMultipartUpload` (`DELETE ?uploadId`). Every\npart but the last is at least this many bytes (5 MiB).",
+          "filterable": false,
+          "name": "min_part_bytes",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "A part is at most this many bytes (5 GiB).",
+          "filterable": false,
+          "name": "max_part_bytes",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "An upload has at most this many parts (10000, numbered from 1).",
+          "filterable": false,
+          "name": "max_parts",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.S3PresignRules",
       "package": "sylphx.data.v1"
     },
     {
@@ -137416,7 +137951,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Updates a bucket.",
+              "doc": "Updates a bucket's `spec.deletion_protection`, `spec.cors` and\n`spec.lifecycle`; every other field is fixed at creation. A mask path\nreplaces the whole field (`spec.cors` replaces every rule).",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
@@ -137518,12 +138053,13 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Returns how to connect to the bucket: its endpoint and its own engine\ncredentials. The credentials are not API keys and are returned only here.",
+              "doc": "Returns how to connect to the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). The credentials are not API keys and are returned only\nhere; each call mints new S3 keys.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
                 "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
                 "INVALID_STATE"
               ],
               "http": {
@@ -137558,7 +138094,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Replaces the bucket's engine credentials; the old ones stop working once\nthe new ones are served.",
+              "doc": "Revokes every S3 key `:connect` minted for the bucket, at once; connect\nagain for new ones. Keys of other buckets are untouched.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",

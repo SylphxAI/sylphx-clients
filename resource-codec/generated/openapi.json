@@ -12758,12 +12758,102 @@
         ],
         "type": "object"
       },
+      "sylphx.data.v1.BucketCorsRule": {
+        "description": "BucketCorsRule lets one set of browser origins call the bucket's S3\nendpoint (presigned GET, single PUT, multipart parts).",
+        "properties": {
+          "allowed_headers": {
+            "description": "Request headers the browser may send, or `*`. A presigned PUT needs\n`Content-Type`; a multipart part needs none.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allowed_methods": {
+            "description": "Any of `GET`, `HEAD`, `PUT`, `POST`, `DELETE`. Required.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allowed_origins": {
+            "description": "Origins as `scheme://host[:port]`, for example `https://app.example.com`,\nwith at most one `*` in the host (`https://*.example.com`), or a lone\n`*`. Required; at most 20.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "expose_headers": {
+            "description": "Response headers the page may read. Data adds `ETag` to a rule that\nallows `PUT` or `POST`, because a browser multipart upload cannot\ncomplete without each part's ETag, so a read of the rule always lists it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_age": {
+            "description": "How long a browser may cache the preflight answer; default `3600s`,\nat most `86400s`.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed_origins",
+          "allowed_methods"
+        ],
+        "type": "object"
+      },
+      "sylphx.data.v1.BucketExpirationRule": {
+        "description": "BucketExpirationRule expires the objects under one key prefix.",
+        "properties": {
+          "days": {
+            "description": "Expire an object this many days after it was written: 1 to 36500.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "prefix": {
+            "description": "Applies to keys that start with this prefix, at most 1024 bytes; empty is\nthe whole bucket.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "type": "object"
+      },
+      "sylphx.data.v1.BucketLifecycle": {
+        "description": "BucketLifecycle removes objects and abandoned uploads on a schedule.",
+        "properties": {
+          "abort_incomplete_multipart_days": {
+            "description": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
+            "format": "int32",
+            "type": "integer"
+          },
+          "expiration_rules": {
+            "description": "Expire current objects by key prefix, at most 50 rules with distinct\nprefixes. On a versioned bucket an expiry writes a delete marker.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.data.v1.BucketExpirationRule"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.data.v1.BucketSpec": {
         "description": "BucketSpec is the caller-writable state of a Bucket.",
         "properties": {
+          "cors": {
+            "description": "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the\nfirst rule matching an origin and method answers. Empty answers no\ncross-origin request. At most 20 rules.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.data.v1.BucketCorsRule"
+            },
+            "type": "array"
+          },
           "deletion_protection": {
             "description": "While set, Delete fails with DELETION_PROTECTED.",
             "type": "boolean"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/sylphx.data.v1.BucketLifecycle",
+            "description": "Rules that remove what a bucket no longer needs. Unset keeps everything."
           },
           "region": {
             "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
@@ -12836,6 +12926,11 @@
       "sylphx.data.v1.ConnectBucketRequest": {
         "description": "The request of ConnectBucket.",
         "properties": {
+          "credential_ttl": {
+            "description": "How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`.\nAsk for what the work needs (a server that signs 7-day URLs asks for\n`604800s`); connect again for fresh keys, they are cheap.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
           "name": {
             "description": "The name of the bucket.",
             "type": "string",
@@ -12852,7 +12947,11 @@
         "properties": {
           "connection_info": {
             "$ref": "#/components/schemas/sylphx.data.v1.ConnectionInfo",
-            "description": "How to connect."
+            "description": "How to reach the bucket through the Data API."
+          },
+          "s3": {
+            "$ref": "#/components/schemas/sylphx.data.v1.S3Connection",
+            "description": "How to reach the same bucket over S3, with keys minted by this call.\nUnset while the bucket is not served over S3."
           }
         },
         "type": "object"
@@ -14800,6 +14899,89 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.data.v1.S3Connection": {
+        "description": "S3Connection is how a client reaches one bucket over the S3 protocol (SigV4):\naws-sdk, rclone, DuckDB, restic, or hand-signed requests. The keys are\nminted for this call, scoped to this one bucket in this one environment, and\nstop working at `expire_time`, on `RotateBucketCredentials`, or when the\nbucket is deleted. They are not API keys and are returned only here.",
+        "properties": {
+          "access_key_id": {
+            "description": "The access key id.",
+            "type": "string"
+          },
+          "bucket": {
+            "description": "The S3 bucket name to put in the path and in signed requests.",
+            "type": "string"
+          },
+          "endpoint": {
+            "description": "The S3 endpoint URL, for example `https://s3.sylphx.net`. One endpoint\nserves every bucket.",
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "When the keys stop working; always set. A presigned URL made with them\nstops working then too, whatever its own expiry says.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "path_style": {
+            "description": "True: address the bucket in the path (`{endpoint}/{bucket}/{key}`); the\nendpoint has no per-bucket DNS name, so a client that defaults to\nvirtual-hosted style must be told to use path style.",
+            "type": "boolean"
+          },
+          "presign": {
+            "$ref": "#/components/schemas/sylphx.data.v1.S3PresignRules",
+            "description": "What presigned URLs and multipart uploads may do on this endpoint."
+          },
+          "region": {
+            "description": "The SigV4 region name to sign with.",
+            "type": "string"
+          },
+          "secret_access_key": {
+            "description": "The secret access key.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "session_token": {
+            "description": "The session token to send as `X-Amz-Security-Token`; empty when the keys\nare not temporary credentials of a session.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.data.v1.S3PresignRules": {
+        "description": "S3PresignRules are the limits on presigned URLs (SigV4 query signing) and\nmultipart uploads for every bucket. A presigned URL is valid for its own\n`X-Amz-Expires` or until the keys that signed it expire, whichever comes\nfirst; the endpoint refuses a longer `X-Amz-Expires` than `max_expires`.",
+        "properties": {
+          "max_expires": {
+            "description": "The longest `X-Amz-Expires` accepted: `604800s` (7 days). Keys that live\nshorter cut a URL's life short; ask `credential_ttl` for a longer\nlifetime when a URL must outlive the default keys.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "max_part_bytes": {
+            "description": "A part is at most this many bytes (5 GiB).",
+            "format": "int64",
+            "type": "string"
+          },
+          "max_parts": {
+            "description": "An upload has at most this many parts (10000, numbered from 1).",
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_single_put_bytes": {
+            "description": "A single `PUT` carries at most this many bytes (5 GiB); larger bodies\nuse multipart.",
+            "format": "int64",
+            "type": "string"
+          },
+          "methods": {
+            "description": "Methods a presigned URL may sign on an object: `GET` and `HEAD` to read,\n`PUT` to write in one request.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "min_part_bytes": {
+            "description": "A multipart upload presigns each of `CreateMultipartUpload` (`POST\n?uploads`), `UploadPart` (`PUT ?partNumber&uploadId`), `ListParts` (`GET\n?uploadId`, to resume after a dropped part), `CompleteMultipartUpload`\n(`POST ?uploadId`) and `AbortMultipartUpload` (`DELETE ?uploadId`). Every\npart but the last is at least this many bytes (5 MiB).",
+            "format": "int64",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.data.v1.ScanValuesRequest": {
@@ -58152,7 +58334,7 @@
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates a bucket.",
+        "description": "Updates a bucket's `spec.deletion_protection`, `spec.cors` and\n`spec.lifecycle`; every other field is fixed at creation. A mask path\nreplaces the whole field (`spec.cors` replaces every rule).",
         "operationId": "data_buckets_update",
         "parameters": [
           {
@@ -58265,7 +58447,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Updates a bucket.",
+        "summary": "Updates a bucket's `spec.deletion_protection`, `spec.cors` and `spec.lifecycle`; every other field is fixed at creation. A mask path replaces the whole field (`spec.cors` replaces every rule).",
         "tags": [
           "data"
         ],
@@ -58291,7 +58473,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}:connect": {
       "post": {
-        "description": "Returns how to connect to the bucket: its endpoint and its own engine\ncredentials. The credentials are not API keys and are returned only here.",
+        "description": "Returns how to connect to the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). The credentials are not API keys and are returned only\nhere; each call mints new S3 keys.",
         "operationId": "data_buckets_connect",
         "parameters": [
           {
@@ -58337,7 +58519,13 @@
           "content": {
             "application/json": {
               "schema": {
-                "properties": {},
+                "properties": {
+                  "credential_ttl": {
+                    "description": "How long the S3 keys last: `900s` to `604800s` (7 days), default `3600s`.\nAsk for what the work needs (a server that signs 7-day URLs asks for\n`604800s`); connect again for fresh keys, they are cheap.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
                 "type": "object"
               }
             }
@@ -58371,7 +58559,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Returns how to connect to the bucket: its endpoint and its own engine credentials. The credentials are not API keys and are returned only here.",
+        "summary": "Returns how to connect to the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). The credentials are not API keys and are returned only here; each call mints new S3 keys.",
         "tags": [
           "data"
         ],
@@ -58380,6 +58568,7 @@
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
           "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
           "INVALID_STATE"
         ],
         "x-sylphx-method": "data.buckets.connect",
@@ -58389,7 +58578,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}:rotateCredentials": {
       "post": {
-        "description": "Replaces the bucket's engine credentials; the old ones stop working once\nthe new ones are served.",
+        "description": "Revokes every S3 key `:connect` minted for the bucket, at once; connect\nagain for new ones. Keys of other buckets are untouched.",
         "operationId": "data_buckets_rotate_credentials",
         "parameters": [
           {
@@ -58484,7 +58673,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Replaces the bucket's engine credentials; the old ones stop working once the new ones are served.",
+        "summary": "Revokes every S3 key `:connect` minted for the bucket, at once; connect again for new ones. Keys of other buckets are untouched.",
         "tags": [
           "data"
         ],
