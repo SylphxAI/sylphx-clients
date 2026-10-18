@@ -427,6 +427,23 @@ export interface UpdateConfigSegmentRequest {
 	validateOnly?: boolean
 }
 
+/** The request of WatchConfigFlags. */
+export interface WatchConfigFlagsRequest {
+	/** The environment whose flag and segment revisions are streamed. */
+	parent: string
+	/** The last received etag; only a different revision is sent. */
+	ifNoneMatch?: string
+}
+
+/**
+ * One environment's ruleset revision. Fetch :snapshot with this etag to
+ * refresh the local evaluator. The SSE event id is this etag.
+ */
+export interface WatchConfigFlagsResponse {
+	/** Changes whenever a flag or segment changes. */
+	etag?: string
+}
+
 /**
  * ConditionOperator is how a TargetingCondition compares. A missing
  * attribute matches only NOT_CONTAINS, NOT_IN and NOT_IN_SEGMENT.
@@ -570,6 +587,10 @@ runtime.registerSchemas({
 		['updateMask', 'update_mask'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.config.v1.WatchConfigFlagsRequest': [
+		['ifNoneMatch', 'if_none_match'],
+	],
+	'sylphx.config.v1.WatchConfigFlagsResponse': [],
 })
 
 /**
@@ -722,6 +743,24 @@ export class ConfigFlagsCollection {
 			bodyType: 'sylphx.config.v1.EvaluateConfigFlagsRequest',
 			responseType: 'sylphx.config.v1.EvaluateConfigFlagsResponse',
 			mutation: true,
+		})
+	}
+
+	/**
+	 * Streams the current ruleset etag and each changed revision as SSE.
+	 * Reconnect with if_none_match or Last-Event-ID to skip the held revision.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/config_flags:watch` · permission `config:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`.
+	 */
+	watch(request: WatchConfigFlagsRequest): AsyncGenerator<WatchConfigFlagsResponse> {
+		return this.client.stream<WatchConfigFlagsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/config_flags:watch`,
+			query: { if_none_match: request.ifNoneMatch },
+			responseType: 'sylphx.config.v1.WatchConfigFlagsResponse',
+			mutation: false,
 		})
 	}
 

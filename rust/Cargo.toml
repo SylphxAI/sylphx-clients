@@ -25,7 +25,8 @@ resource = ["http", "dep:base64", "dep:sha2"]
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"], optional = true }
+futures-util = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2", "stream"], optional = true }
 tokio = { version = "1", features = ["time", "sync"], optional = true }
 p256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"], optional = true }
 ed25519-dalek = { version = "2", default-features = false, features = ["std"], optional = true }

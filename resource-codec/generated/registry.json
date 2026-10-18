@@ -40231,6 +40231,75 @@
       "package": "sylphx.config.v1"
     },
     {
+      "doc": "The request of WatchConfigFlags.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The environment whose flag and segment revisions are streamed.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "config.sylphx.com/ConfigFlag",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The last received etag; only a different revision is sent.",
+          "filterable": false,
+          "name": "if_none_match",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.config.v1.WatchConfigFlagsRequest",
+      "package": "sylphx.config.v1"
+    },
+    {
+      "doc": "One environment's ruleset revision. Fetch :snapshot with this etag to\nrefresh the local evaluator. The SSE event id is this etag.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Changes whenever a flag or segment changes.",
+          "filterable": false,
+          "name": "etag",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.config.v1.WatchConfigFlagsResponse",
+      "package": "sylphx.config.v1"
+    },
+    {
       "doc": "The request of AdoptConnectionProvider. Custody selectors are resolved by the\nserver from the exact App identity, never supplied as bare handles or aliases.",
       "fields": [
         {
@@ -136205,6 +136274,47 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "evaluate"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Streams the current ruleset etag and each changed revision as SSE.\nReconnect with if_none_match or Last-Event-ID to skip the held revision.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "if_none_match"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/config_flags:watch"
+              },
+              "id": "config.config_flags.watch",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "config:read",
+              "proto": "sylphx.config.v1.ConfigService.WatchConfigFlags",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.config.v1.WatchConfigFlagsRequest",
+              "resource_field": null,
+              "response": "sylphx.config.v1.WatchConfigFlagsResponse",
+              "server_streaming": true,
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "watch"
             },
             {
               "cancellable": false,

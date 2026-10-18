@@ -58,6 +58,8 @@ pub struct Method {
     pub http: Http,
     pub request: String,
     pub response: String,
+    #[serde(default)]
+    pub server_streaming: bool,
     pub lro: Option<Lro>,
     pub resource_field: Option<String>,
     pub page: Option<Page>,

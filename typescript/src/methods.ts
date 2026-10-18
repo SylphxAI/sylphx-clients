@@ -1918,6 +1918,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'config:write',
 	},
+	'config.config_flags.watch': {
+		id: 'config.config_flags.watch',
+		httpMethod: 'GET',
+		template: '/v1/{parent=orgs/*/projects/*/envs/*}/config_flags:watch',
+		pathParams: [['parent', 'orgs/*/projects/*/envs/*']],
+		queryParams: ['if_none_match'],
+		longRunning: false,
+		serverStreaming: true,
+		effect: 'read',
+		permission: 'config:read',
+	},
 	'config.config_segments.create': {
 		id: 'config.config_segments.create',
 		httpMethod: 'POST',

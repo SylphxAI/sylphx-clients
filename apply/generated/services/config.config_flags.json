@@ -64,6 +64,15 @@
               "if_none_match"
             ]
           },
+          "id": "config.config_flags.watch",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "if_none_match"
+            ]
+          },
           "id": "config.config_flags.snapshot",
           "kind": "custom"
         }

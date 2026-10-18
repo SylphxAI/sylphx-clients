@@ -155,6 +155,12 @@ export class Sylphx extends Client {
 	invoke(methodId: string, args: Record<string, unknown> = {}): Promise<unknown> {
 		const spec = METHODS[methodId]
 		if (spec === undefined) return Promise.reject(new TypeError(`unknown method \`${methodId}\``))
+		if (spec.serverStreaming === true) return Promise.reject(new TypeError('use invokeStream for a server-streaming method'))
 		return this.call<unknown>(requestFor(spec, args))
+	}
+	invokeStream(methodId: string, args: Record<string, unknown> = {}): AsyncGenerator<unknown> {
+		const spec = METHODS[methodId]
+		if (spec === undefined) throw new TypeError(`unknown method \`${methodId}\``)
+		return this.stream<unknown>(requestFor(spec, args))
 	}
 }

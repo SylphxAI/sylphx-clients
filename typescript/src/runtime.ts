@@ -111,6 +111,7 @@ export interface MethodSpec {
 	/** `'*'` or the request field sent as the body. */
 	body?: string
 	longRunning: boolean
+	serverStreaming?: boolean
 	effect: 'read' | 'write' | 'destructive'
 	permission: string
 	/** A protocol method's default origin (not the Resource API). */
@@ -230,6 +231,47 @@ export class Client {
 		this.maxRetries = options.maxRetries ?? 3
 		this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init))
 		this.origins = options.origins ?? {}
+	}
+
+	/** Server-sent JSON messages; closing the iterator cancels its connection. */
+	async *stream<T>(call: Call): AsyncGenerator<T> {
+		const url = new URL(this.baseUrl + call.path)
+		for (const [key, value] of Object.entries(call.query ?? {})) {
+			if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
+		}
+		const headers: Record<string, string> = { accept: 'text/event-stream' }
+		if (this.apiKey !== undefined) headers.authorization = `Bearer ${this.apiKey}`
+		if (this.apiVersion !== undefined) headers['sylphx-version'] = this.apiVersion
+		const controller = new AbortController()
+		let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+		try {
+			const response = await this.fetchImpl(url, { method: call.method, headers, signal: controller.signal })
+			if (!response.ok) {
+				const problem = fromWire('sylphx.common.v1.ProblemDetails', await response.json()) as ProblemDetails
+				throw new SylphxError(problem, response.status, response.headers.get('sylphx-request-id') ?? undefined)
+			}
+			if (response.body === null) throw new Error('SSE response has no body')
+			reader = response.body.getReader()
+			const decoder = new TextDecoder()
+			let buffer = ''
+			for (;;) {
+				const chunk = await reader.read()
+				if (chunk.done) return
+				buffer += decoder.decode(chunk.value, { stream: true })
+				for (;;) {
+					const end = buffer.indexOf('\n\n')
+					if (end < 0) break
+					const frame = buffer.slice(0, end)
+					buffer = buffer.slice(end + 2)
+					const data = frame.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).replace(/^ /, '')).join('\n')
+					if (data !== '') yield fromWire(call.responseType, JSON.parse(data)) as T
+				}
+			}
+		} finally {
+			controller.abort()
+			await reader?.cancel()
+			reader?.releaseLock()
+		}
 	}
 
 	async call<T>(call: Call): Promise<T> {

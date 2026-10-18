@@ -1257,6 +1257,16 @@ async fn generated(
         confirm(&format!("{} {target}?", method.verb))?;
     }
 
+    if sylphx::methods::method(&method.method).is_some_and(|spec| spec.server_streaming) {
+        use futures_util::StreamExt;
+        let mut stream = client
+            .invoke_stream(&method.method, Value::Object(args))
+            .await?;
+        while let Some(event) = stream.next().await {
+            println!("{}", output::render(&event?, format));
+        }
+        return Ok(());
+    }
     let mut result = client
         .invoke(&method.method, Value::Object(args.clone()))
         .await?;

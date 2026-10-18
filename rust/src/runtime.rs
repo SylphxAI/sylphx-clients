@@ -7,8 +7,10 @@
 //! answers, one UUIDv7 `Idempotency-Key` per logical mutation reused across
 //! its retries, `Retry-After`, and the `Sylphx-Request-Timeout` deadline.
 
+use futures_util::{Stream, StreamExt};
 use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -20,6 +22,39 @@ pub trait Transport: Send + Sync {
         &self,
         request: HttpRequest,
     ) -> impl Future<Output = Result<HttpResponse, Error>> + Send;
+}
+
+/// One typed SSE stream. Reconnect by passing the last revision to the request.
+pub type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Error>> + Send>>;
+
+/// Streaming transport, separate from unary exchanges so custom transports opt in.
+pub trait StreamTransport: Transport {
+    fn stream(
+        &self,
+        request: HttpRequest,
+    ) -> impl Future<Output = Result<ResponseStream<serde_json::Value>, Error>> + Send;
+}
+
+impl<T: StreamTransport> Client<T> {
+    pub async fn stream<R: DeserializeOwned + Send + 'static>(
+        &self,
+        request: HttpRequest,
+    ) -> Result<ResponseStream<R>, Error> {
+        let stream = self.transport.stream(request).await?;
+        Ok(Box::pin(stream.map(|item| {
+            serde_json::from_value(item?).map_err(|e| Error::Decode(e.to_string()))
+        })))
+    }
+
+    pub async fn invoke_stream(
+        &self,
+        method_id: &str,
+        args: serde_json::Value,
+    ) -> Result<ResponseStream<serde_json::Value>, Error> {
+        let spec = crate::methods::method(method_id)
+            .ok_or_else(|| Error::InvalidArgument(format!("unknown method `{method_id}`")))?;
+        self.stream(spec.request(args)?).await
+    }
 }
 
 /// One request against `https://api.sylphx.com`.
@@ -170,6 +205,11 @@ impl<T: Transport> Client<T> {
     ) -> Result<serde_json::Value, Error> {
         let spec = crate::methods::method(method_id)
             .ok_or_else(|| Error::InvalidArgument(format!("unknown method `{method_id}`")))?;
+        if spec.server_streaming {
+            return Err(Error::InvalidArgument(
+                "use invoke_stream for a server-streaming method".into(),
+            ));
+        }
         self.call(spec.request(args)?).await
     }
 
@@ -523,6 +563,7 @@ pub struct MethodSpec {
     pub body: Option<&'static str>,
     /// The method returns an Operation (spec §3.9).
     pub long_running: bool,
+    pub server_streaming: bool,
     /// `read`, `write`, or `destructive`.
     pub effect: &'static str,
     /// The Access scope the method needs.
@@ -970,6 +1011,81 @@ fn retryable_status(r: &HttpResponse) -> bool {
 fn backoff(attempt: u32) -> std::time::Duration {
     let cap = 250u64.saturating_mul(1 << attempt.min(5)).min(8_000);
     std::time::Duration::from_millis(fastrand::u64(0..=cap))
+}
+
+#[cfg(feature = "http")]
+impl StreamTransport for HttpTransport {
+    async fn stream(
+        &self,
+        request: HttpRequest,
+    ) -> Result<ResponseStream<serde_json::Value>, Error> {
+        let base = request
+            .origin
+            .map(|origin| {
+                self.origins
+                    .get(origin)
+                    .map(String::as_str)
+                    .unwrap_or(origin)
+            })
+            .unwrap_or(&self.base_url);
+        let method = reqwest::Method::from_bytes(request.method.as_bytes())
+            .map_err(|e| Error::InvalidArgument(e.to_string()))?;
+        let mut rb = self
+            .http
+            .request(method, format!("{base}{}", request.path))
+            .query(&request.query)
+            .header("accept", "text/event-stream");
+        if let Some(key) = &self.api_key {
+            rb = rb.bearer_auth(key);
+        }
+        if let Some(version) = &self.api_version {
+            rb = rb.header("sylphx-version", version);
+        }
+        let response = rb
+            .send()
+            .await
+            .map_err(|e| Error::Transport(e.to_string()))?;
+        if !response.status().is_success() {
+            let status = response.status().as_u16();
+            let problem = response
+                .json()
+                .await
+                .map_err(|e| Error::Decode(e.to_string()))?;
+            return Err(Error::from_problem(problem, status, None));
+        }
+        let chunks = Box::pin(response.bytes_stream());
+        Ok(Box::pin(futures_util::stream::try_unfold(
+            (chunks, Vec::new()),
+            |(mut chunks, mut buffer)| async move {
+                loop {
+                    if let Some(end) = buffer.windows(2).position(|w| w == b"\n\n") {
+                        let frame = buffer.drain(..end + 2).collect::<Vec<_>>();
+                        let text = std::str::from_utf8(&frame)
+                            .map_err(|e| Error::Decode(e.to_string()))?;
+                        let data = text
+                            .lines()
+                            .filter_map(|line| {
+                                line.strip_prefix("data:")
+                                    .map(|s| s.strip_prefix(' ').unwrap_or(s))
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        if !data.is_empty() {
+                            let value = serde_json::from_str(&data)
+                                .map_err(|e| Error::Decode(e.to_string()))?;
+                            return Ok(Some((value, (chunks, buffer))));
+                        }
+                        continue;
+                    }
+                    match chunks.next().await {
+                        Some(Ok(chunk)) => buffer.extend_from_slice(&chunk),
+                        Some(Err(error)) => return Err(Error::Transport(error.to_string())),
+                        None => return Ok(None),
+                    }
+                }
+            },
+        )))
+    }
 }
 
 #[cfg(test)]

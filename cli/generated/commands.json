@@ -8628,6 +8628,28 @@
                 {
                   "field": "if_none_match",
                   "flag": "--if-none-match",
+                  "summary": "The last received etag; only a different revision is sent.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/config_flags:watch",
+              "method": "config.config_flags.watch",
+              "permission": "config:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Streams the current ruleset etag and each changed revision as SSE. Reconnect with if_none_match or Last-Event-ID to skip the held revision.",
+              "verb": "watch"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "if_none_match",
+                  "flag": "--if-none-match",
                   "summary": "The `etag` of the snapshot the caller holds; unchanged answers `not_modified`.",
                   "type": "string"
                 }

@@ -800,6 +800,34 @@ pub struct UpdateConfigSegmentRequest {
     pub validate_only: bool,
 }
 
+/// The request of WatchConfigFlags.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct WatchConfigFlagsRequest {
+    /// The environment whose flag and segment revisions are streamed.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The last received etag; only a different revision is sent.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ifNoneMatch"
+    )]
+    pub if_none_match: String,
+}
+
+/// One environment's ruleset revision. Fetch :snapshot with this etag to
+/// refresh the local evaluator. The SSE event id is this etag.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct WatchConfigFlagsResponse {
+    /// Changes whenever a flag or segment changes.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+}
+
 /// ConditionOperator is how a TargetingCondition compares. A missing
 /// attribute matches only NOT_CONTAINS, NOT_IN and NOT_IN_SEGMENT.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1351,6 +1379,37 @@ impl<'a, T: crate::runtime::Transport> ConfigFlagsCollection<'a, T> {
             effect_ids: false,
         };
         self.client.call(http).await
+    }
+
+    /// Streams the current ruleset etag and each changed revision as SSE.
+    /// Reconnect with if_none_match or Last-Event-ID to skip the held revision.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/config_flags:watch` · permission `config:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`.
+    pub async fn watch(
+        &self,
+        request: WatchConfigFlagsRequest,
+    ) -> Result<crate::runtime::ResponseStream<WatchConfigFlagsResponse>, crate::runtime::Error>
+    where
+        T: crate::runtime::StreamTransport,
+    {
+        let path = format!(
+            "/v1/{}/config_flags:watch",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("if_none_match", &request.if_none_match);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.stream(http).await
     }
 
     /// The environment's flags and segments in one read, for SDKs that
