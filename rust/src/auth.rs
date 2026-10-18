@@ -1129,6 +1129,14 @@ pub struct Invitation {
     /// Field behavior: `input_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub ttl: String,
+    /// Immutable application context, a JSON object of at most 16 KiB when
+    /// compactly UTF-8 encoded. Omitted metadata is returned as an empty object.
+    /// This is application data, never a permission grant. The application must
+    /// recheck authoritative organization and project membership before acting.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
 }
 
 /// The request of ListCustomerOrganizations.

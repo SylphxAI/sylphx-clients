@@ -8433,6 +8433,12 @@
                 },
                 "type": "object"
               },
+              "metadata": {
+                "additionalProperties": true,
+                "description": "Immutable application context, a JSON object of at most 16 KiB when\ncompactly UTF-8 encoded. Omitted metadata is returned as an empty object.\nThis is application data, never a permission grant. The application must\nrecheck authoritative organization and project membership before acting.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
               "name": {
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/customer_organizations/{customer_organization}/invitations/{invitation}`.",
                 "type": "string"

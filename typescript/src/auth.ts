@@ -541,6 +541,13 @@ export interface Invitation {
 	readonly membership?: string
 	/** How long it stays open; default 7 days, at most 30. */
 	ttl?: string
+	/**
+	 * Immutable application context, a JSON object of at most 16 KiB when
+	 * compactly UTF-8 encoded. Omitted metadata is returned as an empty object.
+	 * This is application data, never a permission grant. The application must
+	 * recheck authoritative organization and project membership before acting.
+	 */
+	metadata?: Record<string, unknown>
 }
 
 /** The request of ListCustomerOrganizations. */
@@ -1259,6 +1266,7 @@ runtime.registerSchemas({
 		['expireTime', 'expire_time'],
 		['acceptTime', 'accept_time'],
 		['endUser', 'end_user'],
+		['metadata', 'metadata', undefined, 'json'],
 	],
 	'sylphx.auth.v1.ListCustomerOrganizationsRequest': [
 		['pageSize', 'page_size'],
