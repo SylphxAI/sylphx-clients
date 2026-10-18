@@ -319,7 +319,7 @@ rm -rf "$S/manifest.old" "$S/drop" "$S/add" "$S/remove" "$S/fill"
 /// `.sylphxignore` subtracts from either set. Deleted files and submodules
 /// are not files here and are skipped by [`scan`].
 pub fn file_set(root: &Path) -> Result<Vec<String>, String> {
-    if git_path(root, "sylphx/cas-index").is_none() {
+    if git_root(root).is_none() {
         return directory_files(root);
     }
     let all = git_z(
@@ -464,6 +464,7 @@ fn stamp(md: &std::fs::Metadata) -> Stamp {
 /// Digests keyed by path and [`Stamp`], kept between runs.
 #[derive(Debug, Default)]
 pub struct StatCache {
+    path: Option<PathBuf>,
     map: BTreeMap<String, (Stamp, Entry)>,
 }
 
@@ -472,9 +473,33 @@ pub struct StatCache {
 const RACY: Duration = Duration::from_secs(2);
 
 impl StatCache {
-    pub fn load(path: &Path) -> Self {
-        let mut c = StatCache::default();
-        let Ok(text) = std::fs::read_to_string(path) else {
+    /// The cache at its default per-source path.
+    pub fn load(root: &Path) -> Self {
+        StatCache {
+            path: Some(source_cache(root).join(CAS_INDEX)),
+            map: BTreeMap::new(),
+        }
+        .read()
+    }
+
+    /// Write the entries to this cache's own path.
+    pub fn save(&self) -> std::io::Result<()> {
+        let Some(path) = self.path.as_deref() else {
+            return Ok(());
+        };
+        self.write(path)
+    }
+
+    /// Read the entries from this cache's own path.
+    fn read(self) -> Self {
+        let Some(path) = self.path else {
+            return StatCache::default();
+        };
+        let mut c = StatCache {
+            path: Some(path.clone()),
+            map: BTreeMap::new(),
+        };
+        let Ok(text) = std::fs::read_to_string(&path) else {
             return c;
         };
         let mut lines = text.split('\n');
@@ -525,7 +550,7 @@ impl StatCache {
         c
     }
 
-    pub fn save(&self, path: &Path) -> std::io::Result<()> {
+    fn write(&self, path: &Path) -> std::io::Result<()> {
         let mut out = String::from("sylphx-cas-index 1\n");
         for (p, (s, e)) in &self.map {
             out.push_str(&format!(
@@ -896,17 +921,17 @@ pub fn work_tree(dir: &Path) -> Result<(PathBuf, String), String> {
     Ok((root, prefix.to_string()))
 }
 
-/// Ordinary sources keep sync state outside their source tree.
-pub fn cache_path(root: &Path) -> Option<PathBuf> {
-    Some(local_path(root, "sylphx/cas-index"))
-}
+/// The immutable scan-index name under this source's own cache.
+const CAS_INDEX: &str = "cas-index";
+/// The pack names under this source's own cache.
+#[cfg(test)]
+const CAS_KNOWN: &str = "cas-known";
 
-/// Use the Git directory when available, otherwise a per-source cache.
-pub fn local_path(root: &Path, name: &str) -> PathBuf {
-    git_path(root, name).unwrap_or_else(|| source_cache(root).join(name))
-}
-
-pub(super) fn source_cache(root: &Path) -> PathBuf {
+/// Per-source user cache, keyed by the canonical source root and never by
+/// shared work-tree metadata: a linked work tree shares its Git directory with
+/// every other work tree of the same hub, so anything under it is not this
+/// caller's state.
+pub fn source_cache(root: &Path) -> PathBuf {
     let base = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))
@@ -916,12 +941,12 @@ pub(super) fn source_cache(root: &Path) -> PathBuf {
         .join(sha256_hex(root.as_os_str().as_encoded_bytes()))
 }
 
-/// `name` inside this work tree's git dir.
-pub fn git_path(root: &Path, name: &str) -> Option<PathBuf> {
+/// The repository root `root` belongs to, or `None` outside a repository.
+fn git_root(root: &Path) -> Option<PathBuf> {
     let out = Command::new("git")
         .arg("-C")
         .arg(root)
-        .args(["rev-parse", "--path-format=absolute", "--git-path", name])
+        .args(["rev-parse", "--show-toplevel"])
         .output()
         .ok()?;
     out.status
@@ -1009,9 +1034,20 @@ output/
             work_tree(&sub).unwrap(),
             (src.0.canonicalize().unwrap(), "sub".into())
         );
-        assert_eq!(
-            local_path(&src.0, "sylphx/cas-known"),
-            git_path(&src.0, "sylphx/cas-known").unwrap()
+        assert!(!source_cache(&src.0).join(CAS_KNOWN).starts_with(&src.0));
+        // A linked work tree shares its Git directory with its hub, so this
+        // source's cache must not land under that shared metadata.
+        let hub = Scratch::new("source-cache-hub");
+        git(&hub.0, &["init", "-q"]);
+        git(&hub.0, &["commit", "-q", "--allow-empty", "-m", "hub"]);
+        let linked = hub.0.join("linked");
+        git(&hub.0, &["worktree", "add", "-q", linked.to_str().unwrap()]);
+        assert!(!source_cache(&linked)
+            .join(CAS_KNOWN)
+            .starts_with(hub.0.join(".git")));
+        assert_ne!(
+            source_cache(&linked).join(CAS_KNOWN),
+            source_cache(&hub.0).join(CAS_KNOWN)
         );
     }
 
@@ -1030,12 +1066,13 @@ output/
         std::fs::set_permissions(root.join("run.sh"), std::fs::Permissions::from_mode(0o755))
             .unwrap();
         symlink("keep.txt", root.join("link")).unwrap();
-        let index = cache_path(root).unwrap();
+        let index = source_cache(root).join(CAS_INDEX);
         assert!(!index.starts_with(root));
-        assert_ne!(index, cache_path(&other.0).unwrap());
+        assert_ne!(index, source_cache(&other.0).join(CAS_INDEX));
         let mut cache = StatCache::default();
         let local = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
-        cache.save(&index).unwrap();
+        cache.path = Some(index.clone());
+        cache.save().unwrap();
         assert!(apply(&ws.0, root, &local, &plan(&local, None), 1));
         assert_eq!(
             std::fs::read_to_string(ws.0.join("tree/edit.txt")).unwrap(),
@@ -1060,7 +1097,7 @@ output/
         assert!(output.status.success());
         assert_eq!(output.stdout, b"keep");
         let before = mtime(&ws.0.join("tree/keep.txt"));
-        let mut cache = StatCache::load(&index);
+        let mut cache = StatCache::load(root);
         let unchanged = scan(root, &file_set(root).unwrap(), &mut cache).unwrap();
         assert_eq!(plan(&unchanged, Some(&local)), Plan::default());
         write(root, "edit.txt", "after");
@@ -1532,8 +1569,14 @@ output/
         let mut cache = StatCache::default();
         let t1 = scan(root, &paths, &mut cache).unwrap();
         let index = root.join("idx/cas-index");
-        cache.save(&index).unwrap();
-        let mut cache = StatCache::load(&index);
+        std::fs::create_dir_all(root.join("idx")).unwrap();
+        cache.path = Some(index.clone());
+        cache.save().unwrap();
+        let mut cache = StatCache {
+            path: Some(index),
+            map: BTreeMap::new(),
+        }
+        .read();
         assert_eq!(cache.map.len(), 1);
         // A poisoned cached digest proves the file was not read again.
         if let Some((_, e)) = cache.map.get_mut("a") {

@@ -1,18 +1,11 @@
-//! Git dependencies of a `sylphx build run`: the locked git sources of the
-//! tree's `Cargo.lock` files, fetched on this machine and sent to the build
-//! machine, which has no route to a git host.
-//!
-//! A build lease reaches only the build cache ([`super::lease_domains`]), so a
-//! crate with a git dependency (`engine = { git = "https://github.com/…",
-//! rev = "…" }`) used to fail in the guest's `git fetch` after its connect
-//! timeouts, about ten minutes per run. The inputs travel with the build
-//! instead, as a remote-execution client sends them (Bazel's external
-//! repositories): this machine holds the git credentials, fetches each locked
-//! commit once (`--depth 1`: about 12 MB where the full history is 114 MB),
-//! and keeps it as a small bare repository in a tarball in the per-source
-//! user cache, outside Git metadata. Every cold lease receives the locked
-//! packs into shallow mirrors at `$W/git-deps/<key>.git` ([`APPLY`]), and the
-//! command runs with
+//! Synced mirrors for locked Git dependencies without platform source grants.
+//! Granted GitHub sources use the shared pull-through source cache instead.
+//! Ungranted sources retain the remote-execution input pattern (Bazel external
+//! repositories): the caller fetches each locked commit once with their Git
+//! credentials and caches an immutable depth-1 tarball in the per-source user
+//! cache, outside Git metadata. Every cold lease receives the locked packs into
+//! shallow mirrors at `$W/git-deps/<key>.git` ([`APPLY`]). No upstream credential
+//! is sent. The command runs with
 //! `CARGO_NET_GIT_FETCH_WITH_CLI=true` and one `url.<mirror>.insteadOf <url>`
 //! per dependency ([`env`]), so Cargo's own fetch reads the mirror and its
 //! lock file, source ids and caches stay as they are. Git prints one
@@ -20,10 +13,10 @@
 //! be updated` the first time a Cargo home fetches a commit; the objects
 //! arrive and the build goes on.
 //!
-//! A dependency this machine cannot fetch stops the run before any machine is
-//! leased: exit 125, not retryable, naming the URL and the commit. A lock
-//! naming the `ssh://` spelling of a GitHub repository that this machine has
-//! no ssh key for is retried over `https://` ([`fetch_urls`]), where its
+//! An ungranted dependency this machine cannot fetch stops before the command:
+//! exit 125, naming its URL and commit. With automatic source routing disabled,
+//! local packs are prepared before leasing. A GitHub SSH spelling without a
+//! local SSH key is retried over HTTPS ([`fetch_urls`]), where the caller’s
 //! credential helper does work.
 
 use std::collections::{BTreeMap, BTreeSet};

@@ -13,9 +13,13 @@
       "cache",
       "image",
       "logs",
-      "run"
+      "run",
+      "source"
     ],
     "build cache": [
+      "env"
+    ],
+    "build source": [
       "env"
     ],
     "completion": [],

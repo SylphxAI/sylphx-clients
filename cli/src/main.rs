@@ -12,6 +12,7 @@ mod apply;
 mod auth;
 mod build_cache;
 mod build_run;
+mod build_source;
 mod context;
 mod devices;
 mod docs_cmd;
@@ -50,6 +51,7 @@ const HAND_WRITTEN: &[(&str, &str)] = &[
     ("build", "logs"),
     ("build", "image"),
     ("build", "cache"),
+    ("build", "source"),
     ("ai", "top"),
     ("events", "listen"),
     ("data", "docs"),
@@ -267,6 +269,7 @@ fn cli(tree: &Tree) -> Command {
                 .subcommand(build_run::logs_command())
                 .subcommand(build_run::image_command())
                 .subcommand(build_cache::command())
+                .subcommand(build_source::command())
         } else if s.get_name() == "data" {
             // `data docs` is porcelain on the generated `data` service: a
             // Markdown tree in a search index (`docs_cmd`).
@@ -610,6 +613,11 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             let (_, cm) = sub.subcommand().expect("checked");
             let creds = context::resolve(api_key.clone(), base_url.clone(), org);
             build_cache::run(creds, cm, format).await
+        }
+        "build" if sub.subcommand_name() == Some("source") => {
+            let (_, sm) = sub.subcommand().expect("checked");
+            let creds = context::resolve(api_key.clone(), base_url.clone(), org);
+            build_source::run(creds, sm, format).await
         }
         "ai" if sub.subcommand_name() == Some("top") => {
             let (_, tm) = sub.subcommand().expect("checked");

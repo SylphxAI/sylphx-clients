@@ -5,6 +5,7 @@
 //! and its guest end to end.
 
 use parking_lot::Mutex;
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -2611,6 +2612,23 @@ async fn run_with(
         .unwrap()
 }
 
+/// Run the CLI from another directory inside the sandbox, keeping the
+/// sandbox's project and configuration.
+async fn run_in_with(
+    sb: &Sandbox,
+    dir: &std::path::Path,
+    url: &str,
+    args: &[&str],
+    tweak: impl FnOnce(&mut Command),
+) -> std::process::Output {
+    let mut c = sb.cmd(url, args);
+    c.current_dir(dir);
+    tweak(&mut c);
+    tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap()
+}
+
 /// A server that takes connections and never answers.
 async fn hanging_server() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -2690,9 +2708,11 @@ fn started_env(log: &Log) -> Value {
     let seen = log.lock();
     let start = seen
         .iter()
-        .rev()
-        .find(|s| s.line.starts_with("POST /process.Process/Start"))
-        .unwrap();
+        .find(|request| {
+            request.line.starts_with("POST /process.Process/Start")
+                && request.body.contains("sylphx-run")
+        })
+        .expect("the command starts");
     assert!(start.line.starts_with("POST /process.Process/Start"));
     let text = &start.body;
     let from = text.find("{\"process\"").expect("a JSON message");
@@ -3215,6 +3235,557 @@ async fn build_cache_env_bootstraps_the_default_project_and_needs_a_key() {
     .await;
     assert_eq!(out.status.code(), Some(125));
     assert!(String::from_utf8_lossy(&out.stderr).contains("not signed in"));
+}
+
+fn source_reply(repository: &str) -> Value {
+    let git_url = format!("https://cache.test/git/org_a/{repository}.git");
+    json!({
+        "token": "source-session-test-token",
+        "expires_at": 2000000000,
+        "git_url": git_url,
+        "read_url": "https://cache.test/v1/source:read",
+        "env": {
+            "CARGO_NET_GIT_FETCH_WITH_CLI": "true",
+            "GIT_CONFIG_COUNT": "5",
+            "GIT_CONFIG_KEY_0": "url.https://cache.test/git/org_a/.insteadOf",
+            "GIT_CONFIG_VALUE_0": "https://github.com/",
+            "GIT_CONFIG_KEY_1": format!("http.{git_url}.extraheader"),
+            "GIT_CONFIG_VALUE_1": "Authorization: Bearer source-session-test-token",
+            "GIT_CONFIG_KEY_2": format!("http.https://cache.test/git/org_a/{repository}.extraheader"),
+            "GIT_CONFIG_VALUE_2": "Authorization: Bearer source-session-test-token",
+            "GIT_CONFIG_KEY_3": "url.https://github.com/.pushInsteadOf",
+            "GIT_CONFIG_VALUE_3": "https://github.com/",
+            "GIT_CONFIG_KEY_4": "url.https://github.com/.pushInsteadOf",
+            "GIT_CONFIG_VALUE_4": "https://cache.test/git/org_a/",
+        }
+    })
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_source_env_works_before_clone_and_preserves_github_push() {
+    let sb = Sandbox::new("source-before-clone");
+    assert!(!sb.dir.join(".git").exists());
+    let (cache, log) = serve(vec![(200, source_reply("acme/repo"))]).await;
+    let out = run_with(
+        &sb,
+        "http://127.0.0.1:9",
+        &[
+            "build",
+            "source",
+            "env",
+            "acme/repo",
+            "--project",
+            "prj_other",
+            "--trust-policy",
+            "orgs/org_a/broker_trust_policies/source",
+            "-o",
+            "json",
+        ],
+        |command| {
+            command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let env: BTreeMap<String, String> = serde_json::from_slice(&out.stdout).unwrap();
+    let seen = log.lock();
+    assert!(seen[0].line.starts_with("POST /v1/source-sessions "));
+    assert!(seen[0]
+        .head
+        .to_ascii_lowercase()
+        .contains("authorization: bearer sylphx_sk_test"));
+    assert_eq!(
+        serde_json::from_str::<Value>(&seen[0].body).unwrap(),
+        json!({
+            "project": "prj_other", "repository": "acme/repo", "network": "public",
+            "trust_policy": "orgs/org_a/broker_trust_policies/source",
+        })
+    );
+    assert!(!String::from_utf8_lossy(&out.stderr).contains("source-session-test-token"));
+    drop(seen);
+    git_init(&sb.dir);
+    for upstream in [
+        "https://github.com/acme/repo",
+        "git@github.com:acme/repo.git",
+        "https://github.com/acme/repo-other",
+        "ssh://git@github.com/acme/repo-other.git",
+    ] {
+        assert!(Command::new("git")
+            .arg("-C")
+            .arg(&sb.dir)
+            .args(["config", "remote.origin.url", upstream])
+            .status()
+            .unwrap()
+            .success());
+        for push in [false, true] {
+            let mut git = Command::new("git");
+            git.arg("-C").arg(&sb.dir).args(["remote", "get-url"]);
+            if push {
+                git.arg("--push");
+            }
+            let result = git.arg("origin").envs(&env).output().unwrap();
+            assert!(result.status.success());
+            let url = String::from_utf8(result.stdout).unwrap();
+            if push {
+                assert!(url.starts_with("https://github.com/acme/"), "{url}");
+                assert_eq!(
+                    url.trim_end().ends_with("repo-other.git"),
+                    upstream.ends_with("repo-other.git")
+                );
+            } else {
+                let suffix = upstream
+                    .strip_prefix("https://github.com/")
+                    .or_else(|| upstream.strip_prefix("git@github.com:"))
+                    .or_else(|| upstream.strip_prefix("ssh://git@github.com/"))
+                    .unwrap();
+                assert_eq!(url.trim(), format!("https://cache.test/git/org_a/{suffix}"));
+            }
+            assert!(!url.contains("source-session-test-token"));
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_source_env_missing_or_denied_authority_never_switches_identity() {
+    for status in [401, 403] {
+        let sb = Sandbox::new(&format!("source-denied-{status}"));
+        let (cache, log) = serve(vec![(
+            status,
+            json!({"error": {"code": "PERMISSION_DENIED", "message": "sylphx_sk_test"}}),
+        )])
+        .await;
+        let out = run_with(
+            &sb,
+            "http://127.0.0.1:9",
+            &["build", "source", "env", "acme/repo", "--project", "prj_a"],
+            |command| {
+                command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+            },
+        )
+        .await;
+        assert_eq!(out.status.code(), Some(125));
+        assert!(out.stdout.is_empty());
+        assert!(!String::from_utf8_lossy(&out.stderr).contains("sylphx_sk_test"));
+        assert_eq!(log.lock().len(), 1);
+    }
+    let sb = Sandbox::new("source-signed-out");
+    let out = run_with(
+        &sb,
+        "http://127.0.0.1:9",
+        &["build", "source", "env", "acme/repo", "--project", "prj_a"],
+        |command| {
+            command.env_remove("SYLPHX_API_KEY");
+        },
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(125));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("not signed in"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_derives_origin_and_locked_sources_using_accepted_lease() {
+    let sb = Sandbox::new("source-build-run");
+    project(&sb.dir);
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&sb.dir)
+        .args([
+            "config",
+            "remote.origin.url",
+            "https://github.com/acme/repo.git"
+        ])
+        .status()
+        .unwrap()
+        .success());
+    std::fs::write(sb.dir.join("Cargo.lock"), r#"version = 4
+[[package]]
+name = "dependency"
+version = "1.0.0"
+source = "git+ssh://git@github.com/acme/dependency?rev=main#0123456789012345678901234567890123456789"
+"#).unwrap();
+    let (cache, requests) = serve(vec![
+        (200, cache_reply()),
+        (200, source_reply("acme/dependency")),
+        (200, source_reply("acme/repo")),
+    ])
+    .await;
+    use base64::Engine;
+    let mut stream = envd_frame(0, json!({"event": {"start": {"pid": 7}}}));
+    let marker = base64::engine::general_purpose::STANDARD
+        .encode(sylphx_build_lease::scripts::COMMAND_STARTED);
+    stream.extend(envd_frame(
+        0,
+        json!({"event": {"data": {"stderr": marker}}}),
+    ));
+    for (channel, chunk) in [
+        (
+            "stdout",
+            "built https://github.com/acme/repo source-session-",
+        ),
+        ("stderr", "Authorization: Bearer source-session-"),
+        ("stdout", "test-token done\n"),
+        ("stderr", "test-token safe\n"),
+    ] {
+        let data = base64::engine::general_purpose::STANDARD.encode(chunk);
+        stream.extend(envd_frame(0, json!({"event": {"data": {channel: data}}})));
+    }
+    stream.extend(envd_frame(
+        0,
+        json!({"event": {"end": {"exitCode": 0, "exited": true, "status": "exit status 0"}}}),
+    ));
+    stream.extend(envd_frame(2, json!({})));
+    let (api, log) = build_stub_at(
+        "fsn1",
+        vec![
+            envd_process("", 0),
+            (200, "application/json", b"{}".to_vec()),
+            envd_process("", 0),
+            (200, "application/connect+json", stream),
+            envd_process("", 0),
+            ended(),
+        ],
+    )
+    .await;
+    // Requested gra, returned fsn1: only the accepted lease selects cluster.
+    let out = run_with(
+        &sb,
+        &api,
+        &["build", "run", "--region", "gra", "--", "true"],
+        |command| {
+            command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let requests = requests.lock();
+    assert_eq!(requests.len(), 3);
+    for (request, repository) in requests[1..].iter().zip(["acme/dependency", "acme/repo"]) {
+        assert!(request.line.starts_with("POST /v1/source-sessions "));
+        let body: Value = serde_json::from_str(&request.body).unwrap();
+        assert_eq!(body["network"], "cluster");
+        assert_eq!(body["repository"], repository);
+    }
+    let env = started_env(&log);
+    assert_eq!(env["CARGO_NET_GIT_FETCH_WITH_CLI"], "true");
+    assert_eq!(env["GIT_CONFIG_COUNT"], "15");
+    assert!(env.as_object().unwrap().values().all(|value| !value
+        .as_str()
+        .unwrap_or("")
+        .contains("source-session-test-token")));
+    assert!(log
+        .lock()
+        .iter()
+        .any(|request| request.body.contains("source-auth-cleanup")));
+    assert!(!String::from_utf8_lossy(&out.stdout).contains("source-session-test-token"));
+    assert!(!String::from_utf8_lossy(&out.stderr).contains("source-session-test-token"));
+    assert!(String::from_utf8_lossy(&out.stdout)
+        .contains("built https://github.com/acme/repo [redacted] done"));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("[redacted] safe"));
+    assert!(
+        !sb.dir.join(".git/sylphx/git-deps").exists()
+            && !sb.dir.join(".git/sylphx/tree-packs").exists(),
+        "granted dependencies and known tree packs are not written under shared worktree metadata"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_source_endpoint_absence_uses_existing_inputs_without_claiming_source_cache() {
+    let sb = Sandbox::new("source-rollout");
+    project(&sb.dir);
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&sb.dir)
+        .args([
+            "config",
+            "remote.origin.url",
+            "https://github.com/acme/repo"
+        ])
+        .status()
+        .unwrap()
+        .success());
+    let (cache, requests) = serve(vec![
+        (200, cache_reply()),
+        (404, json!({"error": {"code": "NOT_FOUND"}})),
+    ])
+    .await;
+    let (api, log) = build_stub(vec![envd_process("built\n", 0), ended()]).await;
+    let out = run_with(&sb, &api, &["build", "run", "--", "true"], |command| {
+        command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+    })
+    .await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let error = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(error.matches("source cache unavailable").count(), 1);
+    assert_eq!(requests.lock().len(), 2);
+    assert!(started_env(&log).get("GIT_CONFIG_COUNT").is_none());
+    assert!(!log
+        .lock()
+        .iter()
+        .any(|request| request.body.contains("source-auth")));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_source_authorization_denial_does_not_use_another_credential() {
+    let sb = Sandbox::new("source-run-denied");
+    project(&sb.dir);
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&sb.dir)
+        .args([
+            "config",
+            "remote.origin.url",
+            "https://github.com/acme/repo"
+        ])
+        .status()
+        .unwrap()
+        .success());
+    let (cache, requests) = serve(vec![
+        (200, cache_reply()),
+        (403, json!({"error": {"code": "PERMISSION_DENIED"}})),
+    ])
+    .await;
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    let mut replies = attempt_replies(&address);
+    replies.truncate(2);
+    replies.push(ended());
+    let (api, log) = serve_bytes_on(listener, replies).await;
+    let out = run_with(&sb, &api, &["build", "run", "--", "true"], |command| {
+        command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+    })
+    .await;
+    assert_eq!(out.status.code(), Some(125));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("PERMISSION_DENIED"));
+    assert_eq!(requests.lock().len(), 2);
+    assert!(!log
+        .lock()
+        .iter()
+        .any(|request| request.line.starts_with("POST /process.Process/Start")));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_respects_no_cache_and_external_source_environment() {
+    for external in [false, true] {
+        let sb = Sandbox::new(&format!("source-override-{external}"));
+        project(&sb.dir);
+        assert!(Command::new("git")
+            .arg("-C")
+            .arg(&sb.dir)
+            .args([
+                "config",
+                "remote.origin.url",
+                "https://github.com/acme/repo"
+            ])
+            .status()
+            .unwrap()
+            .success());
+        let (cache, requests) = serve(if external {
+            vec![(200, cache_reply())]
+        } else {
+            vec![]
+        })
+        .await;
+        let (api, log) = build_stub(vec![envd_process("", 0), ended()]).await;
+        let args = if external {
+            vec![
+                "build",
+                "run",
+                "--env",
+                "GIT_CONFIG_COUNT=1",
+                "--env",
+                "GIT_CONFIG_KEY_0=url.https://external/repo.insteadOf",
+                "--env",
+                "GIT_CONFIG_VALUE_0=https://github.com/acme/repo",
+                "--",
+                "true",
+            ]
+        } else {
+            vec!["build", "run", "--no-cache", "--", "true"]
+        };
+        let out = run_with(&sb, &api, &args, |command| {
+            command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        })
+        .await;
+        assert_eq!(
+            out.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(requests.lock().len(), usize::from(external));
+        let env = started_env(&log);
+        if external {
+            assert_eq!(env["GIT_CONFIG_COUNT"], "1");
+            assert_eq!(
+                env["GIT_CONFIG_KEY_0"],
+                "url.https://external/repo.insteadOf"
+            );
+        } else {
+            assert!(env.get("GIT_CONFIG_COUNT").is_none());
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_caches_pinned_dependencies_outside_shared_worktree_metadata() {
+    let sb = Sandbox::new("source-hub-linked-cache");
+    project(&sb.dir);
+    // A linked worktree shares its hub's Git directory, so anything written
+    // under `.git/<name>` is shared by every worktree of that hub. The
+    // dependency pack cache must resolve to per-source user storage instead.
+    let hub = sb.dir.join("hub");
+    let linked = sb.dir.join("linked");
+    std::fs::create_dir_all(&hub).unwrap();
+    assert!(Command::new("git")
+        .args(["init", "-q"])
+        .arg(&hub)
+        .status()
+        .unwrap()
+        .success());
+    std::fs::write(hub.join("README.md"), "hub\n").unwrap();
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&hub)
+        .args(["add", "README.md"])
+        .status()
+        .unwrap()
+        .success());
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&hub)
+        .args([
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@example.invalid",
+            "commit",
+            "-qm",
+            "hub"
+        ])
+        .status()
+        .unwrap()
+        .success());
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&hub)
+        .args(["worktree", "add", "-q", linked.to_str().unwrap()])
+        .status()
+        .unwrap()
+        .success());
+    assert!(Command::new("git")
+        .arg("-C")
+        .arg(&linked)
+        .args([
+            "config",
+            "remote.origin.url",
+            "https://github.com/acme/repo.git"
+        ])
+        .status()
+        .unwrap()
+        .success());
+    // The locked dependency is a local repository, so packing it needs no network.
+    let upstream = sb.dir.join("upstream");
+    std::fs::create_dir_all(&upstream).unwrap();
+    git_init(&upstream);
+    std::fs::write(upstream.join("lib.rs"), "pub fn dependency() {}\n").unwrap();
+    for args in [
+        vec!["add", "lib.rs"],
+        vec![
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@example.invalid",
+            "commit",
+            "-qm",
+            "dependency",
+        ],
+    ] {
+        assert!(Command::new("git")
+            .arg("-C")
+            .arg(&upstream)
+            .args(args)
+            .status()
+            .unwrap()
+            .success());
+    }
+    let locked = String::from_utf8(
+        Command::new("git")
+            .arg("-C")
+            .arg(&upstream)
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    std::fs::write(
+        linked.join("Cargo.lock"),
+        format!(
+            "version = 4\n[[package]]\nname = \"dependency\"\nversion = \"1.0.0\"\nsource = \"git+file://{}?rev=main#{}\"\n",
+            upstream.display(),
+            locked.trim()
+        ),
+    )
+    .unwrap();
+    let user_cache = sb.dir.join("user-cache");
+    // After the sync: the dependency's tarball upload, then the command.
+    let (api, _log) = build_stub(vec![
+        (200, "application/json", b"{}".to_vec()),
+        envd_process("", 0),
+        ended(),
+    ])
+    .await;
+    let output = run_in_with(
+        &sb,
+        &linked,
+        &api,
+        &["build", "run", "--no-cache", "--", "true"],
+        |command| {
+            command.env("XDG_CACHE_HOME", &user_cache);
+        },
+    )
+    .await;
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    // The pinned dependency was packed locally, into this source's own user
+    // cache, and nothing was written under the hub's shared Git directory.
+    fn tarballs(dir: &std::path::Path) -> Vec<PathBuf> {
+        let mut found = Vec::new();
+        for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                found.extend(tarballs(&path));
+            } else if path.extension().is_some_and(|ext| ext == "tgz") {
+                found.push(path);
+            }
+        }
+        found
+    }
+    let packed = tarballs(&user_cache);
+    assert_eq!(packed.len(), 1, "{packed:?}");
+    assert!(packed[0].starts_with(&user_cache));
+    assert!(!hub.join(".git/sylphx").exists());
+    assert!(!hub.join(".git/worktrees/linked/sylphx").exists());
+    assert!(!linked.join(".sylphx/git-deps").exists());
 }
 
 /// The test vector secret of the Standard Webhooks reference libraries; not a

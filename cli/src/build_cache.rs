@@ -133,6 +133,8 @@ pub struct Minted {
     pub token: Option<String>,
     /// The cache the token is for, when the reply names it.
     pub cache: Option<String>,
+    /// Source sessions declare their credential expiry as Unix seconds.
+    pub expires_at: Option<u64>,
 }
 
 impl std::fmt::Debug for Minted {
@@ -254,6 +256,15 @@ fn check_url(base: &str) -> Result<(), MintError> {
 /// redirects (the key must not follow one), and every error is classified
 /// without echoing the reply.
 pub async fn mint(base: &str, key: &str, req: &Request) -> Result<Minted, MintError> {
+    mint_at(base, key, "v1/tokens", &req.body()).await
+}
+
+pub(crate) async fn mint_at(
+    base: &str,
+    key: &str,
+    endpoint: &str,
+    body: &Value,
+) -> Result<Minted, MintError> {
     check_url(base)?;
     let http = reqwest::Client::builder()
         .timeout(MINT_TIMEOUT)
@@ -261,9 +272,9 @@ pub async fn mint(base: &str, key: &str, req: &Request) -> Result<Minted, MintEr
         .build()
         .map_err(|_| MintError::Unreachable)?;
     let resp = http
-        .post(format!("{base}/v1/tokens"))
+        .post(format!("{base}/{endpoint}"))
         .bearer_auth(key)
-        .json(&req.body())
+        .json(body)
         .send()
         .await
         .map_err(|e| {
@@ -339,6 +350,7 @@ fn parse_env(v: &Value) -> Result<Minted, MintError> {
         env,
         token: text("token"),
         cache: text("cache"),
+        expires_at: v["expires_at"].as_u64(),
     })
 }
 
@@ -445,7 +457,7 @@ fn fail(code: u8, msg: &str) -> Result<(), Failure> {
 }
 
 /// `--project` (an id, a slug, or a name), else the linked or the key's.
-async fn project_of(
+pub(crate) async fn project_of(
     client: &sylphx::Client,
     arg: Option<&String>,
     org: Option<String>,

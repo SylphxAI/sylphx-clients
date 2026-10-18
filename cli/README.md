@@ -186,8 +186,8 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `--region`, `--size`,
   `--env`, `--no-cache`, and `--no-tree` remain optional advanced overrides.
   `--source-history` still requires actual Git history.
-- Cargo git dependencies come with the run: every git commit a `Cargo.lock`
-  of the tree locks is fetched here with your git credentials (depth 1, no tags).
+- Ungranted Cargo git dependencies come with the run: each locked commit is
+  fetched here with your git credentials (depth 1, no tags).
   Like Cargo's locked source cache, immutable URL-and-commit archives live in
   the existing per-source user cache (`$XDG_CACHE_HOME/sylphx/build/sources`,
   otherwise `~/.cache/sylphx/build/sources`), outside the source Git directory.
@@ -199,7 +199,7 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   A lock that names the `ssh://` spelling of a GitHub repository is
   retried over `https://` when the machine has no ssh key for it, since the two
   spellings name the same repository. One that cannot be fetched here stops the
-  run with 125 before a machine is leased. Git prints `warning: rejected
+  run with 125 before the command starts. Git prints `warning: rejected
   refs/commit/… because shallow roots are not allowed to be updated` once per
   new commit; the build is unaffected.
 - Public dependency routing is supplied by the managed guest before any command
@@ -210,6 +210,16 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   choices keep normal precedence. Existing user registry/index choices are
   preserved. Cargo `CARGO_HOME` and `CARGO_TARGET_DIR` overrides are retained.
   `--no-cache` skips compiler/result caches, not the guest dependency mirrors.
+- GitHub source reads are derived from the synced Git origin and locked Cargo
+  GitHub sources. The CLI mints repository-scoped sessions through the public
+  gateway using your Access/Broker grants; the accepted lease selects the
+  reachable public or cluster route. Indexed Git config composes with dependency
+  mirrors, and GitHub remains the push and review origin. `--no-cache` and
+  explicit `--env GIT_CONFIG_…` source overrides skip automatic source routing.
+  Without a source grant, private Cargo dependencies retain the existing shallow
+  mirrors fetched with your local Git credentials and synced to the lease. No
+  other identity is tried. Ungranted dependencies that cannot be fetched fail
+  before the command starts; disabled source routing prepares them before leasing.
 - The run also gets the project's shared build cache (sccache, Turbo): the
   CLI mints a cache token with your key concurrently with admission. Its
   lifetime includes the queue budget, setup and command; if the gateway's
@@ -233,6 +243,41 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   is unset); `-o json` prints the environment as an object. The output holds
   a credential. Exit 0; 2 usage; 125 platform failure. The gateway is
   `https://build-cache.sylphx.net`, or `SYLPHX_BUILD_CACHE_URL`.
+- `sylphx build source env OWNER/REPO [-o json]` works before cloning: evaluate
+  its shell exports, then clone the
+  ordinary GitHub URL. It derives the default public Broker policy and gateway
+  from the existing cache locator, with no infrastructure setting prerequisite.
+  `--project` selects a project and `--trust-policy` is an optional advanced
+  override; the linked/key project is the default. JSON output is an environment object. The short-lived source token
+  travels in a path-scoped HTTP header, never a URL. Keep output out of logs and
+  the synced tree. Exit 125 on missing sign-in or denied source authority.
+  Build runs keep source bearer headers in a private lease-owned Git include file
+  and renew through the existing client keepalive before provider expiry. Each
+  Git invocation rereads the file; no caller Access key goes to the lease. Source
+  credentials are removed before releasing the lease, and output redacts tokens
+  even when a process splits them across output events.
+  In CI, `scripts/ci/setup-source.py` configures the same Git environment before
+  checkout using the job’s own `GITHUB_TOKEN` and `id-token: write` OIDC identity
+  (audience `sylphx-build-source`), with tokens masked and runner env files private.
+  The default CI/Verify entrypoints bootstrap it at the workflow’s signed revision
+  before checkout, rather than installing source settings after the source fetch.
+  Source sessions are bounded by the signed OIDC expiry. A private Git wrapper
+  renews on network Git commands only when the session nears expiry, using fresh
+  job OIDC and the same workflow credential. A renewal denial fails the fetch;
+  it never switches identities or bypasses source routing. The helper/state live
+  in private `RUNNER_TEMP` files, cleared by the Actions runner at job end.
+  The private Cargo action uses its own existing job-scoped App token to mint
+  additional repository sessions through that same public endpoint, bound to
+  locked revisions when present. Those scoped sessions join the workflow
+  repository’s Git environment and renew on their own repository’s fetch demand.
+  A pinned secondary checkout uses its existing workflow credential only after
+  provider read access and the same Access organization are verified.
+  If initial source setup finds an absent endpoint (404), transport failure or
+  server outage (5xx), it warns once and keeps the normal checkout/private-helper
+  path using the same job’s credentials. Authentication denials (401/403) fail;
+  an unavailable cache is never reported as a cache hit.
+  `BUILD_CACHE=false` or an existing indexed Git config preserves advanced CI
+  source overrides.
 
 ## `sylphx work runner`
 

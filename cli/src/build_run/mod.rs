@@ -34,11 +34,12 @@ mod image;
 mod labels;
 mod pack_guest;
 mod packs;
+mod redact;
 mod remote;
 mod store;
 mod sync;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -50,9 +51,9 @@ use serde_json::{json, Value};
 use sylphx::sandboxes as sbx;
 use sylphx::Client;
 
-use crate::build_cache;
 use crate::devices::{duration, parent_env, state, why};
 use crate::Failure;
+use crate::{build_cache, build_source};
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
 use sylphx_build_lease::scripts::{start_script, Startup, ARTIFACTS};
 use sylphx_build_lease::{
@@ -501,6 +502,8 @@ struct HeldState {
     proc: Option<(Guest, u64)>,
     /// Cache token values: removed from any text that leaves the process.
     secrets: Vec<String>,
+    /// Actual credentials only: do not redact ordinary cache addresses/logs.
+    output_secrets: Vec<String>,
     /// `build image`: where the guest pushes, resolved at `send_auth` (the
     /// managed mint, or the explicit flags). Holds no credential.
     publish: Option<image::Publish>,
@@ -729,24 +732,18 @@ fn dry_run(o: &Opts, out: &Out) -> Result<(), Failure> {
 }
 
 struct StatCache {
-    path: Option<PathBuf>,
     cache: sync::StatCache,
 }
 
 impl StatCache {
     fn open(root: &Path) -> Self {
-        let path = sync::cache_path(root);
-        let cache = path
-            .as_deref()
-            .map(sync::StatCache::load)
-            .unwrap_or_default();
-        Self { path, cache }
+        Self {
+            cache: sync::StatCache::load(root),
+        }
     }
 
     fn save(&self) {
-        if let Some(p) = &self.path {
-            let _ = self.cache.save(p);
-        }
+        let _ = self.cache.save();
     }
 }
 
@@ -783,14 +780,19 @@ async fn execute(
         Err(e) => return Outcome::platform(format!("hashing the work tree: {e}"), false),
     };
     cache.save();
-    // Git dependencies are fetched here, where the credentials are, before
-    // any machine is leased: one that cannot be fetched fails in seconds.
+    // Disabled/advanced source routing retains the pre-lease local mirrors.
+    // Otherwise only sources without a public source grant need a local pack.
     let git_deps = if o.image.is_some() {
         Vec::new()
-    } else {
+    } else if o.no_cache || build_source::overridden(&o.env) || key.is_none() {
         match prepare_git_deps(&o.root, &tree, &o.rel) {
-            Ok(d) => d,
+            Ok(d) => d.into_iter().map(|(d, p)| (d, Some(p))).collect(),
             Err(e) => return Outcome::platform(e, false),
+        }
+    } else {
+        match git_deps::locked(&o.root, &tree, &o.rel) {
+            Ok(d) => d.into_iter().map(|d| (d, None)).collect(),
+            Err(e) => return Outcome::platform(format!("reading the lock files: {e}"), false),
         }
     };
     // Bundling can take longer than a machine's idle window. Do it once,
@@ -900,8 +902,8 @@ struct Run<'a> {
     stats: &'a Mutex<Stats>,
     parent: String,
     tree: sync::Tree,
-    /// The tree's locked git dependencies and their tarballs on this machine.
-    git_deps: Vec<(git_deps::Dep, PathBuf)>,
+    /// Locked dependencies; only ungranted sources require a local tarball.
+    git_deps: Vec<(git_deps::Dep, Option<PathBuf>)>,
     /// HEAD and the requested ref, bundled once before acquiring any lease.
     source_history: Option<(String, Vec<u8>)>,
     /// The caller's key, for minting the cache token.
@@ -930,6 +932,26 @@ struct Machine {
 struct Minted {
     reference: String,
     auth: Vec<u8>,
+}
+
+const SOURCE_AUTH_DIR: &str = "/home/user/.sylphx-source";
+const SOURCE_AUTH_PATH: &str = "/home/user/.sylphx-source/gitconfig";
+
+struct Sources {
+    env: BTreeMap<String, String>,
+    repositories: BTreeSet<String>,
+    network: build_cache::Network,
+    expires_at: u64,
+}
+
+impl Sources {
+    fn expiring(&self) -> bool {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|time| time.as_secs())
+            .unwrap_or(0);
+        !self.repositories.is_empty() && self.expires_at.saturating_sub(now) <= 120
+    }
 }
 
 impl Run<'_> {
@@ -970,16 +992,22 @@ impl Run<'_> {
             },
         };
         let mut minted = Instant::now();
+        let mut sources = match self.source(&m.lease).await {
+            Ok(source) => source,
+            Err(e) => return Attempt::Done(Outcome::platform(e, false)),
+        };
         match self.sync(&guest, m.store.as_ref()).await {
             Ok(()) => {}
             Err(e) if workspace_full(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
         }
-        let (git_env, mut setup) = match self.send_git_deps(&guest).await {
+        let (mut git_env, mut setup) = match self.send_git_deps(&guest, &sources.repositories).await
+        {
             Ok(e) => e,
             Err(e) if out_of_space(e.text()) => return self.out_of_space(&m).await,
             Err(e) => return self.lost_or(&name, e).await,
         };
+        build_source::merge_env(&mut git_env, std::mem::take(&mut sources.env));
         match self.send_source_history(&guest).await {
             Ok(script) => setup.push_str(&script),
             Err(e) => return self.lost_or(&name, e).await,
@@ -1002,12 +1030,44 @@ impl Run<'_> {
         {
             setup.push_str(&shell_call(&["chmod", "600", &image::auth_path()]));
         }
+        if !sources.repositories.is_empty() {
+            let bytes = match build_source::take_headers(&mut git_env, SOURCE_AUTH_PATH) {
+                Ok(bytes) => bytes,
+                Err(_) => {
+                    return Attempt::Done(Outcome::platform(
+                        "source session returned invalid Git settings",
+                        false,
+                    ))
+                }
+            };
+            if let Err(error) = self.write_source_headers(&guest, &bytes).await {
+                return self.lost_or(&name, error).await;
+            }
+        }
+        sources.env = git_env;
+        let has_sources = !sources.repositories.is_empty();
         let ran = self
-            .exec(&mut guest, &mut minted, &name, m.cache, git_env, &setup)
+            .exec(&mut guest, &mut minted, &name, m.cache, sources, &setup)
             .await;
         // The credentials are gone before anything else is asked of the
         // machine, whatever the build's end.
         self.drop_auth(&guest).await;
+        if has_sources {
+            let none = BTreeMap::new();
+            let _ = guest
+                .run(
+                    USER,
+                    &argv(&[
+                        "/bin/sh",
+                        "-c",
+                        "rm -rf -- \"$1\"",
+                        "source-auth-cleanup",
+                        SOURCE_AUTH_DIR,
+                    ]),
+                    &none,
+                )
+                .await;
+        }
         let code = match ran {
             Ok(Some(c)) => c,
             Ok(None) => return Attempt::Done(Outcome::TimedOut),
@@ -1031,6 +1091,157 @@ impl Run<'_> {
             }
         }
         Attempt::Done(Outcome::Ran(code))
+    }
+
+    /// Mint through the public gateway using this caller only. Missing public
+    /// grants retain the caller's existing synced dependency mirrors.
+    async fn source(&self, lease: &sbx::Lease) -> Result<Sources, String> {
+        let mut sources = Sources {
+            env: BTreeMap::new(),
+            repositories: BTreeSet::new(),
+            network: build_cache::Network::Public,
+            expires_at: u64::MAX,
+        };
+        if self.o.no_cache || build_source::overridden(&self.o.env) {
+            return Ok(sources);
+        }
+        let (Some(key), Some(project)) = (self.key, build_cache::project_id(&self.parent)) else {
+            return Ok(sources);
+        };
+        let network =
+            build_cache::run_request(project.clone(), self.o.timeout, Duration::ZERO, lease)
+                .network;
+        sources.network = network;
+        let mut repositories: BTreeSet<String> = self
+            .git_deps
+            .iter()
+            .filter_map(|(dep, _)| build_source::repository(&dep.url))
+            .collect();
+        if let Some(origin) = build_source::origin(&self.o.root) {
+            repositories.insert(origin);
+        }
+        for repository in repositories {
+            match build_source::mint(&self.cache_url, key, &project, &repository, network, None)
+                .await
+            {
+                Ok(minted) => {
+                    self.remember_source(&minted);
+                    sources.expires_at = sources.expires_at.min(minted.expires_at.unwrap_or(0));
+                    build_source::merge_env(&mut sources.env, minted.env);
+                    sources.repositories.insert(repository);
+                }
+                Err(build_cache::MintError::Status {
+                    status: 403,
+                    code: Some(code),
+                    ..
+                }) if code == "SOURCE_GRANT_MISSING" => {}
+                Err(error)
+                    if matches!(
+                        &error,
+                        build_cache::MintError::TimedOut
+                            | build_cache::MintError::Unreachable
+                            | build_cache::MintError::Status {
+                                status: 404 | 500..=599,
+                                ..
+                            }
+                    ) =>
+                {
+                    if !self.cache_warned.swap(true, Ordering::Relaxed) {
+                        eprintln!("sylphx: warning: source cache unavailable ({}); using the caller’s existing source inputs", error.short());
+                    }
+                    sources.env.clear();
+                    sources.repositories.clear();
+                    sources.expires_at = u64::MAX;
+                    return Ok(sources);
+                }
+                Err(e) => return Err(format!("source session unavailable ({})", e.short())),
+            }
+        }
+        Ok(sources)
+    }
+
+    fn remember_source(&self, minted: &build_cache::Minted) {
+        self.held.with(|h| {
+            h.secrets.extend(minted.secrets());
+            h.output_secrets.extend(minted.token.iter().cloned());
+            h.output_secrets.extend(
+                minted
+                    .env
+                    .values()
+                    .find(|v| v.starts_with("Authorization:"))
+                    .cloned(),
+            );
+        });
+    }
+
+    async fn write_source_headers(&self, guest: &Guest, bytes: &[u8]) -> Result<(), Fault> {
+        let none = BTreeMap::new();
+        let prepare = argv(&[
+            "/bin/sh",
+            "-c",
+            "umask 077; mkdir -p \"$1\"; chmod 700 \"$1\"",
+            "source-auth",
+            SOURCE_AUTH_DIR,
+        ]);
+        let (code, _, _) = guest.run(USER, &prepare, &none).await?;
+        if code != 0 {
+            return Err(Fault::Other(
+                "preparing private source credentials failed".into(),
+            ));
+        }
+        guest
+            .upload(&format!("{SOURCE_AUTH_PATH}.next"), USER, bytes)
+            .await?;
+        let publish = argv(&[
+            "/bin/sh",
+            "-c",
+            "chmod 600 \"$1.next\" && mv -f \"$1.next\" \"$1\"",
+            "source-auth",
+            SOURCE_AUTH_PATH,
+        ]);
+        let (code, _, _) = guest.run(USER, &publish, &none).await?;
+        if code != 0 {
+            return Err(Fault::Other(
+                "publishing private source credentials failed".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    async fn renew_sources(&self, guest: &Guest, sources: &mut Sources) -> Result<(), Fault> {
+        let key = self
+            .key
+            .ok_or_else(|| Fault::Other("source renewal has no caller identity".into()))?;
+        let project = build_cache::project_id(&self.parent)
+            .ok_or_else(|| Fault::Other("source renewal has no project".into()))?;
+        let mut env = BTreeMap::new();
+        let mut expires_at = u64::MAX;
+        for repository in &sources.repositories {
+            let minted = build_source::mint(
+                &self.cache_url,
+                key,
+                &project,
+                repository,
+                sources.network,
+                None,
+            )
+            .await
+            .map_err(|error| {
+                Fault::Other(format!("source session renewal failed ({})", error.short()))
+            })?;
+            self.remember_source(&minted);
+            expires_at = expires_at.min(
+                minted
+                    .expires_at
+                    .ok_or_else(|| Fault::Other("source renewal has no expiry".into()))?,
+            );
+            build_source::merge_env(&mut env, minted.env);
+        }
+        let bytes = build_source::take_headers(&mut env, SOURCE_AUTH_PATH)
+            .map_err(|_| Fault::Other("source renewal returned invalid Git settings".into()))?;
+        self.write_source_headers(guest, &bytes).await?;
+        sources.expires_at = expires_at;
+        Ok(())
     }
 
     /// The cache environment for the command, minted before the sync (its
@@ -1058,7 +1269,10 @@ impl Run<'_> {
         };
         match minted {
             Ok(m) => {
-                self.held.with(|h| h.secrets.extend(m.secrets()));
+                self.held.with(|h| {
+                    h.secrets.extend(m.secrets());
+                    h.output_secrets.extend(m.token.iter().cloned());
+                });
                 // The gateway as the build machine reaches it.
                 let guest_base = m.env.get("TURBO_API").cloned().unwrap_or_default();
                 let st = m.token.as_deref().and_then(|t| {
@@ -1326,7 +1540,7 @@ impl Run<'_> {
         let filled = match store {
             Some(st) if !plan.upload.is_empty() => {
                 let mut known = store::Known::load(
-                    Some(sync::local_path(&self.o.root, "sylphx/tree-packs")),
+                    Some(sync::source_cache(&self.o.root).join("tree-packs")),
                     &st.instance_key(),
                 );
                 let f = store::fill(
@@ -1450,13 +1664,35 @@ impl Run<'_> {
         Ok(())
     }
 
-    /// Cold lease inputs need no remote HAVE query; install all locked mirrors
-    /// as part of the action, after uploading their packs with the tree inputs.
-    async fn send_git_deps(&self, g: &Guest) -> Result<(BTreeMap<String, String>, String), Fault> {
+    /// Upload only ungranted locked dependencies, then install them in the
+    /// existing guest start action. Cold leases need no remote HAVE query.
+    async fn send_git_deps(
+        &self,
+        g: &Guest,
+        covered: &BTreeSet<String>,
+    ) -> Result<(BTreeMap<String, String>, String), Fault> {
+        let deps: Vec<_> = self
+            .git_deps
+            .iter()
+            .filter(|(d, _)| {
+                !build_source::repository(&d.url).is_some_and(|repo| covered.contains(&repo))
+            })
+            .collect();
         let mut up = 0u64;
         let mut args = vec!["/bin/sh", "-c", git_deps::APPLY, "git-deps-apply", WS];
-        let names: Vec<String> = self.git_deps.iter().map(|(d, _)| d.name()).collect();
-        for ((_, tgz), n) in self.git_deps.iter().zip(&names) {
+        let names: Vec<String> = deps.iter().map(|(d, _)| d.name()).collect();
+        for ((d, tgz), n) in deps.iter().zip(&names) {
+            let packed;
+            let tgz = match tgz {
+                Some(path) => path,
+                None => {
+                    let cache = sync::source_cache(&self.o.root).join("git-deps");
+                    std::fs::create_dir_all(&cache)
+                        .map_err(|e| Fault::Other(format!("preparing git dependencies: {e}")))?;
+                    packed = git_deps::pack(&cache, d).map_err(Fault::Other)?;
+                    &packed
+                }
+            };
             let bytes = std::fs::read(tgz)
                 .map_err(|e| Fault::Other(format!("reading {}: {e}", tgz.display())))?;
             g.upload(&format!("{WS}/{}/in/{n}.tgz", git_deps::DIR), USER, &bytes)
@@ -1468,7 +1704,7 @@ impl Run<'_> {
         if !names.is_empty() {
             self.out.event(json!({"type": "git_deps", "deps": names.len(), "sent": names.len(), "bytes_up": up}));
         }
-        let deps: Vec<git_deps::Dep> = self.git_deps.iter().map(|(d, _)| d.clone()).collect();
+        let deps: Vec<git_deps::Dep> = deps.iter().map(|(d, _)| d.clone()).collect();
         Ok((
             git_deps::env(&deps, WS),
             if names.is_empty() {
@@ -1509,7 +1745,7 @@ impl Run<'_> {
         minted: &mut Instant,
         lease: &str,
         cache: BTreeMap<String, String>,
-        git_env: BTreeMap<String, String>,
+        mut sources: Sources,
         setup: &str,
     ) -> Result<Option<i32>, ExecFault> {
         let mut args = vec![
@@ -1543,7 +1779,7 @@ impl Run<'_> {
         if let Some(sha) = sync::head(&self.o.root) {
             env.insert("SYLPHX_BUILD_GIT_HEAD".into(), sha);
         }
-        env.extend(git_env);
+        env.extend(std::mem::take(&mut sources.env));
         env.extend(self.o.env.clone());
         if self.o.source_history.is_some() {
             env.insert("SYLPHX_BUILD_SOURCE_HISTORY".into(), "1".into());
@@ -1565,6 +1801,7 @@ impl Run<'_> {
         tick.tick().await;
         let mut registry_minted = Instant::now();
         let mut reattached = false;
+        let mut output = redact::Output::new(self.out, self.held);
         let result = loop {
             tokio::select! {
                 ev = p.next() => match ev {
@@ -1572,7 +1809,7 @@ impl Run<'_> {
                         let g2 = g.clone();
                         self.held.with(|h| h.proc = Some((g2, pid)));
                     }
-                    Ok(Some(Event::Stdout(b))) => self.out.stdout(&b),
+                    Ok(Some(Event::Stdout(b))) => output.stdout(&b),
                     Ok(Some(Event::Stderr(b))) => {
                         let before = startup.started();
                         let bytes = startup.push(&b);
@@ -1580,11 +1817,11 @@ impl Run<'_> {
                             deadline = tokio::time::Instant::now() + self.o.timeout;
                             self.out.event(json!({"type": "running", "lease": lease, "size": self.o.size, "region": self.region(), "workspace": "cold", "volume": false, "cache": cached}));
                         }
-                        if !bytes.is_empty() { self.out.stderr(&bytes); }
+                        if !bytes.is_empty() { output.stderr(&bytes); }
                     }
                     Ok(Some(Event::End(c))) => {
                         let pending = startup.finish();
-                        if !pending.is_empty() { self.out.stderr(&pending); }
+                        if !pending.is_empty() { output.stderr(&pending); }
                         if !startup.started() {
                             return Err(ExecFault::Setup(Fault::Other(format!("preparing the build machine failed (status {c}); see its stderr"))));
                         }
@@ -1655,6 +1892,12 @@ impl Run<'_> {
                             *minted = Instant::now();
                         }
                     }
+                    if sources.expiring() {
+                        if let Err(fault) = self.renew_sources(g, &mut sources).await {
+                            if let Some(pid) = p.pid { let _ = g.signal(pid, "SIGKILL").await; }
+                            return Err(ExecFault::after(p.pid.is_some(), fault));
+                        }
+                    }
                     if self.o.image.as_ref().is_some_and(|i| i.managed)
                         && registry_minted.elapsed() >= REGISTRY_TOKEN_RENEW
                     {
@@ -1716,8 +1959,9 @@ impl Run<'_> {
             (img.explicit_publish(), bytes)
         };
         self.held.with(|h| {
-            h.secrets
-                .extend(image::auth_secrets(&String::from_utf8_lossy(&bytes)))
+            let secrets = image::auth_secrets(&String::from_utf8_lossy(&bytes));
+            h.output_secrets.extend(secrets.iter().cloned());
+            h.secrets.extend(secrets);
         });
         let path = image::auth_path();
         g.upload(&path, USER, &bytes).await?;
@@ -1792,8 +2036,9 @@ impl Run<'_> {
             return Err(Fault::Other("the renewed upload changed repository".into()));
         }
         self.held.with(|h| {
-            h.secrets
-                .extend(image::auth_secrets(&String::from_utf8_lossy(&minted.auth)));
+            let secrets = image::auth_secrets(&String::from_utf8_lossy(&minted.auth));
+            h.output_secrets.extend(secrets.iter().cloned());
+            h.secrets.extend(secrets);
         });
         let path = image::auth_path();
         let next = format!("{path}.next");
