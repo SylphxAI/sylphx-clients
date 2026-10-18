@@ -137,6 +137,21 @@ impl Window {
     pub fn full(&self, now: i64) -> bool {
         self.current(now) && self.utilization.is_some_and(|u| u >= 1.0)
     }
+    /// Percent of this window still unspent, or `None` when the vendor has not
+    /// reported a utilization for it. This is what a person reads to answer
+    /// "how much is left in this window", so a seat with a known window never
+    /// renders a bare "n/a" that hides unspent capacity.
+    pub fn remaining_pct(&self) -> Option<f64> {
+        self.utilization.map(|u| (1.0 - u).clamp(0.0, 1.0) * 100.0)
+    }
+    /// A window with no vendor reading is reported as *unreported*, never as
+    /// empty: an unread window is unknown, not zero.
+    pub fn remaining_label(&self) -> String {
+        match self.remaining_pct() {
+            Some(p) => format!("{p:.0}%"),
+            None => "unreported".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -633,10 +648,6 @@ impl View {
                 s.to_string()
             }
         };
-        let pct = |w: Option<&Window>| {
-            w.and_then(|w| w.utilization)
-                .map_or("n/a".to_string(), |u| format!("{:.0}%", u * 100.0))
-        };
         let mut o = String::new();
         o.push_str(&format!("sylphx ai top   {}\n\n", fmt_time(now)));
         o.push_str(&format!(
@@ -683,7 +694,7 @@ impl View {
             ));
         }
 
-        o.push_str("\nSEAT                          PROVIDER     STATE            5H    WEEK  WEEK RESET          NOTE\n");
+        o.push_str("\nSEAT                          PROVIDER     STATE            5H LEFT  WEEK LEFT  WEEK RESET          NOTE\n");
         for r in &self.rows {
             let s = &r.seat;
             let note = match &r.status {
@@ -697,13 +708,14 @@ impl View {
             } else {
                 note
             };
+            let left = |w: Option<&Window>| w.map_or("n/a".to_string(), |w| w.remaining_label());
             o.push_str(&format!(
-                "{:<29} {:<12} {:<15} {:>5} {:>6}  {:<19} {}\n",
+                "{:<29} {:<12} {:<15} {:>8} {:>10}  {:<19} {}\n",
                 trunc(&s.id, 29),
                 trunc(&s.provider, 12),
                 trunc(&s.state, 15),
-                pct(s.five_hour()),
-                pct(s.weekly()),
+                left(s.five_hour()),
+                left(s.weekly()),
                 s.weekly()
                     .and_then(|w| w.reset)
                     .map_or("n/a".into(), fmt_time),
@@ -771,6 +783,41 @@ mod tests {
 
     fn seats(v: Vec<Value>) -> Vec<Seat> {
         parse_seats(&json!({"object": "list", "data": v})).unwrap()
+    }
+
+    #[test]
+    fn a_window_shows_what_is_left_not_what_is_used() {
+        // 96% used means 4% still spendable: the person reads remaining, so a
+        // paid seat at 96% never looks empty.
+        let s = seats(vec![weekly_seat("s1", 0.96, 10)]);
+        let w = s[0].weekly().expect("weekly window");
+        assert!(
+            (w.remaining_pct().unwrap() - 4.0).abs() < 0.01,
+            "96% used leaves 4%: {:?}",
+            w.remaining_pct()
+        );
+        assert_eq!(w.remaining_label(), "4%");
+    }
+
+    #[test]
+    fn an_unread_window_is_unreported_never_zero() {
+        // A window the vendor has not reported must not read as 0% left: an
+        // unread window is unknown.
+        let w = Window {
+            key: "claude_5h".into(),
+            utilization: None,
+            seconds: Some(18_000),
+            reset: None,
+            observed: None,
+        };
+        assert_eq!(w.remaining_pct(), None);
+        assert_eq!(w.remaining_label(), "unreported");
+    }
+
+    #[test]
+    fn a_full_window_reads_zero_left() {
+        let s = seats(vec![weekly_seat("s1", 1.0, 10)]);
+        assert_eq!(s[0].weekly().unwrap().remaining_label(), "0%");
     }
 
     fn sample(t: i64, u: &[(&str, f64)]) -> Sample {
