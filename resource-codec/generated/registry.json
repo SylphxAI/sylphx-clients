@@ -2260,6 +2260,31 @@
       ]
     },
     {
+      "doc": "BucketPublicAccessMode is how much of a bucket is publicly readable.",
+      "name": "sylphx.data.v1.BucketPublicAccessMode",
+      "package": "sylphx.data.v1",
+      "values": [
+        {
+          "doc": "No unauthenticated read.",
+          "number": 1,
+          "proto_name": "BUCKET_PUBLIC_ACCESS_MODE_OFF",
+          "wire": "off"
+        },
+        {
+          "doc": "Every public object in the bucket is readable.",
+          "number": 2,
+          "proto_name": "BUCKET_PUBLIC_ACCESS_MODE_READ",
+          "wire": "read"
+        },
+        {
+          "doc": "Only public objects under `prefixes` are readable.",
+          "number": 3,
+          "proto_name": "BUCKET_PUBLIC_ACCESS_MODE_READ_PREFIXES",
+          "wire": "read_prefixes"
+        }
+      ]
+    },
+    {
       "doc": "ConnectionProfile is which Postgres path a connection takes.",
       "name": "sylphx.data.v1.ConnectionProfile",
       "package": "sylphx.data.v1",
@@ -42137,7 +42162,7 @@
       "package": "sylphx.connections.v1"
     },
     {
-      "doc": "A Bucket is one customer object store: bytes, size, and SHA-256 kept exact,\nwith versions, delete markers, retention, multipart, and per-object\nvisibility (private by default). Silo: each has its own engine, credentials,\nbackup, region, and deletion.",
+      "doc": "A Bucket is one customer object store: bytes, size, and SHA-256 kept exact,\nwith versions, delete markers, retention, multipart, and per-object\nvisibility (private by default). Silo: each has its own store, access keys,\nbackup, region, and deletion.",
       "fields": [
         {
           "behaviors": [
@@ -42431,6 +42456,51 @@
       "package": "sylphx.data.v1"
     },
     {
+      "doc": "BucketPublicAccess says which objects anyone may read with no key. Reads\nonly; a write always needs a key. Per-object visibility still applies on\ntop: a private object is never served.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Which objects are public.",
+          "filterable": false,
+          "name": "mode",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.data.v1.BucketPublicAccessMode"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at\nmost 50, each at most 1024 bytes.",
+          "filterable": false,
+          "name": "prefixes",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.BucketPublicAccess",
+      "package": "sylphx.data.v1"
+    },
+    {
       "doc": "BucketSpec is the caller-writable state of a Bucket.",
       "fields": [
         {
@@ -42545,6 +42615,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.data.v1.BucketLifecycle"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Who may read the bucket's objects without a key. Unset is `OFF`. Set at\ncreation; the bucket serves it once its S3 endpoint does, and until then\nevery object stays private.",
+          "filterable": false,
+          "name": "public_access",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.BucketPublicAccess"
           }
         }
       ],
@@ -42705,6 +42794,44 @@
             "kind": "scalar",
             "scalar": "int64"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The URL clients send object requests to: `https://{host}/v1/objects/{uid}`.",
+          "filterable": false,
+          "name": "endpoint",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The base URL a key-less client reads public objects from, `{endpoint}`\nfollowed by the object key; empty while `spec.public_access` is off.",
+          "filterable": false,
+          "name": "public_url",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.data.v1.BucketStatus",
@@ -42761,23 +42888,6 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "How to reach the bucket through the Data API.",
-          "filterable": false,
-          "name": "connection_info",
-          "number": 1,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "message",
-            "name": "sylphx.data.v1.ConnectionInfo"
-          }
-        },
-        {
-          "behaviors": [],
-          "cli_flag": "",
           "doc": "How to reach the same bucket over S3, with keys minted by this call.\nUnset while the bucket is not served over S3.",
           "filterable": false,
           "name": "s3",
@@ -42790,6 +42900,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.data.v1.S3Connection"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The URL clients send object requests to through the Data API; the same as\n`status.endpoint`.",
+          "filterable": false,
+          "name": "endpoint",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],
@@ -139201,7 +139330,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Returns how to connect to the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). The credentials are not API keys and are returned only\nhere; each call mints new S3 keys.",
+              "doc": "Returns where to reach the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). It carries no username or password; each call mints new\nS3 keys, and a client signs with those.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",

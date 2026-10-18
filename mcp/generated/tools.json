@@ -14488,6 +14488,29 @@
                     },
                     "type": "object"
                   },
+                  "public_access": {
+                    "additionalProperties": false,
+                    "description": "Who may read the bucket's objects without a key. Unset is `OFF`. Set at\ncreation; the bucket serves it once its S3 endpoint does, and until then\nevery object stays private.",
+                    "properties": {
+                      "mode": {
+                        "description": "Which objects are public.",
+                        "enum": [
+                          "off",
+                          "read",
+                          "read_prefixes"
+                        ],
+                        "type": "string"
+                      },
+                      "prefixes": {
+                        "description": "Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at\nmost 50, each at most 1024 bytes.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
                     "type": "string"
@@ -14678,6 +14701,29 @@
                     },
                     "type": "object"
                   },
+                  "public_access": {
+                    "additionalProperties": false,
+                    "description": "Who may read the bucket's objects without a key. Unset is `OFF`. Set at\ncreation; the bucket serves it once its S3 endpoint does, and until then\nevery object stays private.",
+                    "properties": {
+                      "mode": {
+                        "description": "Which objects are public.",
+                        "enum": [
+                          "off",
+                          "read",
+                          "read_prefixes"
+                        ],
+                        "type": "string"
+                      },
+                      "prefixes": {
+                        "description": "Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at\nmost 50, each at most 1024 bytes.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
                     "type": "string"
@@ -14774,9 +14820,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Returns how to connect to the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). The credentials are not API keys and are returned only here; each call mints new S3 keys."
+        "title": "Returns where to reach the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). It carries no username or password; each call mints new S3 keys, and a client signs with those."
       },
-      "description": "Returns how to connect to the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). The credentials are not API keys and are returned only\nhere; each call mints new S3 keys.",
+      "description": "Returns where to reach the bucket: the Data API address, and, once the\nbucket is served over S3, an S3 endpoint with keys scoped to this one\nbucket (`s3`). It carries no username or password; each call mints new\nS3 keys, and a client signs with those.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:connect",
       "input_schema": {

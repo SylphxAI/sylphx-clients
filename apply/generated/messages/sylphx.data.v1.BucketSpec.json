@@ -107,6 +107,24 @@
         "kind": "message",
         "name": "sylphx.data.v1.BucketLifecycle"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "public_access",
+      "number": 7,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.data.v1.BucketPublicAccess"
+      }
     }
   ],
   "name": "sylphx.data.v1.BucketSpec",

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.data.v1.BucketPublicAccessMode",
+  "package": "sylphx.data.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BUCKET_PUBLIC_ACCESS_MODE_OFF",
+      "wire": "off"
+    },
+    {
+      "number": 2,
+      "proto_name": "BUCKET_PUBLIC_ACCESS_MODE_READ",
+      "wire": "read"
+    },
+    {
+      "number": 3,
+      "proto_name": "BUCKET_PUBLIC_ACCESS_MODE_READ_PREFIXES",
+      "wire": "read_prefixes"
+    }
+  ]
+}

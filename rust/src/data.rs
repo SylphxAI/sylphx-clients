@@ -5,7 +5,7 @@
 
 /// A Bucket is one customer object store: bytes, size, and SHA-256 kept exact,
 /// with versions, delete markers, retention, multipart, and per-object
-/// visibility (private by default). Silo: each has its own engine, credentials,
+/// visibility (private by default). Silo: each has its own store, access keys,
 /// backup, region, and deletion.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -125,6 +125,21 @@ pub struct BucketLifecycle {
     pub expiration_rules: Vec<BucketExpirationRule>,
 }
 
+/// BucketPublicAccess says which objects anyone may read with no key. Reads
+/// only; a write always needs a key. Per-object visibility still applies on
+/// top: a private object is never served.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BucketPublicAccess {
+    /// Which objects are public.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<BucketPublicAccessMode>,
+    /// Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at
+    /// most 50, each at most 1024 bytes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prefixes: Vec<String>,
+}
+
 /// BucketSpec is the caller-writable state of a Bucket.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -158,6 +173,15 @@ pub struct BucketSpec {
     /// Rules that remove what a bucket no longer needs. Unset keeps everything.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lifecycle: Option<BucketLifecycle>,
+    /// Who may read the bucket's objects without a key. Unset is `OFF`. Set at
+    /// creation; the bucket serves it once its S3 endpoint does, and until then
+    /// every object stays private.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "publicAccess"
+    )]
+    pub public_access: Option<BucketPublicAccess>,
 }
 
 /// BucketStatus is the observed state of a Bucket.
@@ -219,6 +243,21 @@ pub struct BucketStatus {
         alias = "objectCount"
     )]
     pub object_count: i64,
+    /// The URL clients send object requests to: `https://{host}/v1/objects/{uid}`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub endpoint: String,
+    /// The base URL a key-less client reads public objects from, `{endpoint}`
+    /// followed by the object key; empty while `spec.public_access` is off.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "publicUrl"
+    )]
+    pub public_url: String,
 }
 
 /// The request of ConnectBucket.
@@ -245,17 +284,16 @@ pub struct ConnectBucketRequest {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ConnectBucketResponse {
-    /// How to reach the bucket through the Data API.
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "connectionInfo"
-    )]
-    pub connection_info: Option<ConnectionInfo>,
     /// How to reach the same bucket over S3, with keys minted by this call.
     /// Unset while the bucket is not served over S3.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub s3: Option<S3Connection>,
+    /// The URL clients send object requests to through the Data API; the same as
+    /// `status.endpoint`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub endpoint: String,
 }
 
 /// The request of ConnectDatabase.
@@ -3074,6 +3112,61 @@ pub struct ZSetScoreValueResponse {
     pub score: Option<f64>,
 }
 
+/// BucketPublicAccessMode is how much of a bucket is publicly readable.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum BucketPublicAccessMode {
+    /// No unauthenticated read.
+    Off,
+    /// Every public object in the bucket is readable.
+    Read,
+    /// Only public objects under `prefixes` are readable.
+    ReadPrefixes,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl BucketPublicAccessMode {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Off => "off",
+            Self::Read => "read",
+            Self::ReadPrefixes => "read_prefixes",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "off" => Self::Off,
+            "read" => Self::Read,
+            "read_prefixes" => Self::ReadPrefixes,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for BucketPublicAccessMode {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BucketPublicAccessMode {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for BucketPublicAccessMode {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// ConnectionProfile is which Postgres path a connection takes.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -4788,10 +4881,10 @@ impl<'a, T: crate::runtime::Transport> BucketsCollection<'a, T> {
         Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
-    /// Returns how to connect to the bucket: the Data API address, and, once the
+    /// Returns where to reach the bucket: the Data API address, and, once the
     /// bucket is served over S3, an S3 endpoint with keys scoped to this one
-    /// bucket (`s3`). The credentials are not API keys and are returned only
-    /// here; each call mints new S3 keys.
+    /// bucket (`s3`). It carries no username or password; each call mints new
+    /// S3 keys, and a client signs with those.
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/buckets/*}:connect` · permission `data:write` · effect `read`
     ///

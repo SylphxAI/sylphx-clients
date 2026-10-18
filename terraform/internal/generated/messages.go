@@ -350,6 +350,14 @@ func dataBucketLifecycle() []def.Field {
 	}
 }
 
+// dataBucketPublicAccess is `sylphx.data.v1.BucketPublicAccess`.
+func dataBucketPublicAccess() []def.Field {
+	return []def.Field{
+		{Name: "mode", Kind: def.Enum, Values: []string{"off", "read", "read_prefixes"}, Doc: "Which objects are public."},
+		{Name: "prefixes", Kind: def.String, Repeated: true, Doc: "Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at most 50, each at most 1024 bytes."},
+	}
+}
+
 // dataBucketSpec is `sylphx.data.v1.BucketSpec`.
 func dataBucketSpec() []def.Field {
 	return []def.Field{
@@ -359,6 +367,7 @@ func dataBucketSpec() []def.Field {
 		{Name: "deletion_protection", Kind: def.Bool, Doc: "While set, Delete fails with DELETION_PROTECTED."},
 		{Name: "cors", Kind: def.Message, Msg: dataBucketCorsRule, Repeated: true, Doc: "Browser access (CORS) rules for the bucket's S3 endpoint, in order; the first rule matching an origin and method answers. Empty answers no cross-origin request. At most 20 rules."},
 		{Name: "lifecycle", Kind: def.Message, Msg: dataBucketLifecycle, Doc: "Rules that remove what a bucket no longer needs. Unset keeps everything."},
+		{Name: "public_access", Kind: def.Message, Msg: dataBucketPublicAccess, Doc: "Who may read the bucket's objects without a key. Unset is `OFF`. Set at creation; the bucket serves it once its S3 endpoint does, and until then every object stays private."},
 	}
 }
 
@@ -373,6 +382,8 @@ func dataBucketStatus() []def.Field {
 		{Name: "cell", Kind: def.String, Flags: def.OutputOnly, Doc: "The cell the datastore is placed on."},
 		{Name: "storage_bytes", Kind: def.Int64, Flags: def.OutputOnly, Doc: "Bytes stored, at the last usage sample."},
 		{Name: "object_count", Kind: def.Int64, Flags: def.OutputOnly, Doc: "Current objects, at the last usage sample."},
+		{Name: "endpoint", Kind: def.String, Flags: def.OutputOnly, Doc: "The URL clients send object requests to: `https://{host}/v1/objects/{uid}`."},
+		{Name: "public_url", Kind: def.String, Flags: def.OutputOnly, Doc: "The base URL a key-less client reads public objects from, `{endpoint}` followed by the object key; empty while `spec.public_access` is off."},
 	}
 }
 

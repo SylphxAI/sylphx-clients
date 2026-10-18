@@ -10245,6 +10245,24 @@
                   "type": "json"
                 },
                 {
+                  "field": "bucket.spec.public_access.mode",
+                  "flag": "--spec.public-access.mode",
+                  "summary": "Which objects are public.",
+                  "type": "enum",
+                  "values": [
+                    "off",
+                    "read",
+                    "read_prefixes"
+                  ]
+                },
+                {
+                  "field": "bucket.spec.public_access.prefixes",
+                  "flag": "--spec.public-access.prefixes",
+                  "repeated": true,
+                  "summary": "Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at most 50, each at most 1024 bytes.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10334,6 +10352,24 @@
                   "repeated": true,
                   "summary": "Expire current objects by key prefix, at most 50 rules with distinct prefixes. On a versioned bucket an expiry writes a delete marker.",
                   "type": "json"
+                },
+                {
+                  "field": "bucket.spec.public_access.mode",
+                  "flag": "--spec.public-access.mode",
+                  "summary": "Which objects are public.",
+                  "type": "enum",
+                  "values": [
+                    "off",
+                    "read",
+                    "read_prefixes"
+                  ]
+                },
+                {
+                  "field": "bucket.spec.public_access.prefixes",
+                  "flag": "--spec.public-access.prefixes",
+                  "repeated": true,
+                  "summary": "Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at most 50, each at most 1024 bytes.",
+                  "type": "string"
                 },
                 {
                   "field": "allow_missing",
@@ -10428,7 +10464,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/buckets/{bucket}"
               },
-              "summary": "Returns how to connect to the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). The credentials are not API keys and are returned only here; each call mints new S3 keys.",
+              "summary": "Returns where to reach the bucket: the Data API address, and, once the bucket is served over S3, an S3 endpoint with keys scoped to this one bucket (`s3`). It carries no username or password; each call mints new S3 keys, and a client signs with those.",
               "verb": "connect"
             },
             {

@@ -8,7 +8,7 @@ import type * as common from './common.js'
 /**
  * A Bucket is one customer object store: bytes, size, and SHA-256 kept exact,
  * with versions, delete markers, retention, multipart, and per-object
- * visibility (private by default). Silo: each has its own engine, credentials,
+ * visibility (private by default). Silo: each has its own store, access keys,
  * backup, region, and deletion.
  */
 export interface Bucket {
@@ -81,6 +81,21 @@ export interface BucketLifecycle {
 	expirationRules?: BucketExpirationRule[]
 }
 
+/**
+ * BucketPublicAccess says which objects anyone may read with no key. Reads
+ * only; a write always needs a key. Per-object visibility still applies on
+ * top: a private object is never served.
+ */
+export interface BucketPublicAccess {
+	/** Which objects are public. */
+	mode?: BucketPublicAccessMode
+	/**
+	 * Key prefixes whose objects are public when `mode` is `READ_PREFIXES`, at
+	 * most 50, each at most 1024 bytes.
+	 */
+	prefixes?: string[]
+}
+
 /** BucketSpec is the caller-writable state of a Bucket. */
 export interface BucketSpec {
 	/** Keep every version and write delete markers. */
@@ -102,6 +117,12 @@ export interface BucketSpec {
 	cors?: BucketCorsRule[]
 	/** Rules that remove what a bucket no longer needs. Unset keeps everything. */
 	lifecycle?: BucketLifecycle
+	/**
+	 * Who may read the bucket's objects without a key. Unset is `OFF`. Set at
+	 * creation; the bucket serves it once its S3 endpoint does, and until then
+	 * every object stays private.
+	 */
+	publicAccess?: BucketPublicAccess
 }
 
 /** BucketStatus is the observed state of a Bucket. */
@@ -122,6 +143,13 @@ export interface BucketStatus {
 	readonly storageBytes?: string
 	/** Current objects, at the last usage sample. */
 	readonly objectCount?: string
+	/** The URL clients send object requests to: `https://{host}/v1/objects/{uid}`. */
+	readonly endpoint?: string
+	/**
+	 * The base URL a key-less client reads public objects from, `{endpoint}`
+	 * followed by the object key; empty while `spec.public_access` is off.
+	 */
+	readonly publicUrl?: string
 }
 
 /** The request of ConnectBucket. */
@@ -138,13 +166,16 @@ export interface ConnectBucketRequest {
 
 /** The response of ConnectBucket. */
 export interface ConnectBucketResponse {
-	/** How to reach the bucket through the Data API. */
-	connectionInfo?: ConnectionInfo
 	/**
 	 * How to reach the same bucket over S3, with keys minted by this call.
 	 * Unset while the bucket is not served over S3.
 	 */
 	s3?: S3Connection
+	/**
+	 * The URL clients send object requests to through the Data API; the same as
+	 * `status.endpoint`.
+	 */
+	readonly endpoint?: string
 }
 
 /** The request of ConnectDatabase. */
@@ -1436,6 +1467,9 @@ export interface ZSetScoreValueResponse {
 	score?: number
 }
 
+/** BucketPublicAccessMode is how much of a bucket is publicly readable. */
+export type BucketPublicAccessMode = 'off' | 'read' | 'read_prefixes' | (string & {})
+
 /** ConnectionProfile is which Postgres path a connection takes. */
 export type ConnectionProfile = 'pooled' | 'direct' | (string & {})
 
@@ -1460,23 +1494,25 @@ runtime.registerSchemas({
 		['abortIncompleteMultipartDays', 'abort_incomplete_multipart_days'],
 		['expirationRules', 'expiration_rules', 'sylphx.data.v1.BucketExpirationRule'],
 	],
+	'sylphx.data.v1.BucketPublicAccess': [],
 	'sylphx.data.v1.BucketSpec': [
 		['versioningEnabled', 'versioning_enabled'],
 		['deletionProtection', 'deletion_protection'],
 		['cors', 'cors', 'sylphx.data.v1.BucketCorsRule'],
 		['lifecycle', 'lifecycle', 'sylphx.data.v1.BucketLifecycle'],
+		['publicAccess', 'public_access', 'sylphx.data.v1.BucketPublicAccess'],
 	],
 	'sylphx.data.v1.BucketStatus': [
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['storageBytes', 'storage_bytes'],
 		['objectCount', 'object_count'],
+		['publicUrl', 'public_url'],
 	],
 	'sylphx.data.v1.ConnectBucketRequest': [
 		['credentialTtl', 'credential_ttl'],
 	],
 	'sylphx.data.v1.ConnectBucketResponse': [
-		['connectionInfo', 'connection_info', 'sylphx.data.v1.ConnectionInfo'],
 		['s3', 's3', 'sylphx.data.v1.S3Connection'],
 	],
 	'sylphx.data.v1.ConnectDatabaseRequest': [],
@@ -3002,10 +3038,10 @@ export class BucketsCollection {
 	}
 
 	/**
-	 * Returns how to connect to the bucket: the Data API address, and, once the
+	 * Returns where to reach the bucket: the Data API address, and, once the
 	 * bucket is served over S3, an S3 endpoint with keys scoped to this one
-	 * bucket (`s3`). The credentials are not API keys and are returned only
-	 * here; each call mints new S3 keys.
+	 * bucket (`s3`). It carries no username or password; each call mints new
+	 * S3 keys, and a client signs with those.
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/buckets/*}:connect` · permission `data:write` · effect `read`
 	 *

@@ -4,22 +4,6 @@
       "behaviors": [],
       "cli_flag": "",
       "filterable": false,
-      "name": "connection_info",
-      "number": 1,
-      "oneof": null,
-      "optional": false,
-      "repeated": false,
-      "resource_reference": null,
-      "sensitive": false,
-      "type": {
-        "kind": "message",
-        "name": "sylphx.data.v1.ConnectionInfo"
-      }
-    },
-    {
-      "behaviors": [],
-      "cli_flag": "",
-      "filterable": false,
       "name": "s3",
       "number": 2,
       "oneof": null,
@@ -30,6 +14,24 @@
       "type": {
         "kind": "message",
         "name": "sylphx.data.v1.S3Connection"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "endpoint",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
       }
     }
   ],
