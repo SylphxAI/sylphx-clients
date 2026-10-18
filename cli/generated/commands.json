@@ -3517,6 +3517,117 @@
     {
       "collections": [
         {
+          "collection": "analytics_events",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "events",
+                  "flag": "--events",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "The events, 1 to 500.",
+                  "type": "json"
+                },
+                {
+                  "field": "sent_time",
+                  "flag": "--sent-time",
+                  "summary": "When the sender built the batch, on its clock. When it differs from the receive time by more than 10 minutes, every event time is shifted by the difference.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "consent",
+                  "flag": "--consent",
+                  "summary": "The app's current analytics consent; events are stored only when GRANTED. A publishable-key batch that is not GRANTED has every event rejected `consent_not_granted` (still 200, nothing stored). A secret-key batch with UNSPECIFIED counts as granted (the tenant's server attests); DENIED is always refused.",
+                  "type": "enum",
+                  "values": [
+                    "granted",
+                    "denied"
+                  ]
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:batch",
+              "method": "analytics.analytics_events.batch",
+              "permission": "analytics:ingest",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Records a batch of events. Each event is judged alone: a bad event is reported in `results` and the rest are stored. A duplicate `event_id` (in this or an earlier batch) is counted once. The response is sent only after the store holds the accepted events.",
+              "verb": "batch"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "start_time",
+                  "flag": "--start-time",
+                  "required": true,
+                  "summary": "The interval start; required, at most 31 days before `end_time`.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "end_time",
+                  "flag": "--end-time",
+                  "summary": "The interval end; default now.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "event_name",
+                  "flag": "--event-name",
+                  "summary": "Only events with this name.",
+                  "type": "string"
+                },
+                {
+                  "field": "subject_id",
+                  "flag": "--subject-id",
+                  "summary": "Only events of this subject (the user id, else the anon id).",
+                  "type": "string"
+                },
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 100, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page; bound to the tenant, interval and filters.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events",
+              "method": "analytics.analytics_events.list",
+              "paginates": true,
+              "permission": "analytics:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists the environment's raw events in a time range, newest first.",
+              "verb": "list"
+            }
+          ],
+          "noun": "analytics-events",
+          "resource_type": "analytics.sylphx.com/AnalyticsEvent"
+        }
+      ],
+      "commands": [],
+      "display_name": "Sylphx Analytics",
+      "noun": "analytics",
+      "served": false,
+      "stage": "preview"
+    },
+    {
+      "collections": [
+        {
           "collection": "artifacts",
           "commands": [
             {

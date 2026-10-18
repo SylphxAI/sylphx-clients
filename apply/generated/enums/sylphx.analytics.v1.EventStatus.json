@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.analytics.v1.EventStatus",
+  "package": "sylphx.analytics.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EVENT_STATUS_ACCEPTED",
+      "wire": "accepted"
+    },
+    {
+      "number": 2,
+      "proto_name": "EVENT_STATUS_DUPLICATE",
+      "wire": "duplicate"
+    },
+    {
+      "number": 3,
+      "proto_name": "EVENT_STATUS_REJECTED",
+      "wire": "rejected"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "analytics_events",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "AnalyticsEvent",
+  "message": "sylphx.analytics.v1.AnalyticsEvent",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/analytics_events/{analytics_event}",
+  "plural": "analyticsEvents",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "analytics",
+  "shape": "record",
+  "singular": "analyticsEvent",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "analytics.sylphx.com/AnalyticsEvent"
+}

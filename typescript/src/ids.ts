@@ -109,6 +109,7 @@ export const PREFIXES = [
 	{ prefix: 'sdm', entity: 'EmailDomain', service: 'notify', collection: 'mail_domains' },
 	{ prefix: 'sup', entity: 'Suppression', service: 'notify', collection: 'suppressions' },
 	{ prefix: 'tmpl', entity: 'Template', service: 'notify', collection: 'templates' },
+	{ prefix: 'aev', entity: 'AnalyticsEvent', service: 'analytics', collection: 'analytics_events' },
 	{ prefix: 'eev', entity: 'ErrorEvent', service: 'observability', collection: 'error_events' },
 	{ prefix: 'egrp', entity: 'ErrorGroup', service: 'observability', collection: 'error_groups' },
 	{ prefix: 'log', entity: 'LogEntry', service: 'observability', collection: 'log_entries' },

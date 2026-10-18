@@ -15,6 +15,7 @@
 pub mod access;
 pub mod agents;
 pub mod ai;
+pub mod analytics;
 pub mod artifacts;
 pub mod assets;
 pub mod auth;

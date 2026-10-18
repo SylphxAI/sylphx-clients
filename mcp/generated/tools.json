@@ -5682,6 +5682,66 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Lists the environment's raw events in a time range, newest first."
+      },
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists the environment's raw events in a time range, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListAnalyticsEvents.",
+        "properties": {
+          "end_time": {
+            "description": "The interval end; default now.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "event_name": {
+            "description": "Only events with this name.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 100, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page; bound to the tenant, interval and\nfilters.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
+          },
+          "start_time": {
+            "description": "The interval start; required, at most 31 days before `end_time`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject_id": {
+            "description": "Only events of this subject (the user id, else the anon id).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "analytics.analytics_events.list",
+      "permission": "analytics:read",
+      "served": false,
+      "tool": "analytics_analytics_events_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an artifact."
       },
       "description": "Gets an artifact.",

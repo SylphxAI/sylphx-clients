@@ -4,6 +4,7 @@
 import * as access from './access.js'
 import * as agents from './agents.js'
 import * as ai from './ai.js'
+import * as analytics from './analytics.js'
 import * as artifacts from './artifacts.js'
 import * as assets from './assets.js'
 import * as auth from './auth.js'
@@ -33,7 +34,7 @@ import * as workflows from './workflows.js'
 import { METHODS } from './methods.js'
 import { Client, type ClientOptions, requestFor } from './runtime.js'
 
-export { access, agents, ai, artifacts, assets, auth, billing, broker, build, common, config, connections, data, entitlement, events, hosting, keys, knowledge, localization, money, network, notify, observability, realtime, release, runners, sandboxes, secrets, workflows }
+export { access, agents, ai, analytics, artifacts, assets, auth, billing, broker, build, common, config, connections, data, entitlement, events, hosting, keys, knowledge, localization, money, network, notify, observability, realtime, release, runners, sandboxes, secrets, workflows }
 export {
 	Client,
 	type ClientOptions,
@@ -60,6 +61,8 @@ export class Sylphx extends Client {
 	readonly agents: agents.AgentsApi
 	/** Sylphx AI (`preview`). */
 	readonly ai: ai.AiApi
+	/** Sylphx Analytics (`preview`). */
+	readonly analytics: analytics.AnalyticsApi
 	/** Sylphx Artifacts (`preview`). */
 	readonly artifacts: artifacts.ArtifactsApi
 	/** Sylphx Generated Assets (`preview`). */
@@ -116,6 +119,7 @@ export class Sylphx extends Client {
 		this.access = new access.AccessApi(this)
 		this.agents = new agents.AgentsApi(this)
 		this.ai = new ai.AiApi(this)
+		this.analytics = new analytics.AnalyticsApi(this)
 		this.artifacts = new artifacts.ArtifactsApi(this)
 		this.assets = new assets.AssetsApi(this)
 		this.auth = new auth.AuthApi(this)

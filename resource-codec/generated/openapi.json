@@ -4620,6 +4620,323 @@
         },
         "type": "object"
       },
+      "sylphx.analytics.v1.AnalyticsConsent": {
+        "description": "The app's analytics consent, as sent with a batch.",
+        "enum": [
+          "granted",
+          "denied"
+        ],
+        "type": "string"
+      },
+      "sylphx.analytics.v1.AnalyticsEvent": {
+        "description": "An Analytics Event is one immutable thing a person or a game did, recorded by\nan SDK or a server. Its id is the sender's `event_id`, so a resend of the\nsame event is the same record.\n\nEvent names. A name starting with `$` is the platform's:\n\n- `$pageview` with `path` (required), `referrer`, `title` in `properties`.\n- `$session_start`, with no required property.\n- `$session_end` with `duration_ms` (integer, milliseconds).\n- `level_reached` with `level` (integer or string).\n- `purchase` with `sku`, `amount_minor` (integer, currency minor units),\n  `currency` (ISO 4217) and `trust`, always `client` in this version: the\n  amount is what the client reported, not a ledger fact.\n\n(`level_reached` and `purchase` carry no `$` because games and shops name\nthem themselves; the service checks their properties when it sees the name.)\nAny other name is a custom event with free properties; a conversion is a\ncustom event whose name the reader lists in `GetStats`.",
+        "properties": {
+          "anon_id": {
+            "description": "The device- or install-scoped id from the SDK.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "context": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.EventContext",
+            "description": "The sender's context, plus the platform and browser family the service\nparsed from the request. No IP address and no user agent string is kept.",
+            "readOnly": true
+          },
+          "event_name": {
+            "description": "The event name, for example `$pageview`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "event_time": {
+            "description": "When it happened, on the sender's clock (corrected by `sent_time`).",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "`orgs/{org}/projects/{project}/envs/{env}/analytics_events/{event_id}`.",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "description": "The event's properties.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "received_time": {
+            "description": "When the service received it.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "session_id": {
+            "description": "The SDK session, when there is one.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.EventSource",
+            "description": "Where the event came from.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "The event id again, so a client can hold it without parsing the name.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "user_id": {
+            "description": "The signed-in end user, when known.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.analytics.v1.BatchEventsRequest": {
+        "description": "The request of BatchEvents. A batch has at most 500 events and 1 MiB\ncompressed; `Content-Encoding: gzip` is accepted. `Idempotency-Key` on the\nrequest makes a whole retried batch a no-op in the store.",
+        "properties": {
+          "consent": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsConsent",
+            "description": "The app's current analytics consent; events are stored only when GRANTED.\nA publishable-key batch that is not GRANTED has every event rejected\n`consent_not_granted` (still 200, nothing stored). A secret-key batch\nwith UNSPECIFIED counts as granted (the tenant's server attests); DENIED\nis always refused."
+          },
+          "events": {
+            "description": "The events, 1 to 500.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.EventInput"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "description": "The parent the method acts in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
+          },
+          "sent_time": {
+            "description": "When the sender built the batch, on its clock. When it differs from the\nreceive time by more than 10 minutes, every event time is shifted by the\ndifference.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "events"
+        ],
+        "type": "object"
+      },
+      "sylphx.analytics.v1.BatchEventsResponse": {
+        "description": "The response of BatchEvents.",
+        "properties": {
+          "accepted_count": {
+            "description": "Events stored by this call.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "duplicate_count": {
+            "description": "Events already held.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "rejected_count": {
+            "description": "Events refused.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "results": {
+            "description": "One result per event, in the order sent.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.EventResult"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.analytics.v1.EventContext": {
+        "description": "What the sender knows about where the event was made. Every field is a short\nlabel; none identifies a person.",
+        "properties": {
+          "app_version": {
+            "description": "The app's own version.",
+            "type": "string"
+          },
+          "browser": {
+            "description": "The browser family, for example `Chrome`; filled by the service from the\nrequest, and ignored when a client sends it.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "experiments": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The experiments the subject is in when the event happens: experiment key\nto variant key, at most 20 entries.",
+            "type": "object"
+          },
+          "locale": {
+            "description": "A BCP 47 locale, for example `zh-HK`.",
+            "type": "string"
+          },
+          "os": {
+            "description": "The operating system family, for example `Windows`; filled by the service.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "platform": {
+            "description": "`web`, `ios`, `android`, `unity`, `server`, ...",
+            "type": "string"
+          },
+          "sdk_name": {
+            "description": "The SDK, for example `@sylphx/sdk`.",
+            "type": "string"
+          },
+          "sdk_version": {
+            "description": "The SDK version.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.analytics.v1.EventInput": {
+        "description": "One event as a sender writes it.",
+        "properties": {
+          "anon_id": {
+            "description": "The device- or install-scoped id; required.",
+            "type": "string"
+          },
+          "context": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.EventContext",
+            "description": "The sender's context."
+          },
+          "event_id": {
+            "description": "A UUID made by the sender when the event happens (UUIDv7 recommended). It\nis the deduplication key: a resend, in any batch, is counted once.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The event name: 1 to 128 characters of `A-Za-z0-9_.:/-`; a leading `$` is\nreserved for the platform.",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "description": "Free properties, at most 8 KiB encoded, nesting depth 4.",
+            "type": "object"
+          },
+          "session_id": {
+            "description": "The SDK session, when there is one.",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "When it happened, on the sender's clock. Older than 31 days is refused\n`too_old`; more than 10 minutes ahead is stored as the receive time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "The signed-in end user, when known. When present it, not `anon_id`, is the\nsubject that stats and retention count.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "name",
+          "timestamp",
+          "anon_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.analytics.v1.EventResult": {
+        "description": "The outcome of one event, in the order it was sent.",
+        "properties": {
+          "event_id": {
+            "description": "The event id as sent (empty when it was missing).",
+            "type": "string"
+          },
+          "reason": {
+            "description": "For a rejection: `invalid:<field>` (the JSON name of the field that is\nwrong, for example `invalid:anon_id`), `too_old`, `too_large`,\n`name_reserved`, or `consent_not_granted`.",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.EventStatus",
+            "description": "What became of it."
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.analytics.v1.EventSource": {
+        "description": "Where an event came from, decided by the key that sent it.",
+        "enum": [
+          "client",
+          "server"
+        ],
+        "type": "string"
+      },
+      "sylphx.analytics.v1.EventStatus": {
+        "description": "What became of one event of a batch.",
+        "enum": [
+          "accepted",
+          "duplicate",
+          "rejected"
+        ],
+        "type": "string"
+      },
+      "sylphx.analytics.v1.ListAnalyticsEventsRequest": {
+        "description": "The request of ListAnalyticsEvents.",
+        "properties": {
+          "end_time": {
+            "description": "The interval end; default now.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "event_name": {
+            "description": "Only events with this name.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 100, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page; bound to the tenant, interval and\nfilters.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
+          },
+          "start_time": {
+            "description": "The interval start; required, at most 31 days before `end_time`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject_id": {
+            "description": "Only events of this subject (the user id, else the anon id).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "sylphx.analytics.v1.ListAnalyticsEventsResponse": {
+        "description": "The response of ListAnalyticsEvents.",
+        "properties": {
+          "analytics_events": {
+            "description": "The page.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsEvent"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.artifacts.v1.Artifact": {
         "description": "An Artifact is one immutable content object addressed by digest: an\nimage, or evidence about one (an SBOM, a provenance attestation, a\nsignature) that names it as its subject.",
         "properties": {
@@ -55281,6 +55598,249 @@
         ],
         "x-sylphx-method": "agents.agents.rotate_credential",
         "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/analytics_events": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists the environment's raw events in a time range, newest first.",
+        "operationId": "analytics_analytics_events_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The interval start; required, at most 31 days before `end_time`.",
+            "in": "query",
+            "name": "start_time",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The interval end; default now.",
+            "in": "query",
+            "name": "end_time",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only events with this name.",
+            "in": "query",
+            "name": "event_name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only events of this subject (the user id, else the anon id).",
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 100, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page; bound to the tenant, interval and\nfilters.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.analytics.v1.ListAnalyticsEventsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the environment's raw events in a time range, newest first.",
+        "tags": [
+          "analytics"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "analytics.analytics_events.list",
+        "x-sylphx-permission": "analytics:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/analytics_events:batch": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRecords a batch of events. Each event is judged alone: a bad event is\nreported in `results` and the rest are stored. A duplicate `event_id`\n(in this or an earlier batch) is counted once. The response is sent only\nafter the store holds the accepted events.",
+        "operationId": "analytics_analytics_events_batch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "consent": {
+                    "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsConsent",
+                    "description": "The app's current analytics consent; events are stored only when GRANTED.\nA publishable-key batch that is not GRANTED has every event rejected\n`consent_not_granted` (still 200, nothing stored). A secret-key batch\nwith UNSPECIFIED counts as granted (the tenant's server attests); DENIED\nis always refused."
+                  },
+                  "events": {
+                    "description": "The events, 1 to 500.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.analytics.v1.EventInput"
+                    },
+                    "type": "array"
+                  },
+                  "sent_time": {
+                    "description": "When the sender built the batch, on its clock. When it differs from the\nreceive time by more than 10 minutes, every event time is shifted by the\ndifference.",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "events"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.analytics.v1.BatchEventsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Records a batch of events. Each event is judged alone: a bad event is reported in `results` and the rest are stored. A duplicate `event_id` (in this or an earlier batch) is counted once. The response is sent only after the store holds the accepted events.",
+        "tags": [
+          "analytics"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RATE_LIMITED"
+        ],
+        "x-sylphx-method": "analytics.analytics_events.batch",
+        "x-sylphx-permission": "analytics:ingest",
+        "x-sylphx-publishable-ok": true,
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -117447,6 +118007,10 @@
     {
       "description": "Sylphx AI (preview). AiService is the Resource side of Sylphx AI: the model catalog.\n\nInference is not here. The OpenAI- and Anthropic-compatible routes\n(`/v1/responses`, `/v1/chat/completions`, `/v1/messages`, `/v1/embeddings`,\n`/v1/images/*`, `/v1/audio/*`, `/v1/models`, `/v1/files`) keep their\nindustry wire and stay outside the Resource grammar (ai-inference-surface.md\n§4, resource-api-and-clients.md §4.6); their contract is imported OpenAPI,\nnot proto. Usage is not here either: AI keeps no usage or spend table\n(AI-USAGE-SPEND); its meters are read from Kernel Billing.",
       "name": "ai"
+    },
+    {
+      "description": "Sylphx Analytics (preview). AnalyticsService is Sylphx Analytics: one event stream per environment and\nthe same numbers for every customer (docs/specs/one-platform/analytics.md).\nThis contract writes events and reads them back; the daily stats and\nretention methods are added with the store that computes them.",
+      "name": "analytics"
     },
     {
       "description": "Sylphx Artifacts (preview). ArtifactsService is Sylphx Artifacts: immutable content by digest, with\nits SBOM and provenance. Sylphx Build writes them; Release reads them.",

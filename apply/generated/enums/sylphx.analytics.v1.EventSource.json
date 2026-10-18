@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.analytics.v1.EventSource",
+  "package": "sylphx.analytics.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "EVENT_SOURCE_CLIENT",
+      "wire": "client"
+    },
+    {
+      "number": 2,
+      "proto_name": "EVENT_SOURCE_SERVER",
+      "wire": "server"
+    }
+  ]
+}

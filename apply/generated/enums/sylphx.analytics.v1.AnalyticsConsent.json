@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.analytics.v1.AnalyticsConsent",
+  "package": "sylphx.analytics.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "ANALYTICS_CONSENT_GRANTED",
+      "wire": "granted"
+    },
+    {
+      "number": 2,
+      "proto_name": "ANALYTICS_CONSENT_DENIED",
+      "wire": "denied"
+    }
+  ]
+}

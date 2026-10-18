@@ -605,6 +605,69 @@
       ]
     },
     {
+      "doc": "The app's analytics consent, as sent with a batch.",
+      "name": "sylphx.analytics.v1.AnalyticsConsent",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "The person allowed analytics; events are stored.",
+          "number": 1,
+          "proto_name": "ANALYTICS_CONSENT_GRANTED",
+          "wire": "granted"
+        },
+        {
+          "doc": "The person refused analytics; events are rejected.",
+          "number": 2,
+          "proto_name": "ANALYTICS_CONSENT_DENIED",
+          "wire": "denied"
+        }
+      ]
+    },
+    {
+      "doc": "Where an event came from, decided by the key that sent it.",
+      "name": "sylphx.analytics.v1.EventSource",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "A publishable key: a browser or an app. Revenue from here is a claim.",
+          "number": 1,
+          "proto_name": "EVENT_SOURCE_CLIENT",
+          "wire": "client"
+        },
+        {
+          "doc": "A secret key: a server.",
+          "number": 2,
+          "proto_name": "EVENT_SOURCE_SERVER",
+          "wire": "server"
+        }
+      ]
+    },
+    {
+      "doc": "What became of one event of a batch.",
+      "name": "sylphx.analytics.v1.EventStatus",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "Stored.",
+          "number": 1,
+          "proto_name": "EVENT_STATUS_ACCEPTED",
+          "wire": "accepted"
+        },
+        {
+          "doc": "The environment already has this `event_id`; nothing changed.",
+          "number": 2,
+          "proto_name": "EVENT_STATUS_DUPLICATE",
+          "wire": "duplicate"
+        },
+        {
+          "doc": "Refused; see `reason`.",
+          "number": 3,
+          "proto_name": "EVENT_STATUS_REJECTED",
+          "wire": "rejected"
+        }
+      ]
+    },
+    {
       "doc": "ArtifactKind is what an Artifact is.",
       "name": "sylphx.artifacts.v1.ArtifactKind",
       "package": "sylphx.artifacts.v1",
@@ -18463,6 +18526,959 @@
       ],
       "name": "sylphx.ai.v1.ModelPrice",
       "package": "sylphx.ai.v1"
+    },
+    {
+      "doc": "An Analytics Event is one immutable thing a person or a game did, recorded by\nan SDK or a server. Its id is the sender's `event_id`, so a resend of the\nsame event is the same record.\n\nEvent names. A name starting with `$` is the platform's:\n\n- `$pageview` with `path` (required), `referrer`, `title` in `properties`.\n- `$session_start`, with no required property.\n- `$session_end` with `duration_ms` (integer, milliseconds).\n- `level_reached` with `level` (integer or string).\n- `purchase` with `sku`, `amount_minor` (integer, currency minor units),\n  `currency` (ISO 4217) and `trust`, always `client` in this version: the\n  amount is what the client reported, not a ledger fact.\n\n(`level_reached` and `purchase` carry no `$` because games and shops name\nthem themselves; the service checks their properties when it sees the name.)\nAny other name is a custom event with free properties; a conversion is a\ncustom event whose name the reader lists in `GetStats`.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "`orgs/{org}/projects/{project}/envs/{env}/analytics_events/{event_id}`.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The event id again, so a client can hold it without parsing the name.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The event name, for example `$pageview`.",
+          "filterable": false,
+          "name": "event_name",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When it happened, on the sender's clock (corrected by `sent_time`).",
+          "filterable": false,
+          "name": "event_time",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the service received it.",
+          "filterable": false,
+          "name": "received_time",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The device- or install-scoped id from the SDK.",
+          "filterable": false,
+          "name": "anon_id",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The signed-in end user, when known.",
+          "filterable": false,
+          "name": "user_id",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The SDK session, when there is one.",
+          "filterable": false,
+          "name": "session_id",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The event's properties.",
+          "filterable": false,
+          "name": "properties",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "struct"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The sender's context, plus the platform and browser family the service\nparsed from the request. No IP address and no user agent string is kept.",
+          "filterable": false,
+          "name": "context",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.EventContext"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Where the event came from.",
+          "filterable": false,
+          "name": "source",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.EventSource"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsEvent",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The request of BatchEvents. A batch has at most 500 events and 1 MiB\ncompressed; `Content-Encoding: gzip` is accepted. `Idempotency-Key` on the\nrequest makes a whole retried batch a no-op in the store.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The parent the method acts in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "analytics.sylphx.com/AnalyticsEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The events, 1 to 500.",
+          "filterable": false,
+          "name": "events",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.EventInput"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "When the sender built the batch, on its clock. When it differs from the\nreceive time by more than 10 minutes, every event time is shifted by the\ndifference.",
+          "filterable": false,
+          "name": "sent_time",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The app's current analytics consent; events are stored only when GRANTED.\nA publishable-key batch that is not GRANTED has every event rejected\n`consent_not_granted` (still 200, nothing stored). A secret-key batch\nwith UNSPECIFIED counts as granted (the tenant's server attests); DENIED\nis always refused.",
+          "filterable": false,
+          "name": "consent",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.AnalyticsConsent"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.BatchEventsRequest",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The response of BatchEvents.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "One result per event, in the order sent.",
+          "filterable": false,
+          "name": "results",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.EventResult"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Events stored by this call.",
+          "filterable": false,
+          "name": "accepted_count",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Events already held.",
+          "filterable": false,
+          "name": "duplicate_count",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Events refused.",
+          "filterable": false,
+          "name": "rejected_count",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.BatchEventsResponse",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "What the sender knows about where the event was made. Every field is a short\nlabel; none identifies a person.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The SDK, for example `@sylphx/sdk`.",
+          "filterable": false,
+          "name": "sdk_name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The SDK version.",
+          "filterable": false,
+          "name": "sdk_version",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "`web`, `ios`, `android`, `unity`, `server`, ...",
+          "filterable": false,
+          "name": "platform",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The app's own version.",
+          "filterable": false,
+          "name": "app_version",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A BCP 47 locale, for example `zh-HK`.",
+          "filterable": false,
+          "name": "locale",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The browser family, for example `Chrome`; filled by the service from the\nrequest, and ignored when a client sends it.",
+          "filterable": false,
+          "name": "browser",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The operating system family, for example `Windows`; filled by the service.",
+          "filterable": false,
+          "name": "os",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The experiments the subject is in when the event happens: experiment key\nto variant key, at most 20 entries.",
+          "filterable": false,
+          "name": "experiments",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.EventContext",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "One event as a sender writes it.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "A UUID made by the sender when the event happens (UUIDv7 recommended). It\nis the deduplication key: a resend, in any batch, is counted once.",
+          "filterable": false,
+          "name": "event_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The event name: 1 to 128 characters of `A-Za-z0-9_.:/-`; a leading `$` is\nreserved for the platform.",
+          "filterable": false,
+          "name": "name",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "When it happened, on the sender's clock. Older than 31 days is refused\n`too_old`; more than 10 minutes ahead is stored as the receive time.",
+          "filterable": false,
+          "name": "timestamp",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The device- or install-scoped id; required.",
+          "filterable": false,
+          "name": "anon_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The signed-in end user, when known. When present it, not `anon_id`, is the\nsubject that stats and retention count.",
+          "filterable": false,
+          "name": "user_id",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The SDK session, when there is one.",
+          "filterable": false,
+          "name": "session_id",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Free properties, at most 8 KiB encoded, nesting depth 4.",
+          "filterable": false,
+          "name": "properties",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "struct"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The sender's context.",
+          "filterable": false,
+          "name": "context",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.EventContext"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.EventInput",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The outcome of one event, in the order it was sent.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The event id as sent (empty when it was missing).",
+          "filterable": false,
+          "name": "event_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "What became of it.",
+          "filterable": false,
+          "name": "status",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.EventStatus"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "For a rejection: `invalid:<field>` (the JSON name of the field that is\nwrong, for example `invalid:anon_id`), `too_old`, `too_large`,\n`name_reserved`, or `consent_not_granted`.",
+          "filterable": false,
+          "name": "reason",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.EventResult",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The request of ListAnalyticsEvents.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The parent to list in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "analytics.sylphx.com/AnalyticsEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The interval start; required, at most 31 days before `end_time`.",
+          "filterable": false,
+          "name": "start_time",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The interval end; default now.",
+          "filterable": false,
+          "name": "end_time",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Only events with this name.",
+          "filterable": false,
+          "name": "event_name",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Only events of this subject (the user id, else the anon id).",
+          "filterable": false,
+          "name": "subject_id",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "At most this many; default 100, clamped to 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "`next_page_token` of the previous page; bound to the tenant, interval and\nfilters.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.ListAnalyticsEventsRequest",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The response of ListAnalyticsEvents.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The page.",
+          "filterable": false,
+          "name": "analytics_events",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsEvent"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The token of the next page; empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.ListAnalyticsEventsResponse",
+      "package": "sylphx.analytics.v1"
     },
     {
       "doc": "An Artifact is one immutable content object addressed by digest: an\nimage, or evidence about one (an SBOM, a provenance attestation, a\nsignature) that names it as its subject.",
@@ -123775,6 +124791,28 @@
       "type": "ai.sylphx.com/AiModel"
     },
     {
+      "collection": "analytics_events",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "AnalyticsEvent",
+      "message": "sylphx.analytics.v1.AnalyticsEvent",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/analytics_events/{analytics_event}",
+      "plural": "analyticsEvents",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "analytics",
+      "shape": "record",
+      "singular": "analyticsEvent",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "analytics.sylphx.com/AnalyticsEvent"
+    },
+    {
       "collection": "artifacts",
       "controller": "",
       "deletion_protection": false,
@@ -129951,6 +130989,116 @@
       "proto_services": [
         "sylphx.ai.v1.AiService"
       ],
+      "stage": "preview"
+    },
+    {
+      "collections": [
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Records a batch of events. Each event is judged alone: a bad event is\nreported in `results` and the rest are stored. A duplicate `event_id`\n(in this or an earlier batch) is counted once. The response is sent only\nafter the store holds the accepted events.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "RATE_LIMITED"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:batch"
+              },
+              "id": "analytics.analytics_events.batch",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "analytics:ingest",
+              "proto": "sylphx.analytics.v1.AnalyticsService.BatchEvents",
+              "publishable_ok": true,
+              "rate_class": "bulk",
+              "request": "sylphx.analytics.v1.BatchEventsRequest",
+              "resource_field": null,
+              "response": "sylphx.analytics.v1.BatchEventsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "batch"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists the environment's raw events in a time range, newest first.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "start_time",
+                  "end_time",
+                  "event_name",
+                  "subject_id",
+                  "page_size",
+                  "page_token"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/analytics_events"
+              },
+              "id": "analytics.analytics_events.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "core",
+              "page": {
+                "item": "sylphx.analytics.v1.AnalyticsEvent",
+                "items_field": "analytics_events"
+              },
+              "permission": "analytics:read",
+              "proto": "sylphx.analytics.v1.AnalyticsService.ListAnalyticsEvents",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.analytics.v1.ListAnalyticsEventsRequest",
+              "resource_field": null,
+              "response": "sylphx.analytics.v1.ListAnalyticsEventsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            }
+          ],
+          "name": "analytics_events",
+          "resource_type": "analytics.sylphx.com/AnalyticsEvent"
+        }
+      ],
+      "display_name": "Sylphx Analytics",
+      "doc": "AnalyticsService is Sylphx Analytics: one event stream per environment and\nthe same numbers for every customer (docs/specs/one-platform/analytics.md).\nThis contract writes events and reads them back; the daily stats and\nretention methods are added with the store that computes them.",
+      "methods": [],
+      "name": "analytics",
+      "package": "sylphx.analytics.v1",
+      "proto_services": [
+        "sylphx.analytics.v1.AnalyticsService"
+      ],
+      "served": false,
       "stage": "preview"
     },
     {
