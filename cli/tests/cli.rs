@@ -2392,9 +2392,11 @@ async fn queued_build_timeout(subcommand: &str) {
     let stdout = String::from_utf8_lossy(&out.stdout);
     let last: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
     assert_eq!(last["retryable"], true, "{last}");
+    let error = last["error"].as_str().unwrap();
+    assert!(error.contains("--queue-timeout"), "{last}");
     assert!(
-        last["error"].as_str().unwrap().contains("--queue-timeout"),
-        "{last}"
+        error.contains(&lease),
+        "the failure names the lease: {last}"
     );
     assert_volume_free_regional_leases(&log, "hk");
     let seen = log.lock();

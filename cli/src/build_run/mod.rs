@@ -1263,6 +1263,9 @@ impl Run<'_> {
         lease: sbx::Lease,
         deadline: Instant,
     ) -> Result<sbx::Lease, Attempt> {
+        // The create already returned this resource. A failure before that
+        // has no name; say so instead of printing an empty one.
+        let label = lease_label(&lease.name);
         match wait_ready(client, lease.clone(), None, deadline).await {
             Ready::Ready(l) => Ok(*l),
             // No workspace node pin is requested by this caller.
@@ -1273,7 +1276,7 @@ impl Run<'_> {
                 self.held.with(|h| h.lease = None);
                 Err(Attempt::Done(Outcome::platform(
                     format!(
-                        "no build machine{} within --queue-timeout {}s",
+                        "no build machine{} within --queue-timeout {}s ({label})",
                         self.where_(),
                         self.o.queue_timeout.as_secs()
                     ),
@@ -1283,14 +1286,14 @@ impl Run<'_> {
             Ready::Refused { why, retryable } => {
                 self.held.with(|h| h.lease = None);
                 Err(Attempt::Done(Outcome::platform(
-                    format!("the build machine was refused: {why}"),
+                    format!("the build machine was refused: {why} ({label})"),
                     retryable,
                 )))
             }
             Ready::Ended { reason, retryable } => {
                 self.held.with(|h| h.lease = None);
                 Err(Attempt::Done(Outcome::platform(
-                    format!("the build machine ended before it was ready: {reason}"),
+                    format!("the build machine ended before it was ready: {reason} ({label})"),
                     retryable,
                 )))
             }
@@ -2130,6 +2133,16 @@ fn prepare_git_deps(
     deps.into_iter()
         .map(|d| git_deps::pack(&cache, &d).map(|p| (d, p)))
         .collect()
+}
+
+/// The lease resource already known to a failure. Create can fail before the
+/// platform returns a name; say that instead of printing an empty one.
+fn lease_label(name: &str) -> String {
+    if name.is_empty() {
+        "the lease was never created".into()
+    } else {
+        format!("lease {name}")
+    }
 }
 
 /// A refused API call as a platform failure; retryable as the API says, and
@@ -3737,5 +3750,149 @@ esac
                 requests[1].0
             );
         }
+    }
+
+    /// Admission failures name the lease the create already returned, in the
+    /// text `finish` prints and in the JSON `result` error. A create that
+    /// never returned a name says so instead of printing an empty one.
+    #[tokio::test]
+    async fn queue_timeout_names_the_lease_in_text_and_json() {
+        use tokio::io::AsyncWriteExt;
+
+        let name = "orgs/org_a/projects/prj_a/envs/env_a/leases/l1";
+        let tree = GitTree::new();
+        let o = parse(&[
+            "sylphx",
+            "build",
+            "run",
+            "--region",
+            "hk",
+            "--queue-timeout",
+            "1s",
+            tree.path(),
+            "--",
+            "true",
+        ])
+        .unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let released = name.to_string();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let (line, _) = read_http_request(&mut socket).await;
+            assert!(
+                line.starts_with("POST ") && line.contains(&released) && line.contains(":release"),
+                "{line}"
+            );
+            let payload = json!({"name": released, "status": {"state": "ending"}}).to_string();
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{payload}",
+                        payload.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            socket.shutdown().await.unwrap();
+        });
+        let client = Client::new(
+            sylphx::HttpTransport::builder()
+                .base_url(url)
+                .build()
+                .unwrap(),
+        );
+        let out = Out {
+            json: true,
+            quiet: true,
+        };
+        let held = Held::default();
+        let stats = Mutex::new(Stats::default());
+        let run = api_only_run(
+            &client,
+            &o,
+            &out,
+            &held,
+            &stats,
+            "orgs/org_a/projects/prj_a/envs/env_a",
+        );
+
+        let mut refused = queued_lease(name, sbx::LeaseState::Refused);
+        refused.status.as_mut().unwrap().refusal = Some(sbx::LeaseRefusal::NoCapacity);
+        assert_admission(
+            run.ready(&client, refused, Instant::now())
+                .await
+                .unwrap_err(),
+            &format!("the build machine was refused: no_capacity (lease {name})"),
+            true,
+        );
+
+        let mut ended = queued_lease(name, sbx::LeaseState::Ended);
+        ended.status.as_mut().unwrap().end_reason = Some(sbx::EndReason::BootFailed);
+        assert_admission(
+            run.ready(&client, ended, Instant::now()).await.unwrap_err(),
+            &format!("the build machine ended before it was ready: boot_failed (lease {name})"),
+            true,
+        );
+
+        let mut unnamed = queued_lease("", sbx::LeaseState::Refused);
+        unnamed.status.as_mut().unwrap().refusal = Some(sbx::LeaseRefusal::ShapeNotOffered);
+        assert_admission(
+            run.ready(&client, unnamed, Instant::now())
+                .await
+                .unwrap_err(),
+            "the build machine was refused: shape_not_offered (the lease was never created)",
+            false,
+        );
+
+        let err = run
+            .ready(
+                &client,
+                queued_lease(name, sbx::LeaseState::Granted),
+                Instant::now(),
+            )
+            .await
+            .unwrap_err();
+        assert_admission(
+            err,
+            &format!("no build machine in region hk within --queue-timeout 1s (lease {name})"),
+            true,
+        );
+        server.await.unwrap();
+    }
+
+    fn queued_lease(name: &str, state: sbx::LeaseState) -> sbx::Lease {
+        let mut status = sbx::LeaseStatus::default();
+        status.state = Some(state);
+        let mut lease = sbx::Lease::default();
+        lease.name = name.to_string();
+        lease.status = Some(status);
+        lease
+    }
+
+    /// The plain-text failure and the JSON `result` error are the same string.
+    fn assert_admission(attempt: Attempt, want: &str, retryable: bool) {
+        let Attempt::Done(outcome) = attempt else {
+            panic!("expected a finished admission failure");
+        };
+        let Outcome::Platform {
+            reason,
+            retryable: got,
+        } = &outcome
+        else {
+            panic!("expected a platform failure, got {outcome:?}");
+        };
+        assert_eq!(reason, want);
+        assert_eq!(*got, retryable);
+        assert_eq!(
+            result_event(&outcome, &Stats::default(), 0)["error"],
+            json!(want)
+        );
+        let plain = format!(
+            "sylphx: error: {reason}{}",
+            if *got { " [retryable]" } else { "" }
+        );
+        assert!(plain.contains(want), "{plain}");
     }
 }
