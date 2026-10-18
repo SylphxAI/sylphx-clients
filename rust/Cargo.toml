@@ -13,12 +13,15 @@ repository.workspace = true
 homepage.workspace = true
 
 [features]
-# `resource` is default so the lane's clippy and tests (no feature flags) build it.
-default = ["http", "verify", "resource"]
+# `resource` and `stream` are default so CI tests and clippy build both.
+default = ["http", "verify", "resource", "stream"]
 # The production transport (reqwest + rustls). Without it, bring a `Transport`.
 http = ["dep:reqwest", "dep:tokio", "dep:fastrand"]
 # Offline verification of Sylphx-signed tokens (`sylphx::auth::verify`).
 verify = ["dep:p256", "dep:ed25519-dalek", "dep:base64"]
+# The Sandboxes display stream protocol: frame types and the in-memory mock
+# machine (`sylphx::sandboxes::stream`, `sylphx::sandboxes::stream_mock`).
+stream = ["dep:base64"]
 # Protected-resource OAuth for MCP servers (`sylphx::auth::resource`).
 resource = ["http", "dep:base64", "dep:sha2"]
 

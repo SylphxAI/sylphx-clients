@@ -5178,3 +5178,11 @@ impl<'a, T: crate::runtime::Transport> SnapshotsCollection<'a, T> {
         self.client.call(http).await
     }
 }
+
+/// Hand-written (not generated): see `sandboxes/stream.rs`.
+#[cfg(feature = "stream")]
+pub mod stream;
+
+/// Hand-written (not generated): see `sandboxes/stream_mock.rs`.
+#[cfg(feature = "stream")]
+pub mod stream_mock;
