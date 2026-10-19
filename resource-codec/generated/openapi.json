@@ -13606,6 +13606,17 @@
       "sylphx.data.v1.DatabaseSpec": {
         "description": "DatabaseSpec is the caller-writable state of a Database.",
         "properties": {
+          "client_allowlist": {
+            "description": "Address ranges allowed to connect to the database's endpoint. An entry is\nan IPv4 or IPv6 range like `203.0.113.0/24` or `2001:db8::/32`, at most 50,\napplied on both the pooled and the direct host a connection can reach. A\nconnection from any other address is refused at the endpoint with the\ndatabase's own answer (SQLSTATE 28000), before it reaches Postgres; a\nconnection from a listed address is served as usual. Empty serves every\naddress (the field absent), so clearing it re-opens the endpoint. Send\n`client_allowlist_set` to store an empty list.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "client_allowlist_set": {
+            "description": "Stores `client_allowlist` as given, including an empty list that re-opens\nthe endpoint. An empty repeated field is not a change on its own, so\nUpdate sends `client_allowlist_set` (or `clientAllowlistSet`) as `true`\nwhen it means to clear the list; any non-empty `client_allowlist` is\nstored whether or not this is set. Reads always report `false`.",
+            "type": "boolean"
+          },
           "compute_units": {
             "description": "Compute size in units; default the plan's. `max_connections` derives from\nit.",
             "type": "number"
