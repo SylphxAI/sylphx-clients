@@ -18467,13 +18467,13 @@
                 {
                   "field": "entitlement_grant.approval_ref",
                   "flag": "--approval-ref",
-                  "summary": "A free-text reference to the approval, for example `CEO 2026-10-02` (input on create, up to 200 characters).",
+                  "summary": "A free-text reference to the approval, for example `CEO 2026-10-02` (input on create, up to 200 characters). A test grant's (`test/<id>`) is set by the server, `synthetic:<env>:<synthetic_time>`, and the input is ignored.",
                   "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants",
               "method": "money.entitlement_grants.create",
-              "permission": "billing:credits.approve",
+              "permission": "billing:test_grants:write",
               "positional": {
                 "arg": "ID",
                 "field": "entitlement_grant_id",
@@ -18481,7 +18481,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "entitlement_grant",
-              "summary": "Creates a manual entitlement grant (support, comp, grace). Append-only; needs the approval-class scope. The approver recorded is the key's principal.",
+              "summary": "Creates a manual entitlement grant (support, comp, grace). Append-only. The subject decides what it needs: an end user the env's Sylphx Auth stamped as a born-synthetic test account gets a test grant (`test/<id>`, at most 90 days, approval_ref set by the server) with `billing:test_grants:write`; any other subject needs the approval-class `billing:credits.approve` and is refused PERMISSION_DENIED (`subject_not_synthetic`) otherwise. The approver recorded is the key's principal.",
               "verb": "create"
             }
           ],

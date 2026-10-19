@@ -4347,7 +4347,7 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		body: 'entitlement_grant',
 		longRunning: false,
 		effect: 'write',
-		permission: 'billing:credits.approve',
+		permission: 'billing:test_grants:write',
 	},
 	'money.entitlement_grants.get': {
 		id: 'money.entitlement_grants.get',

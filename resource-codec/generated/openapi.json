@@ -24399,7 +24399,7 @@
         "description": "An Entitlement Grant is one feature a subject holds, from one source: a\nsubscription, an order, a store purchase, or a manual grant. Money derives\nit; a client event never writes one.",
         "properties": {
           "approval_ref": {
-            "description": "A free-text reference to the approval, for example `CEO 2026-10-02`\n(input on create, up to 200 characters).",
+            "description": "A free-text reference to the approval, for example `CEO 2026-10-02`\n(input on create, up to 200 characters). A test grant's (`test/<id>`) is\nset by the server, `synthetic:<env>:<synthetic_time>`, and the input is\nignored.",
             "type": "string"
           },
           "approver": {
@@ -71388,7 +71388,7 @@
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates a manual entitlement grant (support, comp, grace). Append-only;\nneeds the approval-class scope. The approver recorded is the key's principal.",
+        "description": "Creates a manual entitlement grant (support, comp, grace). Append-only.\nThe subject decides what it needs: an end user the env's Sylphx Auth\nstamped as a born-synthetic test account gets a test grant (`test/<id>`,\nat most 90 days, approval_ref set by the server) with\n`billing:test_grants:write`; any other subject needs the approval-class\n`billing:credits.approve` and is refused PERMISSION_DENIED\n(`subject_not_synthetic`) otherwise. The approver recorded is the key's\nprincipal.",
         "operationId": "money_entitlement_grants_create",
         "parameters": [
           {
@@ -71464,11 +71464,14 @@
           "409": {
             "$ref": "#/components/responses/Problem"
           },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Creates a manual entitlement grant (support, comp, grace). Append-only; needs the approval-class scope. The approver recorded is the key's principal.",
+        "summary": "Creates a manual entitlement grant (support, comp, grace). Append-only. The subject decides what it needs: an end user the env's Sylphx Auth stamped as a born-synthetic test account gets a test grant (`test/<id>`, at most 90 days, approval_ref set by the server) with `billing:test_grants:write`; any other subject needs the approval-class `billing:credits.approve` and is refused PERMISSION_DENIED (`subject_not_synthetic`) otherwise. The approver recorded is the key's principal.",
         "tags": [
           "money"
         ],
@@ -71478,10 +71481,11 @@
           "PERMISSION_DENIED",
           "INVALID_FIELD",
           "UNKNOWN_FIELD",
-          "RESOURCE_ALREADY_EXISTS"
+          "RESOURCE_ALREADY_EXISTS",
+          "UNAVAILABLE"
         ],
         "x-sylphx-method": "money.entitlement_grants.create",
-        "x-sylphx-permission": "billing:credits.approve",
+        "x-sylphx-permission": "billing:test_grants:write",
         "x-sylphx-stage": "preview"
       }
     },

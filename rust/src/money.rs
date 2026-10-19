@@ -1177,7 +1177,9 @@ pub struct EntitlementGrant {
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub reason: String,
     /// A free-text reference to the approval, for example `CEO 2026-10-02`
-    /// (input on create, up to 200 characters).
+    /// (input on create, up to 200 characters). A test grant's (`test/<id>`) is
+    /// set by the server, `synthetic:<env>:<synthetic_time>`, and the input is
+    /// ignored.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -6347,12 +6349,18 @@ impl<'a, T: crate::runtime::Transport> EntitlementGrantsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Creates a manual entitlement grant (support, comp, grace). Append-only;
-    /// needs the approval-class scope. The approver recorded is the key's principal.
+    /// Creates a manual entitlement grant (support, comp, grace). Append-only.
+    /// The subject decides what it needs: an end user the env's Sylphx Auth
+    /// stamped as a born-synthetic test account gets a test grant (`test/<id>`,
+    /// at most 90 days, approval_ref set by the server) with
+    /// `billing:test_grants:write`; any other subject needs the approval-class
+    /// `billing:credits.approve` and is refused PERMISSION_DENIED
+    /// (`subject_not_synthetic`) otherwise. The approver recorded is the key's
+    /// principal.
     ///
-    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants` · permission `billing:credits.approve` · effect `write`
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants` · permission `billing:test_grants:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNKNOWN_FIELD`, `RESOURCE_ALREADY_EXISTS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNKNOWN_FIELD`, `RESOURCE_ALREADY_EXISTS`, `UNAVAILABLE`.
     pub async fn create(
         &self,
         request: CreateEntitlementGrantRequest,

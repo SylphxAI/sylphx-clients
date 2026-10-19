@@ -5880,7 +5880,7 @@ pub static METHODS: &[MethodSpec] = &[
         long_running: false,
         server_streaming: false,
         effect: "write",
-        permission: "billing:credits.approve",
+        permission: "billing:test_grants:write",
         origin: None,
         effect_ids: false,
     },

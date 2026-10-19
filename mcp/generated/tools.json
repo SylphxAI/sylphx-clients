@@ -25457,9 +25457,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Creates a manual entitlement grant (support, comp, grace). Append-only; needs the approval-class scope. The approver recorded is the key's principal."
+        "title": "Creates a manual entitlement grant (support, comp, grace). Append-only. The subject decides what it needs: an end user the env's Sylphx Auth stamped as a born-synthetic test account gets a test grant (`test/<id>`, at most 90 days, approval_ref set by the server) with `billing:test_grants:write`; any other subject needs the approval-class `billing:credits.approve` and is refused PERMISSION_DENIED (`subject_not_synthetic`) otherwise. The approver recorded is the key's principal."
       },
-      "description": "Creates a manual entitlement grant (support, comp, grace). Append-only;\nneeds the approval-class scope. The approver recorded is the key's principal.",
+      "description": "Creates a manual entitlement grant (support, comp, grace). Append-only.\nThe subject decides what it needs: an end user the env's Sylphx Auth\nstamped as a born-synthetic test account gets a test grant (`test/<id>`,\nat most 90 days, approval_ref set by the server) with\n`billing:test_grants:write`; any other subject needs the approval-class\n`billing:credits.approve` and is refused PERMISSION_DENIED\n(`subject_not_synthetic`) otherwise. The approver recorded is the key's\nprincipal.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entitlement_grants",
       "input_schema": {
@@ -25471,7 +25471,7 @@
             "description": "The grant: `subject`, `feature`, `expire_time` (future, at most 400 days\nout), `campaign`, `reason` and `approval_ref` are required.",
             "properties": {
               "approval_ref": {
-                "description": "A free-text reference to the approval, for example `CEO 2026-10-02`\n(input on create, up to 200 characters).",
+                "description": "A free-text reference to the approval, for example `CEO 2026-10-02`\n(input on create, up to 200 characters). A test grant's (`test/<id>`) is\nset by the server, `synthetic:<env>:<synthetic_time>`, and the input is\nignored.",
                 "type": "string"
               },
               "campaign": {
@@ -25557,7 +25557,7 @@
       },
       "long_running": false,
       "method_id": "money.entitlement_grants.create",
-      "permission": "billing:credits.approve",
+      "permission": "billing:test_grants:write",
       "tool": "money_entitlement_grants_create"
     },
     {
