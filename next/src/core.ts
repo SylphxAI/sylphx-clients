@@ -52,6 +52,8 @@ interface Stored {
 	key: string
 	tags: string[]
 	timestamp: number
+	/** Seconds after which the entry is stale; `false` when it never is. Absent when the caller sent none. */
+	revalidate?: number | false
 	/** JSON text of the encoded payload, when kept in KV. */
 	payload?: string
 	/** Bucket object key of the payload, when large. */
@@ -136,7 +138,16 @@ export class CacheCore {
 	async lookup(
 		key: string,
 		extraTags: string[] = [],
-	): Promise<{ payload: unknown; tags: string[]; timestamp: number; state: TagState } | undefined> {
+	): Promise<
+		| {
+				payload: unknown
+				tags: string[]
+				timestamp: number
+				revalidate?: number | false
+				state: TagState
+		  }
+		| undefined
+	> {
 		const { kv, objects } = await this.resolve()
 		const asked = [...new Set([...(this.knownTags.get(key) ?? []), ...extraTags])]
 		const [raw, ...tagRows] = await kv.getMany([this.entryKey(key), ...asked.map(this.tagKey)])
@@ -155,24 +166,36 @@ export class CacheCore {
 		if (rec.blob !== undefined) payloadBytes = await objects?.get(rec.blob)
 		else if (rec.payload !== undefined) payloadBytes = text.encode(rec.payload)
 		if (payloadBytes === undefined) return undefined
-		return { payload: fromBytes(payloadBytes), tags: rec.tags, timestamp: rec.timestamp, state }
+		return {
+			payload: fromBytes(payloadBytes),
+			tags: rec.tags,
+			timestamp: rec.timestamp,
+			revalidate: rec.revalidate,
+			state,
+		}
 	}
 
 	async write(
 		key: string,
 		payload: unknown,
-		meta: { tags: string[]; timestamp: number; ttlSeconds?: number },
+		meta: { tags: string[]; timestamp: number; revalidate?: number | false; ttlSeconds?: number },
 	): Promise<void> {
 		const { kv, objects } = await this.resolve()
 		const bytes = toBytes(payload)
 		const rec: Stored = { v: 1, key, tags: meta.tags, timestamp: meta.timestamp }
+		if (meta.revalidate !== undefined) rec.revalidate = meta.revalidate
 		const large = objects !== undefined && bytes.length > this.threshold
 		if (large) {
 			rec.blob = this.blobKey()
 			await objects.put(rec.blob, bytes, 'application/json')
 		} else rec.payload = untext.decode(bytes)
 		this.remember(key, meta.tags)
-		const ttl = Math.min(meta.ttlSeconds ?? this.retention, this.retention)
+		let ttl = Math.min(meta.ttlSeconds ?? this.retention, this.retention)
+		if (typeof meta.revalidate === 'number') {
+			// A stale entry is still served while it rebuilds, so it must outlive its window:
+			// `revalidate` plus the retention, never less than the plain retention.
+			ttl = Math.max(ttl, meta.revalidate + this.retention)
+		}
 		const entryKey = this.entryKey(key)
 		const previous = objects !== undefined ? await this.previousBlob(kv, entryKey) : undefined
 		await kv.set(entryKey, text.encode(JSON.stringify(rec)), ttl)

@@ -55,10 +55,15 @@ export function createCacheHandler(options: CacheOptions = {}) {
 				if (entry === undefined) return null
 				const data = entry.payload as CacheData
 				const { stale } = entry.state
-				if (stale >= entry.timestamp) {
+				const isFetch = data.kind === 'FETCH' || ctx.kind === 'FETCH' || ctx.kindHint === 'fetch'
+				// A page whose revalidate window has passed is stale even when no tag was revalidated:
+				// served once as it is, then rebuilt in the background by Next.js.
+				const window = Number.isFinite(entry.revalidate)
+					? entry.timestamp + (entry.revalidate as number) * 1000
+					: Number.POSITIVE_INFINITY
+				if (stale >= entry.timestamp || make().now() >= window) {
 					// A data-cache (fetch) entry must be refetched; a page may be served once
 					// while it is rebuilt: lastModified -1 is Next.js's "stale" marker.
-					const isFetch = data.kind === 'FETCH' || ctx.kind === 'FETCH' || ctx.kindHint === 'fetch'
 					return isFetch ? null : { lastModified: -1, value: data }
 				}
 				return { lastModified: entry.timestamp, value: data }
@@ -72,7 +77,7 @@ export function createCacheHandler(options: CacheOptions = {}) {
 			try {
 				if (data === null || data === undefined) return await make().remove(key)
 				const tags = [...new Set([...(ctx.tags ?? []), ...headerTags(data)])]
-				await make().write(key, data, { tags, timestamp: make().now() })
+				await make().write(key, data, { tags, timestamp: make().now(), revalidate: ctx.revalidate })
 			} catch (error) {
 				make().onError(error, 'set')
 			}

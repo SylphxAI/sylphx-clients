@@ -72,12 +72,45 @@ describe('isr cache handler', () => {
 		expect((fresh?.value as ReturnType<typeof page>).html).toBe('v2')
 	})
 
+	test('a page past its revalidate window is served stale, then the rebuild serves the new body', async () => {
+		const { make, c } = setup()
+		const a = make()
+		const b = make()
+		await a.set('/t/1', page('v1'), { tags: [], revalidate: 30 })
+		c.t += 29_000
+		expect((await b.get('/t/1'))?.lastModified).toBe(c.t - 29_000) // still fresh
+		c.t += 2_000
+		const stale = await b.get('/t/1') // after the window, no tag call, any replica
+		expect(stale?.lastModified).toBe(-1)
+		expect((stale?.value as ReturnType<typeof page>).html).toBe('v1') // the stale body is served
+		await a.set('/t/1', page('v2'), { tags: [], revalidate: 30 }) // the background rebuild
+		const fresh = await b.get('/t/1')
+		expect(fresh?.lastModified).toBe(c.t)
+		expect((fresh?.value as ReturnType<typeof page>).html).toBe('v2')
+	})
+
+	test('revalidate false never goes stale, and a window longer than the retention is still served stale', async () => {
+		const { make, c } = setup()
+		const h = make()
+		await h.set('/forever', page('f'), { tags: [], revalidate: false })
+		c.t += 20 * 86_400_000
+		expect((await make().get('/forever'))?.lastModified).toBe(c.t - 20 * 86_400_000)
+		const long = make()
+		await long.set('/year', page('y'), { tags: [], revalidate: 400 * 86_400 })
+		// A fresh reader on another replica, before the window: the entry survived the retention.
+		c.t += 29 * 86_400_000
+		expect((await make().get('/year'))?.lastModified).toBe(c.t - 29 * 86_400_000)
+		c.t += 380 * 86_400_000
+		expect((await make().get('/year'))?.lastModified).toBe(-1)
+	})
+
 	test('a revalidated fetch entry is a miss, and soft tags from get count', async () => {
 		const { make, c } = setup()
 		const a = make()
 		const b = make()
 		await a.set('f1', { kind: 'FETCH', data: { body: 'x' }, revalidate: 60 }, { tags: ['t1'] })
 		c.t += 10
+		expect((await a.get('f1', { kind: 'FETCH' }))?.lastModified).not.toBe(-1) // inside the window
 		await b.revalidateTag(['t1'])
 		expect(await a.get('f1', { kind: 'FETCH' })).toBeNull()
 		await a.set('/p', page('p'), { tags: [] })

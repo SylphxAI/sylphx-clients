@@ -62,9 +62,10 @@ Works with Next.js 14.1 and later (`cacheHandler`), and Next.js 16
 - A lookup is one `MGET` for the entry and its tags. A replica remembers each
   key's tags after it first reads it; the first read of a key, or of an entry
   whose tags changed, costs a second `MGET`.
-- Entries are kept for 30 days (`retentionSeconds`). Next.js decides when a
-  page is due for revalidation from its own `revalidate` time, so a stale page
-  stays available to serve while it is rebuilt.
+- Entries are kept for 30 days (`retentionSeconds`). A page with a `revalidate`
+  window is served past that window and rebuilt in the background, on every
+  replica, from the entry's own write time; `revalidate: false` never expires.
+  Such an entry is kept at least its window plus the retention.
 - If KV or the Bucket is unreachable, a read counts as a miss (the page is
   rendered) and a failed write is logged. `revalidateTag` throws, so you learn
   that an invalidation did not land.
