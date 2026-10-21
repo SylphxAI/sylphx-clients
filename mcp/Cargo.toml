@@ -38,3 +38,8 @@ tokio = { version = "1", features = ["io-util", "macros", "rt-multi-thread"] }
 [[test]]
 name = "stdio"
 required-features = ["stdio"]
+
+[package.metadata.cargo-machete]
+# Reached only through `use mcp_kit::...` under the `stdio` feature, so the
+# textual scan cannot see the crate name.
+ignored = ["sylphx-mcp-kit"]
