@@ -47,6 +47,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use futures_util::{stream, StreamExt};
 use serde_json::{json, Value};
 use sylphx::sandboxes as sbx;
 use sylphx::Client;
@@ -75,6 +76,17 @@ pub const EXIT_INTERRUPTED: u8 = 130;
 pub const EXIT_LOST: u8 = 137;
 
 const USER: &str = "user";
+
+/// Bound network fan-out and retain input order, including errors. Drain every
+/// operation before returning so no upload or credential mint outlives setup.
+async fn pipeline<I, F, Fut, T>(items: I, work: F) -> Vec<T>
+where
+    I: IntoIterator,
+    F: FnMut(I::Item) -> Fut,
+    Fut: std::future::Future<Output = T>,
+{
+    stream::iter(items).map(work).buffered(4).collect().await
+}
 const SIZES: [&str; 3] = ["standard", "large", "xlarge"];
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 const MAX_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
@@ -935,6 +947,17 @@ struct Minted {
 }
 
 const SOURCE_AUTH_DIR: &str = "/home/user/.sylphx-source";
+const SOURCE_AUTH_WRITE: &str = r#"set -eu
+umask 077
+mkdir -p "$1"
+chmod 700 "$1"
+tmp=$(mktemp "$2.XXXXXX")
+trap 'rm -f -- "$tmp"' EXIT
+printf '%s' "$SYLPHX_SOURCE_HEADERS" > "$tmp"
+unset SYLPHX_SOURCE_HEADERS
+chmod 600 "$tmp"
+mv -f -- "$tmp" "$2"
+"#;
 const SOURCE_AUTH_PATH: &str = "/home/user/.sylphx-source/gitconfig";
 
 struct Sources {
@@ -992,6 +1015,9 @@ impl Run<'_> {
             },
         };
         let mut minted = Instant::now();
+        // Keep request phases ordered on every attempt: a failed workspace
+        // upload must be classified before dependency uploads start, and the
+        // next accepted lease must mint its own source grants.
         let mut sources = match self.source(&m.lease).await {
             Ok(source) => source,
             Err(e) => return Attempt::Done(Outcome::platform(e, false)),
@@ -1120,12 +1146,22 @@ impl Run<'_> {
         if let Some(origin) = build_source::origin(&self.o.root) {
             repositories.insert(origin);
         }
-        for repository in repositories {
-            match build_source::mint(&self.cache_url, key, &project, &repository, network, None)
-                .await
-            {
+        let minted = pipeline(repositories, |repository| {
+            let project = &project;
+            async move {
+                let minted =
+                    build_source::mint(&self.cache_url, key, project, &repository, network, None)
+                        .await;
+                if let Ok(minted) = &minted {
+                    self.remember_source(minted);
+                }
+                (repository, minted)
+            }
+        })
+        .await;
+        for (repository, minted) in minted {
+            match minted {
                 Ok(minted) => {
-                    self.remember_source(&minted);
                     sources.expires_at = sources.expires_at.min(minted.expires_at.unwrap_or(0));
                     build_source::merge_env(&mut sources.env, minted.env);
                     sources.repositories.insert(repository);
@@ -1175,31 +1211,23 @@ impl Run<'_> {
     }
 
     async fn write_source_headers(&self, guest: &Guest, bytes: &[u8]) -> Result<(), Fault> {
-        let none = BTreeMap::new();
-        let prepare = argv(&[
-            "/bin/sh",
-            "-c",
-            "umask 077; mkdir -p \"$1\"; chmod 700 \"$1\"",
-            "source-auth",
-            SOURCE_AUTH_DIR,
-        ]);
-        let (code, _, _) = guest.run(USER, &prepare, &none).await?;
-        if code != 0 {
-            return Err(Fault::Other(
-                "preparing private source credentials failed".into(),
-            ));
-        }
-        guest
-            .upload(&format!("{SOURCE_AUTH_PATH}.next"), USER, bytes)
-            .await?;
+        // Carry credentials only in the process environment, never argv or
+        // output. One action creates a private temporary file and publishes it
+        // atomically, including on renewal.
+        let env = BTreeMap::from([(
+            "SYLPHX_SOURCE_HEADERS".to_string(),
+            String::from_utf8(bytes.to_vec())
+                .map_err(|_| Fault::Other("invalid source credentials".into()))?,
+        )]);
         let publish = argv(&[
             "/bin/sh",
             "-c",
-            "chmod 600 \"$1.next\" && mv -f \"$1.next\" \"$1\"",
+            SOURCE_AUTH_WRITE,
             "source-auth",
+            SOURCE_AUTH_DIR,
             SOURCE_AUTH_PATH,
         ]);
-        let (code, _, _) = guest.run(USER, &publish, &none).await?;
+        let (code, _, _) = guest.run(USER, &publish, &env).await?;
         if code != 0 {
             return Err(Fault::Other(
                 "publishing private source credentials failed".into(),
@@ -1578,19 +1606,25 @@ impl Run<'_> {
         let tars = sync::tarballs(&self.o.root, &direct, &self.tree).map_err(Fault::Other)?;
         let lists = sync::lists(&self.tree, &plan, &filled);
         let s = format!("{WS}/.sylphx");
-        for (i, t) in tars.iter().enumerate() {
-            g.upload(&format!("{s}/in-{i:04}.tar.gz"), USER, t).await?;
-            up += t.len() as u64;
-        }
+        let mut uploads: Vec<(String, &[u8])> = tars
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (format!("{s}/in-{i:04}.tar.gz"), t.as_slice()))
+            .collect();
         for (name, body) in [
             ("drop", lists.drop.as_bytes()),
             ("add", lists.add.as_bytes()),
             ("remove", &lists.remove[..]),
         ] {
             if !body.is_empty() {
-                g.upload(&format!("{s}/{name}"), USER, body).await?;
-                up += body.len() as u64;
+                uploads.push((format!("{s}/{name}"), body));
             }
+        }
+        // Stop at the first fault: further requests could race the lease-loss
+        // check and must not outlive the failed workspace setup phase.
+        for (path, body) in uploads {
+            g.upload(&path, USER, body).await?;
+            up += body.len() as u64;
         }
         self.add(|st| {
             st.bytes_up += up;
@@ -1681,23 +1715,34 @@ impl Run<'_> {
         let mut up = 0u64;
         let mut args = vec!["/bin/sh", "-c", git_deps::APPLY, "git-deps-apply", WS];
         let names: Vec<String> = deps.iter().map(|(d, _)| d.name()).collect();
-        for ((d, tgz), n) in deps.iter().zip(&names) {
-            let packed;
-            let tgz = match tgz {
-                Some(path) => path,
-                None => {
-                    let cache = sync::source_cache(&self.o.root).join("git-deps");
-                    std::fs::create_dir_all(&cache)
-                        .map_err(|e| Fault::Other(format!("preparing git dependencies: {e}")))?;
-                    packed = git_deps::pack(&cache, d).map_err(Fault::Other)?;
-                    &packed
-                }
-            };
-            let bytes = std::fs::read(tgz)
-                .map_err(|e| Fault::Other(format!("reading {}: {e}", tgz.display())))?;
+        for result in pipeline(deps.iter().zip(&names), |((d, tgz), n)| async move {
+            let d = d.clone();
+            let tgz = tgz.clone();
+            let cache = sync::source_cache(&self.o.root).join("git-deps");
+            // Git/tar and filesystem reads are blocking; keep them off the
+            // async executor so independent grants/uploads keep progressing.
+            let bytes = tokio::task::spawn_blocking(move || {
+                let tgz = match tgz {
+                    Some(path) => path,
+                    None => {
+                        std::fs::create_dir_all(&cache).map_err(|e| {
+                            Fault::Other(format!("preparing git dependencies: {e}"))
+                        })?;
+                        git_deps::pack(&cache, &d).map_err(Fault::Other)?
+                    }
+                };
+                std::fs::read(&tgz)
+                    .map_err(|e| Fault::Other(format!("reading {}: {e}", tgz.display())))
+            })
+            .await
+            .map_err(|_| Fault::Other("packing git dependencies failed".into()))??;
             g.upload(&format!("{WS}/{}/in/{n}.tgz", git_deps::DIR), USER, &bytes)
                 .await?;
-            up += bytes.len() as u64;
+            Ok::<_, Fault>(bytes.len() as u64)
+        })
+        .await
+        {
+            up += result?;
         }
         args.extend(names.iter().map(String::as_str));
         self.add(|s| s.bytes_up += up);
@@ -2485,6 +2530,81 @@ mod tests {
     use super::*;
     use sylphx_build_lease::scripts::{PROVISION, RUN};
     use sylphx_build_lease::{provision_failure, BUILD_PACKAGES};
+
+    #[tokio::test]
+    async fn pipeline_bounds_concurrency_and_preserves_mint_upload_order() {
+        use std::sync::atomic::AtomicUsize;
+        let active = AtomicUsize::new(0);
+        let peak = AtomicUsize::new(0);
+        let completed = Mutex::new(Vec::new());
+        let results = pipeline(0..12, |i| {
+            let (active, peak, completed) = (&active, &peak, &completed);
+            async move {
+                let count = active.fetch_add(1, Ordering::SeqCst) + 1;
+                peak.fetch_max(count, Ordering::SeqCst);
+                // Reverse completion order within each window.
+                tokio::time::sleep(Duration::from_millis((4 - i % 4) * 5)).await;
+                completed.lock().unwrap().push(i);
+                active.fetch_sub(1, Ordering::SeqCst);
+                i
+            }
+        })
+        .await;
+        assert_eq!(results, (0..12).collect::<Vec<_>>());
+        assert_eq!(peak.load(Ordering::SeqCst), 4);
+        assert_ne!(*completed.lock().unwrap(), results);
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn pipeline_drains_work_and_returns_errors_in_input_order() {
+        let completed = Mutex::new(Vec::new());
+        let results = pipeline(0..8, |i| {
+            let completed = &completed;
+            async move {
+                tokio::task::yield_now().await;
+                completed.lock().unwrap().push(i);
+                match i {
+                    1 | 3 => Err(i),
+                    _ => Ok(i),
+                }
+            }
+        })
+        .await;
+        assert_eq!(completed.lock().unwrap().len(), 8);
+        assert_eq!(results.into_iter().collect::<Result<Vec<_>, _>>(), Err(1));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn source_headers_are_private_atomic_and_not_shell_expanded() {
+        use std::os::unix::fs::PermissionsExt;
+        let tree = GitTree::new();
+        let dir = tree.0.join("private");
+        let path = dir.join("gitconfig");
+        for secret in ["old", "new\n$(exit 1) ' \" \\\n"] {
+            let output = std::process::Command::new("/bin/sh")
+                .args(["-c", SOURCE_AUTH_WRITE, "source-auth"])
+                .arg(&dir)
+                .arg(&path)
+                .env("SYLPHX_SOURCE_HEADERS", secret)
+                .output()
+                .unwrap();
+            assert!(output.status.success());
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+            assert_eq!(std::fs::read(&path).unwrap(), secret.as_bytes());
+            assert_eq!(
+                std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777,
+                0o700
+            );
+            assert_eq!(
+                std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+            assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+        }
+    }
 
     fn parse(args: &[&str]) -> Result<Opts, String> {
         let mut root = Command::new("sylphx").arg(
