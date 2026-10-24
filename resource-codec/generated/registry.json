@@ -30409,7 +30409,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Sylphx's internal cost to serve, never billed. Returned only on GET/List\nto an authenticated org-wide platform seller operator holding billing:read\nand billing:operator:read; absent from customer and recordPayment responses.\nUnset without a recorded shadow price. Project costs conserve rounded org\nCOGS per price by the same deterministic allocation.",
+          "doc": "Sylphx's internal cost to serve, never billed. Returned only on GET/List\nto an authenticated org-wide platform credential holding billing:read and\nthe internal cost-read scope; absent from customer and recordPayment\nresponses. Unset without a recorded shadow price. Project costs conserve\nrounded org COGS per price by the same deterministic allocation.",
           "filterable": false,
           "name": "shadow_cost",
           "number": 12,
@@ -32996,7 +32996,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Sylphx's internal cost to serve, never billed. Returned only on GET/List\nto an authenticated org-wide platform seller operator holding billing:read\nand billing:operator:read; absent from customer responses. Unset without\na shadow price (internal Sandboxes classes rate at zero).",
+          "doc": "Sylphx's internal cost to serve, never billed. Returned only on GET/List\nto an authenticated org-wide platform credential holding billing:read and\nthe internal cost-read scope; absent from customer responses. Unset without\na shadow price (internal Sandboxes classes rate at zero).",
           "filterable": false,
           "name": "shadow_cost",
           "number": 9,

@@ -1,8 +1,5 @@
 {
   "commands": {
-    "ai": [
-      "top"
-    ],
     "api": [],
     "apply": [],
     "auth": [

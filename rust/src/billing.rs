@@ -630,10 +630,10 @@ pub struct InvoiceLine {
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub project: String,
     /// Sylphx's internal cost to serve, never billed. Returned only on GET/List
-    /// to an authenticated org-wide platform seller operator holding billing:read
-    /// and billing:operator:read; absent from customer and recordPayment responses.
-    /// Unset without a recorded shadow price. Project costs conserve rounded org
-    /// COGS per price by the same deterministic allocation.
+    /// to an authenticated org-wide platform credential holding billing:read and
+    /// the internal cost-read scope; absent from customer and recordPayment
+    /// responses. Unset without a recorded shadow price. Project costs conserve
+    /// rounded org COGS per price by the same deterministic allocation.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "shadowCost")]
@@ -1653,8 +1653,8 @@ pub struct UsageLine {
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
     /// Sylphx's internal cost to serve, never billed. Returned only on GET/List
-    /// to an authenticated org-wide platform seller operator holding billing:read
-    /// and billing:operator:read; absent from customer responses. Unset without
+    /// to an authenticated org-wide platform credential holding billing:read and
+    /// the internal cost-read scope; absent from customer responses. Unset without
     /// a shadow price (internal Sandboxes classes rate at zero).
     ///
     /// Field behavior: `output_only`.

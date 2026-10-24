@@ -3,11 +3,9 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `devices`, `build run`, `build cache env`, `events listen`, `work runner`, `mcp`, `completion`, `ai top`) is hand-written on the
+//! `api`, `devices`, `build run`, `build cache env`, `events listen`, `work runner`, `mcp`, `completion`) is hand-written on the
 //! same SDK.
 
-mod ai_top;
-mod ai_top_run;
 mod apply;
 mod auth;
 mod build_cache;
@@ -52,7 +50,6 @@ const HAND_WRITTEN: &[(&str, &str)] = &[
     ("build", "image"),
     ("build", "cache"),
     ("build", "source"),
-    ("ai", "top"),
     ("events", "listen"),
     ("data", "docs"),
 ];
@@ -278,32 +275,6 @@ fn cli(tree: &Tree) -> Command {
             // `events listen` is porcelain on the generated `events` service:
             // a topic relayed to a local URL through a temporary Queue.
             s.subcommand(events_listen::command())
-        } else if s.get_name() == "ai" {
-            s.subcommand(
-                Command::new("top")
-                    .about("Live view of the AI seats: usable and spent, resets, runway, accounts needed, what needs a person")
-                    .long_about("Reads GET /v1/operator/seats (a platform key with ai:operator:seats:read; --base-url points it at the gateway) and shows usable and spent seats, the earliest reset, runway and seats needed at the 24h and 6h pace, and red lines for anything that needs a person (login, on hold, alarm). The pace is measured from weekly-window readings this command keeps in its config directory, so it appears after about 6 hours of use. Sessions, subagents and API-equivalent value show n/a until the gateway receipts carry them.\n\nOn a terminal it refreshes until Ctrl-C; --once or a pipe prints once; --json (or -o json) prints one JSON document.")
-                    .arg(
-                        Arg::new("once")
-                            .long("once")
-                            .action(ArgAction::SetTrue)
-                            .help("Print once and exit (the default when stdout is not a terminal)"),
-                    )
-                    .arg(
-                        Arg::new("json")
-                            .long("json")
-                            .action(ArgAction::SetTrue)
-                            .help("Print one JSON document and exit (same as -o json)"),
-                    )
-                    .arg(
-                        Arg::new("interval")
-                            .long("interval")
-                            .value_name("SECONDS")
-                            .default_value("10")
-                            .value_parser(clap::value_parser!(u64).range(1..))
-                            .help("Seconds between refreshes in live mode"),
-                    ),
-            )
         } else {
             s
         };
@@ -618,20 +589,6 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             let (_, sm) = sub.subcommand().expect("checked");
             let creds = context::resolve(api_key.clone(), base_url.clone(), org);
             build_source::run(creds, sm, format).await
-        }
-        "ai" if sub.subcommand_name() == Some("top") => {
-            let (_, tm) = sub.subcommand().expect("checked");
-            ai_top_run::run(
-                &client().await?,
-                tm.get_flag("json") || format == Format::Json,
-                tm.get_flag("once"),
-                *tm.get_one::<u64>("interval").expect("defaulted"),
-            )
-            .await
-            .map_err(|e| match e {
-                ai_top_run::TopError::Api(e) => Failure::Api(e),
-                ai_top_run::TopError::Msg(m) => Failure::Refused(m),
-            })
         }
         "data" if sub.subcommand_name() == Some("docs") => {
             let (_, dm) = sub.subcommand().expect("checked");

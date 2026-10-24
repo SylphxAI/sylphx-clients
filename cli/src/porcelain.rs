@@ -24,7 +24,7 @@ pub fn command() -> Command {
 /// Every command that is not generated: top-level commands that are not a
 /// generated service (with their subcommands), and the subcommands a generated
 /// service carries that are neither a collection nor a service-level method
-/// (`auth enable`, `ai top`). Hidden commands are left out; `help` is
+/// (`auth enable`). Hidden commands are left out; `help` is
 /// implicit in clap and always present.
 pub fn manifest(cmd: &Command, tree: &Tree) -> Value {
     let visible = |c: &Command| !c.is_hide_set();
@@ -109,7 +109,6 @@ mod tests {
         assert!(c["help"].is_array());
         assert!(c["devices"].as_array().is_some_and(|d| !d.is_empty()));
         // Hand-written commands mounted on generated services.
-        assert_eq!(c["ai"], json!(["top"]));
         assert_eq!(c["auth"], json!(["enable", "status"]));
         // Generated services and the hidden build command are not porcelain.
         assert!(c["access"].is_null());

@@ -275,10 +275,10 @@ export interface InvoiceLine {
 	readonly project?: string
 	/**
 	 * Sylphx's internal cost to serve, never billed. Returned only on GET/List
-	 * to an authenticated org-wide platform seller operator holding billing:read
-	 * and billing:operator:read; absent from customer and recordPayment responses.
-	 * Unset without a recorded shadow price. Project costs conserve rounded org
-	 * COGS per price by the same deterministic allocation.
+	 * to an authenticated org-wide platform credential holding billing:read and
+	 * the internal cost-read scope; absent from customer and recordPayment
+	 * responses. Unset without a recorded shadow price. Project costs conserve
+	 * rounded org COGS per price by the same deterministic allocation.
 	 */
 	readonly shadowCost?: Money
 }
@@ -711,8 +711,8 @@ export interface UsageLine {
 	readonly service?: string
 	/**
 	 * Sylphx's internal cost to serve, never billed. Returned only on GET/List
-	 * to an authenticated org-wide platform seller operator holding billing:read
-	 * and billing:operator:read; absent from customer responses. Unset without
+	 * to an authenticated org-wide platform credential holding billing:read and
+	 * the internal cost-read scope; absent from customer responses. Unset without
 	 * a shadow price (internal Sandboxes classes rate at zero).
 	 */
 	readonly shadowCost?: Money
