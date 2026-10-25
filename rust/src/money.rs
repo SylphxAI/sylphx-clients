@@ -2930,6 +2930,19 @@ pub struct Price {
         alias = "defaultCurrency"
     )]
     pub default_currency: String,
+    /// Optional introductory unit amounts for the first paid billing period of a
+    /// new subject's subscription to this product. `unit_amounts` remains the
+    /// renewal price. Must cover exactly the same currencies, each strictly lower
+    /// than its renewal amount and greater than zero. Recurring prices only;
+    /// cannot be combined with a free trial. Web checkout accepts one line item
+    /// for an introductory offer and does not combine it with promotion codes.
+    /// Store introductory offers are configured and enforced by the store.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "introductoryUnitAmounts"
+    )]
+    pub introductory_unit_amounts: std::collections::BTreeMap<String, String>,
 }
 
 /// A Product is one thing sold, with its prices and the features it grants.

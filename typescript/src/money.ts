@@ -1407,6 +1407,16 @@ export interface Price {
 	 * currency is immutable there.
 	 */
 	defaultCurrency?: string
+	/**
+	 * Optional introductory unit amounts for the first paid billing period of a
+	 * new subject's subscription to this product. `unit_amounts` remains the
+	 * renewal price. Must cover exactly the same currencies, each strictly lower
+	 * than its renewal amount and greater than zero. Recurring prices only;
+	 * cannot be combined with a free trial. Web checkout accepts one line item
+	 * for an introductory offer and does not combine it with promotion codes.
+	 * Store introductory offers are configured and enforced by the store.
+	 */
+	introductoryUnitAmounts?: Record<string, string>
 }
 
 /** A Product is one thing sold, with its prices and the features it grants. */
@@ -2823,6 +2833,7 @@ runtime.registerSchemas({
 		['taxBehavior', 'tax_behavior'],
 		['trialDays', 'trial_days'],
 		['defaultCurrency', 'default_currency'],
+		['introductoryUnitAmounts', 'introductory_unit_amounts', undefined, 'map'],
 	],
 	'sylphx.money.v1.Product': [
 		['displayName', 'display_name'],

@@ -79026,6 +79026,28 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional introductory unit amounts for the first paid billing period of a\nnew subject's subscription to this product. `unit_amounts` remains the\nrenewal price. Must cover exactly the same currencies, each strictly lower\nthan its renewal amount and greater than zero. Recurring prices only;\ncannot be combined with a free trial. Web checkout accepts one line item\nfor an introductory offer and does not combine it with promotion codes.\nStore introductory offers are configured and enforced by the store.",
+          "filterable": false,
+          "name": "introductory_unit_amounts",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
         }
       ],
       "name": "sylphx.money.v1.Price",

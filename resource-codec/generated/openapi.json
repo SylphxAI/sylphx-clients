@@ -26037,6 +26037,13 @@
             "description": "The processor's base currency: an upper-case ISO 4217 code that is a key of\n`unit_amounts`. Unset uses the first currency in code order. Changing it\ncreates a new processor price under the same lookup key, because the base\ncurrency is immutable there.",
             "type": "string"
           },
+          "introductory_unit_amounts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional introductory unit amounts for the first paid billing period of a\nnew subject's subscription to this product. `unit_amounts` remains the\nrenewal price. Must cover exactly the same currencies, each strictly lower\nthan its renewal amount and greater than zero. Recurring prices only;\ncannot be combined with a free trial. Web checkout accepts one line item\nfor an introductory offer and does not combine it with promotion codes.\nStore introductory offers are configured and enforced by the store.",
+            "type": "object"
+          },
           "key": {
             "description": "The lookup key the app uses; `^[a-z][a-z0-9_]{0,63}$`, unique in the\ncatalog.",
             "type": "string"
