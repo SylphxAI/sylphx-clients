@@ -118,6 +118,8 @@ pub struct FlagSpec {
     #[serde(default)]
     pub required: bool,
     #[serde(default)]
+    pub sensitive: bool,
+    #[serde(default)]
     pub repeated: bool,
     #[serde(default)]
     pub values: Option<Vec<String>>,

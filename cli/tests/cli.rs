@@ -247,6 +247,373 @@ async fn run(sb: &Sandbox, url: &str, args: &[&str]) -> std::process::Output {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn file_flag_conflicts_are_refused_before_a_request() {
+    for (collection, resource, field, flag, file_value, flag_value) in [
+        (
+            "volumes",
+            "volume",
+            "storage_class",
+            "--spec.storage-class",
+            "local",
+            "standard",
+        ),
+        ("leases", "lease", "region", "--spec.region", "gra", "bhs"),
+    ] {
+        let sb = Sandbox::new(&format!("file-conflict-{collection}"));
+        let path = sb.dir.join("request.json");
+        let mut spec = serde_json::Map::new();
+        spec.insert(field.into(), json!(file_value));
+        let mut body = serde_json::Map::new();
+        body.insert(resource.into(), json!({"spec": spec}));
+        std::fs::write(&path, Value::Object(body).to_string()).unwrap();
+        let (url, log) = serve(vec![(200, json!({}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "sandboxes",
+                collection,
+                "create",
+                "-f",
+                path.to_str().unwrap(),
+                flag,
+                flag_value,
+            ],
+        )
+        .await;
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(2), "{err}");
+        assert!(
+            err.contains("conflict")
+                && err.contains(flag)
+                && err.contains(file_value)
+                && err.contains(flag_value),
+            "{err}"
+        );
+        assert!(log.lock().is_empty());
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn volume_create_accepts_matching_and_missing_file_fields() {
+    for file_class in [Some("local"), None] {
+        let sb = Sandbox::new(&format!("file-match-{file_class:?}"));
+        let path = sb.dir.join("request.yaml");
+        let mut spec = json!({"size_gib": 10});
+        if let Some(class) = file_class {
+            spec["storage_class"] = json!(class);
+        }
+        std::fs::write(
+            &path,
+            serde_yaml_ng::to_string(&json!({"volume_id": "test", "volume": {"spec": spec}}))
+                .unwrap(),
+        )
+        .unwrap();
+        let (url, log) = serve(vec![(200, json!({"name": format!("{ENV}/volumes/test")}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "sandboxes",
+                "volumes",
+                "create",
+                "test",
+                "-f",
+                path.to_str().unwrap(),
+                "--spec.storage-class",
+                "local",
+                "--spec.region",
+                "gra",
+                "-o",
+                "json",
+            ],
+        )
+        .await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let log = log.lock();
+        assert_eq!(log.len(), 1);
+        let body: Value = serde_json::from_str(&log[0].body).unwrap();
+        assert_eq!(body["spec"]["storage_class"], "local");
+        assert_eq!(body["spec"]["region"], "gra");
+        assert_eq!(body["spec"]["size_gib"], 10);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn lease_create_without_a_webhook_reaches_the_api_including_dry_run() {
+    for dry_run in [false, true] {
+        let sb = Sandbox::new(&format!("lease-no-webhook-{dry_run}"));
+        let (url, log) = serve(vec![(200, json!({"name": format!("{ENV}/leases/test")}))]).await;
+        let mut args = vec![
+            "sandboxes",
+            "leases",
+            "create",
+            "test",
+            "--spec.shape",
+            "standard",
+            "--spec.ttl",
+            "60s",
+            "--spec.image",
+            "alpine",
+            "--no-wait",
+            "-o",
+            "json",
+        ];
+        if dry_run {
+            args.push("--dry-run");
+        }
+        let out = run(&sb, &url, &args).await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let log = log.lock();
+        assert_eq!(log.len(), 1);
+        let body: Value = serde_json::from_str(&log[0].body).unwrap();
+        assert!(body["spec"].get("webhook").is_none(), "{body}");
+        assert_eq!(log[0].line.contains("validate_only=true"), dry_run);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn lease_create_accepts_matching_and_missing_file_fields() {
+    for file_region in [Some("gra"), None] {
+        let sb = Sandbox::new(&format!("lease-file-match-{file_region:?}"));
+        let path = sb.dir.join("request.json");
+        let mut spec = json!({"shape": "standard", "ttl": "60s", "image": "alpine"});
+        if let Some(region) = file_region {
+            spec["region"] = json!(region);
+        }
+        std::fs::write(
+            &path,
+            json!({"lease_id": "test", "lease": {"spec": spec}}).to_string(),
+        )
+        .unwrap();
+        let (url, log) = serve(vec![(200, json!({}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "sandboxes",
+                "leases",
+                "create",
+                "test",
+                "-f",
+                path.to_str().unwrap(),
+                "--spec.region",
+                "gra",
+                "--no-wait",
+            ],
+        )
+        .await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let log = log.lock();
+        assert_eq!(log.len(), 1);
+        let sent: Value = serde_json::from_str(&log[0].body).unwrap();
+        assert_eq!(sent["spec"]["region"], "gra");
+        assert_eq!(sent["spec"]["image"], "alpine");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_positional_conflicts_are_refused_before_a_request() {
+    for (collection, verb, body) in [
+        ("volumes", "create", json!({"volume_id": "file-id"})),
+        (
+            "volumes",
+            "get",
+            json!({"name": format!("{ENV}/volumes/file-id")}),
+        ),
+        ("leases", "create", json!({"lease_id": "file-id"})),
+    ] {
+        let sb = Sandbox::new(&format!("positional-conflict-{collection}-{verb}"));
+        let path = sb.dir.join("request.json");
+        std::fs::write(&path, body.to_string()).unwrap();
+        let (url, log) = serve(vec![(200, json!({}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "sandboxes",
+                collection,
+                verb,
+                "flag-id",
+                "-f",
+                path.to_str().unwrap(),
+            ],
+        )
+        .await;
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(2), "{err}");
+        assert!(err.contains("conflict"), "{err}");
+        assert!(log.lock().is_empty());
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn password_file_conflicts_never_print_either_secret() {
+    let sb = Sandbox::new("password-conflict");
+    let path = sb.dir.join("request.json");
+    let file_secret = "synthetic-file-password-16118";
+    let flag_secret = "synthetic-flag-password-16118";
+    std::fs::write(
+        &path,
+        json!({"end_user": {"password": file_secret}}).to_string(),
+    )
+    .unwrap();
+    let (url, log) = serve(vec![(200, json!({}))]).await;
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "auth",
+            "end-users",
+            "create",
+            "-f",
+            path.to_str().unwrap(),
+            "--password",
+            flag_secret,
+        ],
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("conflict"));
+    for output in [&out.stdout, &out.stderr] {
+        let text = String::from_utf8_lossy(output);
+        assert!(
+            !text.contains(file_secret) && !text.contains(flag_secret),
+            "secret reached output"
+        );
+    }
+    assert!(log.lock().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn equivalent_numeric_file_and_flag_values_are_accepted() {
+    for (service, collection, resource, field, flag, file_value) in [
+        (
+            "data",
+            "databases",
+            "database",
+            "compute_units",
+            "--spec.compute-units",
+            json!(2.0),
+        ),
+        (
+            "sandboxes",
+            "leases",
+            "lease",
+            "budget",
+            "--spec.budget.max-cpu-seconds",
+            json!({"max_cpu_seconds": "2"}),
+        ),
+    ] {
+        let sb = Sandbox::new(&format!("numeric-match-{collection}"));
+        let path = sb.dir.join("request.json");
+        let mut body = json!({resource: {"spec": {field: file_value}}});
+        if collection == "leases" {
+            body[resource]["spec"]["shape"] = json!("standard");
+            body[resource]["spec"]["ttl"] = json!("60s");
+        }
+        std::fs::write(&path, body.to_string()).unwrap();
+        let (url, log) = serve(vec![(200, json!({}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                service,
+                collection,
+                "create",
+                "test",
+                "-f",
+                path.to_str().unwrap(),
+                flag,
+                "2",
+                "--no-wait",
+            ],
+        )
+        .await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let log = log.lock();
+        assert_eq!(log.len(), 1);
+        let sent: Value = serde_json::from_str(&log[0].body).unwrap();
+        if collection == "leases" {
+            assert_eq!(sent["spec"][field]["max_cpu_seconds"], 2);
+        } else {
+            assert_eq!(sent["spec"][field], 2);
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn matching_update_flags_preserve_file_edits_and_explicit_masks() {
+    for explicit_mask in [false, true] {
+        let sb = Sandbox::new(&format!("file-update-mask-{explicit_mask}"));
+        let path = sb.dir.join("request.json");
+        let key = format!("{ENV}/api_keys/key_a");
+        let mut body = json!({"api_key": {"name": key, "meta": {"etag": "k3", "display_name": "file edit"}, "spec": {"label": "ci"}}});
+        if explicit_mask {
+            body["update_mask"] = json!("spec.label,meta.display_name");
+        }
+        std::fs::write(&path, body.to_string()).unwrap();
+        let (url, log) = serve(vec![(200, json!({"name": key}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "access",
+                "api-keys",
+                "update",
+                "key_a",
+                "-f",
+                path.to_str().unwrap(),
+                "--spec.label",
+                "ci",
+            ],
+        )
+        .await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let log = log.lock();
+        assert_eq!(log.len(), 1);
+        assert_eq!(
+            log[0].line.contains("update_mask="),
+            explicit_mask,
+            "{}",
+            log[0].line
+        );
+        if explicit_mask {
+            assert!(
+                log[0]
+                    .line
+                    .contains("update_mask=spec.label%2Cmeta.display_name"),
+                "{}",
+                log[0].line
+            );
+        }
+        let sent: Value = serde_json::from_str(&log[0].body).unwrap();
+        assert_eq!(sent["meta"]["display_name"], "file edit");
+        assert_eq!(sent["spec"]["label"], "ci");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_link_file_in_another_shape_never_shadows_the_key_scope() {
     // The older `{orgId, projectId}` file names no org, project or env: it is
     // skipped with a warning, and the key's own env (whoami) is the default.

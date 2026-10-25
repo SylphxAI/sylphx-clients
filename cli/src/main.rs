@@ -94,7 +94,7 @@ fn cli(tree: &Tree) -> Command {
                 .long("from-file")
                 .short('f')
                 .value_name("PATH")
-                .help("Read the whole request (wire JSON or YAML) from a file; flags override it"),
+                .help("Read the whole request (wire JSON or YAML) from a file; conflicting flags are refused"),
         ))
         .arg(global(
             Arg::new("no-wait")
@@ -1120,6 +1120,30 @@ fn singleton_name(parent: String, suffix: Option<&str>) -> String {
     }
 }
 
+/// Compare numeric flags using their protobuf value, not their JSON spelling.
+fn same_field_value(existing: &Value, value: &Value, ty: &str) -> bool {
+    if existing == value {
+        return true;
+    }
+    match ty {
+        "number" => existing
+            .as_f64()
+            .zip(value.as_f64())
+            .is_some_and(|(a, b)| a == b),
+        "int" => existing.as_str().is_some_and(|s| {
+            s.parse::<i64>()
+                .ok()
+                .zip(value.as_i64())
+                .is_some_and(|(a, b)| a == b)
+                || s.parse::<u64>()
+                    .ok()
+                    .zip(value.as_u64())
+                    .is_some_and(|(a, b)| a == b)
+        }),
+        _ => false,
+    }
+}
+
 async fn generated(
     client: &Client,
     method: &MethodCmd,
@@ -1146,6 +1170,28 @@ async fn generated(
         }
         None => Map::new(),
     };
+    let file_args = Value::Object(args.clone());
+    let (values, mask) = tree::flag_values(method, mm)?;
+    for (field, value) in &values {
+        if let Some(existing) = tree::get_path(&file_args, field) {
+            let flag = method
+                .flags
+                .iter()
+                .find(|f| &f.field == field)
+                .expect("flag field");
+            if !same_field_value(existing, value, &flag.r#type) {
+                let detail = if flag.sensitive {
+                    ": values redacted".to_string()
+                } else {
+                    format!(": file value {existing}, flag value {value}")
+                };
+                return Err(Failure::Usage(format!(
+                    "{} conflicts with --from-file at {field}{detail}",
+                    flag.flag
+                )));
+            }
+        }
+    }
     let mut defaults = Defaults {
         client,
         link: None,
@@ -1178,10 +1224,18 @@ async fn generated(
             _ => None,
         };
         if let Some(v) = value {
-            tree::set_path(&mut args, &p.field, Value::String(v));
+            let value = Value::String(v);
+            if let Some(existing) = tree::get_path(&file_args, &p.field) {
+                if existing != &value {
+                    return Err(Failure::Usage(format!(
+                        "{} conflicts with --from-file at {}: file value {existing}, positional value {value}",
+                        p.arg, p.field
+                    )));
+                }
+            }
+            tree::set_path(&mut args, &p.field, value);
         }
     }
-    let (values, mask) = tree::flag_values(method, mm)?;
     for (field, value) in values {
         tree::set_path(&mut args, &field, value);
     }
@@ -1194,7 +1248,13 @@ async fn generated(
             tree::set_path(&mut args, &f.field, Value::String(v));
         }
     }
-    if method.is_update() && !mask.is_empty() && !args.contains_key("update_mask") {
+    // A file is a full request: preserve its explicit mask, or its unmasked
+    // update semantics. Only flags-only updates derive a mask from flags.
+    if method.is_update()
+        && root.get_one::<String>("from-file").is_none()
+        && !mask.is_empty()
+        && !args.contains_key("update_mask")
+    {
         args.insert("update_mask".into(), Value::String(mask.join(",")));
     }
     let missing = tree::missing_required(method, &Value::Object(args.clone()));
