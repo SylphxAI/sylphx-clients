@@ -111483,10 +111483,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Warm machine bounds.",
+          "doc": "Optional overrides over warm capacity sized automatically from recent lease demand.",
           "filterable": false,
           "name": "warm",
           "number": 3,
@@ -111614,7 +111614,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Warm machines kept booted.",
+          "doc": "Optional floor over automatic demand sizing; defaults to zero.",
           "filterable": false,
           "name": "min",
           "number": 1,
@@ -111633,7 +111633,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Warm machines at most; at most 10 on free and 100 on Pro.",
+          "doc": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
           "filterable": false,
           "name": "max",
           "number": 2,

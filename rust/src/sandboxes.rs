@@ -1924,9 +1924,7 @@ pub struct PoolSpec {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub image: String,
-    /// Warm machine bounds.
-    ///
-    /// Field behavior: `required`.
+    /// Optional overrides over warm capacity sized automatically from recent lease demand.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warm: Option<PoolWarm>,
     /// Warm machines older than this are recycled; 5 minutes to 2 hours.
@@ -1981,10 +1979,10 @@ pub struct PoolStatus {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct PoolWarm {
-    /// Warm machines kept booted.
+    /// Optional floor over automatic demand sizing; defaults to zero.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub min: i32,
-    /// Warm machines at most; at most 10 on free and 100 on Pro.
+    /// Optional ceiling over automatic demand sizing; zero uses the deployment limit.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub max: i32,
 }

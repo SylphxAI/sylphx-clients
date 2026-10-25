@@ -26659,13 +26659,13 @@
                 {
                   "field": "pool.spec.warm.min",
                   "flag": "--spec.warm.min",
-                  "summary": "Warm machines kept booted.",
+                  "summary": "Optional floor over automatic demand sizing; defaults to zero.",
                   "type": "int"
                 },
                 {
                   "field": "pool.spec.warm.max",
                   "flag": "--spec.warm.max",
-                  "summary": "Warm machines at most; at most 10 on free and 100 on Pro.",
+                  "summary": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
                   "type": "int"
                 },
                 {
@@ -26731,13 +26731,13 @@
                 {
                   "field": "pool.spec.warm.min",
                   "flag": "--spec.warm.min",
-                  "summary": "Warm machines kept booted.",
+                  "summary": "Optional floor over automatic demand sizing; defaults to zero.",
                   "type": "int"
                 },
                 {
                   "field": "pool.spec.warm.max",
                   "flag": "--spec.warm.max",
-                  "summary": "Warm machines at most; at most 10 on free and 100 on Pro.",
+                  "summary": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
                   "type": "int"
                 },
                 {

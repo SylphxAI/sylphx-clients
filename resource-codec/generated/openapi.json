@@ -37234,13 +37234,12 @@
           },
           "warm": {
             "$ref": "#/components/schemas/sylphx.sandboxes.v1.PoolWarm",
-            "description": "Warm machine bounds."
+            "description": "Optional overrides over warm capacity sized automatically from recent lease demand."
           }
         },
         "required": [
           "shape",
-          "image",
-          "warm"
+          "image"
         ],
         "type": "object"
       },
@@ -37280,12 +37279,12 @@
         "description": "PoolWarm bounds a Pool's warm machines.",
         "properties": {
           "max": {
-            "description": "Warm machines at most; at most 10 on free and 100 on Pro.",
+            "description": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
             "format": "int32",
             "type": "integer"
           },
           "min": {
-            "description": "Warm machines kept booted.",
+            "description": "Optional floor over automatic demand sizing; defaults to zero.",
             "format": "int32",
             "type": "integer"
           }

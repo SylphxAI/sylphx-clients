@@ -995,7 +995,7 @@ export interface PoolSpec {
 	shape?: string
 	/** The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`. */
 	image?: string
-	/** Warm machine bounds. */
+	/** Optional overrides over warm capacity sized automatically from recent lease demand. */
 	warm?: PoolWarm
 	/** Warm machines older than this are recycled; 5 minutes to 2 hours. */
 	maxAge?: string
@@ -1015,9 +1015,9 @@ export interface PoolStatus {
 
 /** PoolWarm bounds a Pool's warm machines. */
 export interface PoolWarm {
-	/** Warm machines kept booted. */
+	/** Optional floor over automatic demand sizing; defaults to zero. */
 	min?: number
-	/** Warm machines at most; at most 10 on free and 100 on Pro. */
+	/** Optional ceiling over automatic demand sizing; zero uses the deployment limit. */
 	max?: number
 }
 

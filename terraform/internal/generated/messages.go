@@ -990,7 +990,7 @@ func sandboxesPoolSpec() []def.Field {
 	return []def.Field{
 		{Name: "shape", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "The shape."},
 		{Name: "image", Kind: def.String, Flags: def.Required, Doc: "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`."},
-		{Name: "warm", Kind: def.Message, Msg: sandboxesPoolWarm, Flags: def.Required, Doc: "Warm machine bounds."},
+		{Name: "warm", Kind: def.Message, Msg: sandboxesPoolWarm, Doc: "Optional overrides over warm capacity sized automatically from recent lease demand."},
 		{Name: "max_age", Kind: def.Duration, Doc: "Warm machines older than this are recycled; 5 minutes to 2 hours."},
 	}
 }
@@ -1008,8 +1008,8 @@ func sandboxesPoolStatus() []def.Field {
 // sandboxesPoolWarm is `sylphx.sandboxes.v1.PoolWarm`.
 func sandboxesPoolWarm() []def.Field {
 	return []def.Field{
-		{Name: "min", Kind: def.Int32, Doc: "Warm machines kept booted."},
-		{Name: "max", Kind: def.Int32, Doc: "Warm machines at most; at most 10 on free and 100 on Pro."},
+		{Name: "min", Kind: def.Int32, Doc: "Optional floor over automatic demand sizing; defaults to zero."},
+		{Name: "max", Kind: def.Int32, Doc: "Optional ceiling over automatic demand sizing; zero uses the deployment limit."},
 	}
 }
 

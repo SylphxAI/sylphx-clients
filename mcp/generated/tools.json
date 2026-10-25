@@ -36773,15 +36773,15 @@
                   },
                   "warm": {
                     "additionalProperties": false,
-                    "description": "Warm machine bounds.",
+                    "description": "Optional overrides over warm capacity sized automatically from recent lease demand.",
                     "properties": {
                       "max": {
-                        "description": "Warm machines at most; at most 10 on free and 100 on Pro.",
+                        "description": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
                         "format": "int32",
                         "type": "integer"
                       },
                       "min": {
-                        "description": "Warm machines kept booted.",
+                        "description": "Optional floor over automatic demand sizing; defaults to zero.",
                         "format": "int32",
                         "type": "integer"
                       }
@@ -36791,8 +36791,7 @@
                 },
                 "required": [
                   "shape",
-                  "image",
-                  "warm"
+                  "image"
                 ],
                 "type": "object"
               }
@@ -36895,15 +36894,15 @@
                   },
                   "warm": {
                     "additionalProperties": false,
-                    "description": "Warm machine bounds.",
+                    "description": "Optional overrides over warm capacity sized automatically from recent lease demand.",
                     "properties": {
                       "max": {
-                        "description": "Warm machines at most; at most 10 on free and 100 on Pro.",
+                        "description": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
                         "format": "int32",
                         "type": "integer"
                       },
                       "min": {
-                        "description": "Warm machines kept booted.",
+                        "description": "Optional floor over automatic demand sizing; defaults to zero.",
                         "format": "int32",
                         "type": "integer"
                       }
@@ -36913,8 +36912,7 @@
                 },
                 "required": [
                   "shape",
-                  "image",
-                  "warm"
+                  "image"
                 ],
                 "type": "object"
               }
