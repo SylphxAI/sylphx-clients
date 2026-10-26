@@ -105,3 +105,25 @@ match rs.authorize(auth_header, &["mcp:tools"]).await {
 This crate is generated from the Sylphx schema registry by `sylphx-gen`; do
 not edit it by hand. Source: `clients/rust` in the Sylphx monorepo, published
 from its MIT mirror.
+
+## Identifier-first Auth
+
+With the default `http` feature, `sylphx::auth::client::AuthClient` exposes
+`r#continue(ContinueRequest)` and `continue_verify(ContinueVerifyRequest)`.
+Construct it with `AuthClient::new(publishable_key, original_user_agent)`;
+never pass a secret key. Both calls forward the browser's original User-Agent,
+which binds the flow. Use the same client/header for both calls.
+
+`ContinueRequest::default()` uses `SessionMode::Server`. Continue returns
+`ContinueResponse::Password` or `EmailOtp { flow, expires_in }`. Use
+`method: Some(ContinueMethod::EmailOtp)` for an explicit email fallback.
+Verification returns `ContinueVerifyResponse::Ticket { ticket, expires_in }` in
+server mode; redeem the ticket on your backend with the secret key, forwarding
+the same User-Agent, and store the resulting bearer in an HttpOnly cookie.
+Only explicit `SessionMode::Browser` returns `ContinueVerifyResponse::Session`.
+
+`ContinueVerifyRequest` carries `flow`, `code`, and optional `factor_proofs`.
+`AuthClientError::MfaRequired` preserves the 401 error; retry the same flow with
+TOTP or recovery-code proofs. `AuthClientError::RateLimited` preserves 429 and
+`AuthApiError::retry_after_seconds` from `Retry-After` (or JSON `retry_after`).
+The client does not replay these single-use mutations automatically.

@@ -4874,6 +4874,10 @@ impl<'a, T: crate::runtime::Transport> OauthClientsCollection<'a, T> {
     }
 }
 
+/// Hand-written (not generated): see `auth/client.rs`.
+#[cfg(feature = "http")]
+pub mod client;
+
 /// Hand-written (not generated): see `auth/verify.rs`.
 #[cfg(feature = "verify")]
 pub mod verify;

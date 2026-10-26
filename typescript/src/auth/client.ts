@@ -2,8 +2,10 @@
 /**
  * A browser client for Sylphx Auth's client API (`/v1/client/*`). It holds a
  * publishable key (public by design), never a secret, and the session is a
- * bearer token (`session_mode: "browser"`). There is no cookie mode: apps that
- * want an HttpOnly cookie redeem the sign-in ticket on their own backend with
+ * bearer token for password sign-in (`session_mode: "browser"`). Continue
+ * defaults to server mode and returns a one-time ticket instead. There is no
+ * cookie mode: apps that want an HttpOnly cookie redeem the sign-in ticket
+ * on their own backend with
  * the secret key. Zero dependencies (`fetch` only).
  *
  *     import { createAuthClient } from '@sylphx/sdk/auth/client'
@@ -52,7 +54,7 @@ export class AuthClientError extends Error {
 	readonly code: AuthClientErrorCode
 	readonly status: number
 	readonly authority: string | undefined
-	/** Seconds from `Retry-After`, on `locked_out` and `rate_limited`. */
+	/** Seconds from `Retry-After` (or JSON `retry_after`) on rate-limit errors. */
 	readonly retryAfterSeconds: number | undefined
 
 	constructor(
@@ -155,6 +157,29 @@ export interface FactorProof {
 	response: string
 }
 
+export type AuthContinue =
+	| { step: 'password' }
+	| { step: 'email_otp'; flow: string; expiresIn: number }
+
+export interface AuthTicket {
+	ticket: string
+	expiresIn: number
+}
+
+export interface AuthContinueInput {
+	email: string
+	method?: 'email_otp'
+	captchaToken?: string
+	/** Defaults to server: verification returns a ticket, not a browser bearer. */
+	sessionMode?: 'server' | 'browser'
+}
+
+export interface AuthContinueVerifyInput {
+	flow: string
+	code: string
+	factorProofs?: FactorProof[]
+}
+
 export interface PrivacyStoreCount {
 	store: string
 	rows: number
@@ -190,6 +215,8 @@ export interface AuthClientOptions {
 	fetch?: FetchFn
 	/** Default `'omit'` (the service never needs cookies). `'include'` is opt-in. */
 	credentials?: RequestCredentials
+	/** Original browser User-Agent when proxying Continue through a server. */
+	userAgent?: string
 	/** The signed-in session token, when restoring one. */
 	sessionToken?: string
 }
@@ -287,13 +314,17 @@ export function createAuthClient(options: AuthClientOptions) {
 		} catch {}
 		const code = typeof body.code === 'string' ? body.code : `http_${res.status}`
 		const raw = res.headers.get('retry-after')
-		const retry = raw !== null && /^\d+$/.test(raw.trim()) ? Number(raw) : undefined
+		const retry = raw !== null && /^\d+$/.test(raw.trim())
+			? Number(raw)
+			: typeof body.retry_after === 'number' && Number.isFinite(body.retry_after) && body.retry_after >= 0
+				? body.retry_after : undefined
 		const Cls = ERROR_CLASSES[code] ?? AuthClientError
 		throw new Cls(code, res.status, typeof body.error === 'string' ? body.error : res.statusText, body.authority, retry)
 	}
 
-	async function send(method: string, target: string, opts: { body?: unknown; session?: boolean } = {}): Promise<Response> {
+	async function send(method: string, target: string, opts: { body?: unknown; session?: boolean; forwardUserAgent?: boolean } = {}): Promise<Response> {
 		const headers: Record<string, string> = {}
+		if (opts.forwardUserAgent && options.userAgent !== undefined) headers['user-agent'] = options.userAgent
 		if (opts.body !== undefined) headers['content-type'] = 'application/json'
 		if (opts.session) {
 			if (token === undefined) throw new AuthUnauthorizedError('unauthorized', 401, 'not signed in')
@@ -322,6 +353,38 @@ export function createAuthClient(options: AuthClientOptions) {
 	}
 
 	return {
+		/** Identifier-first sign-in. Server proxies must forward the original User-Agent. */
+		async continue(input: AuthContinueInput): Promise<AuthContinue> {
+			const w = await json(await send('POST', url('/v1/client/continue'), {
+				forwardUserAgent: true,
+				body: {
+					email: input.email,
+					method: input.method,
+					captcha_token: input.captchaToken,
+					session_mode: input.sessionMode ?? 'server',
+				},
+			}))
+			return w.step === 'password' ? { step: 'password' }
+				: { step: 'email_otp', flow: w.flow, expiresIn: w.expires_in }
+		},
+
+		/** Complete the flow with the same User-Agent. MFA errors leave the flow usable. */
+		async continueVerify(input: AuthContinueVerifyInput): Promise<AuthTicket | AuthSignIn> {
+			const w = await json(await send('POST', url('/v1/client/continue/verify'), {
+				forwardUserAgent: true,
+				body: {
+					flow: input.flow,
+					code: input.code,
+					factor_proofs: input.factorProofs?.map((p) => ({
+						factor_type: p.factorType, factor_id: p.factorId, response: p.response,
+					})),
+				},
+			}))
+			return typeof w.ticket === 'string'
+				? { ticket: w.ticket, expiresIn: w.expires_in }
+				: remember(signIn(w))
+		},
+
 		/** GET /v1/client/config: methods, social providers, branding. */
 		async config(): Promise<AuthConfig> {
 			const w = await json(await send('GET', url('/v1/client/config')))

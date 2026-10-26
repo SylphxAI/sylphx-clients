@@ -180,3 +180,26 @@ const { session } = await redeemed.json()
 ```
 
 `@sylphx/nextjs` ships this pattern as a route handler.
+
+## Identifier-first Auth
+
+`createAuthClient` (also exported from `@sylphx/sdk/auth/client`) supports
+`continue({ email, method?, captchaToken?, sessionMode? })` and
+`continueVerify({ flow, code, factorProofs? })`. Continue returns either
+`{ step: 'password' }` or `{ step: 'email_otp', flow, expiresIn }`.
+`method: 'email_otp'` explicitly selects the email fallback.
+
+Continue defaults to `sessionMode: 'server'`: verification returns
+`{ ticket, expiresIn }`. Send that one-time ticket to your backend for redemption
+with the secret key and an HttpOnly session cookie. Only explicit
+`sessionMode: 'browser'` returns `{ user, session }` and remembers the bearer.
+Do not pass a secret key to this client. Existing password sign-in still uses
+browser mode.
+
+A server proxy must supply `userAgent` in `createAuthClient` options with the
+original browser's User-Agent. Both Continue calls forward it unchanged; a
+browser calls directly and supplies the header itself. The flow is bound to
+that header. `AuthMfaRequiredError` (401) permits retrying the same flow with
+`factorProofs`. `AuthRateLimitedError` (429) exposes `retryAfterSeconds` from
+`Retry-After`, falling back to the JSON `retry_after` field. Neither call is
+automatically replayed.

@@ -377,3 +377,132 @@ describe('errors', () => {
 		await expect(auth.config()).rejects.toBeInstanceOf(AuthNetworkError)
 	})
 })
+
+describe('Continue recorded responses', () => {
+	test('default server mode, query key, original User-Agent, and ticket decoding', async () => {
+		const s = stub(({ url }) =>
+			url.includes('/continue/verify')
+				? ok({ ticket: 'one-time-ticket', expires_in: 120 })
+				: ok({ step: 'email_otp', flow: 'opaque-flow', expires_in: 600 }),
+		)
+		const c = createAuthClient({
+			publishableKey: KEY,
+			userAgent: 'Original Browser/1',
+			fetch: s.fetch,
+		})
+		expect(await c.continue({ email: 'a@b.c' })).toEqual({
+			step: 'email_otp',
+			flow: 'opaque-flow',
+			expiresIn: 600,
+		})
+		expect(await c.continueVerify({ flow: 'opaque-flow', code: '012345' })).toEqual({
+			ticket: 'one-time-ticket',
+			expiresIn: 120,
+		})
+		expect(s.calls.map((call) => call.url)).toEqual([
+			`https://api.sylphx.com/v1/client/continue?publishable_key=${KEY}`,
+			`https://api.sylphx.com/v1/client/continue/verify?publishable_key=${KEY}`,
+		])
+		expect(JSON.parse(s.calls[0]!.init.body as string)).toEqual({
+			email: 'a@b.c',
+			session_mode: 'server',
+		})
+		expect(JSON.parse(s.calls[1]!.init.body as string)).toEqual({
+			flow: 'opaque-flow',
+			code: '012345',
+		})
+		for (const call of s.calls) {
+			expect(call.init.method).toBe('POST')
+			expect(new Headers(call.init.headers).get('user-agent')).toBe('Original Browser/1')
+			expect(new Headers(call.init.headers).get('authorization')).toBeNull()
+		}
+		expect(c.sessionToken).toBeUndefined()
+	})
+
+	test('password branch, explicit email fallback, browser session, and MFA proof wire', async () => {
+		const s = stub(({ url, init }) =>
+			url.includes('/continue/verify')
+				? ok({ user: userWire, session: sessionWire })
+				: ok(
+						JSON.parse(init.body as string).method
+							? { step: 'email_otp', flow: 'f', expires_in: 600 }
+							: { step: 'password' },
+					),
+		)
+		const c = createAuthClient({ publishableKey: KEY, fetch: s.fetch })
+		expect(await c.continue({ email: 'a@b.c' })).toEqual({ step: 'password' })
+		await c.continue({
+			email: 'a@b.c',
+			method: 'email_otp',
+			captchaToken: 'captcha',
+			sessionMode: 'browser',
+		})
+		expect(JSON.parse(s.calls[1]!.init.body as string)).toEqual({
+			email: 'a@b.c',
+			method: 'email_otp',
+			captcha_token: 'captcha',
+			session_mode: 'browser',
+		})
+		const result = await c.continueVerify({
+			flow: 'f',
+			code: '012345',
+			factorProofs: [{ factorType: 'totp', factorId: 'factor', response: '654321' }],
+		})
+		expect(result).toEqual({
+			user: { id: 'u1', email: 'a@b.c', name: 'A', emailVerified: true },
+			session: { id: 's1', token: sessionWire.token, expiresAt: 1800000000 },
+		})
+		expect(c.sessionToken).toBe(sessionWire.token)
+		expect(JSON.parse(s.calls[2]!.init.body as string)).toEqual({
+			flow: 'f',
+			code: '012345',
+			factor_proofs: [{ factor_type: 'totp', factor_id: 'factor', response: '654321' }],
+		})
+		expect(new Headers(s.calls[2]!.init.headers).has('user-agent')).toBe(false)
+	})
+
+	test('verification maps MFA and allows caller retry with proofs', async () => {
+		let attempts = 0
+		const s = stub(() =>
+			++attempts === 1 ? err(401, 'mfa_required') : ok({ ticket: 't', expires_in: 120 }),
+		)
+		const c = createAuthClient({ publishableKey: KEY, fetch: s.fetch })
+		await expect(c.continueVerify({ flow: 'f', code: '012345' })).rejects.toBeInstanceOf(
+			AuthMfaRequiredError,
+		)
+		expect(s.calls).toHaveLength(1)
+		expect(
+			await c.continueVerify({
+				flow: 'f',
+				code: '012345',
+				factorProofs: [{ factorType: 'recovery_code', factorId: 'factor', response: 'recovery' }],
+			}),
+		).toEqual({ ticket: 't', expiresIn: 120 })
+	})
+
+	for (const endpoint of ['continue', 'continueVerify'] as const) {
+		for (const header of [undefined, '17', 'invalid']) {
+			test(`${endpoint} maps 429 body retry_after and Retry-After ${header}`, async () => {
+				const s = stub(
+					() =>
+						new Response(
+							JSON.stringify({ code: 'rate_limited', error: 'slow down', retry_after: 9 }),
+							{ status: 429, headers: header === undefined ? {} : { 'Retry-After': header } },
+						),
+				)
+				const c = createAuthClient({ publishableKey: KEY, fetch: s.fetch })
+				let error: unknown
+				try {
+					if (endpoint === 'continue') await c.continue({ email: 'a@b.c' })
+					else await c.continueVerify({ flow: 'f', code: '012345' })
+				} catch (e) {
+					error = e
+				}
+				expect(error).toBeInstanceOf(AuthRateLimitedError)
+				expect((error as AuthRateLimitedError).status).toBe(429)
+				expect((error as AuthRateLimitedError).retryAfterSeconds).toBe(header === '17' ? 17 : 9)
+				expect(s.calls).toHaveLength(1)
+			})
+		}
+	}
+})
