@@ -342,6 +342,90 @@ pub struct CheckUsageStandingRequest {
     pub actor_proof: String,
 }
 
+/// The consent evidence of one checkout: what was asked, what the buyer
+/// answered, and when Money recorded it.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckoutConsent {
+    /// Whether the buyer ticked the terms.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsAccepted"
+    )]
+    pub terms_accepted: bool,
+    /// The wording the buyer saw.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsText"
+    )]
+    pub terms_text: String,
+    /// The version of that wording.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsVersion"
+    )]
+    pub terms_version: String,
+    /// `opt_in`, `opt_out`, or empty when promotions were not asked.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub promotions: String,
+    /// When Money first recorded the answer.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recordTime"
+    )]
+    pub record_time: String,
+}
+
+/// The consent a checkout page collects.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckoutConsentCollection {
+    /// Require a tick accepting `terms_text` before the buyer can pay. The
+    /// merchant's Stripe account needs a terms of service URL in its public
+    /// business details; without one the create fails with
+    /// `processor_terms_url_missing`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsRequired"
+    )]
+    pub terms_required: bool,
+    /// The wording shown next to the tick; at most 1200 characters. Required
+    /// with `terms_required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsText"
+    )]
+    pub terms_text: String,
+    /// Which version of the wording this is, recorded with the consent as
+    /// evidence; at most 64 characters. Required with `terms_required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsVersion"
+    )]
+    pub terms_version: String,
+    /// Offer the buyer an opt-in to promotional email where the processor
+    /// allows it.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub promotions: bool,
+}
+
 /// A Checkout Policy is an environment's seller setting for which buyers
 /// consumer checkout refuses, by buyer country (docs/services/money/web-payments.md,
 /// "Denying consumer checkout by country"). One per environment, id `default`;
@@ -545,6 +629,21 @@ pub struct CheckoutSession {
         alias = "billingSubdivisionCode"
     )]
     pub billing_subdivision_code: String,
+    /// The consent the hosted page collects before it takes payment, for
+    /// example a required tick for a withdrawal waiver or the terms of sale.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "consentCollection"
+    )]
+    pub consent_collection: Option<CheckoutConsentCollection>,
+    /// The consent the buyer gave, recorded once the processor reports it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub consent: Option<CheckoutConsent>,
 }
 
 /// The request of ClientVerifyStorePurchase.

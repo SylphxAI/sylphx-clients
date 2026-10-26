@@ -18777,6 +18777,30 @@
                   "flag": "--buyer-country-code",
                   "summary": "Where the buyer is, upper-case ISO 3166-1 alpha-2, when the caller knows it (for example from the request's IP address). A country the environment's checkout policy denies is refused here, before any page is made, unless the policy lets a business buy. Not trusted for anything else: the billing address the buyer gives is checked again when the payment completes.",
                   "type": "string"
+                },
+                {
+                  "field": "checkout_session.consent_collection.terms_required",
+                  "flag": "--consent-collection.terms-required",
+                  "summary": "Require a tick accepting `terms_text` before the buyer can pay. The merchant's Stripe account needs a terms of service URL in its public business details; without one the create fails with `processor_terms_url_missing`.",
+                  "type": "bool"
+                },
+                {
+                  "field": "checkout_session.consent_collection.terms_text",
+                  "flag": "--consent-collection.terms-text",
+                  "summary": "The wording shown next to the tick; at most 1200 characters. Required with `terms_required`.",
+                  "type": "string"
+                },
+                {
+                  "field": "checkout_session.consent_collection.terms_version",
+                  "flag": "--consent-collection.terms-version",
+                  "summary": "Which version of the wording this is, recorded with the consent as evidence; at most 64 characters. Required with `terms_required`.",
+                  "type": "string"
+                },
+                {
+                  "field": "checkout_session.consent_collection.promotions",
+                  "flag": "--consent-collection.promotions",
+                  "summary": "Offer the buyer an opt-in to promotional email where the processor allows it.",
+                  "type": "bool"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/checkout_sessions",

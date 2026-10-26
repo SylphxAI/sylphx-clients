@@ -72334,6 +72334,191 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "The consent evidence of one checkout: what was asked, what the buyer\nanswered, and when Money recorded it.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether the buyer ticked the terms.",
+          "filterable": false,
+          "name": "terms_accepted",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The wording the buyer saw.",
+          "filterable": false,
+          "name": "terms_text",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The version of that wording.",
+          "filterable": false,
+          "name": "terms_version",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`opt_in`, `opt_out`, or empty when promotions were not asked.",
+          "filterable": false,
+          "name": "promotions",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When Money first recorded the answer.",
+          "filterable": false,
+          "name": "record_time",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CheckoutConsent",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The consent a checkout page collects.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Require a tick accepting `terms_text` before the buyer can pay. The\nmerchant's Stripe account needs a terms of service URL in its public\nbusiness details; without one the create fails with\n`processor_terms_url_missing`.",
+          "filterable": false,
+          "name": "terms_required",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The wording shown next to the tick; at most 1200 characters. Required\nwith `terms_required`.",
+          "filterable": false,
+          "name": "terms_text",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Which version of the wording this is, recorded with the consent as\nevidence; at most 64 characters. Required with `terms_required`.",
+          "filterable": false,
+          "name": "terms_version",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Offer the buyer an opt-in to promotional email where the processor\nallows it.",
+          "filterable": false,
+          "name": "promotions",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CheckoutConsentCollection",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "A Checkout Policy is an environment's seller setting for which buyers\nconsumer checkout refuses, by buyer country (docs/services/money/web-payments.md,\n\"Denying consumer checkout by country\"). One per environment, id `default`;\nan environment without one refuses nobody.",
       "fields": [
         {
@@ -72835,6 +73020,45 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The consent the hosted page collects before it takes payment, for\nexample a required tick for a withdrawal waiver or the terms of sale.",
+          "filterable": false,
+          "name": "consent_collection",
+          "number": 27,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CheckoutConsentCollection"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The consent the buyer gave, recorded once the processor reports it.",
+          "filterable": false,
+          "name": "consent",
+          "number": 28,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CheckoutConsent"
           }
         }
       ],

@@ -178,6 +178,49 @@ export interface CheckUsageStandingRequest {
 }
 
 /**
+ * The consent evidence of one checkout: what was asked, what the buyer
+ * answered, and when Money recorded it.
+ */
+export interface CheckoutConsent {
+	/** Whether the buyer ticked the terms. */
+	readonly termsAccepted?: boolean
+	/** The wording the buyer saw. */
+	readonly termsText?: string
+	/** The version of that wording. */
+	readonly termsVersion?: string
+	/** `opt_in`, `opt_out`, or empty when promotions were not asked. */
+	readonly promotions?: string
+	/** When Money first recorded the answer. */
+	readonly recordTime?: string
+}
+
+/** The consent a checkout page collects. */
+export interface CheckoutConsentCollection {
+	/**
+	 * Require a tick accepting `terms_text` before the buyer can pay. The
+	 * merchant's Stripe account needs a terms of service URL in its public
+	 * business details; without one the create fails with
+	 * `processor_terms_url_missing`.
+	 */
+	termsRequired?: boolean
+	/**
+	 * The wording shown next to the tick; at most 1200 characters. Required
+	 * with `terms_required`.
+	 */
+	termsText?: string
+	/**
+	 * Which version of the wording this is, recorded with the consent as
+	 * evidence; at most 64 characters. Required with `terms_required`.
+	 */
+	termsVersion?: string
+	/**
+	 * Offer the buyer an opt-in to promotional email where the processor
+	 * allows it.
+	 */
+	promotions?: boolean
+}
+
+/**
  * A Checkout Policy is an environment's seller setting for which buyers
  * consumer checkout refuses, by buyer country (docs/services/money/web-payments.md,
  * "Denying consumer checkout by country"). One per environment, id `default`;
@@ -283,6 +326,13 @@ export interface CheckoutSession {
 	 * Nothing else of the buyer's address is stored.
 	 */
 	readonly billingSubdivisionCode?: string
+	/**
+	 * The consent the hosted page collects before it takes payment, for
+	 * example a required tick for a withdrawal waiver or the terms of sale.
+	 */
+	consentCollection?: CheckoutConsentCollection
+	/** The consent the buyer gave, recorded once the processor reports it. */
+	readonly consent?: CheckoutConsent
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -2487,6 +2537,17 @@ runtime.registerSchemas({
 		['subjectProof', 'subject_proof'],
 		['actorProof', 'actor_proof'],
 	],
+	'sylphx.money.v1.CheckoutConsent': [
+		['termsAccepted', 'terms_accepted'],
+		['termsText', 'terms_text'],
+		['termsVersion', 'terms_version'],
+		['recordTime', 'record_time'],
+	],
+	'sylphx.money.v1.CheckoutConsentCollection': [
+		['termsRequired', 'terms_required'],
+		['termsText', 'terms_text'],
+		['termsVersion', 'terms_version'],
+	],
 	'sylphx.money.v1.CheckoutPolicy': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.money.v1.CheckoutPolicySpec'],
@@ -2510,6 +2571,8 @@ runtime.registerSchemas({
 		['deniedReason', 'denied_reason'],
 		['billingCountryCode', 'billing_country_code'],
 		['billingSubdivisionCode', 'billing_subdivision_code'],
+		['consentCollection', 'consent_collection', 'sylphx.money.v1.CheckoutConsentCollection'],
+		['consent', 'consent', 'sylphx.money.v1.CheckoutConsent'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],

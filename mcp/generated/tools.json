@@ -25877,6 +25877,30 @@
                 "type": "string",
                 "x-sylphx-immutable": true
               },
+              "consent_collection": {
+                "additionalProperties": false,
+                "description": "The consent the hosted page collects before it takes payment, for\nexample a required tick for a withdrawal waiver or the terms of sale.",
+                "properties": {
+                  "promotions": {
+                    "description": "Offer the buyer an opt-in to promotional email where the processor\nallows it.",
+                    "type": "boolean"
+                  },
+                  "terms_required": {
+                    "description": "Require a tick accepting `terms_text` before the buyer can pay. The\nmerchant's Stripe account needs a terms of service URL in its public\nbusiness details; without one the create fails with\n`processor_terms_url_missing`.",
+                    "type": "boolean"
+                  },
+                  "terms_text": {
+                    "description": "The wording shown next to the tick; at most 1200 characters. Required\nwith `terms_required`.",
+                    "type": "string"
+                  },
+                  "terms_version": {
+                    "description": "Which version of the wording this is, recorded with the consent as\nevidence; at most 64 characters. Required with `terms_required`.",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
               "currency_code": {
                 "description": "The currency to charge in, upper-case ISO 4217; default the processor's\nchoice for the buyer among the prices' currencies.",
                 "type": "string",

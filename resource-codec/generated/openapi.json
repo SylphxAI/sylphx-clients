@@ -23764,6 +23764,60 @@
         ],
         "type": "object"
       },
+      "sylphx.money.v1.CheckoutConsent": {
+        "description": "The consent evidence of one checkout: what was asked, what the buyer\nanswered, and when Money recorded it.",
+        "properties": {
+          "promotions": {
+            "description": "`opt_in`, `opt_out`, or empty when promotions were not asked.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "record_time": {
+            "description": "When Money first recorded the answer.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "terms_accepted": {
+            "description": "Whether the buyer ticked the terms.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "terms_text": {
+            "description": "The wording the buyer saw.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "terms_version": {
+            "description": "The version of that wording.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.CheckoutConsentCollection": {
+        "description": "The consent a checkout page collects.",
+        "properties": {
+          "promotions": {
+            "description": "Offer the buyer an opt-in to promotional email where the processor\nallows it.",
+            "type": "boolean"
+          },
+          "terms_required": {
+            "description": "Require a tick accepting `terms_text` before the buyer can pay. The\nmerchant's Stripe account needs a terms of service URL in its public\nbusiness details; without one the create fails with\n`processor_terms_url_missing`.",
+            "type": "boolean"
+          },
+          "terms_text": {
+            "description": "The wording shown next to the tick; at most 1200 characters. Required\nwith `terms_required`.",
+            "type": "string"
+          },
+          "terms_version": {
+            "description": "Which version of the wording this is, recorded with the consent as\nevidence; at most 64 characters. Required with `terms_required`.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.CheckoutPolicy": {
         "description": "A Checkout Policy is an environment's seller setting for which buyers\nconsumer checkout refuses, by buyer country (docs/services/money/web-payments.md,\n\"Denying consumer checkout by country\"). One per environment, id `default`;\nan environment without one refuses nobody.",
         "properties": {
@@ -23833,6 +23887,16 @@
           "cancel_url": {
             "description": "Where the buyer lands on cancel. HTTPS only.",
             "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "consent": {
+            "$ref": "#/components/schemas/sylphx.money.v1.CheckoutConsent",
+            "description": "The consent the buyer gave, recorded once the processor reports it.",
+            "readOnly": true
+          },
+          "consent_collection": {
+            "$ref": "#/components/schemas/sylphx.money.v1.CheckoutConsentCollection",
+            "description": "The consent the hosted page collects before it takes payment, for\nexample a required tick for a withdrawal waiver or the terms of sale.",
             "x-sylphx-immutable": true
           },
           "currency_code": {
