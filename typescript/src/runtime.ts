@@ -234,7 +234,7 @@ export class Client {
 	}
 
 	/** Server-sent JSON messages; closing the iterator cancels its connection. */
-	async *stream<T>(call: Call): AsyncGenerator<T> {
+	async *stream<T>(call: Call, signal?: AbortSignal): AsyncGenerator<T> {
 		const url = new URL(this.baseUrl + call.path)
 		for (const [key, value] of Object.entries(call.query ?? {})) {
 			if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
@@ -243,6 +243,9 @@ export class Client {
 		if (this.apiKey !== undefined) headers.authorization = `Bearer ${this.apiKey}`
 		if (this.apiVersion !== undefined) headers['sylphx-version'] = this.apiVersion
 		const controller = new AbortController()
+		const abort = () => controller.abort()
+		signal?.addEventListener('abort', abort, { once: true })
+		if (signal?.aborted) abort()
 		let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
 		try {
 			const response = await this.fetchImpl(url, { method: call.method, headers, signal: controller.signal })
@@ -268,6 +271,7 @@ export class Client {
 				}
 			}
 		} finally {
+			signal?.removeEventListener('abort', abort)
 			controller.abort()
 			await reader?.cancel()
 			reader?.releaseLock()

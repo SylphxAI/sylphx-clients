@@ -14,6 +14,11 @@ export class FlagsHandle {
 		this.context = { ...context }
 	}
 
+	/** Stop background revision updates when this handle is no longer used. */
+	close(): void {
+		this.evaluator.close()
+	}
+
 	private async value(key: string): Promise<unknown> {
 		try {
 			const results = await this.evaluator.evaluateAll(this.context)

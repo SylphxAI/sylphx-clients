@@ -8,7 +8,7 @@
  *
  * - `local` (servers, secret key with `config:read`): download the
  *   environment's ruleset (`config_flags:snapshot`), evaluate every call in
- *   process, and poll for changes with the ruleset's etag. No call per
+ *   process, and watch revisions with the ruleset's etag. No call per
  *   evaluation.
  * - `remote` (browsers and apps, publishable key with `config:evaluate`):
  *   ask `config_flags:evaluate` for one context's values, cached for five
@@ -289,6 +289,8 @@ export interface FlagsOptions {
 	mode?: 'local' | 'remote'
 	/** How long `remote` answers are reused per context. Default 5 minutes. */
 	cacheTtlMs?: number
+	/** Watch local ruleset revisions. Default true; polling remains the fallback. */
+	stream?: boolean
 	/** The clock (tests). */
 	now?: () => number
 }
@@ -299,6 +301,7 @@ interface Ruleset {
 	segments: Map<string, ConfigSegmentSpec>
 	fetchedAt: number
 	pollMs: number
+	revision: number
 }
 
 function durationMs(d: string | undefined, fallback: number): number {
@@ -317,6 +320,10 @@ export class Flags {
 	private readonly parent: string
 	private readonly ttl: number
 	private readonly now: () => number
+	private readonly streaming: boolean
+	private watcher: AbortController | undefined
+	private revision = 0
+	private closed = false
 	private ruleset: Ruleset | undefined
 	private refreshing: Promise<Ruleset> | undefined
 	private readonly cache = new Map<string, { at: number; values: Map<string, FlagEvaluation> }>()
@@ -327,6 +334,7 @@ export class Flags {
 		this.mode = options.mode ?? 'remote'
 		this.ttl = options.cacheTtlMs ?? 5 * 60 * 1000
 		this.now = options.now ?? Date.now
+		this.streaming = options.stream ?? true
 	}
 
 	/** Whether a boolean flag is on for `ctx`; false when it is missing. */
@@ -384,12 +392,52 @@ export class Flags {
 	reset(): void {
 		this.cache.clear()
 		this.ruleset = undefined
+		this.revision++
 	}
 
-	/** The ruleset, polled with its etag once its poll interval has passed. */
+	/** Stop the revision connection and reconnect timer. Cached evaluations remain usable. */
+	close(): void {
+		this.closed = true
+		this.watcher?.abort()
+	}
+
+	private startWatcher(etag: string): void {
+		if (!this.streaming || this.closed || this.watcher) return
+		const controller = new AbortController()
+		this.watcher = controller
+		void this.watchRevisions(etag, controller.signal)
+	}
+
+	private async watchRevisions(etag: string, signal: AbortSignal): Promise<void> {
+		while (!signal.aborted) {
+			try {
+				for await (const event of this.client.config.configFlags.watch({ parent: this.parent, ifNoneMatch: etag }, signal)) {
+					if (signal.aborted) return
+					if (event.etag && event.etag !== etag) {
+						etag = event.etag
+						this.revision++
+					}
+				}
+			} catch {
+				// Retain the last good ruleset. Polling still works while disconnected.
+			}
+			if (signal.aborted) return
+			await new Promise<void>((resolve) => {
+				const finish = () => {
+					clearTimeout(timer)
+					signal.removeEventListener('abort', finish)
+					resolve()
+				}
+				const timer = setTimeout(finish, 1000)
+				signal.addEventListener('abort', finish, { once: true })
+			})
+		}
+	}
+
+	/** Fetch on a revision change or after the fallback poll interval. */
 	private async current(): Promise<Ruleset> {
 		const r = this.ruleset
-		if (r && this.now() - r.fetchedAt < r.pollMs) return r
+		if (r && r.revision === this.revision && this.now() - r.fetchedAt < r.pollMs) return r
 		this.refreshing ??= this.fetchRuleset(r).finally(() => {
 			this.refreshing = undefined
 		})
@@ -403,20 +451,22 @@ export class Flags {
 	}
 
 	private async fetchRuleset(held: Ruleset | undefined): Promise<Ruleset> {
+		const revision = this.revision
 		const snap = await this.client.config.configFlags.snapshot({
 			parent: this.parent,
 			...(held ? { ifNoneMatch: held.etag } : {}),
 		})
 		const pollMs = durationMs(snap.pollInterval, 30_000)
 		if (held && snap.notModified) {
-			this.ruleset = { ...held, fetchedAt: this.now(), pollMs }
+			this.ruleset = { ...held, fetchedAt: this.now(), pollMs, revision }
 			return this.ruleset
 		}
 		const flags = new Map<string, ConfigFlagSpec>()
 		for (const f of snap.configFlags ?? []) if (f.spec) flags.set(idOf(f.name), f.spec)
 		const segments = new Map<string, ConfigSegmentSpec>()
 		for (const s of snap.configSegments ?? []) if (s.spec) segments.set(idOf(s.name), s.spec)
-		this.ruleset = { etag: snap.etag ?? '', flags, segments, fetchedAt: this.now(), pollMs }
+		this.ruleset = { etag: snap.etag ?? '', flags, segments, fetchedAt: this.now(), pollMs, revision }
+		this.startWatcher(this.ruleset.etag)
 		return this.ruleset
 	}
 }

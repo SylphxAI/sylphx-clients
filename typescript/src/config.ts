@@ -754,14 +754,14 @@ export class ConfigFlagsCollection {
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`.
 	 */
-	watch(request: WatchConfigFlagsRequest): AsyncGenerator<WatchConfigFlagsResponse> {
+	watch(request: WatchConfigFlagsRequest, signal?: AbortSignal): AsyncGenerator<WatchConfigFlagsResponse> {
 		return this.client.stream<WatchConfigFlagsResponse>({
 			method: 'GET',
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/config_flags:watch`,
 			query: { if_none_match: request.ifNoneMatch },
 			responseType: 'sylphx.config.v1.WatchConfigFlagsResponse',
 			mutation: false,
-		})
+		}, signal)
 	}
 
 	/**
