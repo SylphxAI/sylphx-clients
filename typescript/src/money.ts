@@ -1720,6 +1720,12 @@ export interface RevenueSourceSpec {
 	 * never a credential. At most 32 entries.
 	 */
 	config?: Record<string, string>
+	/**
+	 * The connector's credential, such as a Stripe live restricted key with
+	 * read access to balance transactions and payouts. Shared by all connector
+	 * kinds: sealed on write, never returned; omit it on update to keep it.
+	 */
+	credential?: string
 }
 
 /** RevenueSourceStatus is the observed state of a RevenueSource. */

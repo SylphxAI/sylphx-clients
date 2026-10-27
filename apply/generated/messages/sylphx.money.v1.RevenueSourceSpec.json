@@ -75,6 +75,25 @@
           "scalar": "string"
         }
       }
+    },
+    {
+      "behaviors": [
+        "INPUT_ONLY",
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "credential",
+      "number": 5,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.money.v1.RevenueSourceSpec",

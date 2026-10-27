@@ -26615,6 +26615,12 @@
             "description": "The connector's settings (an account id, a bucket, a column mapping),\nnever a credential. At most 32 entries.",
             "type": "object"
           },
+          "credential": {
+            "description": "The connector's credential, such as a Stripe live restricted key with\nread access to balance transactions and payouts. Shared by all connector\nkinds: sealed on write, never returned; omit it on update to keep it.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
           "display_name": {
             "description": "Shown on summaries and in the console.",
             "type": "string"

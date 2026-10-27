@@ -3565,6 +3565,13 @@ pub struct RevenueSourceSpec {
     /// never a credential. At most 32 entries.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub config: std::collections::BTreeMap<String, String>,
+    /// The connector's credential, such as a Stripe live restricted key with
+    /// read access to balance transactions and payouts. Shared by all connector
+    /// kinds: sealed on write, never returned; omit it on update to keep it.
+    ///
+    /// Field behavior: `input_only`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub credential: String,
 }
 
 /// RevenueSourceStatus is the observed state of a RevenueSource.

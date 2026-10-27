@@ -20364,6 +20364,13 @@
                   "type": "key=value"
                 },
                 {
+                  "field": "revenue_source.spec.credential",
+                  "flag": "--spec.credential",
+                  "sensitive": true,
+                  "summary": "The connector's credential, such as a Stripe live restricted key with read access to balance transactions and payouts. Shared by all connector kinds: sealed on write, never returned; omit it on update to keep it.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -20424,6 +20431,13 @@
                   "repeated": true,
                   "summary": "The connector's settings (an account id, a bucket, a column mapping), never a credential. At most 32 entries.",
                   "type": "key=value"
+                },
+                {
+                  "field": "revenue_source.spec.credential",
+                  "flag": "--spec.credential",
+                  "sensitive": true,
+                  "summary": "The connector's credential, such as a Stripe live restricted key with read access to balance transactions and payouts. Shared by all connector kinds: sealed on write, never returned; omit it on update to keep it.",
+                  "type": "string"
                 },
                 {
                   "field": "validate_only",

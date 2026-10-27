@@ -80744,6 +80744,26 @@
               "scalar": "string"
             }
           }
+        },
+        {
+          "behaviors": [
+            "INPUT_ONLY",
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The connector's credential, such as a Stripe live restricted key with\nread access to balance transactions and payouts. Shared by all connector\nkinds: sealed on write, never returned; omit it on update to keep it.",
+          "filterable": false,
+          "name": "credential",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.RevenueSourceSpec",
