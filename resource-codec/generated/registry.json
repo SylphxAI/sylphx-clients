@@ -72891,6 +72891,26 @@
         },
         {
           "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "Countries whose shipping address the hosted page collects, upper-case ISO\n3166-1 alpha-2. Empty means no shipping address is collected.",
+          "filterable": false,
+          "name": "shipping_country_codes",
+          "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
@@ -73059,6 +73079,120 @@
           "type": {
             "kind": "message",
             "name": "sylphx.money.v1.CheckoutConsent"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The buyer's email address, once the hosted checkout has collected it.",
+          "filterable": false,
+          "name": "customer_email",
+          "number": 29,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The physical delivery address, when `shipping_country_codes` was set and\nthe hosted checkout has collected it.",
+          "filterable": false,
+          "name": "shipping_address",
+          "number": 30,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.ShippingAddress"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor's current total in minor units, when it has reported one.",
+          "filterable": false,
+          "name": "amount_total",
+          "number": 31,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles.",
+          "filterable": false,
+          "name": "payment_status",
+          "number": 32,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor's live/test mode, once the session has reported it.",
+          "filterable": false,
+          "name": "livemode",
+          "number": 33,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor payment this checkout produced; empty before settlement.",
+          "filterable": false,
+          "name": "processor_payment_id",
+          "number": 34,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],
@@ -74920,6 +75054,32 @@
         }
       ],
       "name": "sylphx.money.v1.ExchangeRate",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The request of ExpireCheckoutSession.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The Money checkout resource to expire.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/CheckoutSession",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ExpireCheckoutSessionRequest",
       "package": "sylphx.money.v1"
     },
     {
@@ -79491,6 +79651,239 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "A processor refund created for a one-time checkout.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor's refund id.",
+          "filterable": false,
+          "name": "id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The Money checkout resource this refund belongs to.",
+          "filterable": false,
+          "name": "checkout_session",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor payment intent the refund applies to.",
+          "filterable": false,
+          "name": "payment_intent",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Amount refunded in minor units.",
+          "filterable": false,
+          "name": "amount_minor",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "ISO 4217 currency code.",
+          "filterable": false,
+          "name": "currency_code",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The processor's refund status.",
+          "filterable": false,
+          "name": "status",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.Refund",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The request of RefundCheckoutSession.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The Money checkout resource to refund.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/CheckoutSession",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional partial amount in minor units; empty refunds the remaining amount.",
+          "filterable": false,
+          "name": "amount_minor",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional processor refund reason.",
+          "filterable": false,
+          "name": "reason",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Caller metadata, such as the app's return and order ids. At most 20 keys.",
+          "filterable": false,
+          "name": "metadata",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.RefundCheckoutSessionRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The processor refund created for this checkout.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The refund receipt, read back from the processor after creation.",
+          "filterable": false,
+          "name": "refund",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.Refund"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.RefundCheckoutSessionResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of ReleaseUsageInvoiceCollection.",
       "fields": [
         {
@@ -81046,6 +81439,146 @@
         }
       ],
       "name": "sylphx.money.v1.SettleUsageReservationRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "A shipping address collected by the hosted checkout for a physical order.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Recipient name.",
+          "filterable": false,
+          "name": "recipient",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "First address line.",
+          "filterable": false,
+          "name": "line1",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Optional second address line.",
+          "filterable": false,
+          "name": "line2",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "City or town.",
+          "filterable": false,
+          "name": "city",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "State, county or province.",
+          "filterable": false,
+          "name": "region",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Postcode.",
+          "filterable": false,
+          "name": "postal_code",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Upper-case ISO 3166-1 alpha-2 region code.",
+          "filterable": false,
+          "name": "region_code",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ShippingAddress",
       "package": "sylphx.money.v1"
     },
     {
@@ -147891,6 +148424,93 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Expires an open hosted checkout so it can no longer be paid.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_STATE",
+                "UNAVAILABLE",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}",
+                    "pattern": "orgs/*/projects/*/envs/*/checkout_sessions/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:expire"
+              },
+              "id": "money.checkout_sessions.expire",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.ExpireCheckoutSession",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ExpireCheckoutSessionRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.CheckoutSession",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "expire"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Refund all or part of a paid one-time checkout.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_STATE",
+                "INVALID_FIELD",
+                "UNAVAILABLE",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}",
+                    "pattern": "orgs/*/projects/*/envs/*/checkout_sessions/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:refund"
+              },
+              "id": "money.checkout_sessions.refund",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.RefundCheckoutSession",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.RefundCheckoutSessionRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.RefundCheckoutSessionResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "refund"
             }
           ],
           "name": "checkout_sessions",

@@ -301,6 +301,11 @@ export interface CheckoutSession {
 	 * payment completes.
 	 */
 	buyerCountryCode?: string
+	/**
+	 * Countries whose shipping address the hosted page collects, upper-case ISO
+	 * 3166-1 alpha-2. Empty means no shipping address is collected.
+	 */
+	shippingCountryCodes?: string[]
 	/** The hosted page. */
 	readonly url?: string
 	/** `open`, `complete`, or `expired`. */
@@ -333,6 +338,21 @@ export interface CheckoutSession {
 	consentCollection?: CheckoutConsentCollection
 	/** The consent the buyer gave, recorded once the processor reports it. */
 	readonly consent?: CheckoutConsent
+	/** The buyer's email address, once the hosted checkout has collected it. */
+	readonly customerEmail?: string
+	/**
+	 * The physical delivery address, when `shipping_country_codes` was set and
+	 * the hosted checkout has collected it.
+	 */
+	readonly shippingAddress?: ShippingAddress
+	/** The processor's current total in minor units, when it has reported one. */
+	readonly amountTotal?: string
+	/** `unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles. */
+	readonly paymentStatus?: string
+	/** The processor's live/test mode, once the session has reported it. */
+	readonly livemode?: boolean
+	/** The processor payment this checkout produced; empty before settlement. */
+	readonly processorPaymentId?: string
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -663,6 +683,12 @@ export interface ExchangeRate {
 	 * before a weekend or holiday.
 	 */
 	readonly publicationDay?: string
+}
+
+/** The request of ExpireCheckoutSession. */
+export interface ExpireCheckoutSessionRequest {
+	/** The Money checkout resource to expire. */
+	name: string
 }
 
 /**
@@ -1513,6 +1539,40 @@ export interface RefreshMerchantAccountRequest {
 	name: string
 }
 
+/** A processor refund created for a one-time checkout. */
+export interface Refund {
+	/** The processor's refund id. */
+	readonly id?: string
+	/** The Money checkout resource this refund belongs to. */
+	readonly checkoutSession?: string
+	/** The processor payment intent the refund applies to. */
+	readonly paymentIntent?: string
+	/** Amount refunded in minor units. */
+	readonly amountMinor?: string
+	/** ISO 4217 currency code. */
+	readonly currencyCode?: string
+	/** The processor's refund status. */
+	readonly status?: string
+}
+
+/** The request of RefundCheckoutSession. */
+export interface RefundCheckoutSessionRequest {
+	/** The Money checkout resource to refund. */
+	name: string
+	/** Optional partial amount in minor units; empty refunds the remaining amount. */
+	amountMinor?: string
+	/** Optional processor refund reason. */
+	reason?: string
+	/** Caller metadata, such as the app's return and order ids. At most 20 keys. */
+	metadata?: Record<string, string>
+}
+
+/** The processor refund created for this checkout. */
+export interface RefundCheckoutSessionResponse {
+	/** The refund receipt, read back from the processor after creation. */
+	readonly refund?: Refund
+}
+
 /** The request of ReleaseUsageInvoiceCollection. */
 export interface ReleaseUsageInvoiceCollectionRequest {
 	/** The held invoice to release for collection. */
@@ -1781,6 +1841,24 @@ export interface SettleUsageReservationRequest {
 	quantityUsed: string
 	/** When the work happened; now when absent. */
 	occurredTime?: string
+}
+
+/** A shipping address collected by the hosted checkout for a physical order. */
+export interface ShippingAddress {
+	/** Recipient name. */
+	readonly recipient?: string
+	/** First address line. */
+	readonly line1?: string
+	/** Optional second address line. */
+	readonly line2?: string
+	/** City or town. */
+	readonly city?: string
+	/** State, county or province. */
+	readonly region?: string
+	/** Postcode. */
+	readonly postalCode?: string
+	/** Upper-case ISO 3166-1 alpha-2 region code. */
+	readonly regionCode?: string
 }
 
 /** The request of SnapshotEntitlementGrants. */
@@ -2566,6 +2644,7 @@ runtime.registerSchemas({
 		['metadata', 'metadata', undefined, 'map'],
 		['allowPromotionCodes', 'allow_promotion_codes'],
 		['buyerCountryCode', 'buyer_country_code'],
+		['shippingCountryCodes', 'shipping_country_codes'],
 		['expireTime', 'expire_time'],
 		['processorSessionId', 'processor_session_id'],
 		['deniedReason', 'denied_reason'],
@@ -2573,6 +2652,11 @@ runtime.registerSchemas({
 		['billingSubdivisionCode', 'billing_subdivision_code'],
 		['consentCollection', 'consent_collection', 'sylphx.money.v1.CheckoutConsentCollection'],
 		['consent', 'consent', 'sylphx.money.v1.CheckoutConsent'],
+		['customerEmail', 'customer_email'],
+		['shippingAddress', 'shipping_address', 'sylphx.money.v1.ShippingAddress'],
+		['amountTotal', 'amount_total'],
+		['paymentStatus', 'payment_status'],
+		['processorPaymentId', 'processor_payment_id'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -2662,6 +2746,7 @@ runtime.registerSchemas({
 		['perUsd', 'per_usd'],
 		['publicationDay', 'publication_day'],
 	],
+	'sylphx.money.v1.ExpireCheckoutSessionRequest': [],
 	'sylphx.money.v1.Feature': [
 		['displayName', 'display_name'],
 	],
@@ -2907,6 +2992,19 @@ runtime.registerSchemas({
 		['licence', 'licence', 'sylphx.money.v1.LicencePolicy'],
 	],
 	'sylphx.money.v1.RefreshMerchantAccountRequest': [],
+	'sylphx.money.v1.Refund': [
+		['checkoutSession', 'checkout_session'],
+		['paymentIntent', 'payment_intent'],
+		['amountMinor', 'amount_minor'],
+		['currencyCode', 'currency_code'],
+	],
+	'sylphx.money.v1.RefundCheckoutSessionRequest': [
+		['amountMinor', 'amount_minor'],
+		['metadata', 'metadata', undefined, 'map'],
+	],
+	'sylphx.money.v1.RefundCheckoutSessionResponse': [
+		['refund', 'refund', 'sylphx.money.v1.Refund'],
+	],
 	'sylphx.money.v1.ReleaseUsageInvoiceCollectionRequest': [],
 	'sylphx.money.v1.ReleaseUsageReservationRequest': [],
 	'sylphx.money.v1.ResumeCustomerSubscriptionRequest': [],
@@ -2966,6 +3064,10 @@ runtime.registerSchemas({
 	'sylphx.money.v1.SettleUsageReservationRequest': [
 		['quantityUsed', 'quantity_used'],
 		['occurredTime', 'occurred_time'],
+	],
+	'sylphx.money.v1.ShippingAddress': [
+		['postalCode', 'postal_code'],
+		['regionCode', 'region_code'],
 	],
 	'sylphx.money.v1.SnapshotEntitlementGrantsRequest': [
 		['pageSize', 'page_size'],
@@ -3990,6 +4092,42 @@ export class CheckoutSessionsCollection {
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/checkout_sessions/*', 'name')}`,
 			responseType: 'sylphx.money.v1.CheckoutSession',
 			mutation: false,
+		})
+	}
+
+	/**
+	 * Expires an open hosted checkout so it can no longer be paid.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/checkout_sessions/*}:expire` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async expire(request: ExpireCheckoutSessionRequest): Promise<CheckoutSession> {
+		return this.client.call<CheckoutSession>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/checkout_sessions/*', 'name')}:expire`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.ExpireCheckoutSessionRequest',
+			responseType: 'sylphx.money.v1.CheckoutSession',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Refund all or part of a paid one-time checkout.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/checkout_sessions/*}:refund` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `INVALID_FIELD`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async refund(request: RefundCheckoutSessionRequest): Promise<RefundCheckoutSessionResponse> {
+		return this.client.call<RefundCheckoutSessionResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/checkout_sessions/*', 'name')}:refund`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.RefundCheckoutSessionRequest',
+			responseType: 'sylphx.money.v1.RefundCheckoutSessionResponse',
+			mutation: true,
 		})
 	}
 }

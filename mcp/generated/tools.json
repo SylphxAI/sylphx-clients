@@ -25972,6 +25972,14 @@
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}`.",
                 "type": "string"
               },
+              "shipping_country_codes": {
+                "description": "Countries whose shipping address the hosted page collects, upper-case ISO\n3166-1 alpha-2. Empty means no shipping address is collected.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
               "subject": {
                 "additionalProperties": false,
                 "description": "Who pays and is entitled.",
@@ -26052,6 +26060,84 @@
       "method_id": "money.checkout_sessions.get",
       "permission": "billing:read",
       "tool": "money_checkout_sessions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Expires an open hosted checkout so it can no longer be paid."
+      },
+      "description": "Expires an open hosted checkout so it can no longer be paid.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:expire",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ExpireCheckoutSession.",
+        "properties": {
+          "name": {
+            "description": "The Money checkout resource to expire.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.checkout_sessions.expire",
+      "permission": "billing:write",
+      "tool": "money_checkout_sessions_expire"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Refund all or part of a paid one-time checkout."
+      },
+      "description": "Refund all or part of a paid one-time checkout.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:refund",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RefundCheckoutSession.",
+        "properties": {
+          "amount_minor": {
+            "description": "Optional partial amount in minor units; empty refunds the remaining amount.",
+            "format": "int64",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Caller metadata, such as the app's return and order ids. At most 20 keys.",
+            "type": "object"
+          },
+          "name": {
+            "description": "The Money checkout resource to refund.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          },
+          "reason": {
+            "description": "Optional processor refund reason.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.checkout_sessions.refund",
+      "permission": "billing:write",
+      "tool": "money_checkout_sessions_refund"
     },
     {
       "annotations": {

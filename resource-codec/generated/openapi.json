@@ -23869,6 +23869,12 @@
             "type": "boolean",
             "x-sylphx-immutable": true
           },
+          "amount_total": {
+            "description": "The processor's current total in minor units, when it has reported one.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
           "billing_country_code": {
             "description": "The billing country the completed checkout was checked against, upper-case\nISO 3166-1 alpha-2; empty until completion.",
             "readOnly": true,
@@ -23904,6 +23910,11 @@
             "type": "string",
             "x-sylphx-immutable": true
           },
+          "customer_email": {
+            "description": "The buyer's email address, once the hosted checkout has collected it.",
+            "readOnly": true,
+            "type": "string"
+          },
           "denied_reason": {
             "description": "Why a completed checkout was refused and refunded instead of delivered:\n`country_denied` (the billing country is on the checkout policy's list) or\n`country_unknown` (no billing country to check). Empty otherwise.",
             "readOnly": true,
@@ -23922,6 +23933,11 @@
             },
             "type": "array",
             "x-sylphx-immutable": true
+          },
+          "livemode": {
+            "description": "The processor's live/test mode, once the session has reported it.",
+            "readOnly": true,
+            "type": "boolean"
           },
           "locale": {
             "description": "The page language, for example `en` or `zh-HK`; default automatic.",
@@ -23944,10 +23960,33 @@
             "description": "`orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}`.",
             "type": "string"
           },
+          "payment_status": {
+            "description": "`unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processor_payment_id": {
+            "description": "The processor payment this checkout produced; empty before settlement.",
+            "readOnly": true,
+            "type": "string"
+          },
           "processor_session_id": {
             "description": "The processor's session id.",
             "readOnly": true,
             "type": "string"
+          },
+          "shipping_address": {
+            "$ref": "#/components/schemas/sylphx.money.v1.ShippingAddress",
+            "description": "The physical delivery address, when `shipping_country_codes` was set and\nthe hosted checkout has collected it.",
+            "readOnly": true
+          },
+          "shipping_country_codes": {
+            "description": "Countries whose shipping address the hosted page collects, upper-case ISO\n3166-1 alpha-2. Empty means no shipping address is collected.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-immutable": true
           },
           "state": {
             "description": "`open`, `complete`, or `expired`.",
@@ -24571,6 +24610,20 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.money.v1.ExpireCheckoutSessionRequest": {
+        "description": "The request of ExpireCheckoutSession.",
+        "properties": {
+          "name": {
+            "description": "The Money checkout resource to expire.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "sylphx.money.v1.Feature": {
@@ -26225,6 +26278,84 @@
         ],
         "type": "object"
       },
+      "sylphx.money.v1.Refund": {
+        "description": "A processor refund created for a one-time checkout.",
+        "properties": {
+          "amount_minor": {
+            "description": "Amount refunded in minor units.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "checkout_session": {
+            "description": "The Money checkout resource this refund belongs to.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "currency_code": {
+            "description": "ISO 4217 currency code.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "The processor's refund id.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "payment_intent": {
+            "description": "The processor payment intent the refund applies to.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "The processor's refund status.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.RefundCheckoutSessionRequest": {
+        "description": "The request of RefundCheckoutSession.",
+        "properties": {
+          "amount_minor": {
+            "description": "Optional partial amount in minor units; empty refunds the remaining amount.",
+            "format": "int64",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Caller metadata, such as the app's return and order ids. At most 20 keys.",
+            "type": "object"
+          },
+          "name": {
+            "description": "The Money checkout resource to refund.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          },
+          "reason": {
+            "description": "Optional processor refund reason.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.RefundCheckoutSessionResponse": {
+        "description": "The processor refund created for this checkout.",
+        "properties": {
+          "refund": {
+            "$ref": "#/components/schemas/sylphx.money.v1.Refund",
+            "description": "The refund receipt, read back from the processor after creation.",
+            "readOnly": true
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.ReleaseUsageInvoiceCollectionRequest": {
         "description": "The request of ReleaseUsageInvoiceCollection.",
         "properties": {
@@ -26724,6 +26855,47 @@
           "name",
           "quantity_used"
         ],
+        "type": "object"
+      },
+      "sylphx.money.v1.ShippingAddress": {
+        "description": "A shipping address collected by the hosted checkout for a physical order.",
+        "properties": {
+          "city": {
+            "description": "City or town.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "line1": {
+            "description": "First address line.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "line2": {
+            "description": "Optional second address line.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "postal_code": {
+            "description": "Postcode.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recipient": {
+            "description": "Recipient name.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "region": {
+            "description": "State, county or province.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "region_code": {
+            "description": "Upper-case ISO 3166-1 alpha-2 region code.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.money.v1.SnapshotEntitlementGrantsRequest": {
@@ -61072,6 +61244,244 @@
         ],
         "x-sylphx-method": "money.checkout_sessions.get",
         "x-sylphx-permission": "billing:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}:expire": {
+      "post": {
+        "description": "Expires an open hosted checkout so it can no longer be paid.",
+        "operationId": "money_checkout_sessions_expire",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "checkout_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.CheckoutSession"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Expires an open hosted checkout so it can no longer be paid.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "money.checkout_sessions.expire",
+        "x-sylphx-permission": "billing:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}:refund": {
+      "post": {
+        "description": "Refund all or part of a paid one-time checkout.",
+        "operationId": "money_checkout_sessions_refund",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "checkout_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "amount_minor": {
+                    "description": "Optional partial amount in minor units; empty refunds the remaining amount.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller metadata, such as the app's return and order ids. At most 20 keys.",
+                    "type": "object"
+                  },
+                  "reason": {
+                    "description": "Optional processor refund reason.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.RefundCheckoutSessionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Refund all or part of a paid one-time checkout.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_STATE",
+          "INVALID_FIELD",
+          "UNAVAILABLE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "money.checkout_sessions.refund",
+        "x-sylphx-permission": "billing:write",
         "x-sylphx-stage": "preview"
       }
     },

@@ -18779,6 +18779,13 @@
                   "type": "string"
                 },
                 {
+                  "field": "checkout_session.shipping_country_codes",
+                  "flag": "--shipping-country-codes",
+                  "repeated": true,
+                  "summary": "Countries whose shipping address the hosted page collects, upper-case ISO 3166-1 alpha-2. Empty means no shipping address is collected.",
+                  "type": "string"
+                },
+                {
                   "field": "checkout_session.consent_collection.terms_required",
                   "flag": "--consent-collection.terms-required",
                   "summary": "Require a tick accepting `terms_text` before the buyer can pay. The merchant's Stripe account needs a terms of service URL in its public business details; without one the create fails with `processor_terms_url_missing`.",
@@ -18830,6 +18837,56 @@
               },
               "summary": "Gets a checkout session.",
               "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:expire",
+              "method": "money.checkout_sessions.expire",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}"
+              },
+              "summary": "Expires an open hosted checkout so it can no longer be paid.",
+              "verb": "expire"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "amount_minor",
+                  "flag": "--amount-minor",
+                  "summary": "Optional partial amount in minor units; empty refunds the remaining amount.",
+                  "type": "int"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "summary": "Optional processor refund reason.",
+                  "type": "string"
+                },
+                {
+                  "field": "metadata",
+                  "flag": "--metadata",
+                  "repeated": true,
+                  "summary": "Caller metadata, such as the app's return and order ids. At most 20 keys.",
+                  "type": "key=value"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:refund",
+              "method": "money.checkout_sessions.refund",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}"
+              },
+              "summary": "Refund all or part of a paid one-time checkout.",
+              "verb": "refund"
             }
           ],
           "noun": "checkout-sessions",

@@ -569,6 +569,16 @@ pub struct CheckoutSession {
         alias = "buyerCountryCode"
     )]
     pub buyer_country_code: String,
+    /// Countries whose shipping address the hosted page collects, upper-case ISO
+    /// 3166-1 alpha-2. Empty means no shipping address is collected.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "shippingCountryCodes"
+    )]
+    pub shipping_country_codes: Vec<String>,
     /// The hosted page.
     ///
     /// Field behavior: `output_only`.
@@ -644,6 +654,58 @@ pub struct CheckoutSession {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub consent: Option<CheckoutConsent>,
+    /// The buyer's email address, once the hosted checkout has collected it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "customerEmail"
+    )]
+    pub customer_email: String,
+    /// The physical delivery address, when `shipping_country_codes` was set and
+    /// the hosted checkout has collected it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "shippingAddress"
+    )]
+    pub shipping_address: Option<ShippingAddress>,
+    /// The processor's current total in minor units, when it has reported one.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "amountTotal"
+    )]
+    pub amount_total: Option<i64>,
+    /// `unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "paymentStatus"
+    )]
+    pub payment_status: String,
+    /// The processor's live/test mode, once the session has reported it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub livemode: Option<bool>,
+    /// The processor payment this checkout produced; empty before settlement.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "processorPaymentId"
+    )]
+    pub processor_payment_id: String,
 }
 
 /// The request of ClientVerifyStorePurchase.
@@ -1351,6 +1413,17 @@ pub struct ExchangeRate {
         alias = "publicationDay"
     )]
     pub publication_day: String,
+}
+
+/// The request of ExpireCheckoutSession.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ExpireCheckoutSessionRequest {
+    /// The Money checkout resource to expire.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
 }
 
 /// A Feature is what an app checks, for example `plus` or
@@ -3106,6 +3179,95 @@ pub struct RefreshMerchantAccountRequest {
     pub name: String,
 }
 
+/// A processor refund created for a one-time checkout.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Refund {
+    /// The processor's refund id.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// The Money checkout resource this refund belongs to.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "checkoutSession"
+    )]
+    pub checkout_session: String,
+    /// The processor payment intent the refund applies to.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "paymentIntent"
+    )]
+    pub payment_intent: String,
+    /// Amount refunded in minor units.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "amountMinor"
+    )]
+    pub amount_minor: i64,
+    /// ISO 4217 currency code.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currencyCode"
+    )]
+    pub currency_code: String,
+    /// The processor's refund status.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+}
+
+/// The request of RefundCheckoutSession.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RefundCheckoutSessionRequest {
+    /// The Money checkout resource to refund.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optional partial amount in minor units; empty refunds the remaining amount.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "amountMinor"
+    )]
+    pub amount_minor: i64,
+    /// Optional processor refund reason.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// Caller metadata, such as the app's return and order ids. At most 20 keys.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub metadata: std::collections::BTreeMap<String, String>,
+}
+
+/// The processor refund created for this checkout.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RefundCheckoutSessionResponse {
+    /// The refund receipt, read back from the processor after creation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refund: Option<Refund>,
+}
+
 /// The request of ReleaseUsageInvoiceCollection.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3672,6 +3834,55 @@ pub struct SettleUsageReservationRequest {
         alias = "occurredTime"
     )]
     pub occurred_time: String,
+}
+
+/// A shipping address collected by the hosted checkout for a physical order.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ShippingAddress {
+    /// Recipient name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub recipient: String,
+    /// First address line.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub line1: String,
+    /// Optional second address line.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub line2: String,
+    /// City or town.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub city: String,
+    /// State, county or province.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub region: String,
+    /// Postcode.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "postalCode"
+    )]
+    pub postal_code: String,
+    /// Upper-case ISO 3166-1 alpha-2 region code.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "regionCode"
+    )]
+    pub region_code: String,
 }
 
 /// The request of SnapshotEntitlementGrants.
@@ -6758,6 +6969,66 @@ impl<'a, T: crate::runtime::Transport> CheckoutSessionsCollection<'a, T> {
             query: query.0,
             body: None,
             mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Expires an open hosted checkout so it can no longer be paid.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:expire` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn expire(
+        &self,
+        request: ExpireCheckoutSessionRequest,
+    ) -> Result<CheckoutSession, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:expire",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/checkout_sessions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Refund all or part of a paid one-time checkout.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/checkout_sessions/*}:refund` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `INVALID_FIELD`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn refund(
+        &self,
+        request: RefundCheckoutSessionRequest,
+    ) -> Result<RefundCheckoutSessionResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:refund",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/checkout_sessions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
             origin: None,
             effect_ids: false,
         };
