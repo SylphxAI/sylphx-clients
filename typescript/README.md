@@ -203,3 +203,7 @@ that header. `AuthMfaRequiredError` (401) permits retrying the same flow with
 `factorProofs`. `AuthRateLimitedError` (429) exposes `retryAfterSeconds` from
 `Retry-After`, falling back to the JSON `retry_after` field. Neither call is
 automatically replayed.
+
+Tests can inject `createContinueMock({ publishableKey })` from
+`@sylphx/sdk/auth/continue-mock` as the client’s `fetch` and read test codes
+from its `outbox`. See the [wire contract and mock limits](../../docs/services/contracts/auth-client-continue.md).
