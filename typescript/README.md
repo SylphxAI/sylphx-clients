@@ -181,6 +181,84 @@ const { session } = await redeemed.json()
 
 `@sylphx/nextjs` ships this pattern as a route handler.
 
+## Browser file uploads
+
+Import the handwritten helper from `@sylphx/sdk/browser-upload`. Files up to and
+including 5 MiB use a single presigned PUT; larger files use sequential S3
+multipart requests. `XMLHttpRequest.upload` supplies byte progress (bytes sent,
+not proof of completion); only the resolved promise means completion succeeded.
+
+```ts
+import { localUploadCheckpoint, uploadBrowserFile } from '@sylphx/sdk/browser-upload'
+import type { BrowserUploadBackend } from '@sylphx/sdk/browser-upload'
+
+// Your authenticated application backend implements these operations.
+const backend: BrowserUploadBackend = applicationUploadBackend
+const checkpoint = localUploadCheckpoint(`${accountId}/${bucketId}/${objectKey}`)
+const controller = new AbortController()
+const uploaded = await uploadBrowserFile({
+  key: objectKey,
+  file: fileInput.files![0]!,
+  backend,
+  checkpoint,
+  signal: controller.signal,
+  onProgress: ({ loaded, total, resumed }) => renderProgress(loaded, total, resumed),
+})
+console.log(uploaded.sha256) // full-file SHA-256 in lowercase hex, NOT an S3 ETag
+```
+
+After reload, reselect the original file and call again with the same key and
+checkpoint id. The helper hashes the **whole** file before resuming, rejecting a
+same-sized replacement with different bytes. It reconciles all remote parts,
+including a PUT completed just before a reload interrupted checkpoint saving;
+stale local part receipts do not cause skipped transfers. Each upload needs one
+writer: do not run the same checkpoint/upload concurrently in multiple tabs.
+The default localStorage store is optional; supply your own asynchronous store
+(e.g. IndexedDB). Storage failures reject instead of silently losing resume state.
+
+### Trusted-server adapter
+
+The helper deliberately does not receive bucket credentials or an API key. Your
+server uses `data.buckets.connect` and the returned S3 connection (endpoint,
+region, bucket, pathStyle, temporary credentials) with an S3-compatible signer:
+
+| Adapter method | Server operation |
+| --- | --- |
+| `put` | Presign `PutObject` for this key, size, and SHA-256 |
+| `create` | `CreateMultipartUpload`; return its UploadId |
+| `part` | Presign `UploadPart` for this UploadId and partNumber |
+| `listParts` | `ListParts`, **following every page**, return partNumber, ETag, Size |
+| `complete` | `CompleteMultipartUpload` with ordered PartNumber/ETag pairs; detect embedded XML errors even on HTTP 200 |
+| `abort` | `AbortMultipartUpload` |
+
+The returned `UploadRequest` contains the signed URL and any required headers.
+Return exactly the headers covered by the signature. Where supported, use the
+provided SHA-256 (hex; convert to base64 for S3 checksum headers) to require
+server-side checksum validation. The helper's returned checksum identifies the
+source; it does not independently read back or attest remote storage integrity.
+Do not compare multipart ETags to this SHA-256. Authorize every operation against
+the current user, bucket, key, and upload id; never accept browser checkpoint
+contents as authorization. URLs should be short-lived and renewable on each call.
+
+Configure bucket CORS to allow your browser origin, PUT and signed headers, and
+**expose `ETag`**. Missing ETag stops multipart completion rather than inventing a
+receipt. The helper never persists signed URLs, access keys or credentials.
+Checkpoints do contain object key, upload id, file size, SHA-256 and part receipts;
+clear them on logout if those identifiers are sensitive.
+
+Errors and cancellation keep multipart state so a later call can resume; there
+is no automatic network retry. Use `abortBrowserUpload(backend, checkpoint)` to
+abort remotely and then clear state. Apply a bucket lifecycle rule to expire
+abandoned multipart uploads (a browser may close immediately after creation).
+If completion succeeded but its response/checkpoint cleanup was lost, reconcile
+object existence/checksum on your server before discarding the stale checkpoint.
+Do not blindly restart or overwrite the object. The helper does not automatically
+recover this ambiguous-completion case or a server-expired upload id.
+
+Requires a secure browser context with Web Crypto, Blob, XHR, and (for the default
+checkpoint store) localStorage. SHA-256 currently buffers the entire source in
+memory; applications must set a file-size limit suitable for their target devices.
+
 ## Identifier-first Auth
 
 `createAuthClient` (also exported from `@sylphx/sdk/auth/client`) supports
