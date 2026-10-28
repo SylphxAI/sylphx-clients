@@ -95,6 +95,59 @@ pub struct BatchIngestUsageEventsResponse {
     pub results: Vec<IngestedUsageEventResult>,
 }
 
+/// Signed booked sales/refunds in native currency, sorted by dimensions.
+/// Only Money's own ledger-backed daily roll-up counts. It does not include
+/// pre-adoption history, unpriced purchases or external revenue reports.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BookedVolumeLine {
+    /// The app's project resource name.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub project: String,
+    /// The environment resource name.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub environment: String,
+    /// The app/package, bundle or Stripe product reference; empty stays empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "productRef"
+    )]
+    pub product_ref: String,
+    /// stripe, app_store or google_play.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub channel: String,
+    /// ISO 4217 currency; never sum amounts across currencies.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currencyCode"
+    )]
+    pub currency_code: String,
+    /// Signed integer minor units in currency_code; refunds subtract.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub gross: String,
+    /// Recorded processor fees, not an estimate of eventual settlement fees.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub fee: String,
+    /// Recorded tax in native minor units.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub tax: String,
+    /// Recorded net in native minor units.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub net: String,
+    /// Signed units: full reversals subtract units, partial refunds may not.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub units: String,
+    /// Number of booked ledger postings, including refund postings.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "postingCount"
+    )]
+    pub posting_count: String,
+}
+
 /// The request of CancelCustomerSubscription.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3757,6 +3810,13 @@ pub struct RevenueSummary {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub incomplete: bool,
+    /// Ledger-backed booked volume for this exact period, by app/environment,
+    /// channel and original currency. Never FX converted or replaced by imported
+    /// estimates/final reports; independent of amount, split and group_by.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "bookedVolume")]
+    pub booked_volume: Vec<BookedVolumeLine>,
 }
 
 /// The request of RunRevenueSource.

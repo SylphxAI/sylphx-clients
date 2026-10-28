@@ -23538,6 +23538,56 @@
         },
         "type": "object"
       },
+      "sylphx.money.v1.BookedVolumeLine": {
+        "description": "Signed booked sales/refunds in native currency, sorted by dimensions.\nOnly Money's own ledger-backed daily roll-up counts. It does not include\npre-adoption history, unpriced purchases or external revenue reports.",
+        "properties": {
+          "channel": {
+            "description": "stripe, app_store or google_play.",
+            "type": "string"
+          },
+          "currency_code": {
+            "description": "ISO 4217 currency; never sum amounts across currencies.",
+            "type": "string"
+          },
+          "environment": {
+            "description": "The environment resource name.",
+            "type": "string"
+          },
+          "fee": {
+            "description": "Recorded processor fees, not an estimate of eventual settlement fees.",
+            "type": "string"
+          },
+          "gross": {
+            "description": "Signed integer minor units in currency_code; refunds subtract.",
+            "type": "string"
+          },
+          "net": {
+            "description": "Recorded net in native minor units.",
+            "type": "string"
+          },
+          "posting_count": {
+            "description": "Number of booked ledger postings, including refund postings.",
+            "type": "string"
+          },
+          "product_ref": {
+            "description": "The app/package, bundle or Stripe product reference; empty stays empty.",
+            "type": "string"
+          },
+          "project": {
+            "description": "The app's project resource name.",
+            "type": "string"
+          },
+          "tax": {
+            "description": "Recorded tax in native minor units.",
+            "type": "string"
+          },
+          "units": {
+            "description": "Signed units: full reversals subtract units, partial refunds may not.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.CancelCustomerSubscriptionRequest": {
         "description": "The request of CancelCustomerSubscription.",
         "properties": {
@@ -26698,6 +26748,14 @@
             "description": "`net` or `gross`.",
             "readOnly": true,
             "type": "string"
+          },
+          "booked_volume": {
+            "description": "Ledger-backed booked volume for this exact period, by app/environment,\nchannel and original currency. Never FX converted or replaced by imported\nestimates/final reports; independent of amount, split and group_by.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.BookedVolumeLine"
+            },
+            "readOnly": true,
+            "type": "array"
           },
           "buckets": {
             "description": "One bucket per day or month that holds revenue, oldest first.",

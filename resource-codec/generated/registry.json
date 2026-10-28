@@ -71658,6 +71658,200 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "Signed booked sales/refunds in native currency, sorted by dimensions.\nOnly Money's own ledger-backed daily roll-up counts. It does not include\npre-adoption history, unpriced purchases or external revenue reports.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The app's project resource name.",
+          "filterable": false,
+          "name": "project",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The environment resource name.",
+          "filterable": false,
+          "name": "environment",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The app/package, bundle or Stripe product reference; empty stays empty.",
+          "filterable": false,
+          "name": "product_ref",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "stripe, app_store or google_play.",
+          "filterable": false,
+          "name": "channel",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "ISO 4217 currency; never sum amounts across currencies.",
+          "filterable": false,
+          "name": "currency_code",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Signed integer minor units in currency_code; refunds subtract.",
+          "filterable": false,
+          "name": "gross",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Recorded processor fees, not an estimate of eventual settlement fees.",
+          "filterable": false,
+          "name": "fee",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Recorded tax in native minor units.",
+          "filterable": false,
+          "name": "tax",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Recorded net in native minor units.",
+          "filterable": false,
+          "name": "net",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Signed units: full reversals subtract units, partial refunds may not.",
+          "filterable": false,
+          "name": "units",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Number of booked ledger postings, including refund postings.",
+          "filterable": false,
+          "name": "posting_count",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.BookedVolumeLine",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of CancelCustomerSubscription.",
       "fields": [
         {
@@ -81233,6 +81427,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Ledger-backed booked volume for this exact period, by app/environment,\nchannel and original currency. Never FX converted or replaced by imported\nestimates/final reports; independent of amount, split and group_by.",
+          "filterable": false,
+          "name": "booked_volume",
+          "number": 23,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.BookedVolumeLine"
           }
         }
       ],

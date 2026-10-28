@@ -287,6 +287,24 @@
         "kind": "scalar",
         "scalar": "bool"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "booked_volume",
+      "number": 23,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.money.v1.BookedVolumeLine"
+      }
     }
   ],
   "name": "sylphx.money.v1.RevenueSummary",

@@ -52,6 +52,36 @@ export interface BatchIngestUsageEventsResponse {
 	results?: IngestedUsageEventResult[]
 }
 
+/**
+ * Signed booked sales/refunds in native currency, sorted by dimensions.
+ * Only Money's own ledger-backed daily roll-up counts. It does not include
+ * pre-adoption history, unpriced purchases or external revenue reports.
+ */
+export interface BookedVolumeLine {
+	/** The app's project resource name. */
+	project?: string
+	/** The environment resource name. */
+	environment?: string
+	/** The app/package, bundle or Stripe product reference; empty stays empty. */
+	productRef?: string
+	/** stripe, app_store or google_play. */
+	channel?: string
+	/** ISO 4217 currency; never sum amounts across currencies. */
+	currencyCode?: string
+	/** Signed integer minor units in currency_code; refunds subtract. */
+	gross?: string
+	/** Recorded processor fees, not an estimate of eventual settlement fees. */
+	fee?: string
+	/** Recorded tax in native minor units. */
+	tax?: string
+	/** Recorded net in native minor units. */
+	net?: string
+	/** Signed units: full reversals subtract units, partial refunds may not. */
+	units?: string
+	/** Number of booked ledger postings, including refund postings. */
+	postingCount?: string
+}
+
 /** The request of CancelCustomerSubscription. */
 export interface CancelCustomerSubscriptionRequest {
 	/** The subscription to cancel. */
@@ -1807,6 +1837,12 @@ export interface RevenueSummary {
 	readonly unconvertedCount?: string
 	/** A stale source has not reported some day of the period. */
 	readonly incomplete?: boolean
+	/**
+	 * Ledger-backed booked volume for this exact period, by app/environment,
+	 * channel and original currency. Never FX converted or replaced by imported
+	 * estimates/final reports; independent of amount, split and group_by.
+	 */
+	readonly bookedVolume?: BookedVolumeLine[]
 }
 
 /** The request of RunRevenueSource. */
@@ -2584,6 +2620,11 @@ runtime.registerSchemas({
 	'sylphx.money.v1.BatchIngestUsageEventsResponse': [
 		['results', 'results', 'sylphx.money.v1.IngestedUsageEventResult'],
 	],
+	'sylphx.money.v1.BookedVolumeLine': [
+		['productRef', 'product_ref'],
+		['currencyCode', 'currency_code'],
+		['postingCount', 'posting_count'],
+	],
 	'sylphx.money.v1.CancelCustomerSubscriptionRequest': [
 		['atPeriodEnd', 'at_period_end'],
 		['refundLastPayment', 'refund_last_payment'],
@@ -3059,6 +3100,7 @@ runtime.registerSchemas({
 		['staleSources', 'stale_sources', 'sylphx.money.v1.StaleRevenueSource'],
 		['unconverted', 'unconverted', 'sylphx.money.v1.UnconvertedAmount'],
 		['unconvertedCount', 'unconverted_count'],
+		['bookedVolume', 'booked_volume', 'sylphx.money.v1.BookedVolumeLine'],
 	],
 	'sylphx.money.v1.RunRevenueSourceRequest': [
 		['startDay', 'start_day'],
