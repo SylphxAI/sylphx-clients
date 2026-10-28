@@ -13440,7 +13440,7 @@
             "x-sylphx-sensitive": true
           },
           "port": {
-            "description": "The TLS port: 5432 Postgres, 6379 Valkey, 8108 search, 443 objects.",
+            "description": "The TLS port: 5432 Postgres, 6379 key-value, 8108 search, 443 objects.",
             "format": "int32",
             "type": "integer"
           },
@@ -14379,7 +14379,7 @@
         "type": "object"
       },
       "sylphx.data.v1.KvNamespace": {
-        "description": "A KvNamespace is one customer key-value store on its own Valkey: versioned\nbytes with compare-and-set, TTL, and prefix list, plus a closed Valkey\ncommand profile on the wire. Silo: each has its own engine, credentials,\nbackup, region, and deletion.",
+        "description": "A KvNamespace is one managed key-value store: versioned bytes with\ncompare-and-set, TTL, prefix list, and a supported command profile.\nSilo: each has its own credentials,\nbackup, region, and deletion.",
         "properties": {
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",

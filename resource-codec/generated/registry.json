@@ -43186,7 +43186,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "The TLS port: 5432 Postgres, 6379 Valkey, 8108 search, 443 objects.",
+          "doc": "The TLS port: 5432 Postgres, 6379 key-value, 8108 search, 443 objects.",
           "filterable": false,
           "name": "port",
           "number": 2,
@@ -45784,7 +45784,7 @@
       "package": "sylphx.data.v1"
     },
     {
-      "doc": "A KvNamespace is one customer key-value store on its own Valkey: versioned\nbytes with compare-and-set, TTL, and prefix list, plus a closed Valkey\ncommand profile on the wire. Silo: each has its own engine, credentials,\nbackup, region, and deletion.",
+      "doc": "A KvNamespace is one managed key-value store: versioned bytes with\ncompare-and-set, TTL, prefix list, and a supported command profile.\nSilo: each has its own credentials,\nbackup, region, and deletion.",
       "fields": [
         {
           "behaviors": [

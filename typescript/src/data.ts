@@ -223,7 +223,7 @@ export interface ConnectSearchIndexResponse {
 export interface ConnectionInfo {
 	/** The endpoint host, `{ref}.sylphx.net`. */
 	host?: string
-	/** The TLS port: 5432 Postgres, 6379 Valkey, 8108 search, 443 objects. */
+	/** The TLS port: 5432 Postgres, 6379 key-value, 8108 search, 443 objects. */
 	port?: number
 	/** The engine user. */
 	username?: string
@@ -690,9 +690,9 @@ export interface IncrementValueResponse {
 }
 
 /**
- * A KvNamespace is one customer key-value store on its own Valkey: versioned
- * bytes with compare-and-set, TTL, and prefix list, plus a closed Valkey
- * command profile on the wire. Silo: each has its own engine, credentials,
+ * A KvNamespace is one managed key-value store: versioned bytes with
+ * compare-and-set, TTL, prefix list, and a supported command profile.
+ * Silo: each has its own credentials,
  * backup, region, and deletion.
  */
 export interface KvNamespace {
