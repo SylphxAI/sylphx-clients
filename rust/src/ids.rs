@@ -436,6 +436,8 @@ pub const MOA: Prefix = Prefix::new(
 );
 /// Message (`msg`, notify).
 pub const MSG: Prefix = Prefix::new("msg", "Message", "notify", Some("messages"));
+/// MessageTopic (`tpc`, notify).
+pub const TPC: Prefix = Prefix::new("tpc", "MessageTopic", "notify", Some("message_topics"));
 /// Preference (`prf`, notify).
 pub const PRF: Prefix = Prefix::new("prf", "Preference", "notify", Some("preferences"));
 /// Recipient (`rcp`, notify).
@@ -708,12 +710,12 @@ pub const ALL: &[Prefix] = &[
     AGT, AGV, ASES, SEVT, MST, MEM, AOP, MDL, AI, LLM, ART, BAC, BLS, INV, MET, PLAN, URP, BSUB,
     SITEM, AUSE, ACC, TXN, TPOL, TKX, BLD, BCC, CHG, FLAG, SEG, CONN, CPRV, BKT, DB, KV, IDX, CUS,
     ENT, EVT, IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK, PRV, SRL, SVC, SLNK, KMS, KMSV, CERT,
-    DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, PRF, RCP, SND, SDM, SUP, TMPL, AEV,
-    EEV, EGRP, LOG, SCRP, SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV, POOL, SHP, SNAP, VOL,
-    SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK, TASK, CEX, VMNT, WKSP,
-    MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF, ALRT, DOC, FILE,
-    PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP, SLOG, CFG,
-    BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK, RVS, RVF, RVSUM, FXR,
-    MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL,
-    KSCH,
+    DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, TPC, PRF, RCP, SND, SDM, SUP, TMPL,
+    AEV, EEV, EGRP, LOG, SCRP, SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV, POOL, SHP, SNAP,
+    VOL, SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK, TASK, CEX, VMNT,
+    WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF, ALRT, DOC,
+    FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP,
+    SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK, RVS, RVF,
+    RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR, SPC, EPI,
+    KEN, KREL, KSCH,
 ];

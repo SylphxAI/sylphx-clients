@@ -103,6 +103,7 @@ export const PREFIXES = [
 	{ prefix: 'mcl', entity: 'MailboxConnectLink', service: 'notify', collection: 'mailbox_connect_links' },
 	{ prefix: 'moa', entity: 'MailboxOauthApp', service: 'notify', collection: 'mailbox_oauth_apps' },
 	{ prefix: 'msg', entity: 'Message', service: 'notify', collection: 'messages' },
+	{ prefix: 'tpc', entity: 'MessageTopic', service: 'notify', collection: 'message_topics' },
 	{ prefix: 'prf', entity: 'Preference', service: 'notify', collection: 'preferences' },
 	{ prefix: 'rcp', entity: 'Recipient', service: 'notify', collection: 'recipients' },
 	{ prefix: 'snd', entity: 'Sender', service: 'notify', collection: 'senders' },

@@ -304,6 +304,18 @@ export interface DeleteMailboxRequest {
 	force?: boolean
 }
 
+/** The request of DeleteMessageTopic. */
+export interface DeleteMessageTopicRequest {
+	/** The name of the message topic to delete. */
+	name: string
+	/** Delete only if the current etag matches. */
+	etag?: string
+	/** Succeed when the message topic does not exist. */
+	allowMissing?: boolean
+	/** Validate without deleting anything. */
+	validateOnly?: boolean
+}
+
 /** The request of DeletePreference. */
 export interface DeletePreferenceRequest {
 	/** The name of the preference to delete. */
@@ -531,6 +543,12 @@ export interface GetMailboxRequest {
 /** The request of GetMessage. */
 export interface GetMessageRequest {
 	/** The name of the message to get. */
+	name: string
+}
+
+/** The request of GetMessageTopic. */
+export interface GetMessageTopicRequest {
+	/** The name of the message topic to get. */
 	name: string
 }
 
@@ -812,6 +830,28 @@ export interface ListMailboxesRequest {
 export interface ListMailboxesResponse {
 	/** The page. */
 	mailboxes?: Mailbox[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** The request of ListMessageTopics. */
+export interface ListMessageTopicsRequest {
+	/** The parent to list in. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+	/** AIP-160 filter over labels and filterable fields. */
+	filter?: string
+	/** AIP-132 ordering over filterable fields. */
+	orderBy?: string
+}
+
+/** The response of ListMessageTopics. */
+export interface ListMessageTopicsResponse {
+	/** The page. */
+	messageTopics?: MessageTopic[]
 	/** The token of the next page; empty on the last page. */
 	nextPageToken?: string
 }
@@ -1303,6 +1343,42 @@ export interface MessageContent {
 }
 
 /**
+ * A Message Topic holds an environment's settings for one message topic. The
+ * id is the topic messages carry. A topic with no Message Topic admits every
+ * message; a Message Topic may gate it on a Sylphx Money feature the recipient holds and cap it
+ * by a Money limit feature, so a plan's allowances stay data in Money.
+ */
+export interface MessageTopic {
+	/** `orgs/{org}/projects/{project}/envs/{env}/message_topics/{message_topic}`. */
+	name?: string
+	/** `tpc_<cell><ulid>`; never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/**
+	 * A Money feature key the recipient must hold (`entitlement_grants:check`
+	 * for the Recipient's `external_key` as the end user). A message to a
+	 * recipient that does not hold it is recorded `SUPPRESSED` with
+	 * `state_reason` `entitlement`; when Money cannot answer, the create fails
+	 * with 503 and writes nothing. The sending key must also hold
+	 * `billing:read`. Unset admits every recipient.
+	 */
+	requiredFeature?: string
+	/**
+	 * A Money `limit` feature whose allowance is the most messages on this topic
+	 * one recipient receives per `send_limit_window`. A message over it, or to a
+	 * recipient that holds no allowance, is recorded `RATE_LIMITED` and its
+	 * create answers 429. Unset: no topic limit.
+	 */
+	sendLimitFeature?: string
+	/**
+	 * The window the allowance counts over: 1 minute to 24 hours; default 24
+	 * hours.
+	 */
+	sendLimitWindow?: string
+}
+
+/**
  * A Preference is a recipient's choice for one topic: which channels may carry
  * it. Admission honors it, and unsubscribe links write it. The id is the
  * topic.
@@ -1645,6 +1721,18 @@ export interface UpdateMailboxRequest {
 	validateOnly?: boolean
 }
 
+/** The request of UpdateMessageTopic. */
+export interface UpdateMessageTopicRequest {
+	/** The message topic to update; `name` identifies it. */
+	messageTopic: MessageTopic
+	/** The fields to write; unset writes every populated field. */
+	updateMask?: string
+	/** Create the message topic when it does not exist (declarative upsert). */
+	allowMissing?: boolean
+	/** Validate and return the result without writing anything. */
+	validateOnly?: boolean
+}
+
 /** The request of UpdatePreference. */
 export interface UpdatePreferenceRequest {
 	/** The preference to update; `name` identifies it. */
@@ -1863,6 +1951,10 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.DeleteMessageTopicRequest': [
+		['allowMissing', 'allow_missing'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.DeletePreferenceRequest': [
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
@@ -1929,6 +2021,7 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetMailboxOauthAppRequest': [],
 	'sylphx.notify.v1.GetMailboxRequest': [],
 	'sylphx.notify.v1.GetMessageRequest': [],
+	'sylphx.notify.v1.GetMessageTopicRequest': [],
 	'sylphx.notify.v1.GetPreferenceRequest': [],
 	'sylphx.notify.v1.GetRecipientRequest': [],
 	'sylphx.notify.v1.GetRouteRequest': [],
@@ -2017,6 +2110,15 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListMailboxesResponse': [
 		['mailboxes', 'mailboxes', 'sylphx.notify.v1.Mailbox'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListMessageTopicsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListMessageTopicsResponse': [
+		['messageTopics', 'message_topics', 'sylphx.notify.v1.MessageTopic'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListMessagesRequest': [
@@ -2160,6 +2262,12 @@ runtime.registerSchemas({
 		['textBody', 'text_body'],
 		['htmlBody', 'html_body'],
 	],
+	'sylphx.notify.v1.MessageTopic': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['requiredFeature', 'required_feature'],
+		['sendLimitFeature', 'send_limit_feature'],
+		['sendLimitWindow', 'send_limit_window'],
+	],
 	'sylphx.notify.v1.Preference': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['digestInterval', 'digest_interval'],
@@ -2271,6 +2379,12 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.UpdateMessageTopicRequest': [
+		['messageTopic', 'message_topic', 'sylphx.notify.v1.MessageTopic'],
+		['updateMask', 'update_mask'],
+		['allowMissing', 'allow_missing'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.UpdatePreferenceRequest': [
 		['preference', 'preference', 'sylphx.notify.v1.Preference'],
 		['updateMask', 'update_mask'],
@@ -2323,6 +2437,8 @@ export class NotifyApi {
 	readonly recipients: RecipientsCollection
 	/** The `preferences` collection. */
 	readonly preferences: PreferencesCollection
+	/** The `message_topics` collection. */
+	readonly messageTopics: MessageTopicsCollection
 	/** The `suppressions` collection. */
 	readonly suppressions: SuppressionsCollection
 	/** The `templates` collection. */
@@ -2348,6 +2464,7 @@ export class NotifyApi {
 		this.senders = new SendersCollection(client)
 		this.recipients = new RecipientsCollection(client)
 		this.preferences = new PreferencesCollection(client)
+		this.messageTopics = new MessageTopicsCollection(client)
 		this.suppressions = new SuppressionsCollection(client)
 		this.templates = new TemplatesCollection(client)
 		this.messages = new MessagesCollection(client)
@@ -2906,6 +3023,94 @@ export class PreferencesCollection {
 		return this.client.call<Record<string, never>>({
 			method: 'DELETE',
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/recipients/*/preferences/*', 'name')}`,
+			query: { etag: request.etag, allow_missing: request.allowMissing, validate_only: request.validateOnly },
+			mutation: true,
+		})
+	}
+}
+
+/** `message_topics` of Sylphx Notify: Resource type `notify.sylphx.com/MessageTopic`. */
+export class MessageTopicsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets a message topic.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/message_topics/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetMessageTopicRequest): Promise<MessageTopic> {
+		return this.client.call<MessageTopic>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/message_topics/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.MessageTopic',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists message topics.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/message_topics` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListMessageTopicsRequest): Promise<ListMessageTopicsResponse> {
+		return this.client.call<ListMessageTopicsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/message_topics`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListMessageTopicsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListMessageTopicsRequest): AsyncGenerator<MessageTopic> {
+		let next: ListMessageTopicsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.messageTopics ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Updates a message topic; with `allow_missing`, creates it.
+	 *
+	 * `PATCH /v1/{message_topic.name=orgs/*\/projects/*\/envs/*\/message_topics/*}` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateMessageTopicRequest): Promise<MessageTopic> {
+		return this.client.call<MessageTopic>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.messageTopic?.name, 'orgs/*/projects/*/envs/*/message_topics/*', 'message_topic.name')}`,
+			query: { update_mask: request.updateMask, allow_missing: request.allowMissing, validate_only: request.validateOnly },
+			body: request.messageTopic ?? {},
+			bodyType: 'sylphx.notify.v1.MessageTopic',
+			responseType: 'sylphx.notify.v1.MessageTopic',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Deletes a message topic; its messages are admitted with no gate or topic limit.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/message_topics/*}` · permission `notify:write` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async delete(request: DeleteMessageTopicRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/message_topics/*', 'name')}`,
 			query: { etag: request.etag, allow_missing: request.allowMissing, validate_only: request.validateOnly },
 			mutation: true,
 		})

@@ -1,0 +1,22 @@
+{
+  "collection": "message_topics",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "MessageTopic",
+  "message": "sylphx.notify.v1.MessageTopic",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/message_topics/{message_topic}",
+  "plural": "messageTopics",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "messageTopic",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/MessageTopic"
+}

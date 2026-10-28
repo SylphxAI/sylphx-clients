@@ -29864,6 +29864,32 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.DeleteMessageTopicRequest": {
+        "description": "The request of DeleteMessageTopic.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the message topic does not exist.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the message topic to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MessageTopic"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.DeletePreferenceRequest": {
         "description": "The request of DeletePreference.",
         "properties": {
@@ -30374,6 +30400,20 @@
             "description": "The name of the message to get.",
             "type": "string",
             "x-sylphx-resource-reference": "notify.sylphx.com/Message"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetMessageTopicRequest": {
+        "description": "The request of GetMessageTopic.",
+        "properties": {
+          "name": {
+            "description": "The name of the message topic to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MessageTopic"
           }
         },
         "required": [
@@ -30996,6 +31036,54 @@
             "description": "The page.",
             "items": {
               "$ref": "#/components/schemas/sylphx.notify.v1.Mailbox"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListMessageTopicsRequest": {
+        "description": "The request of ListMessageTopics.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MessageTopic"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListMessageTopicsResponse": {
+        "description": "The response of ListMessageTopics.",
+        "properties": {
+          "message_topics": {
+            "description": "The page.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.MessageTopic"
             },
             "type": "array"
           },
@@ -31995,6 +32083,38 @@
         ],
         "type": "string"
       },
+      "sylphx.notify.v1.MessageTopic": {
+        "description": "A Message Topic holds an environment's settings for one message topic. The\nid is the topic messages carry. A topic with no Message Topic admits every\nmessage; a Message Topic may gate it on a Sylphx Money feature the recipient holds and cap it\nby a Money limit feature, so a plan's allowances stay data in Money.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "`orgs/{org}/projects/{project}/envs/{env}/message_topics/{message_topic}`.",
+            "type": "string"
+          },
+          "required_feature": {
+            "description": "A Money feature key the recipient must hold (`entitlement_grants:check`\nfor the Recipient's `external_key` as the end user). A message to a\nrecipient that does not hold it is recorded `SUPPRESSED` with\n`state_reason` `entitlement`; when Money cannot answer, the create fails\nwith 503 and writes nothing. The sending key must also hold\n`billing:read`. Unset admits every recipient.",
+            "type": "string"
+          },
+          "send_limit_feature": {
+            "description": "A Money `limit` feature whose allowance is the most messages on this topic\none recipient receives per `send_limit_window`. A message over it, or to a\nrecipient that holds no allowance, is recorded `RATE_LIMITED` and its\ncreate answers 429. Unset: no topic limit.",
+            "type": "string"
+          },
+          "send_limit_window": {
+            "description": "The window the allowance counts over: 1 minute to 24 hours; default 24\nhours.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "uid": {
+            "description": "`tpc_<cell><ulid>`; never reused.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.Preference": {
         "description": "A Preference is a recipient's choice for one topic: which channels may carry\nit. Admission honors it, and unsubscribe links write it. The id is the\ntopic.",
         "properties": {
@@ -32688,6 +32808,31 @@
         },
         "required": [
           "mailbox"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.UpdateMessageTopicRequest": {
+        "description": "The request of UpdateMessageTopic.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the message topic when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "message_topic": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MessageTopic",
+            "description": "The message topic to update; `name` identifies it."
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message_topic"
         ],
         "type": "object"
       },
@@ -87385,6 +87530,446 @@
         ],
         "x-sylphx-method": "money.merchant_accounts.connect",
         "x-sylphx-permission": "billing:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/message_topics": {
+      "get": {
+        "description": "Lists message topics.",
+        "operationId": "notify_message_topics_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-132 ordering over filterable fields.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListMessageTopicsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists message topics.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "notify.message_topics.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/message_topics/{message_topic}": {
+      "delete": {
+        "description": "Deletes a message topic; its messages are admitted with no gate or topic limit.",
+        "operationId": "notify_message_topics_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_topic",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Delete only if the current etag matches.",
+            "in": "query",
+            "name": "etag",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Succeed when the message topic does not exist.",
+            "in": "query",
+            "name": "allow_missing",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Validate without deleting anything.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Deletes a message topic; its messages are admitted with no gate or topic limit.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.message_topics.delete",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      },
+      "get": {
+        "description": "Gets a message topic.",
+        "operationId": "notify_message_topics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_topic",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.MessageTopic"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets a message topic.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "notify.message_topics.get",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      },
+      "patch": {
+        "description": "Updates a message topic; with `allow_missing`, creates it.",
+        "operationId": "notify_message_topics_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_topic",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The fields to write; unset writes every populated field.",
+            "in": "query",
+            "name": "update_mask",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated field paths.",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Create the message topic when it does not exist (declarative upsert).",
+            "in": "query",
+            "name": "allow_missing",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Validate and return the result without writing anything.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.MessageTopic"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.MessageTopic"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Updates a message topic; with `allow_missing`, creates it.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNKNOWN_FIELD",
+          "INVALID_FIELD",
+          "ETAG_MISMATCH",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.message_topics.update",
+        "x-sylphx-permission": "notify:write",
         "x-sylphx-stage": "preview"
       }
     },

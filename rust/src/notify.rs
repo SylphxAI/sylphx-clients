@@ -691,6 +691,34 @@ pub struct DeleteMailboxRequest {
     pub force: bool,
 }
 
+/// The request of DeleteMessageTopic.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteMessageTopicRequest {
+    /// The name of the message topic to delete.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Delete only if the current etag matches.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+    /// Succeed when the message topic does not exist.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowMissing"
+    )]
+    pub allow_missing: bool,
+    /// Validate without deleting anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
 /// The request of DeletePreference.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1195,6 +1223,17 @@ pub struct GetMailboxRequest {
 #[non_exhaustive]
 pub struct GetMessageRequest {
     /// The name of the message to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetMessageTopic.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetMessageTopicRequest {
+    /// The name of the message topic to get.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1856,6 +1895,61 @@ pub struct ListMailboxesResponse {
     /// The page.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mailboxes: Vec<Mailbox>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// The request of ListMessageTopics.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListMessageTopicsRequest {
+    /// The parent to list in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter over labels and filterable fields.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// AIP-132 ordering over filterable fields.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// The response of ListMessageTopics.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListMessageTopicsResponse {
+    /// The page.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "messageTopics"
+    )]
+    pub message_topics: Vec<MessageTopic>,
     /// The token of the next page; empty on the last page.
     #[serde(
         default,
@@ -2928,6 +3022,58 @@ pub struct MessageContent {
     pub html_body: String,
 }
 
+/// A Message Topic holds an environment's settings for one message topic. The
+/// id is the topic messages carry. A topic with no Message Topic admits every
+/// message; a Message Topic may gate it on a Sylphx Money feature the recipient holds and cap it
+/// by a Money limit feature, so a plan's allowances stay data in Money.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MessageTopic {
+    /// `orgs/{org}/projects/{project}/envs/{env}/message_topics/{message_topic}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `tpc_<cell><ulid>`; never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// A Money feature key the recipient must hold (`entitlement_grants:check`
+    /// for the Recipient's `external_key` as the end user). A message to a
+    /// recipient that does not hold it is recorded `SUPPRESSED` with
+    /// `state_reason` `entitlement`; when Money cannot answer, the create fails
+    /// with 503 and writes nothing. The sending key must also hold
+    /// `billing:read`. Unset admits every recipient.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requiredFeature"
+    )]
+    pub required_feature: String,
+    /// A Money `limit` feature whose allowance is the most messages on this topic
+    /// one recipient receives per `send_limit_window`. A message over it, or to a
+    /// recipient that holds no allowance, is recorded `RATE_LIMITED` and its
+    /// create answers 429. Unset: no topic limit.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sendLimitFeature"
+    )]
+    pub send_limit_feature: String,
+    /// The window the allowance counts over: 1 minute to 24 hours; default 24
+    /// hours.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sendLimitWindow"
+    )]
+    pub send_limit_window: String,
+}
+
 /// A Preference is a recipient's choice for one topic: which channels may carry
 /// it. Admission honors it, and unsubscribe links write it. The id is the
 /// topic.
@@ -3611,6 +3757,42 @@ pub struct UpdateMailboxRequest {
     )]
     pub update_mask: String,
     /// Create the mailbox when it does not exist (declarative upsert).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowMissing"
+    )]
+    pub allow_missing: bool,
+    /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// The request of UpdateMessageTopic.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateMessageTopicRequest {
+    /// The message topic to update; `name` identifies it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "messageTopic"
+    )]
+    pub message_topic: Option<MessageTopic>,
+    /// The fields to write; unset writes every populated field.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+    /// Create the message topic when it does not exist (declarative upsert).
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4786,6 +4968,13 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
         }
     }
 
+    /// The `message_topics` collection.
+    pub fn message_topics(&self) -> MessageTopicsCollection<'a, T> {
+        MessageTopicsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `suppressions` collection.
     pub fn suppressions(&self) -> SuppressionsCollection<'a, T> {
         SuppressionsCollection {
@@ -5775,6 +5964,159 @@ impl<'a, T: crate::runtime::Transport> PreferencesCollection<'a, T> {
             crate::runtime::path_param(
                 &request.name,
                 "orgs/*/projects/*/envs/*/recipients/*/preferences/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("etag", &request.etag);
+        query.push("allow_missing", &request.allow_missing);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `message_topics` of Sylphx Notify: Resource type `notify.sylphx.com/MessageTopic`.
+pub struct MessageTopicsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> MessageTopicsCollection<'a, T> {
+    /// Gets a message topic.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/message_topics/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetMessageTopicRequest,
+    ) -> Result<MessageTopic, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/message_topics/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists message topics.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/message_topics` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListMessageTopicsRequest,
+    ) -> Result<ListMessageTopicsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/message_topics",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListMessageTopicsRequest,
+    ) -> Result<Vec<MessageTopic>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.message_topics);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Updates a message topic; with `allow_missing`, creates it.
+    ///
+    /// `PATCH /v1/{message_topic.name=orgs/*/projects/*/envs/*/message_topics/*}` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateMessageTopicRequest,
+    ) -> Result<MessageTopic, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .message_topic
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/message_topics/*",
+                "message_topic.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("allow_missing", &request.allow_missing);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.message_topic)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Deletes a message topic; its messages are admitted with no gate or topic limit.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/message_topics/*}` · permission `notify:write` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn delete(
+        &self,
+        request: DeleteMessageTopicRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/message_topics/*",
                 "name"
             )?
         );

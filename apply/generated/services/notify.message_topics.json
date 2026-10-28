@@ -1,0 +1,50 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.message_topics.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.message_topics.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.message_topics.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "notify.message_topics.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/MessageTopic"
+    }
+  ]
+}
