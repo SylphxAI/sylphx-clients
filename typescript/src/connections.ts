@@ -109,6 +109,12 @@ export interface ConnectionProvider {
 export interface ConnectionProviderSpec {
 	/** A GitHub App. */
 	githubApp?: GitHubAppConfig
+	/**
+	 * Organizations allowed to use specific installations of this provider.
+	 * Removing a grant prevents subsequent Broker exchanges. Signing custody
+	 * remains in the provider's organization and is never copied to a recipient.
+	 */
+	sharingGrants?: ProviderSharingGrant[]
 }
 
 /** ConnectionProviderStatus is the observed state of a ConnectionProvider. */
@@ -318,6 +324,20 @@ export interface ListConnectionsResponse {
 	nextPageToken?: string
 }
 
+/**
+ * ProviderSharingGrant lets a named organization use exact external
+ * installations through its own Connections and Broker permissions.
+ */
+export interface ProviderSharingGrant {
+	/** The recipient, `orgs/{org}`; wildcards are not accepted. */
+	organization?: string
+	/**
+	 * Exact provider installation ids. For GitHub these are canonical positive
+	 * decimal installation ids. An empty list grants nothing.
+	 */
+	externalIds?: string[]
+}
+
 /** The request of UpdateConnectionProvider. */
 export interface UpdateConnectionProviderRequest {
 	/** The connection provider to update; `name` identifies it. */
@@ -380,6 +400,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.connections.v1.ConnectionProviderSpec': [
 		['githubApp', 'github_app', 'sylphx.connections.v1.GitHubAppConfig'],
+		['sharingGrants', 'sharing_grants', 'sylphx.connections.v1.ProviderSharingGrant'],
 	],
 	'sylphx.connections.v1.ConnectionProviderStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -444,6 +465,9 @@ runtime.registerSchemas({
 	'sylphx.connections.v1.ListConnectionsResponse': [
 		['connections', 'connections', 'sylphx.connections.v1.Connection'],
 		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.connections.v1.ProviderSharingGrant': [
+		['externalIds', 'external_ids'],
 	],
 	'sylphx.connections.v1.UpdateConnectionProviderRequest': [
 		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],

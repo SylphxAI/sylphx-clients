@@ -12769,6 +12769,13 @@
           "github_app": {
             "$ref": "#/components/schemas/sylphx.connections.v1.GitHubAppConfig",
             "description": "A GitHub App."
+          },
+          "sharing_grants": {
+            "description": "Organizations allowed to use specific installations of this provider.\nRemoving a grant prevents subsequent Broker exchanges. Signing custody\nremains in the provider's organization and is never copied to a recipient.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.connections.v1.ProviderSharingGrant"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -13226,6 +13233,28 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.connections.v1.ProviderSharingGrant": {
+        "description": "ProviderSharingGrant lets a named organization use exact external\ninstallations through its own Connections and Broker permissions.",
+        "properties": {
+          "external_ids": {
+            "description": "Exact provider installation ids. For GitHub these are canonical positive\ndecimal installation ids. An empty list grants nothing.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "organization": {
+            "description": "The recipient, `orgs/{org}`; wildcards are not accepted.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/Org"
+          }
+        },
+        "required": [
+          "organization",
+          "external_ids"
+        ],
         "type": "object"
       },
       "sylphx.connections.v1.RepositorySelection": {

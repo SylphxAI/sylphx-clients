@@ -9445,6 +9445,13 @@
                   "type": "string"
                 },
                 {
+                  "field": "connection_provider.spec.sharing_grants",
+                  "flag": "--spec.sharing-grants",
+                  "repeated": true,
+                  "summary": "Organizations allowed to use specific installations of this provider. Removing a grant prevents subsequent Broker exchanges. Signing custody remains in the provider's organization and is never copied to a recipient.",
+                  "type": "json"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",

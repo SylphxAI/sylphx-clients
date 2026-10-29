@@ -266,6 +266,7 @@ func configTargetingRule() []def.Field {
 func connectionsConnectionProviderSpec() []def.Field {
 	return []def.Field{
 		{Name: "github_app", Kind: def.Message, Msg: connectionsGitHubAppConfig, Flags: def.Presence, Doc: "A GitHub App."},
+		{Name: "sharing_grants", Kind: def.Message, Msg: connectionsProviderSharingGrant, Repeated: true, Doc: "Organizations allowed to use specific installations of this provider. Removing a grant prevents subsequent Broker exchanges. Signing custody remains in the provider's organization and is never copied to a recipient."},
 	}
 }
 
@@ -320,6 +321,14 @@ func connectionsGitHubAppConfig() []def.Field {
 		{Name: "client_id", Kind: def.String, Doc: "The App's OAuth client id."},
 		{Name: "signing_key", Kind: def.String, Flags: def.Required, Doc: "The imported, non-exportable SIGN Key (RS256) that signs App assertions; only the credential service may use it."},
 		{Name: "webhook_secret", Kind: def.String, Doc: "The Secret holding the webhook secret that verifies deliveries."},
+	}
+}
+
+// connectionsProviderSharingGrant is `sylphx.connections.v1.ProviderSharingGrant`.
+func connectionsProviderSharingGrant() []def.Field {
+	return []def.Field{
+		{Name: "organization", Kind: def.String, Flags: def.Required, Doc: "The recipient, `orgs/{org}`; wildcards are not accepted."},
+		{Name: "external_ids", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "Exact provider installation ids. For GitHub these are canonical positive decimal installation ids. An empty list grants nothing."},
 	}
 }
 

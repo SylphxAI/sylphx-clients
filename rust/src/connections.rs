@@ -217,6 +217,15 @@ pub struct ConnectionProviderSpec {
     /// A GitHub App.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "githubApp")]
     pub github_app: Option<GitHubAppConfig>,
+    /// Organizations allowed to use specific installations of this provider.
+    /// Removing a grant prevents subsequent Broker exchanges. Signing custody
+    /// remains in the provider's organization and is never copied to a recipient.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sharingGrants"
+    )]
+    pub sharing_grants: Vec<ProviderSharingGrant>,
 }
 
 /// ConnectionProviderStatus is the observed state of a ConnectionProvider.
@@ -692,6 +701,24 @@ pub struct ListConnectionsResponse {
         alias = "nextPageToken"
     )]
     pub next_page_token: String,
+}
+
+/// ProviderSharingGrant lets a named organization use exact external
+/// installations through its own Connections and Broker permissions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProviderSharingGrant {
+    /// The recipient, `orgs/{org}`; wildcards are not accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub organization: String,
+    /// Exact provider installation ids. For GitHub these are canonical positive
+    /// decimal installation ids. An empty list grants nothing.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "externalIds")]
+    pub external_ids: Vec<String>,
 }
 
 /// The request of UpdateConnectionProvider.

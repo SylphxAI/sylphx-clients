@@ -17,6 +17,24 @@
         "kind": "message",
         "name": "sylphx.connections.v1.GitHubAppConfig"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sharing_grants",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.connections.v1.ProviderSharingGrant"
+      }
     }
   ],
   "name": "sylphx.connections.v1.ConnectionProviderSpec",
