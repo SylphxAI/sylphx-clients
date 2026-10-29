@@ -618,6 +618,14 @@ export interface CustomerSubscription {
 	readonly trialEndTime?: string
 	/** The checkout's metadata. */
 	readonly metadata?: Record<string, unknown>
+	/**
+	 * The buyer's billing country, upper-case ISO 3166-1 alpha-2 (for example
+	 * `HK`), for a web subscription: the processor customer's billing address
+	 * (which checkout requires and saves), else the default payment method's
+	 * billing address. Kept current when the processor reports a subscription
+	 * or customer change. Empty when unknown, and for store subscriptions.
+	 */
+	readonly billingCountryCode?: string
 }
 
 /** The request of DeleteRevenueSource. */
@@ -2775,6 +2783,7 @@ runtime.registerSchemas({
 		['cancelAtPeriodEnd', 'cancel_at_period_end'],
 		['trialEndTime', 'trial_end_time'],
 		['metadata', 'metadata', undefined, 'json'],
+		['billingCountryCode', 'billing_country_code'],
 	],
 	'sylphx.money.v1.DeleteRevenueSourceRequest': [
 		['validateOnly', 'validate_only'],

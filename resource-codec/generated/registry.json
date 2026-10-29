@@ -75339,6 +75339,25 @@
             "kind": "well_known",
             "wkt": "struct"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The buyer's billing country, upper-case ISO 3166-1 alpha-2 (for example\n`HK`), for a web subscription: the processor customer's billing address\n(which checkout requires and saves), else the default payment method's\nbilling address. Kept current when the processor reports a subscription\nor customer change. Empty when unknown, and for store subscriptions.",
+          "filterable": false,
+          "name": "billing_country_code",
+          "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.CustomerSubscription",

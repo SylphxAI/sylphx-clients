@@ -24648,6 +24648,11 @@
       "sylphx.money.v1.CustomerSubscription": {
         "description": "A Customer Subscription is a subject's recurring purchase, mirrored from\nthe processor after Money read it back. Money writes it; a caller changes it\nonly through `:cancel` and `:resume`.",
         "properties": {
+          "billing_country_code": {
+            "description": "The buyer's billing country, upper-case ISO 3166-1 alpha-2 (for example\n`HK`), for a web subscription: the processor customer's billing address\n(which checkout requires and saves), else the default payment method's\nbilling address. Kept current when the processor reports a subscription\nor customer change. Empty when unknown, and for store subscriptions.",
+            "readOnly": true,
+            "type": "string"
+          },
           "cancel_at_period_end": {
             "description": "Whether it ends at `current_period_end_time` instead of renewing.",
             "readOnly": true,

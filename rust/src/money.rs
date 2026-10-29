@@ -1293,6 +1293,19 @@ pub struct CustomerSubscription {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
+    /// The buyer's billing country, upper-case ISO 3166-1 alpha-2 (for example
+    /// `HK`), for a web subscription: the processor customer's billing address
+    /// (which checkout requires and saves), else the default payment method's
+    /// billing address. Kept current when the processor reports a subscription
+    /// or customer change. Empty when unknown, and for store subscriptions.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "billingCountryCode"
+    )]
+    pub billing_country_code: String,
 }
 
 /// The request of DeleteRevenueSource.
