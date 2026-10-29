@@ -12108,6 +12108,12 @@
                   "type": "int"
                 },
                 {
+                  "field": "webhook_endpoint.spec.consumer",
+                  "flag": "--spec.consumer",
+                  "summary": "Optional opaque customer identifier. A nonempty value receives only events whose CloudEvents consumer extension is the same string. Empty receives every consumer, including events without the extension.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -12181,6 +12187,12 @@
                   "flag": "--spec.rate-limit-per-second",
                   "summary": "At most this many attempts start per second; 0 is no limit. Deliveries over the limit wait their turn; none is dropped.",
                   "type": "int"
+                },
+                {
+                  "field": "webhook_endpoint.spec.consumer",
+                  "flag": "--spec.consumer",
+                  "summary": "Optional opaque customer identifier. A nonempty value receives only events whose CloudEvents consumer extension is the same string. Empty receives every consumer, including events without the extension.",
+                  "type": "string"
                 },
                 {
                   "field": "allow_missing",

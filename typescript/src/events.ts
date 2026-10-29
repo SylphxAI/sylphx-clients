@@ -1198,6 +1198,12 @@ export interface WebhookEndpointSpec {
 	 * over the limit wait their turn; none is dropped.
 	 */
 	rateLimitPerSecond?: number
+	/**
+	 * Optional opaque customer identifier. A nonempty value receives only
+	 * events whose CloudEvents consumer extension is the same string. Empty
+	 * receives every consumer, including events without the extension.
+	 */
+	consumer?: string
 }
 
 /** WebhookEndpointStatus is the observed state of a WebhookEndpoint. */

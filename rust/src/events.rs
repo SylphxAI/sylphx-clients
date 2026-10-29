@@ -2696,6 +2696,11 @@ pub struct WebhookEndpointSpec {
         alias = "rateLimitPerSecond"
     )]
     pub rate_limit_per_second: i32,
+    /// Optional opaque customer identifier. A nonempty value receives only
+    /// events whose CloudEvents consumer extension is the same string. Empty
+    /// receives every consumer, including events without the extension.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub consumer: String,
 }
 
 /// WebhookEndpointStatus is the observed state of a WebhookEndpoint.

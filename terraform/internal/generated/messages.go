@@ -564,6 +564,7 @@ func eventsWebhookEndpointSpec() []def.Field {
 		{Name: "max_concurrent_deliveries", Kind: def.Int32, Doc: "At most this many deliveries in flight; default 10."},
 		{Name: "event_types", Kind: def.String, Repeated: true, Doc: "Which event types the endpoint receives: an exact type (`order.paid`), a prefix ending in `.*` (`order.*`), or `*` for every type; default `[\"*\"]`."},
 		{Name: "rate_limit_per_second", Kind: def.Int32, Doc: "At most this many attempts start per second; 0 is no limit. Deliveries over the limit wait their turn; none is dropped."},
+		{Name: "consumer", Kind: def.String, Doc: "Optional opaque customer identifier. A nonempty value receives only events whose CloudEvents consumer extension is the same string. Empty receives every consumer, including events without the extension."},
 	}
 }
 

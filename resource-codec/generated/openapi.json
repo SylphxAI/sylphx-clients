@@ -18746,6 +18746,10 @@
       "sylphx.events.v1.WebhookEndpointSpec": {
         "description": "WebhookEndpointSpec is the caller-writable state of a WebhookEndpoint.",
         "properties": {
+          "consumer": {
+            "description": "Optional opaque customer identifier. A nonempty value receives only\nevents whose CloudEvents consumer extension is the same string. Empty\nreceives every consumer, including events without the extension.",
+            "type": "string"
+          },
           "disabled": {
             "description": "Stop delivering; deliveries queue until enabled.",
             "type": "boolean"
