@@ -23564,6 +23564,89 @@
       "package": "sylphx.auth.v1"
     },
     {
+      "doc": "The request of CreateTrustedIssuer.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The parent to create in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/TrustedIssuer",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The issuer key, the final name segment (`^[a-z][a-z0-9]{1,15}$`); it is\npart of every end-user id from this issuer and never changes.",
+          "filterable": false,
+          "name": "trusted_issuer_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The trusted issuer to create; only caller-writable fields are read.",
+          "filterable": false,
+          "name": "trusted_issuer",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.TrustedIssuer"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Validate and return the result without writing anything.",
+          "filterable": false,
+          "name": "validate_only",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.CreateTrustedIssuerRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
       "doc": "A Customer Organization is a B2B tenant inside a customer's app. It is never\na Sylphx org and never a Resource name segment of anything but its own\nmemberships.",
       "fields": [
         {
@@ -24237,6 +24320,89 @@
         }
       ],
       "name": "sylphx.auth.v1.DeleteOrganizationRoleRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of DeleteTrustedIssuer.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The name of the trusted issuer to delete.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/TrustedIssuer",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Delete only if the current etag matches.",
+          "filterable": false,
+          "name": "etag",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Succeed when the trusted issuer does not exist.",
+          "filterable": false,
+          "name": "allow_missing",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Validate without deleting anything.",
+          "filterable": false,
+          "name": "validate_only",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.DeleteTrustedIssuerRequest",
       "package": "sylphx.auth.v1"
     },
     {
@@ -25041,6 +25207,32 @@
         }
       ],
       "name": "sylphx.auth.v1.GetSessionRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of GetTrustedIssuer.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The name of the trusted issuer to get.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/TrustedIssuer",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.GetTrustedIssuerRequest",
       "package": "sylphx.auth.v1"
     },
     {
@@ -26729,6 +26921,149 @@
       "package": "sylphx.auth.v1"
     },
     {
+      "doc": "The request of ListTrustedIssuers.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The parent to list in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/TrustedIssuer",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "At most this many; default 50, clamped to 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "`next_page_token` of the previous page.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "AIP-160 filter over labels and filterable fields.",
+          "filterable": false,
+          "name": "filter",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "AIP-132 ordering over filterable fields.",
+          "filterable": false,
+          "name": "order_by",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ListTrustedIssuersRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The response of ListTrustedIssuers.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The page.",
+          "filterable": false,
+          "name": "trusted_issuers",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.TrustedIssuer"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The token of the next page; empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ListTrustedIssuersResponse",
+      "package": "sylphx.auth.v1"
+    },
+    {
       "doc": "A Membership places an end user in a customer organization with app-defined\nroles. Roles are app data, not Access policy. Changes append to history with\na current head per (user, organization); Delete closes the membership.",
       "fields": [
         {
@@ -28280,6 +28615,211 @@
       "package": "sylphx.auth.v1"
     },
     {
+      "doc": "A Trusted Issuer lets the environment's end users sign in with the\ncustomer's own identity provider (Clerk, Auth0, Cognito, Firebase Auth, or\nany OIDC or JWT issuer) instead of Sylphx Auth. Every Sylphx service then\naccepts that issuer's access tokens as the end user\n`ext_<issuer key>_<hash of iss and sub>`, with role `authenticated`\n(docs/specs/one-platform/end-user-principal.md §5). Auth fetches and caches\nthe issuer's keys; a verifying service never calls the issuer. No profile or\npassword is stored: the issuer owns the user and the session.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "`orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}`;\nthe final segment is the issuer key (`^[a-z][a-z0-9]{1,15}$`, for example\n`clerk`) that every end-user id from this issuer carries. It never\nchanges, so a user keeps the same id for as long as the issuer is trusted.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`tis_<ulid>`; never reused.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The exact `iss` the issuer's tokens carry, an HTTPS URL, for example\n`https://clerk.example.com` or `https://securetoken.google.com/<project>`.\nOne Trusted Issuer per issuer in an environment.",
+          "filterable": true,
+          "name": "issuer",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The HTTPS URL of the issuer's JSON Web Key Set. Only Auth fetches it.",
+          "filterable": false,
+          "name": "jwks_uri",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "A token's `aud` must contain one of these, for example the Firebase\nproject id or the Auth0 API identifier.",
+          "filterable": false,
+          "name": "audiences",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Token claims copied into the end user's `app_metadata`, the claim\npolicies read (for example the issuer's `org_role` as `roles`). Map only\nclaims the issuer's admin sets, never ones the user can write.",
+          "filterable": false,
+          "name": "app_metadata_claims",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.TrustedIssuerClaimMapping"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A disabled issuer's tokens are refused; its users keep their ids and data.",
+          "filterable": true,
+          "name": "disabled",
+          "number": 14,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.TrustedIssuer",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "One token claim copied into `app_metadata`.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The top-level claim name in the issuer's token, for example `org_role` or\n`https://example.com/roles`.",
+          "filterable": false,
+          "name": "claim",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The `app_metadata` key it is copied to; unique within the issuer.",
+          "filterable": false,
+          "name": "key",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.TrustedIssuerClaimMapping",
+      "package": "sylphx.auth.v1"
+    },
+    {
       "doc": "The request of UnlockEndUser.",
       "fields": [
         {
@@ -28744,6 +29284,70 @@
         }
       ],
       "name": "sylphx.auth.v1.UpdateOrganizationRoleRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of UpdateTrustedIssuer.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The trusted issuer to update; `name` identifies it.",
+          "filterable": false,
+          "name": "trusted_issuer",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.TrustedIssuer"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The fields to write; unset writes every populated field.",
+          "filterable": false,
+          "name": "update_mask",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "field_mask"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Validate and return the result without writing anything.",
+          "filterable": false,
+          "name": "validate_only",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.UpdateTrustedIssuerRequest",
       "package": "sylphx.auth.v1"
     },
     {
@@ -126802,6 +127406,28 @@
       "type": "auth.sylphx.com/Session"
     },
     {
+      "collection": "trusted_issuers",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "TrustedIssuer",
+      "message": "sylphx.auth.v1.TrustedIssuer",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}",
+      "plural": "trustedIssuers",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "auth",
+      "shape": "record",
+      "singular": "trustedIssuer",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "auth.sylphx.com/TrustedIssuer"
+    },
+    {
       "collection": "billing_accounts",
       "controller": "",
       "deletion_protection": false,
@@ -135010,6 +135636,239 @@
           ],
           "name": "organization_roles",
           "resource_type": "auth.sylphx.com/OrganizationRole"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Gets an trusted issuer.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}",
+                    "pattern": "orgs/*/projects/*/envs/*/trusted_issuers/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/trusted_issuers/*}"
+              },
+              "id": "auth.trusted_issuers.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "auth:read",
+              "proto": "sylphx.auth.v1.AuthService.GetTrustedIssuer",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.GetTrustedIssuerRequest",
+              "resource_field": null,
+              "response": "sylphx.auth.v1.TrustedIssuer",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists trusted issuers.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "filter",
+                  "order_by"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/trusted_issuers"
+              },
+              "id": "auth.trusted_issuers.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.auth.v1.TrustedIssuer",
+                "items_field": "trusted_issuers"
+              },
+              "permission": "auth:read",
+              "proto": "sylphx.auth.v1.AuthService.ListTrustedIssuers",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.ListTrustedIssuersRequest",
+              "resource_field": null,
+              "response": "sylphx.auth.v1.ListTrustedIssuersResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Creates an trusted issuer.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "UNKNOWN_FIELD",
+                "INVALID_FIELD",
+                "RESOURCE_ALREADY_EXISTS",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS",
+                "PLAN_LIMIT_REACHED"
+              ],
+              "http": {
+                "body": "trusted_issuer",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "trusted_issuer_id",
+                  "validate_only"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/trusted_issuers"
+              },
+              "id": "auth.trusted_issuers.create",
+              "kind": "create",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "auth:write",
+              "proto": "sylphx.auth.v1.AuthService.CreateTrustedIssuer",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.CreateTrustedIssuerRequest",
+              "resource_field": "trusted_issuer",
+              "response": "sylphx.auth.v1.TrustedIssuer",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "create"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Updates an trusted issuer.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNKNOWN_FIELD",
+                "INVALID_FIELD",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "trusted_issuer",
+                "method": "PATCH",
+                "path_params": [
+                  {
+                    "field": "trusted_issuer.name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}",
+                    "pattern": "orgs/*/projects/*/envs/*/trusted_issuers/*"
+                  }
+                ],
+                "query_params": [
+                  "update_mask",
+                  "validate_only"
+                ],
+                "template": "/v1/{trusted_issuer.name=orgs/*/projects/*/envs/*/trusted_issuers/*}"
+              },
+              "id": "auth.trusted_issuers.update",
+              "kind": "update",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "auth:write",
+              "proto": "sylphx.auth.v1.AuthService.UpdateTrustedIssuer",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.UpdateTrustedIssuerRequest",
+              "resource_field": "trusted_issuer",
+              "response": "sylphx.auth.v1.TrustedIssuer",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "update"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Deletes an trusted issuer.",
+              "effect": "destructive",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": null,
+                "method": "DELETE",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}",
+                    "pattern": "orgs/*/projects/*/envs/*/trusted_issuers/*"
+                  }
+                ],
+                "query_params": [
+                  "etag",
+                  "allow_missing",
+                  "validate_only"
+                ],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/trusted_issuers/*}"
+              },
+              "id": "auth.trusted_issuers.delete",
+              "kind": "delete",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "auth:write",
+              "proto": "sylphx.auth.v1.AuthService.DeleteTrustedIssuer",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.DeleteTrustedIssuerRequest",
+              "resource_field": null,
+              "response": "google.protobuf.Empty",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "delete"
+            }
+          ],
+          "name": "trusted_issuers",
+          "resource_type": "auth.sylphx.com/TrustedIssuer"
         },
         {
           "methods": [

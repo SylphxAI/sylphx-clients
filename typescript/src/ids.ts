@@ -38,6 +38,7 @@ export const PREFIXES = [
 	{ prefix: 'ivt', entity: 'Invitation', service: 'auth', collection: 'invitations' },
 	{ prefix: 'oac', entity: 'OauthClient', service: 'auth', collection: 'oauth_clients' },
 	{ prefix: 'orl', entity: 'OrganizationRole', service: 'auth', collection: 'organization_roles' },
+	{ prefix: 'tis', entity: 'TrustedIssuer', service: 'auth', collection: 'trusted_issuers' },
 	{ prefix: 'agt', entity: 'Agent', service: 'agents', collection: 'agents' },
 	{ prefix: 'agv', entity: 'AgentVersion', service: 'agents', collection: 'agent_versions' },
 	{ prefix: 'ases', entity: 'AgentSession', service: 'agents', collection: 'agent_sessions' },

@@ -1,0 +1,22 @@
+{
+  "collection": "trusted_issuers",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "TrustedIssuer",
+  "message": "sylphx.auth.v1.TrustedIssuer",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}",
+  "plural": "trustedIssuers",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "trustedIssuer",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/TrustedIssuer"
+}

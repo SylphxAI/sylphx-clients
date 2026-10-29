@@ -1,0 +1,59 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.trusted_issuers.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "auth.trusted_issuers.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "trusted_issuer_id",
+              "validate_only"
+            ]
+          },
+          "id": "auth.trusted_issuers.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "auth.trusted_issuers.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag",
+              "allow_missing",
+              "validate_only"
+            ]
+          },
+          "id": "auth.trusted_issuers.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/TrustedIssuer"
+    }
+  ]
+}

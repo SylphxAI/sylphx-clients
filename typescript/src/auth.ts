@@ -224,6 +224,21 @@ export interface CreateOrganizationRoleRequest {
 	validateOnly?: boolean
 }
 
+/** The request of CreateTrustedIssuer. */
+export interface CreateTrustedIssuerRequest {
+	/** The parent to create in. */
+	parent: string
+	/**
+	 * The issuer key, the final name segment (`^[a-z][a-z0-9]{1,15}$`); it is
+	 * part of every end-user id from this issuer and never changes.
+	 */
+	trustedIssuerId: string
+	/** The trusted issuer to create; only caller-writable fields are read. */
+	trustedIssuer: TrustedIssuer
+	/** Validate and return the result without writing anything. */
+	validateOnly?: boolean
+}
+
 /**
  * A Customer Organization is a B2B tenant inside a customer's app. It is never
  * a Sylphx org and never a Resource name segment of anything but its own
@@ -317,6 +332,18 @@ export interface DeleteOrganizationRoleRequest {
 	/** Delete only if the current etag matches. */
 	etag?: string
 	/** Succeed when the organization role does not exist. */
+	allowMissing?: boolean
+	/** Validate without deleting anything. */
+	validateOnly?: boolean
+}
+
+/** The request of DeleteTrustedIssuer. */
+export interface DeleteTrustedIssuerRequest {
+	/** The name of the trusted issuer to delete. */
+	name: string
+	/** Delete only if the current etag matches. */
+	etag?: string
+	/** Succeed when the trusted issuer does not exist. */
 	allowMissing?: boolean
 	/** Validate without deleting anything. */
 	validateOnly?: boolean
@@ -477,6 +504,12 @@ export interface GetOrganizationRoleRequest {
 /** The request of GetSession. */
 export interface GetSessionRequest {
 	/** The name of the session to get. */
+	name: string
+}
+
+/** The request of GetTrustedIssuer. */
+export interface GetTrustedIssuerRequest {
+	/** The name of the trusted issuer to get. */
 	name: string
 }
 
@@ -752,6 +785,28 @@ export interface ListSessionsResponse {
 	nextPageToken?: string
 }
 
+/** The request of ListTrustedIssuers. */
+export interface ListTrustedIssuersRequest {
+	/** The parent to list in. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+	/** AIP-160 filter over labels and filterable fields. */
+	filter?: string
+	/** AIP-132 ordering over filterable fields. */
+	orderBy?: string
+}
+
+/** The response of ListTrustedIssuers. */
+export interface ListTrustedIssuersResponse {
+	/** The page. */
+	trustedIssuers?: TrustedIssuer[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
 /**
  * A Membership places an end user in a customer organization with app-defined
  * roles. Roles are app data, not Access policy. Changes append to history with
@@ -1015,6 +1070,62 @@ export interface SuspendEndUserRequest {
 	etag?: string
 }
 
+/**
+ * A Trusted Issuer lets the environment's end users sign in with the
+ * customer's own identity provider (Clerk, Auth0, Cognito, Firebase Auth, or
+ * any OIDC or JWT issuer) instead of Sylphx Auth. Every Sylphx service then
+ * accepts that issuer's access tokens as the end user
+ * `ext_<issuer key>_<hash of iss and sub>`, with role `authenticated`
+ * (docs/specs/one-platform/end-user-principal.md §5). Auth fetches and caches
+ * the issuer's keys; a verifying service never calls the issuer. No profile or
+ * password is stored: the issuer owns the user and the session.
+ */
+export interface TrustedIssuer {
+	/**
+	 * `orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}`;
+	 * the final segment is the issuer key (`^[a-z][a-z0-9]{1,15}$`, for example
+	 * `clerk`) that every end-user id from this issuer carries. It never
+	 * changes, so a user keeps the same id for as long as the issuer is trusted.
+	 */
+	name?: string
+	/** `tis_<ulid>`; never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/**
+	 * The exact `iss` the issuer's tokens carry, an HTTPS URL, for example
+	 * `https://clerk.example.com` or `https://securetoken.google.com/<project>`.
+	 * One Trusted Issuer per issuer in an environment.
+	 */
+	issuer?: string
+	/** The HTTPS URL of the issuer's JSON Web Key Set. Only Auth fetches it. */
+	jwksUri?: string
+	/**
+	 * A token's `aud` must contain one of these, for example the Firebase
+	 * project id or the Auth0 API identifier.
+	 */
+	audiences?: string[]
+	/**
+	 * Token claims copied into the end user's `app_metadata`, the claim
+	 * policies read (for example the issuer's `org_role` as `roles`). Map only
+	 * claims the issuer's admin sets, never ones the user can write.
+	 */
+	appMetadataClaims?: TrustedIssuerClaimMapping[]
+	/** A disabled issuer's tokens are refused; its users keep their ids and data. */
+	disabled?: boolean
+}
+
+/** One token claim copied into `app_metadata`. */
+export interface TrustedIssuerClaimMapping {
+	/**
+	 * The top-level claim name in the issuer's token, for example `org_role` or
+	 * `https://example.com/roles`.
+	 */
+	claim?: string
+	/** The `app_metadata` key it is copied to; unique within the issuer. */
+	key?: string
+}
+
 /** The request of UnlockEndUser. */
 export interface UnlockEndUserRequest {
 	/** The name of the end user. */
@@ -1084,6 +1195,16 @@ export interface UpdateOauthClientRequest {
 export interface UpdateOrganizationRoleRequest {
 	/** The organization role to update; `name` identifies it. */
 	organizationRole: OrganizationRole
+	/** The fields to write; unset writes every populated field. */
+	updateMask?: string
+	/** Validate and return the result without writing anything. */
+	validateOnly?: boolean
+}
+
+/** The request of UpdateTrustedIssuer. */
+export interface UpdateTrustedIssuerRequest {
+	/** The trusted issuer to update; `name` identifies it. */
+	trustedIssuer: TrustedIssuer
 	/** The fields to write; unset writes every populated field. */
 	updateMask?: string
 	/** Validate and return the result without writing anything. */
@@ -1193,6 +1314,11 @@ runtime.registerSchemas({
 		['organizationRole', 'organization_role', 'sylphx.auth.v1.OrganizationRole'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.auth.v1.CreateTrustedIssuerRequest': [
+		['trustedIssuerId', 'trusted_issuer_id'],
+		['trustedIssuer', 'trusted_issuer', 'sylphx.auth.v1.TrustedIssuer'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.auth.v1.CustomerOrganization': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['verifiedDomains', 'verified_domains'],
@@ -1220,6 +1346,10 @@ runtime.registerSchemas({
 		['validateOnly', 'validate_only'],
 	],
 	'sylphx.auth.v1.DeleteOrganizationRoleRequest': [
+		['allowMissing', 'allow_missing'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.auth.v1.DeleteTrustedIssuerRequest': [
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
@@ -1256,6 +1386,7 @@ runtime.registerSchemas({
 	'sylphx.auth.v1.GetOauthClientRequest': [],
 	'sylphx.auth.v1.GetOrganizationRoleRequest': [],
 	'sylphx.auth.v1.GetSessionRequest': [],
+	'sylphx.auth.v1.GetTrustedIssuerRequest': [],
 	'sylphx.auth.v1.Identity': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['linkTime', 'link_time'],
@@ -1349,6 +1480,15 @@ runtime.registerSchemas({
 		['sessions', 'sessions', 'sylphx.auth.v1.Session'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.auth.v1.ListTrustedIssuersRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.auth.v1.ListTrustedIssuersResponse': [
+		['trustedIssuers', 'trusted_issuers', 'sylphx.auth.v1.TrustedIssuer'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.auth.v1.Membership': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['endUser', 'end_user'],
@@ -1423,6 +1563,12 @@ runtime.registerSchemas({
 	],
 	'sylphx.auth.v1.SocialProvider': [],
 	'sylphx.auth.v1.SuspendEndUserRequest': [],
+	'sylphx.auth.v1.TrustedIssuer': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['jwksUri', 'jwks_uri'],
+		['appMetadataClaims', 'app_metadata_claims', 'sylphx.auth.v1.TrustedIssuerClaimMapping'],
+	],
+	'sylphx.auth.v1.TrustedIssuerClaimMapping': [],
 	'sylphx.auth.v1.UnlockEndUserRequest': [],
 	'sylphx.auth.v1.UpdateAuthConfigRequest': [
 		['authConfig', 'auth_config', 'sylphx.auth.v1.AuthConfig'],
@@ -1457,6 +1603,11 @@ runtime.registerSchemas({
 		['updateMask', 'update_mask'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.auth.v1.UpdateTrustedIssuerRequest': [
+		['trustedIssuer', 'trusted_issuer', 'sylphx.auth.v1.TrustedIssuer'],
+		['updateMask', 'update_mask'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.auth.v1.VerifyEmailDomainRequest': [],
 })
 
@@ -1484,6 +1635,8 @@ export class AuthApi {
 	readonly memberships: MembershipsCollection
 	/** The `organization_roles` collection. */
 	readonly organizationRoles: OrganizationRolesCollection
+	/** The `trusted_issuers` collection. */
+	readonly trustedIssuers: TrustedIssuersCollection
 	/** The `invitations` collection. */
 	readonly invitations: InvitationsCollection
 	/** The `email_domains` collection. */
@@ -1499,6 +1652,7 @@ export class AuthApi {
 		this.customerOrganizations = new CustomerOrganizationsCollection(client)
 		this.memberships = new MembershipsCollection(client)
 		this.organizationRoles = new OrganizationRolesCollection(client)
+		this.trustedIssuers = new TrustedIssuersCollection(client)
 		this.invitations = new InvitationsCollection(client)
 		this.emailDomains = new EmailDomainsCollection(client)
 		this.oauthClients = new OauthClientsCollection(client)
@@ -2233,6 +2387,113 @@ export class OrganizationRolesCollection {
 		return this.client.call<Record<string, never>>({
 			method: 'DELETE',
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/organization_roles/*', 'name')}`,
+			query: { etag: request.etag, allow_missing: request.allowMissing, validate_only: request.validateOnly },
+			mutation: true,
+		})
+	}
+}
+
+/** `trusted_issuers` of Sylphx Auth: Resource type `auth.sylphx.com/TrustedIssuer`. */
+export class TrustedIssuersCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets an trusted issuer.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/trusted_issuers/*}` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetTrustedIssuerRequest): Promise<TrustedIssuer> {
+		return this.client.call<TrustedIssuer>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/trusted_issuers/*', 'name')}`,
+			responseType: 'sylphx.auth.v1.TrustedIssuer',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists trusted issuers.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/trusted_issuers` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListTrustedIssuersRequest): Promise<ListTrustedIssuersResponse> {
+		return this.client.call<ListTrustedIssuersResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/trusted_issuers`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.auth.v1.ListTrustedIssuersResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListTrustedIssuersRequest): AsyncGenerator<TrustedIssuer> {
+		let next: ListTrustedIssuersRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.trustedIssuers ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates an trusted issuer.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/trusted_issuers` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
+	 */
+	async create(request: CreateTrustedIssuerRequest): Promise<TrustedIssuer> {
+		return this.client.call<TrustedIssuer>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/trusted_issuers`,
+			query: { trusted_issuer_id: request.trustedIssuerId, validate_only: request.validateOnly },
+			body: request.trustedIssuer ?? {},
+			bodyType: 'sylphx.auth.v1.TrustedIssuer',
+			responseType: 'sylphx.auth.v1.TrustedIssuer',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Updates an trusted issuer.
+	 *
+	 * `PATCH /v1/{trusted_issuer.name=orgs/*\/projects/*\/envs/*\/trusted_issuers/*}` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateTrustedIssuerRequest): Promise<TrustedIssuer> {
+		return this.client.call<TrustedIssuer>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.trustedIssuer?.name, 'orgs/*/projects/*/envs/*/trusted_issuers/*', 'trusted_issuer.name')}`,
+			query: { update_mask: request.updateMask, validate_only: request.validateOnly },
+			body: request.trustedIssuer ?? {},
+			bodyType: 'sylphx.auth.v1.TrustedIssuer',
+			responseType: 'sylphx.auth.v1.TrustedIssuer',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Deletes an trusted issuer.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/trusted_issuers/*}` · permission `auth:write` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async delete(request: DeleteTrustedIssuerRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/trusted_issuers/*', 'name')}`,
 			query: { etag: request.etag, allow_missing: request.allowMissing, validate_only: request.validateOnly },
 			mutation: true,
 		})

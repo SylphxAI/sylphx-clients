@@ -8371,6 +8371,377 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets an trusted issuer."
+      },
+      "description": "Gets an trusted issuer.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/trusted_issuers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetTrustedIssuer.",
+        "properties": {
+          "name": {
+            "description": "The name of the trusted issuer to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/TrustedIssuer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.trusted_issuers.get",
+      "permission": "auth:read",
+      "tool": "auth_trusted_issuers_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists trusted issuers."
+      },
+      "description": "Lists trusted issuers.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/trusted_issuers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListTrustedIssuers.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/TrustedIssuer"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.trusted_issuers.list",
+      "permission": "auth:read",
+      "tool": "auth_trusted_issuers_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an trusted issuer."
+      },
+      "description": "Creates an trusted issuer.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/trusted_issuers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateTrustedIssuer.",
+        "properties": {
+          "parent": {
+            "description": "The parent to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/TrustedIssuer"
+          },
+          "trusted_issuer": {
+            "additionalProperties": false,
+            "description": "The trusted issuer to create; only caller-writable fields are read.",
+            "properties": {
+              "app_metadata_claims": {
+                "description": "Token claims copied into the end user's `app_metadata`, the claim\npolicies read (for example the issuer's `org_role` as `roles`). Map only\nclaims the issuer's admin sets, never ones the user can write.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "One token claim copied into `app_metadata`.",
+                  "properties": {
+                    "claim": {
+                      "description": "The top-level claim name in the issuer's token, for example `org_role` or\n`https://example.com/roles`.",
+                      "type": "string"
+                    },
+                    "key": {
+                      "description": "The `app_metadata` key it is copied to; unique within the issuer.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "claim",
+                    "key"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "audiences": {
+                "description": "A token's `aud` must contain one of these, for example the Firebase\nproject id or the Auth0 API identifier.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "disabled": {
+                "description": "A disabled issuer's tokens are refused; its users keep their ids and data.",
+                "type": "boolean"
+              },
+              "issuer": {
+                "description": "The exact `iss` the issuer's tokens carry, an HTTPS URL, for example\n`https://clerk.example.com` or `https://securetoken.google.com/<project>`.\nOne Trusted Issuer per issuer in an environment.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "jwks_uri": {
+                "description": "The HTTPS URL of the issuer's JSON Web Key Set. Only Auth fetches it.",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}`;\nthe final segment is the issuer key (`^[a-z][a-z0-9]{1,15}$`, for example\n`clerk`) that every end-user id from this issuer carries. It never\nchanges, so a user keeps the same id for as long as the issuer is trusted.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "issuer",
+              "jwks_uri",
+              "audiences"
+            ],
+            "type": "object"
+          },
+          "trusted_issuer_id": {
+            "description": "The issuer key, the final name segment (`^[a-z][a-z0-9]{1,15}$`); it is\npart of every end-user id from this issuer and never changes.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "trusted_issuer_id",
+          "trusted_issuer"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.trusted_issuers.create",
+      "permission": "auth:write",
+      "tool": "auth_trusted_issuers_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates an trusted issuer."
+      },
+      "description": "Updates an trusted issuer.",
+      "effect": "write",
+      "http": "PATCH /v1/{trusted_issuer.name=orgs/*/projects/*/envs/*/trusted_issuers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateTrustedIssuer.",
+        "properties": {
+          "trusted_issuer": {
+            "additionalProperties": false,
+            "description": "The trusted issuer to update; `name` identifies it.",
+            "properties": {
+              "app_metadata_claims": {
+                "description": "Token claims copied into the end user's `app_metadata`, the claim\npolicies read (for example the issuer's `org_role` as `roles`). Map only\nclaims the issuer's admin sets, never ones the user can write.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "One token claim copied into `app_metadata`.",
+                  "properties": {
+                    "claim": {
+                      "description": "The top-level claim name in the issuer's token, for example `org_role` or\n`https://example.com/roles`.",
+                      "type": "string"
+                    },
+                    "key": {
+                      "description": "The `app_metadata` key it is copied to; unique within the issuer.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "claim",
+                    "key"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "audiences": {
+                "description": "A token's `aud` must contain one of these, for example the Firebase\nproject id or the Auth0 API identifier.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "disabled": {
+                "description": "A disabled issuer's tokens are refused; its users keep their ids and data.",
+                "type": "boolean"
+              },
+              "issuer": {
+                "description": "The exact `iss` the issuer's tokens carry, an HTTPS URL, for example\n`https://clerk.example.com` or `https://securetoken.google.com/<project>`.\nOne Trusted Issuer per issuer in an environment.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "jwks_uri": {
+                "description": "The HTTPS URL of the issuer's JSON Web Key Set. Only Auth fetches it.",
+                "type": "string"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}`;\nthe final segment is the issuer key (`^[a-z][a-z0-9]{1,15}$`, for example\n`clerk`) that every end-user id from this issuer carries. It never\nchanges, so a user keeps the same id for as long as the issuer is trusted.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "issuer",
+              "jwks_uri",
+              "audiences"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "trusted_issuer"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.trusted_issuers.update",
+      "permission": "auth:write",
+      "tool": "auth_trusted_issuers_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes an trusted issuer."
+      },
+      "description": "Deletes an trusted issuer.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/trusted_issuers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteTrustedIssuer.",
+        "properties": {
+          "allow_missing": {
+            "description": "Succeed when the trusted issuer does not exist.",
+            "type": "boolean"
+          },
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Delete only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the trusted issuer to delete.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/TrustedIssuer"
+          },
+          "validate_only": {
+            "description": "Validate without deleting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.trusted_issuers.delete",
+      "permission": "auth:write",
+      "tool": "auth_trusted_issuers_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets an invitation."
       },
       "description": "Gets an invitation.",

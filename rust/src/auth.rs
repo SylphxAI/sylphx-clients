@@ -459,6 +459,43 @@ pub struct CreateOrganizationRoleRequest {
     pub validate_only: bool,
 }
 
+/// The request of CreateTrustedIssuer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateTrustedIssuerRequest {
+    /// The parent to create in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The issuer key, the final name segment (`^[a-z][a-z0-9]{1,15}$`); it is
+    /// part of every end-user id from this issuer and never changes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "trustedIssuerId"
+    )]
+    pub trusted_issuer_id: String,
+    /// The trusted issuer to create; only caller-writable fields are read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "trustedIssuer"
+    )]
+    pub trusted_issuer: Option<TrustedIssuer>,
+    /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
 /// A Customer Organization is a B2B tenant inside a customer's app. It is never
 /// a Sylphx org and never a Resource name segment of anything but its own
 /// memberships.
@@ -667,6 +704,34 @@ pub struct DeleteOrganizationRoleRequest {
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub etag: String,
     /// Succeed when the organization role does not exist.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowMissing"
+    )]
+    pub allow_missing: bool,
+    /// Validate without deleting anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// The request of DeleteTrustedIssuer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteTrustedIssuerRequest {
+    /// The name of the trusted issuer to delete.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Delete only if the current etag matches.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+    /// Succeed when the trusted issuer does not exist.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -993,6 +1058,17 @@ pub struct GetOrganizationRoleRequest {
 #[non_exhaustive]
 pub struct GetSessionRequest {
     /// The name of the session to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetTrustedIssuer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetTrustedIssuerRequest {
+    /// The name of the trusted issuer to get.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1608,6 +1684,61 @@ pub struct ListSessionsResponse {
     pub next_page_token: String,
 }
 
+/// The request of ListTrustedIssuers.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListTrustedIssuersRequest {
+    /// The parent to list in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter over labels and filterable fields.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// AIP-132 ordering over filterable fields.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// The response of ListTrustedIssuers.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListTrustedIssuersResponse {
+    /// The page.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "trustedIssuers"
+    )]
+    pub trusted_issuers: Vec<TrustedIssuer>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
 /// A Membership places an end user in a customer organization with app-defined
 /// roles. Roles are app data, not Access policy. Changes append to history with
 /// a current head per (user, organization); Delete closes the membership.
@@ -2181,6 +2312,86 @@ pub struct SuspendEndUserRequest {
     pub etag: String,
 }
 
+/// A Trusted Issuer lets the environment's end users sign in with the
+/// customer's own identity provider (Clerk, Auth0, Cognito, Firebase Auth, or
+/// any OIDC or JWT issuer) instead of Sylphx Auth. Every Sylphx service then
+/// accepts that issuer's access tokens as the end user
+/// `ext_<issuer key>_<hash of iss and sub>`, with role `authenticated`
+/// (docs/specs/one-platform/end-user-principal.md §5). Auth fetches and caches
+/// the issuer's keys; a verifying service never calls the issuer. No profile or
+/// password is stored: the issuer owns the user and the session.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct TrustedIssuer {
+    /// `orgs/{org}/projects/{project}/envs/{env}/trusted_issuers/{trusted_issuer}`;
+    /// the final segment is the issuer key (`^[a-z][a-z0-9]{1,15}$`, for example
+    /// `clerk`) that every end-user id from this issuer carries. It never
+    /// changes, so a user keeps the same id for as long as the issuer is trusted.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `tis_<ulid>`; never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The exact `iss` the issuer's tokens carry, an HTTPS URL, for example
+    /// `https://clerk.example.com` or `https://securetoken.google.com/<project>`.
+    /// One Trusted Issuer per issuer in an environment.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub issuer: String,
+    /// The HTTPS URL of the issuer's JSON Web Key Set. Only Auth fetches it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "jwksUri"
+    )]
+    pub jwks_uri: String,
+    /// A token's `aud` must contain one of these, for example the Firebase
+    /// project id or the Auth0 API identifier.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub audiences: Vec<String>,
+    /// Token claims copied into the end user's `app_metadata`, the claim
+    /// policies read (for example the issuer's `org_role` as `roles`). Map only
+    /// claims the issuer's admin sets, never ones the user can write.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "appMetadataClaims"
+    )]
+    pub app_metadata_claims: Vec<TrustedIssuerClaimMapping>,
+    /// A disabled issuer's tokens are refused; its users keep their ids and data.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled: Option<bool>,
+}
+
+/// One token claim copied into `app_metadata`.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct TrustedIssuerClaimMapping {
+    /// The top-level claim name in the issuer's token, for example `org_role` or
+    /// `https://example.com/roles`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub claim: String,
+    /// The `app_metadata` key it is copied to; unique within the issuer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub key: String,
+}
+
 /// The request of UnlockEndUser.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2360,6 +2571,35 @@ pub struct UpdateOrganizationRoleRequest {
         alias = "organizationRole"
     )]
     pub organization_role: Option<OrganizationRole>,
+    /// The fields to write; unset writes every populated field.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+    /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// The request of UpdateTrustedIssuer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateTrustedIssuerRequest {
+    /// The trusted issuer to update; `name` identifies it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "trustedIssuer"
+    )]
+    pub trusted_issuer: Option<TrustedIssuer>,
     /// The fields to write; unset writes every populated field.
     #[serde(
         default,
@@ -3046,6 +3286,13 @@ impl<'a, T: crate::runtime::Transport> AuthApi<'a, T> {
     /// The `organization_roles` collection.
     pub fn organization_roles(&self) -> OrganizationRolesCollection<'a, T> {
         OrganizationRolesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `trusted_issuers` collection.
+    pub fn trusted_issuers(&self) -> TrustedIssuersCollection<'a, T> {
+        TrustedIssuersCollection {
             client: self.client,
         }
     }
@@ -4280,6 +4527,186 @@ impl<'a, T: crate::runtime::Transport> OrganizationRolesCollection<'a, T> {
             crate::runtime::path_param(
                 &request.name,
                 "orgs/*/projects/*/envs/*/organization_roles/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("etag", &request.etag);
+        query.push("allow_missing", &request.allow_missing);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `trusted_issuers` of Sylphx Auth: Resource type `auth.sylphx.com/TrustedIssuer`.
+pub struct TrustedIssuersCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> TrustedIssuersCollection<'a, T> {
+    /// Gets an trusted issuer.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/trusted_issuers/*}` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetTrustedIssuerRequest,
+    ) -> Result<TrustedIssuer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/trusted_issuers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists trusted issuers.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/trusted_issuers` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListTrustedIssuersRequest,
+    ) -> Result<ListTrustedIssuersResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/trusted_issuers",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListTrustedIssuersRequest,
+    ) -> Result<Vec<TrustedIssuer>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.trusted_issuers);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates an trusted issuer.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/trusted_issuers` · permission `auth:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
+    pub async fn create(
+        &self,
+        request: CreateTrustedIssuerRequest,
+    ) -> Result<TrustedIssuer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/trusted_issuers",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("trusted_issuer_id", &request.trusted_issuer_id);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.trusted_issuer)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Updates an trusted issuer.
+    ///
+    /// `PATCH /v1/{trusted_issuer.name=orgs/*/projects/*/envs/*/trusted_issuers/*}` · permission `auth:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateTrustedIssuerRequest,
+    ) -> Result<TrustedIssuer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .trusted_issuer
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/trusted_issuers/*",
+                "trusted_issuer.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.trusted_issuer)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Deletes an trusted issuer.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/trusted_issuers/*}` · permission `auth:write` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn delete(
+        &self,
+        request: DeleteTrustedIssuerRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/trusted_issuers/*",
                 "name"
             )?
         );
