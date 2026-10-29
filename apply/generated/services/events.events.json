@@ -6,6 +6,13 @@
           "http": {
             "query_params": []
           },
+          "id": "events.events.publish_service_event",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "events.events.get",
           "kind": "get"
         },

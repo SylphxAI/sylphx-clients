@@ -56575,6 +56575,115 @@
       "package": "sylphx.events.v1"
     },
     {
+      "doc": "A service event's target and payload. The caller's service identity is\nverified independently of the target; target ids alone confer no authority.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "source must be sylphx.<service> and type must start with <service>.",
+          "filterable": false,
+          "name": "event",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.events.v1.CloudEvent"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact registered https endpoint URI; empty uses ordinary environment fan-out.",
+          "filterable": false,
+          "name": "webhook_uri",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.events.v1.PublishServiceEventRequest",
+      "package": "sylphx.events.v1"
+    },
+    {
+      "doc": "Durable carrier admission, not confirmation that the receiver answered.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The stored tenant event.",
+          "filterable": false,
+          "name": "event",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.events.v1.Event"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Ordinary delivery resource names; read them to observe receiver acceptance.",
+          "filterable": false,
+          "name": "webhook_deliveries",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.events.v1.PublishServiceEventResponse",
+      "package": "sylphx.events.v1"
+    },
+    {
       "doc": "A Queue holds messages for pull consumers. A consumer leases messages for a\nvisibility timeout, then acks or nacks them; a lease is fenced, so a stale\nholder cannot ack a message someone else holds. A message leased\n`max_deliveries` times moves to the dead-letter queue.",
       "fields": [
         {
@@ -143839,6 +143948,42 @@
         },
         {
           "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Publishes a service's own event into a consenting tenant environment.\nRequires events:publish and the exact events:platform:<service> scope.\nA webhook_uri selects exactly one registered endpoint in that environment;\nadmission atomically stores its signed, retried delivery, or stores nothing.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "RESOURCE_NOT_FOUND",
+                "RESOURCE_ALREADY_EXISTS",
+                "IDEMPOTENCY_KEY_REUSED"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [],
+                "query_params": [],
+                "template": "/v1/events:publishServiceEvent"
+              },
+              "id": "events.events.publish_service_event",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "events:publish",
+              "proto": "sylphx.events.v1.EventsService.PublishServiceEvent",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.events.v1.PublishServiceEventRequest",
+              "resource_field": null,
+              "response": "sylphx.events.v1.PublishServiceEventResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "publish_service_event"
+            },
             {
               "cancellable": false,
               "cli_verb": "",

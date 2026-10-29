@@ -11443,6 +11443,37 @@
           "collection": "events",
           "commands": [
             {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "parent",
+                  "flag": "--parent",
+                  "required": true,
+                  "summary": "The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}.",
+                  "type": "string"
+                },
+                {
+                  "field": "event",
+                  "flag": "--event",
+                  "required": true,
+                  "summary": "source must be sylphx.<service> and type must start with <service>.",
+                  "type": "json"
+                },
+                {
+                  "field": "webhook_uri",
+                  "flag": "--webhook-uri",
+                  "summary": "Exact registered https endpoint URI; empty uses ordinary environment fan-out.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/events:publishServiceEvent",
+              "method": "events.events.publish_service_event",
+              "permission": "events:publish",
+              "positional": null,
+              "summary": "Publishes a service's own event into a consenting tenant environment. Requires events:publish and the exact events:platform:<service> scope. A webhook_uri selects exactly one registered endpoint in that environment; admission atomically stores its signed, retried delivery, or stores nothing.",
+              "verb": "publish-service-event"
+            },
+            {
               "effect": "read",
               "flags": [],
               "http": "GET /v1/{name=orgs/*/projects/*/envs/*/events/*}",

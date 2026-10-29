@@ -754,6 +754,27 @@ export interface PublishRealtimeMessagesResponse {
 }
 
 /**
+ * A service event's target and payload. The caller's service identity is
+ * verified independently of the target; target ids alone confer no authority.
+ */
+export interface PublishServiceEventRequest {
+	/** The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}. */
+	parent: string
+	/** source must be sylphx.<service> and type must start with <service>. */
+	event: CloudEvent
+	/** Exact registered https endpoint URI; empty uses ordinary environment fan-out. */
+	webhookUri?: string
+}
+
+/** Durable carrier admission, not confirmation that the receiver answered. */
+export interface PublishServiceEventResponse {
+	/** The stored tenant event. */
+	readonly event?: Event
+	/** Ordinary delivery resource names; read them to observe receiver acceptance. */
+	readonly webhookDeliveries?: string[]
+}
+
+/**
  * A Queue holds messages for pull consumers. A consumer leases messages for a
  * visibility timeout, then acks or nacks them; a lease is fenced, so a stale
  * holder cannot ack a message someone else holds. A message leased
@@ -1506,6 +1527,14 @@ runtime.registerSchemas({
 	'sylphx.events.v1.PublishRealtimeMessagesResponse': [
 		['realtimeMessage', 'realtime_message', 'sylphx.events.v1.RealtimeMessage'],
 	],
+	'sylphx.events.v1.PublishServiceEventRequest': [
+		['event', 'event', 'sylphx.events.v1.CloudEvent'],
+		['webhookUri', 'webhook_uri'],
+	],
+	'sylphx.events.v1.PublishServiceEventResponse': [
+		['event', 'event', 'sylphx.events.v1.Event'],
+		['webhookDeliveries', 'webhook_deliveries'],
+	],
 	'sylphx.events.v1.Queue': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.events.v1.QueueSpec'],
@@ -1844,6 +1873,27 @@ export class EventsCollection {
 
 	constructor(client: runtime.Client) {
 		this.client = client
+	}
+
+	/**
+	 * Publishes a service's own event into a consenting tenant environment.
+	 * Requires events:publish and the exact events:platform:<service> scope.
+	 * A webhook_uri selects exactly one registered endpoint in that environment;
+	 * admission atomically stores its signed, retried delivery, or stores nothing.
+	 *
+	 * `POST /v1/events:publishServiceEvent` · permission `events:publish` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`.
+	 */
+	async publishServiceEvent(request: PublishServiceEventRequest): Promise<PublishServiceEventResponse> {
+		return this.client.call<PublishServiceEventResponse>({
+			method: 'POST',
+			path: `/v1/events:publishServiceEvent`,
+			body: runtime.omit(request, []),
+			bodyType: 'sylphx.events.v1.PublishServiceEventRequest',
+			responseType: 'sylphx.events.v1.PublishServiceEventResponse',
+			mutation: true,
+		})
 	}
 
 	/**

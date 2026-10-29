@@ -18147,6 +18147,47 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.PublishServiceEventRequest": {
+        "description": "A service event's target and payload. The caller's service identity is\nverified independently of the target; target ids alone confer no authority.",
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/sylphx.events.v1.CloudEvent",
+            "description": "source must be sylphx.<service> and type must start with <service>."
+          },
+          "parent": {
+            "description": "The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}.",
+            "type": "string"
+          },
+          "webhook_uri": {
+            "description": "Exact registered https endpoint URI; empty uses ordinary environment fan-out.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "event"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.PublishServiceEventResponse": {
+        "description": "Durable carrier admission, not confirmation that the receiver answered.",
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/sylphx.events.v1.Event",
+            "description": "The stored tenant event.",
+            "readOnly": true
+          },
+          "webhook_deliveries": {
+            "description": "Ordinary delivery resource names; read them to observe receiver acceptance.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.events.v1.Queue": {
         "description": "A Queue holds messages for pull consumers. A consumer leases messages for a\nvisibility timeout, then acks or nacks them; a lease is fenced, so a stale\nholder cannot ack a message someone else holds. A message leased\n`max_deliveries` times moves to the dead-letter queue.",
         "properties": {
@@ -43808,6 +43849,97 @@
         "x-sylphx-method": "data.documents.put",
         "x-sylphx-origin": "https://api.data.sylphx.com",
         "x-sylphx-permission": "data:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/events:publishServiceEvent": {
+      "post": {
+        "description": "Publishes a service's own event into a consenting tenant environment.\nRequires events:publish and the exact events:platform:<service> scope.\nA webhook_uri selects exactly one registered endpoint in that environment;\nadmission atomically stores its signed, retried delivery, or stores nothing.",
+        "operationId": "events_events_publish_service_event",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "event": {
+                    "$ref": "#/components/schemas/sylphx.events.v1.CloudEvent",
+                    "description": "source must be sylphx.<service> and type must start with <service>."
+                  },
+                  "parent": {
+                    "description": "The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}.",
+                    "type": "string"
+                  },
+                  "webhook_uri": {
+                    "description": "Exact registered https endpoint URI; empty uses ordinary environment fan-out.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "parent",
+                  "event"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.PublishServiceEventResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Publishes a service's own event into a consenting tenant environment. Requires events:publish and the exact events:platform:<service> scope. A webhook_uri selects exactly one registered endpoint in that environment; admission atomically stores its signed, retried delivery, or stores nothing.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-sylphx-method": "events.events.publish_service_event",
+        "x-sylphx-permission": "events:publish",
         "x-sylphx-stage": "preview"
       }
     },

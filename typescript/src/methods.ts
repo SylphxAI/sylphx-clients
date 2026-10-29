@@ -2897,6 +2897,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'events:read',
 	},
+	'events.events.publish_service_event': {
+		id: 'events.events.publish_service_event',
+		httpMethod: 'POST',
+		template: '/v1/events:publishServiceEvent',
+		pathParams: [],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'events:publish',
+	},
 	'events.inbound_endpoints.create': {
 		id: 'events.inbound_endpoints.create',
 		httpMethod: 'POST',

@@ -16188,6 +16188,92 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Publishes a service's own event into a consenting tenant environment. Requires events:publish and the exact events:platform:<service> scope. A webhook_uri selects exactly one registered endpoint in that environment; admission atomically stores its signed, retried delivery, or stores nothing."
+      },
+      "description": "Publishes a service's own event into a consenting tenant environment.\nRequires events:publish and the exact events:platform:<service> scope.\nA webhook_uri selects exactly one registered endpoint in that environment;\nadmission atomically stores its signed, retried delivery, or stores nothing.",
+      "effect": "write",
+      "http": "POST /v1/events:publishServiceEvent",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "A service event's target and payload. The caller's service identity is\nverified independently of the target; target ids alone confer no authority.",
+        "properties": {
+          "event": {
+            "additionalProperties": false,
+            "description": "source must be sylphx.<service> and type must start with <service>.",
+            "properties": {
+              "data": {
+                "description": "The payload."
+              },
+              "data_content_type": {
+                "description": "The payload media type; default `application/json`.",
+                "type": "string"
+              },
+              "data_schema": {
+                "description": "The payload schema URI.",
+                "type": "string"
+              },
+              "event_time": {
+                "description": "When the occurrence happened.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "extensions": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Extension attributes, at most 64.",
+                "type": "object"
+              },
+              "id": {
+                "description": "Unique per `source`; with `source` it is the dedupe key.",
+                "type": "string"
+              },
+              "source": {
+                "description": "The producer's URI-reference.",
+                "type": "string"
+              },
+              "subject": {
+                "description": "The subject within the source.",
+                "type": "string"
+              },
+              "type": {
+                "description": "The event type, for example `com.example.order.created`.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "source",
+              "type"
+            ],
+            "type": "object"
+          },
+          "parent": {
+            "description": "The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}.",
+            "type": "string"
+          },
+          "webhook_uri": {
+            "description": "Exact registered https endpoint URI; empty uses ordinary environment fan-out.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "event"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "events.events.publish_service_event",
+      "permission": "events:publish",
+      "tool": "events_events_publish_service_event"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,

@@ -1725,6 +1725,50 @@ pub struct PublishRealtimeMessagesResponse {
     pub realtime_message: Option<RealtimeMessage>,
 }
 
+/// A service event's target and payload. The caller's service identity is
+/// verified independently of the target; target ids alone confer no authority.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PublishServiceEventRequest {
+    /// The consenting tenant environment: orgs/{org}/projects/{project}/envs/{env}.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// source must be sylphx.<service> and type must start with <service>.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event: Option<CloudEvent>,
+    /// Exact registered https endpoint URI; empty uses ordinary environment fan-out.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "webhookUri"
+    )]
+    pub webhook_uri: String,
+}
+
+/// Durable carrier admission, not confirmation that the receiver answered.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PublishServiceEventResponse {
+    /// The stored tenant event.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event: Option<Event>,
+    /// Ordinary delivery resource names; read them to observe receiver acceptance.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "webhookDeliveries"
+    )]
+    pub webhook_deliveries: Vec<String>,
+}
+
 /// A Queue holds messages for pull consumers. A consumer leases messages for a
 /// visibility timeout, then acks or nacks them; a lease is fenced, so a stale
 /// holder cannot ack a message someone else holds. A message leased
@@ -3312,6 +3356,32 @@ pub struct EventsCollection<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> EventsCollection<'a, T> {
+    /// Publishes a service's own event into a consenting tenant environment.
+    /// Requires events:publish and the exact events:platform:<service> scope.
+    /// A webhook_uri selects exactly one registered endpoint in that environment;
+    /// admission atomically stores its signed, retried delivery, or stores nothing.
+    ///
+    /// `POST /v1/events:publishServiceEvent` · permission `events:publish` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`.
+    pub async fn publish_service_event(
+        &self,
+        request: PublishServiceEventRequest,
+    ) -> Result<PublishServiceEventResponse, crate::runtime::Error> {
+        let path = "/v1/events:publishServiceEvent".to_string();
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &[])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
     /// Gets an event.
     ///
     /// `GET /v1/{name=orgs/*/projects/*/envs/*/events/*}` · permission `events:read` · effect `read`
