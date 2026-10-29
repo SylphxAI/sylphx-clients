@@ -9,7 +9,11 @@
 		"exactOptionalPropertyTypes": false,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"types": ["bun"]
+		"types": ["bun"],
+		"jsx": "react-jsx",
+		"paths": {
+			"@sylphx/next/auth": ["./src/auth.tsx"]
+		}
 	},
 	"include": ["src/**/*", "test/**/*"]
 }

@@ -1,7 +1,7 @@
 {
 	"name": "@sylphx/next",
-	"version": "0.1.0",
-	"description": "Next.js cache handlers for Sylphx: ISR and 'use cache' shared across replicas, on Sylphx KV and Buckets.",
+	"version": "0.2.0",
+	"description": "Customer-branded App Router sign-in and shared Next.js ISR/use-cache handlers.",
 	"license": "MIT",
 	"type": "module",
 	"repository": {
@@ -31,6 +31,10 @@
 		"./use-cache-handler": {
 			"types": "./dist/use-cache-handler.d.ts",
 			"default": "./dist/use-cache-handler.js"
+		},
+		"./auth": {
+			"types": "./dist/auth.d.ts",
+			"default": "./dist/auth.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -47,9 +51,11 @@
 		"prepublishOnly": "bun run build"
 	},
 	"peerDependencies": {
-		"@sylphx/sdk": ">=0.32.0",
+		"@sylphx/sdk": ">=0.32.1",
 		"next": ">=14.1.0",
-		"redis": ">=5.0.0"
+		"redis": ">=5.0.0",
+		"react": ">=19.0.0",
+		"react-dom": ">=19.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@sylphx/sdk": {
@@ -60,11 +66,23 @@
 		},
 		"redis": {
 			"optional": true
+		},
+		"react": {
+			"optional": true
+		},
+		"react-dom": {
+			"optional": true
 		}
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.0",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"react": "19.2.4",
+		"react-dom": "19.2.4",
+		"@types/react": "^19.0.0",
+		"@types/react-dom": "^19.0.0",
+		"next": "^15.5.0",
+		"@sylphx/sdk": "file:../typescript"
 	},
 	"publishConfig": {
 		"access": "public",

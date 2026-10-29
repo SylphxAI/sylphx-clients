@@ -12,7 +12,7 @@ Everything a customer or an app uses to call Sylphx, generated from one schema
 | `workload/` | `sylphx-workload` | crates.io | the shared SPIFFE Workload API client and customer workload identity constructor |
 | `apply/` | `sylphx-apply` | crates.io | apply orchestration; `generated/` is generated |
 | `typescript/` | `@sylphx/sdk` | npm (dist-tag `next` until the Access cutover) | `package.json`, `tsconfig*.json`, `README.md`, `test/` (`src/` is generated) |
-| `next/` | `@sylphx/next` | npm (dist-tag `next`) | everything: a Next.js cache handler for ISR and `'use cache'` on Sylphx KV and Buckets; it is not generated and calls the SDK |
+| `next/` | `@sylphx/next` | npm (dist-tag `next`) | everything: branded App Router sign-in and a Next.js cache handler for ISR and `'use cache'` on Sylphx KV and Buckets; it is not generated and calls the SDK |
 
 The SDK `rust/src/` and TypeScript `src/`, and each client's `generated/`
 directory, are `sylphx-gen` output: never edit them; change `contracts/` or

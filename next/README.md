@@ -95,3 +95,74 @@ Use `createUseCacheHandler` the same way for `cacheHandlers`.
 Bodies removed from the Bucket when replaced are deleted on a best-effort
 basis. If a replica dies between the two writes an unreferenced object can
 remain; set a Bucket lifecycle rule if that matters.
+
+## Customer-branded sign-in (App Router)
+
+The public `@sylphx/next/auth` export provides a Server Component for Next.js
+15+ with React 19. Install `@sylphx/sdk@^0.32.1` alongside this package. Auth is
+independent of the cache handlers; no Redis connection is needed.
+
+```tsx
+// app/sign-in/page.tsx — a Server Component, never add 'use client'
+import { SignIn } from '@sylphx/next/auth'
+
+export default async function Page({ searchParams }: {
+  searchParams: Promise<{ auth_ticket?: string; auth_error?: string }>
+}) {
+  const query = await searchParams
+  return <>
+    {query.auth_error && <p role="alert">Sign-in was not completed. Please try again.</p>}
+    <SignIn
+      auth={{
+        baseUrl: process.env.AUTH_API_ORIGIN!,
+        publishableKey: process.env.AUTH_PUBLISHABLE_KEY!,
+        secretKey: process.env.AUTH_SECRET_KEY!,
+        returnUrl: 'https://shop.example.com/sign-in',
+      }}
+      ticket={query.auth_ticket}
+      appearance={{
+        variables: {
+          colorPrimary: '#334155', colorText: '#111827',
+          colorBackground: '#ffffff', colorDanger: '#b91c1c',
+          borderRadius: '12px', fontFamily: 'Inter, sans-serif',
+        },
+        elements: { root: 'account-card', input: 'account-input',
+          button: 'account-submit', socialButton: 'account-provider' },
+      }}
+    />
+  </>
+}
+```
+
+Configure the instance's brand and enabled methods in Auth. Google and Apple
+buttons appear only when the client config reports a usable provider. Add the
+app's HTTPS return origin to the instance's redirect allowlist. `baseUrl` and
+`returnUrl` must be trusted HTTPS URLs, not values derived from incoming Host
+headers or a submitted redirect field. Never prefix `AUTH_SECRET_KEY` with
+`NEXT_PUBLIC_` or pass it to a Client Component.
+
+Continue submits the identifier first and renders the returned password or
+email-code step. Password users can explicitly request an email code when
+that method is enabled. All sign-in paths use server mode. OAuth navigates
+through a server action; on return the one-time `auth_ticket` is submitted to
+the same server redemption path (a visible button also permits manual submission).
+The API secret and the browser User-Agent are sent only from the app server.
+The session is stored in `__Host-session`: HttpOnly, Secure, SameSite=Lax,
+Path=/, no Domain attribute, with the returned expiry. The bearer is never
+returned in action state or put in browser storage. Use HTTPS in development
+as well as production. The app can read this cookie from its own server code;
+protect authenticated resources there rather than treating rendered UI as authorization.
+
+Branding comes from client config, not a hosted vendor page. There is no vendor
+footer or hosted-account link. `appearance.variables` controls colors, corner
+radius and font; `appearance.elements` accepts classes for `root`, `logo`,
+`title`, `form`, `label`, `input`, `button`, `socialButton`, and `error`.
+Labels, browser autocomplete, natural keyboard order, step focus and an error
+live region are retained. MFA/captcha challenges require an application-specific
+flow; this component fails closed with a generic error rather than returning
+a session or displaying raw upstream errors.
+
+Verification: build the sibling SDK first, then in `clients/next` run
+`bun install --no-save && bun run test && bun run typecheck && bun run build`.
+The auth tests use the generated Continue mock; social tests exercise the
+server redirect and returned-ticket contract, not external provider credentials.
