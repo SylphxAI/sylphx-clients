@@ -219,6 +219,16 @@ export interface CreateSenderRequest {
 	validateOnly?: boolean
 }
 
+/** The request of CreateSmsNumber. */
+export interface CreateSmsNumberRequest {
+	/** The environment to bind the number in. */
+	parent: string
+	/** The binding id; server-assigned when empty. */
+	smsNumberId?: string
+	/** The binding to create. */
+	smsNumber: SmsNumber
+}
+
 /** The request of CreateSuppression. */
 export interface CreateSuppressionRequest {
 	/** The parent to create in. */
@@ -364,6 +374,12 @@ export interface DeleteSenderRequest {
 	allowMissing?: boolean
 	/** Validate without deleting anything. */
 	validateOnly?: boolean
+}
+
+/** The request of DeleteSmsNumber. */
+export interface DeleteSmsNumberRequest {
+	/** The name of the number to release. */
+	name: string
 }
 
 /** The request of DeleteSuppression. */
@@ -516,6 +532,12 @@ export interface GetInboundEmailRequest {
 	name: string
 }
 
+/** The request of GetInboundSms. */
+export interface GetInboundSmsRequest {
+	/** The name of the inbound SMS to get. */
+	name: string
+}
+
 /** The request of GetInboxItem. */
 export interface GetInboxItemRequest {
 	/** The name of the inbox item to get. */
@@ -573,6 +595,12 @@ export interface GetRouteRequest {
 /** The request of GetSender. */
 export interface GetSenderRequest {
 	/** The name of the sender to get. */
+	name: string
+}
+
+/** The request of GetSmsNumber. */
+export interface GetSmsNumberRequest {
+	/** The name of the binding to get. */
 	name: string
 }
 
@@ -645,6 +673,40 @@ export interface InboundEmail {
 	readonly erased?: boolean
 	/** The Notify Message that sent it, for mail Notify sent as this mailbox. */
 	readonly message?: string
+}
+
+/**
+ * An Inbound SMS is one text a bound number received, kept as evidence. The
+ * body is cleared when the environment's tier retention expires; the carrier's
+ * message id stays, so a replay after that never records the message again.
+ * Consumers read the feed in `sequence` order.
+ */
+export interface InboundSms {
+	/** `orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms/{inbound_sms}`. */
+	name?: string
+	/** `isms_<cell><ulid>`; never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/**
+	 * The feed position, increasing within the environment; filter
+	 * `sequence > N` to resume after the last one handled.
+	 */
+	readonly sequence?: string
+	/** The carrier's id for this message; the dedupe key on the number binding. */
+	readonly carrierMessageId?: string
+	/** The sender, in E.164 when the carrier gave one. */
+	readonly senderNumber?: string
+	/** The number the message was sent to, in E.164. */
+	readonly recipientNumber?: string
+	/** The text. Empty once retention has cleared it. */
+	readonly text?: string
+	/** How many segments the carrier counted. */
+	readonly segments?: number
+	/** When the carrier says it received the message. */
+	readonly receiveTime?: string
+	/** The text has been cleared by retention; the dedupe key stays. */
+	readonly cleared?: boolean
 }
 
 /** In-app inbox content. */
@@ -742,6 +804,28 @@ export interface ListInboundEmailsRequest {
 export interface ListInboundEmailsResponse {
 	/** The page. */
 	inboundEmails?: InboundEmail[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** The request of ListInboundSms. */
+export interface ListInboundSmsRequest {
+	/** The number binding to list in. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+	/** AIP-160 filter over filterable fields. */
+	filter?: string
+	/** AIP-132 ordering over filterable fields. */
+	orderBy?: string
+}
+
+/** The response of ListInboundSms. */
+export interface ListInboundSmsResponse {
+	/** The page. */
+	inboundSms?: InboundSms[]
 	/** The token of the next page; empty on the last page. */
 	nextPageToken?: string
 }
@@ -962,6 +1046,24 @@ export interface ListSendersRequest {
 export interface ListSendersResponse {
 	/** The page. */
 	senders?: Sender[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** The request of ListSmsNumbers. */
+export interface ListSmsNumbersRequest {
+	/** The environment to list in. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+}
+
+/** The response of ListSmsNumbers. */
+export interface ListSmsNumbersResponse {
+	/** The page. */
+	smsNumbers?: SmsNumber[]
 	/** The token of the next page; empty on the last page. */
 	nextPageToken?: string
 }
@@ -1595,6 +1697,66 @@ export interface SmsContent {
 	body?: string
 }
 
+/**
+ * An SMS Number is provisioned and owned by Notify for one environment.
+ * The platform orders it within the caller's explicit USD cost limits and
+ * authenticates delivery into its durable inbound feed.
+ */
+export interface SmsNumber {
+	/** `orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}`. */
+	name?: string
+	/** `snum_<cell><ulid>`; never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** Desired state. */
+	spec?: SmsNumberSpec
+	/** Observed state. */
+	readonly status?: SmsNumberStatus
+}
+
+/** SmsNumberSpec is the caller-writable state of an SMS Number. */
+export interface SmsNumberSpec {
+	/** ISO two-letter country code. */
+	regionCode?: string
+	/** local, mobile, toll_free, national or shared_cost. */
+	numberType?: string
+	/** The carrier; Telnyx is supported. */
+	provider?: string
+	/** Maximum one-time USD price, as a decimal string. No quote over it is ordered. */
+	upfrontCostLimit?: string
+	/** Maximum recurring monthly USD price, as a decimal string. */
+	monthlyCostLimit?: string
+}
+
+/** SmsNumberStatus is the observed state of an SMS Number. */
+export interface SmsNumberStatus {
+	/** The generation this status was computed from. */
+	readonly observedGeneration?: string
+	/** Ready, Reconciling, Stalled. */
+	readonly conditions?: common.Condition[]
+	/** Receiving: an active binding whose number the carrier delivers to. */
+	readonly receiving?: boolean
+	/** When the binding stopped receiving, if it has. */
+	readonly retiredTime?: string
+	/** The provisioned E.164 number; empty until inventory selection. */
+	readonly phoneNumber?: string
+	/** The platform carrier account reference, never a credential. */
+	readonly carrierAccount?: string
+	/** Carrier number identifier, when available. */
+	readonly providerNumberId?: string
+	/** Stable carrier order receipt; an uncertain purchase is reconciled, not repeated. */
+	readonly orderId?: string
+	/** Messaging profile holding this number's webhook configuration. */
+	readonly messagingProfileId?: string
+	/** Safe reason for a pending or stalled provision; contains no message text. */
+	readonly stateReason?: string
+	/** Accepted one-time price in USD. */
+	readonly upfrontCost?: string
+	/** Accepted monthly price in USD. */
+	readonly monthlyCost?: string
+}
+
 /** An SMS origin. */
 export interface SmsSender {
 	/** An E.164 number. */
@@ -1925,6 +2087,10 @@ runtime.registerSchemas({
 		['sender', 'sender', 'sylphx.notify.v1.Sender'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.CreateSmsNumberRequest': [
+		['smsNumberId', 'sms_number_id'],
+		['smsNumber', 'sms_number', 'sylphx.notify.v1.SmsNumber'],
+	],
 	'sylphx.notify.v1.CreateSuppressionRequest': [
 		['suppressionId', 'suppression_id'],
 		['suppression', 'suppression', 'sylphx.notify.v1.Suppression'],
@@ -1971,6 +2137,7 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.DeleteSmsNumberRequest': [],
 	'sylphx.notify.v1.DeleteSuppressionRequest': [
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
@@ -2016,6 +2183,7 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetBroadcastRequest': [],
 	'sylphx.notify.v1.GetEmailDomainRequest': [],
 	'sylphx.notify.v1.GetInboundEmailRequest': [],
+	'sylphx.notify.v1.GetInboundSmsRequest': [],
 	'sylphx.notify.v1.GetInboxItemRequest': [],
 	'sylphx.notify.v1.GetMailboxConnectLinkRequest': [],
 	'sylphx.notify.v1.GetMailboxOauthAppRequest': [],
@@ -2026,6 +2194,7 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetRecipientRequest': [],
 	'sylphx.notify.v1.GetRouteRequest': [],
 	'sylphx.notify.v1.GetSenderRequest': [],
+	'sylphx.notify.v1.GetSmsNumberRequest': [],
 	'sylphx.notify.v1.GetSuppressionRequest': [],
 	'sylphx.notify.v1.GetTemplateRequest': [],
 	'sylphx.notify.v1.InboundEmail': [
@@ -2041,6 +2210,13 @@ runtime.registerSchemas({
 		['receiveTime', 'receive_time'],
 		['rawSha256', 'raw_sha256'],
 		['sizeBytes', 'size_bytes'],
+	],
+	'sylphx.notify.v1.InboundSms': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['carrierMessageId', 'carrier_message_id'],
+		['senderNumber', 'sender_number'],
+		['recipientNumber', 'recipient_number'],
+		['receiveTime', 'receive_time'],
 	],
 	'sylphx.notify.v1.InboxContent': [
 		['actionUri', 'action_uri'],
@@ -2074,6 +2250,15 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListInboundEmailsResponse': [
 		['inboundEmails', 'inbound_emails', 'sylphx.notify.v1.InboundEmail'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListInboundSmsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListInboundSmsResponse': [
+		['inboundSms', 'inbound_sms', 'sylphx.notify.v1.InboundSms'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListInboxItemsRequest': [
@@ -2164,6 +2349,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListSendersResponse': [
 		['senders', 'senders', 'sylphx.notify.v1.Sender'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSmsNumbersRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.notify.v1.ListSmsNumbersResponse': [
+		['smsNumbers', 'sms_numbers', 'sylphx.notify.v1.SmsNumber'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListSuppressionsRequest': [
@@ -2330,6 +2523,30 @@ runtime.registerSchemas({
 		['verificationNote', 'verification_note'],
 	],
 	'sylphx.notify.v1.SmsContent': [],
+	'sylphx.notify.v1.SmsNumber': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.notify.v1.SmsNumberSpec'],
+		['status', 'status', 'sylphx.notify.v1.SmsNumberStatus'],
+	],
+	'sylphx.notify.v1.SmsNumberSpec': [
+		['regionCode', 'region_code'],
+		['numberType', 'number_type'],
+		['upfrontCostLimit', 'upfront_cost_limit'],
+		['monthlyCostLimit', 'monthly_cost_limit'],
+	],
+	'sylphx.notify.v1.SmsNumberStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['retiredTime', 'retired_time'],
+		['phoneNumber', 'phone_number'],
+		['carrierAccount', 'carrier_account'],
+		['providerNumberId', 'provider_number_id'],
+		['orderId', 'order_id'],
+		['messagingProfileId', 'messaging_profile_id'],
+		['stateReason', 'state_reason'],
+		['upfrontCost', 'upfront_cost'],
+		['monthlyCost', 'monthly_cost'],
+	],
 	'sylphx.notify.v1.SmsSender': [
 		['phoneNumber', 'phone_number'],
 		['senderKey', 'sender_key'],
@@ -2457,6 +2674,10 @@ export class NotifyApi {
 	readonly inboxItems: InboxItemsCollection
 	/** The `broadcasts` collection. */
 	readonly broadcasts: BroadcastsCollection
+	/** The `sms_numbers` collection. */
+	readonly smsNumbers: SmsNumbersCollection
+	/** The `inbound_sms` collection. */
+	readonly inboundSms: InboundSmsCollection
 
 	constructor(client: runtime.Client) {
 		this.mailDomains = new MailDomainsCollection(client)
@@ -2474,6 +2695,8 @@ export class NotifyApi {
 		this.inboundEmails = new InboundEmailsCollection(client)
 		this.inboxItems = new InboxItemsCollection(client)
 		this.broadcasts = new BroadcastsCollection(client)
+		this.smsNumbers = new SmsNumbersCollection(client)
+		this.inboundSms = new InboundSmsCollection(client)
 	}
 }
 
@@ -4009,5 +4232,146 @@ export class BroadcastsCollection {
 			responseType: 'sylphx.notify.v1.Broadcast',
 			mutation: true,
 		})
+	}
+}
+
+/** `sms_numbers` of Sylphx Notify: Resource type `notify.sylphx.com/SmsNumber`. */
+export class SmsNumbersCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Provisions one carrier number within explicit cost limits and receives its SMS.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/sms_numbers` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateSmsNumberRequest): Promise<SmsNumber> {
+		return this.client.call<SmsNumber>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/sms_numbers`,
+			query: { sms_number_id: request.smsNumberId },
+			body: request.smsNumber ?? {},
+			bodyType: 'sylphx.notify.v1.SmsNumber',
+			responseType: 'sylphx.notify.v1.SmsNumber',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Gets an SMS number binding.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/sms_numbers/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetSmsNumberRequest): Promise<SmsNumber> {
+		return this.client.call<SmsNumber>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/sms_numbers/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SmsNumber',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists an environment's SMS number bindings.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/sms_numbers` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListSmsNumbersRequest): Promise<ListSmsNumbersResponse> {
+		return this.client.call<ListSmsNumbersResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/sms_numbers`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.notify.v1.ListSmsNumbersResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSmsNumbersRequest): AsyncGenerator<SmsNumber> {
+		let next: ListSmsNumbersRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.smsNumbers ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Requests carrier release and stops recurring number billing. Read status
+	 * until retired_time is set. Historical messages stay readable.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/sms_numbers/*}` · permission `notify:write` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`.
+	 */
+	async delete(request: DeleteSmsNumberRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/sms_numbers/*', 'name')}`,
+			mutation: true,
+		})
+	}
+}
+
+/** `inbound_sms` of Sylphx Notify: Resource type `notify.sylphx.com/InboundSms`. */
+export class InboundSmsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one inbound SMS.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/sms_numbers/*\/inbound_sms/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetInboundSmsRequest): Promise<InboundSms> {
+		return this.client.call<InboundSms>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/sms_numbers/*/inbound_sms/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.InboundSms',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists a number's inbound SMS in feed order, oldest first.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/sms_numbers/*}/inbound_sms` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListInboundSmsRequest): Promise<ListInboundSmsResponse> {
+		return this.client.call<ListInboundSmsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/sms_numbers/*', 'parent')}/inbound_sms`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListInboundSmsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListInboundSmsRequest): AsyncGenerator<InboundSms> {
+		let next: ListInboundSmsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.inboundSms ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
 	}
 }

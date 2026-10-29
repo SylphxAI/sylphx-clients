@@ -1,0 +1,42 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "sms_number_id"
+            ]
+          },
+          "id": "notify.sms_numbers.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.sms_numbers.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "notify.sms_numbers.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.sms_numbers.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/SmsNumber"
+    }
+  ]
+}

@@ -25791,6 +25791,221 @@
           ],
           "noun": "broadcasts",
           "resource_type": "notify.sylphx.com/Broadcast"
+        },
+        {
+          "collection": "sms_numbers",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "sms_number.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "sms_number.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "sms_number.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "sms_number.spec.region_code",
+                  "flag": "--spec.region-code",
+                  "required": true,
+                  "summary": "ISO two-letter country code.",
+                  "type": "string"
+                },
+                {
+                  "field": "sms_number.spec.number_type",
+                  "flag": "--spec.number-type",
+                  "required": true,
+                  "summary": "local, mobile, toll_free, national or shared_cost.",
+                  "type": "string"
+                },
+                {
+                  "field": "sms_number.spec.provider",
+                  "flag": "--spec.provider",
+                  "required": true,
+                  "summary": "The carrier; Telnyx is supported.",
+                  "type": "string"
+                },
+                {
+                  "field": "sms_number.spec.upfront_cost_limit",
+                  "flag": "--spec.upfront-cost-limit",
+                  "required": true,
+                  "summary": "Maximum one-time USD price, as a decimal string. No quote over it is ordered.",
+                  "type": "string"
+                },
+                {
+                  "field": "sms_number.spec.monthly_cost_limit",
+                  "flag": "--spec.monthly-cost-limit",
+                  "required": true,
+                  "summary": "Maximum recurring monthly USD price, as a decimal string.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers",
+              "method": "notify.sms_numbers.create",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "ID",
+                "field": "sms_number_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "sms_number",
+              "summary": "Provisions one carrier number within explicit cost limits and receives its SMS.",
+              "verb": "create"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}",
+              "method": "notify.sms_numbers.get",
+              "permission": "notify:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}"
+              },
+              "summary": "Gets an SMS number binding.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers",
+              "method": "notify.sms_numbers.list",
+              "paginates": true,
+              "permission": "notify:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists an environment's SMS number bindings.",
+              "verb": "list"
+            },
+            {
+              "confirm": {
+                "prompt": true,
+                "skip_flag": "--yes"
+              },
+              "effect": "destructive",
+              "flags": [],
+              "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}",
+              "method": "notify.sms_numbers.delete",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}"
+              },
+              "summary": "Requests carrier release and stops recurring number billing. Read status until retired_time is set. Historical messages stay readable.",
+              "verb": "delete"
+            }
+          ],
+          "noun": "sms-numbers",
+          "resource_type": "notify.sylphx.com/SmsNumber"
+        },
+        {
+          "collection": "inbound_sms",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_sms/*}",
+              "method": "notify.inbound_sms.get",
+              "permission": "notify:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms/{inbound_sms}"
+              },
+              "summary": "Gets one inbound SMS.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_sms",
+              "method": "notify.inbound_sms.list",
+              "paginates": true,
+              "permission": "notify:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}"
+              },
+              "summary": "Lists a number's inbound SMS in feed order, oldest first.",
+              "verb": "list"
+            }
+          ],
+          "noun": "inbound-sms",
+          "resource_type": "notify.sylphx.com/InboundSms"
         }
       ],
       "commands": [],

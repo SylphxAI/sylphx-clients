@@ -1,0 +1,22 @@
+{
+  "collection": "sms_numbers",
+  "controller": "services/notify/controller",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SmsNumber",
+  "message": "sylphx.notify.v1.SmsNumber",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}",
+  "plural": "smsNumbers",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "smsNumber",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/SmsNumber"
+}

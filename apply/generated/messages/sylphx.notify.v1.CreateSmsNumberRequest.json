@@ -1,0 +1,60 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "parent",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "notify.sylphx.com/SmsNumber",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sms_number_id",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sms_number",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.notify.v1.SmsNumber"
+      }
+    }
+  ],
+  "name": "sylphx.notify.v1.CreateSmsNumberRequest",
+  "package": "sylphx.notify.v1"
+}

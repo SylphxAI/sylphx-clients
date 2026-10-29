@@ -1,0 +1,22 @@
+{
+  "collection": "inbound_sms",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "InboundSms",
+  "message": "sylphx.notify.v1.InboundSms",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms/{inbound_sms}",
+  "plural": "inboundSms",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "inboundSms",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/InboundSms"
+}

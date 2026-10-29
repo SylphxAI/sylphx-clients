@@ -705,6 +705,10 @@ pub const KSCH: Prefix = Prefix::new(
     "knowledge",
     Some("knowledge_schemas"),
 );
+/// SmsNumber (`snum`, notify).
+pub const SNUM: Prefix = Prefix::new("snum", "SmsNumber", "notify", Some("sms_numbers"));
+/// InboundSms (`isms`, notify).
+pub const ISMS: Prefix = Prefix::new("isms", "InboundSms", "notify", Some("inbound_sms"));
 
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
@@ -719,5 +723,5 @@ pub const ALL: &[Prefix] = &[
     DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP,
     SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK, RVS, RVF,
     RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR, SPC, EPI,
-    KEN, KREL, KSCH,
+    KEN, KREL, KSCH, SNUM, ISMS,
 ];

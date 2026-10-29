@@ -30000,6 +30000,29 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.CreateSmsNumberRequest": {
+        "description": "The request of CreateSmsNumber.",
+        "properties": {
+          "parent": {
+            "description": "The environment to bind the number in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          },
+          "sms_number": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber",
+            "description": "The binding to create."
+          },
+          "sms_number_id": {
+            "description": "The binding id; server-assigned when empty.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "sms_number"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.CreateSuppressionRequest": {
         "description": "The request of CreateSuppression.",
         "properties": {
@@ -30293,6 +30316,20 @@
           "validate_only": {
             "description": "Validate without deleting anything.",
             "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.DeleteSmsNumberRequest": {
+        "description": "The request of DeleteSmsNumber.",
+        "properties": {
+          "name": {
+            "description": "The name of the number to release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
           }
         },
         "required": [
@@ -30639,6 +30676,20 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.GetInboundSmsRequest": {
+        "description": "The request of GetInboundSms.",
+        "properties": {
+          "name": {
+            "description": "The name of the inbound SMS to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundSms"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.GetInboxItemRequest": {
         "description": "The request of GetInboxItem.",
         "properties": {
@@ -30772,6 +30823,20 @@
             "description": "The name of the sender to get.",
             "type": "string",
             "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetSmsNumberRequest": {
+        "description": "The request of GetSmsNumber.",
+        "properties": {
+          "name": {
+            "description": "The name of the binding to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
           }
         },
         "required": [
@@ -30936,6 +31001,68 @@
           "sent"
         ],
         "type": "string"
+      },
+      "sylphx.notify.v1.InboundSms": {
+        "description": "An Inbound SMS is one text a bound number received, kept as evidence. The\nbody is cleared when the environment's tier retention expires; the carrier's\nmessage id stays, so a replay after that never records the message again.\nConsumers read the feed in `sequence` order.",
+        "properties": {
+          "carrier_message_id": {
+            "description": "The carrier's id for this message; the dedupe key on the number binding.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cleared": {
+            "description": "The text has been cleared by retention; the dedupe key stays.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "`orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms/{inbound_sms}`.",
+            "type": "string"
+          },
+          "receive_time": {
+            "description": "When the carrier says it received the message.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recipient_number": {
+            "description": "The number the message was sent to, in E.164.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "segments": {
+            "description": "How many segments the carrier counted.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "sender_number": {
+            "description": "The sender, in E.164 when the carrier gave one.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sequence": {
+            "description": "The feed position, increasing within the environment; filter\n`sequence > N` to resume after the last one handled.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "text": {
+            "description": "The text. Empty once retention has cleared it.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "`isms_<cell><ulid>`; never reused.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "sylphx.notify.v1.InboxContent": {
         "description": "In-app inbox content.",
@@ -31146,6 +31273,54 @@
             "description": "The page.",
             "items": {
               "$ref": "#/components/schemas/sylphx.notify.v1.InboundEmail"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListInboundSmsRequest": {
+        "description": "The request of ListInboundSms.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The number binding to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundSms"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListInboundSmsResponse": {
+        "description": "The response of ListInboundSms.",
+        "properties": {
+          "inbound_sms": {
+            "description": "The page.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.InboundSms"
             },
             "type": "array"
           },
@@ -31630,6 +31805,46 @@
             "description": "The page.",
             "items": {
               "$ref": "#/components/schemas/sylphx.notify.v1.Sender"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSmsNumbersRequest": {
+        "description": "The request of ListSmsNumbers.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSmsNumbersResponse": {
+        "description": "The response of ListSmsNumbers.",
+        "properties": {
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          },
+          "sms_numbers": {
+            "description": "The page.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
             },
             "type": "array"
           }
@@ -32845,6 +33060,141 @@
           "sender",
           "body"
         ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SmsNumber": {
+        "description": "An SMS Number is provisioned and owned by Notify for one environment.\nThe platform orders it within the caller's explicit USD cost limits and\nauthenticates delivery into its durable inbound feed.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "`orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}`.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumberSpec",
+            "description": "Desired state."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumberStatus",
+            "description": "Observed state.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "`snum_<cell><ulid>`; never reused.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SmsNumberSpec": {
+        "description": "SmsNumberSpec is the caller-writable state of an SMS Number.",
+        "properties": {
+          "monthly_cost_limit": {
+            "description": "Maximum recurring monthly USD price, as a decimal string.",
+            "type": "string"
+          },
+          "number_type": {
+            "description": "local, mobile, toll_free, national or shared_cost.",
+            "type": "string"
+          },
+          "provider": {
+            "description": "The carrier; Telnyx is supported.",
+            "type": "string"
+          },
+          "region_code": {
+            "description": "ISO two-letter country code.",
+            "type": "string"
+          },
+          "upfront_cost_limit": {
+            "description": "Maximum one-time USD price, as a decimal string. No quote over it is ordered.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "region_code",
+          "number_type",
+          "provider",
+          "upfront_cost_limit",
+          "monthly_cost_limit"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SmsNumberStatus": {
+        "description": "SmsNumberStatus is the observed state of an SMS Number.",
+        "properties": {
+          "carrier_account": {
+            "description": "The platform carrier account reference, never a credential.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "conditions": {
+            "description": "Ready, Reconciling, Stalled.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "messaging_profile_id": {
+            "description": "Messaging profile holding this number's webhook configuration.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "monthly_cost": {
+            "description": "Accepted monthly price in USD.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "The generation this status was computed from.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "order_id": {
+            "description": "Stable carrier order receipt; an uncertain purchase is reconciled, not repeated.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "phone_number": {
+            "description": "The provisioned E.164 number; empty until inventory selection.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_number_id": {
+            "description": "Carrier number identifier, when available.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "receiving": {
+            "description": "Receiving: an active binding whose number the carrier delivers to.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "retired_time": {
+            "description": "When the binding stopped receiving, if it has.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state_reason": {
+            "description": "Safe reason for a pending or stalled provision; contains no message text.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "upfront_cost": {
+            "description": "Accepted one-time price in USD.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.notify.v1.SmsSender": {
@@ -104347,6 +104697,576 @@
         "x-sylphx-method": "hosting.service_rollouts.resume",
         "x-sylphx-permission": "hosting:write",
         "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers": {
+      "get": {
+        "description": "Lists an environment's SMS number bindings.",
+        "operationId": "notify_sms_numbers_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSmsNumbersResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists an environment's SMS number bindings.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "notify.sms_numbers.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Provisions one carrier number within explicit cost limits and receives its SMS.",
+        "operationId": "notify_sms_numbers_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The binding id; server-assigned when empty.",
+            "in": "query",
+            "name": "sms_number_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Provisions one carrier number within explicit cost limits and receives its SMS.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "UNKNOWN_FIELD",
+          "INVALID_FIELD",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.sms_numbers.create",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}": {
+      "delete": {
+        "description": "Requests carrier release and stops recurring number billing. Read status\nuntil retired_time is set. Historical messages stay readable.",
+        "operationId": "notify_sms_numbers_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Requests carrier release and stops recurring number billing. Read status until retired_time is set. Historical messages stay readable.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH"
+        ],
+        "x-sylphx-method": "notify.sms_numbers.delete",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      },
+      "get": {
+        "description": "Gets an SMS number binding.",
+        "operationId": "notify_sms_numbers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets an SMS number binding.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "notify.sms_numbers.get",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms": {
+      "get": {
+        "description": "Lists a number's inbound SMS in feed order, oldest first.",
+        "operationId": "notify_inbound_sms_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter over filterable fields.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-132 ordering over filterable fields.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListInboundSmsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists a number's inbound SMS in feed order, oldest first.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "notify.inbound_sms.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms/{inbound_sms}": {
+      "get": {
+        "description": "Gets one inbound SMS.",
+        "operationId": "notify_inbound_sms_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "inbound_sms",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.InboundSms"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one inbound SMS.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "notify.inbound_sms.get",
+        "x-sylphx-permission": "notify:read",
         "x-sylphx-stage": "preview"
       }
     },

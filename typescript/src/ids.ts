@@ -215,6 +215,8 @@ export const PREFIXES = [
 	{ prefix: 'ken', entity: 'Entity', service: 'knowledge', collection: 'entities' },
 	{ prefix: 'krel', entity: 'Relation', service: 'knowledge', collection: 'relations' },
 	{ prefix: 'ksch', entity: 'KnowledgeSchema', service: 'knowledge', collection: 'knowledge_schemas' },
+	{ prefix: 'snum', entity: 'SmsNumber', service: 'notify', collection: 'sms_numbers' },
+	{ prefix: 'isms', entity: 'InboundSms', service: 'notify', collection: 'inbound_sms' },
 ] as const satisfies readonly PrefixInfo[]
 
 /** A registered prefix, for example `'prj'`. */

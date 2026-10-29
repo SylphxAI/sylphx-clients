@@ -510,6 +510,29 @@ pub struct CreateSenderRequest {
     pub validate_only: bool,
 }
 
+/// The request of CreateSmsNumber.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateSmsNumberRequest {
+    /// The environment to bind the number in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The binding id; server-assigned when empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "smsNumberId"
+    )]
+    pub sms_number_id: String,
+    /// The binding to create.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "smsNumber")]
+    pub sms_number: Option<SmsNumber>,
+}
+
 /// The request of CreateSuppression.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -832,6 +855,17 @@ pub struct DeleteSenderRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// The request of DeleteSmsNumber.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteSmsNumberRequest {
+    /// The name of the number to release.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
 }
 
 /// The request of DeleteSuppression.
@@ -1174,6 +1208,17 @@ pub struct GetInboundEmailRequest {
     pub name: String,
 }
 
+/// The request of GetInboundSms.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetInboundSmsRequest {
+    /// The name of the inbound SMS to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetInboxItem.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1278,6 +1323,17 @@ pub struct GetRouteRequest {
 #[non_exhaustive]
 pub struct GetSenderRequest {
     /// The name of the sender to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetSmsNumber.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSmsNumberRequest {
+    /// The name of the binding to get.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1463,6 +1519,89 @@ pub struct InboundEmail {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub message: String,
+}
+
+/// An Inbound SMS is one text a bound number received, kept as evidence. The
+/// body is cleared when the environment's tier retention expires; the carrier's
+/// message id stays, so a replay after that never records the message again.
+/// Consumers read the feed in `sequence` order.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct InboundSms {
+    /// `orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms/{inbound_sms}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `isms_<cell><ulid>`; never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The feed position, increasing within the environment; filter
+    /// `sequence > N` to resume after the last one handled.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub sequence: i64,
+    /// The carrier's id for this message; the dedupe key on the number binding.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "carrierMessageId"
+    )]
+    pub carrier_message_id: String,
+    /// The sender, in E.164 when the carrier gave one.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "senderNumber"
+    )]
+    pub sender_number: String,
+    /// The number the message was sent to, in E.164.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientNumber"
+    )]
+    pub recipient_number: String,
+    /// The text. Empty once retention has cleared it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub text: String,
+    /// How many segments the carrier counted.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub segments: i32,
+    /// When the carrier says it received the message.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiveTime"
+    )]
+    pub receive_time: String,
+    /// The text has been cleared by retention; the dedupe key stays.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub cleared: bool,
 }
 
 /// In-app inbox content.
@@ -1683,6 +1822,57 @@ pub struct ListInboundEmailsResponse {
         alias = "inboundEmails"
     )]
     pub inbound_emails: Vec<InboundEmail>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// The request of ListInboundSms.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListInboundSmsRequest {
+    /// The number binding to list in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter over filterable fields.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// AIP-132 ordering over filterable fields.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// The response of ListInboundSms.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListInboundSmsResponse {
+    /// The page.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "inboundSms")]
+    pub inbound_sms: Vec<InboundSms>,
     /// The token of the next page; empty on the last page.
     #[serde(
         default,
@@ -2205,6 +2395,47 @@ pub struct ListSendersResponse {
     /// The page.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub senders: Vec<Sender>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// The request of ListSmsNumbers.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSmsNumbersRequest {
+    /// The environment to list in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListSmsNumbers.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSmsNumbersResponse {
+    /// The page.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "smsNumbers")]
+    pub sms_numbers: Vec<SmsNumber>,
     /// The token of the next page; empty on the last page.
     #[serde(
         default,
@@ -3483,6 +3714,191 @@ pub struct SmsContent {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub body: String,
+}
+
+/// An SMS Number is provisioned and owned by Notify for one environment.
+/// The platform orders it within the caller's explicit USD cost limits and
+/// authenticates delivery into its durable inbound feed.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SmsNumber {
+    /// `orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `snum_<cell><ulid>`; never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Desired state.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<SmsNumberSpec>,
+    /// Observed state.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<SmsNumberStatus>,
+}
+
+/// SmsNumberSpec is the caller-writable state of an SMS Number.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SmsNumberSpec {
+    /// ISO two-letter country code.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "regionCode"
+    )]
+    pub region_code: String,
+    /// local, mobile, toll_free, national or shared_cost.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "numberType"
+    )]
+    pub number_type: String,
+    /// The carrier; Telnyx is supported.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub provider: String,
+    /// Maximum one-time USD price, as a decimal string. No quote over it is ordered.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "upfrontCostLimit"
+    )]
+    pub upfront_cost_limit: String,
+    /// Maximum recurring monthly USD price, as a decimal string.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "monthlyCostLimit"
+    )]
+    pub monthly_cost_limit: String,
+}
+
+/// SmsNumberStatus is the observed state of an SMS Number.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SmsNumberStatus {
+    /// The generation this status was computed from.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Ready, Reconciling, Stalled.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Receiving: an active binding whose number the carrier delivers to.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub receiving: bool,
+    /// When the binding stopped receiving, if it has.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "retiredTime"
+    )]
+    pub retired_time: String,
+    /// The provisioned E.164 number; empty until inventory selection.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "phoneNumber"
+    )]
+    pub phone_number: String,
+    /// The platform carrier account reference, never a credential.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "carrierAccount"
+    )]
+    pub carrier_account: String,
+    /// Carrier number identifier, when available.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerNumberId"
+    )]
+    pub provider_number_id: String,
+    /// Stable carrier order receipt; an uncertain purchase is reconciled, not repeated.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderId"
+    )]
+    pub order_id: String,
+    /// Messaging profile holding this number's webhook configuration.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "messagingProfileId"
+    )]
+    pub messaging_profile_id: String,
+    /// Safe reason for a pending or stalled provision; contains no message text.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "stateReason"
+    )]
+    pub state_reason: String,
+    /// Accepted one-time price in USD.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "upfrontCost"
+    )]
+    pub upfront_cost: String,
+    /// Accepted monthly price in USD.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "monthlyCost"
+    )]
+    pub monthly_cost: String,
 }
 
 /// An SMS origin.
@@ -5034,6 +5450,20 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
     /// The `broadcasts` collection.
     pub fn broadcasts(&self) -> BroadcastsCollection<'a, T> {
         BroadcastsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `sms_numbers` collection.
+    pub fn sms_numbers(&self) -> SmsNumbersCollection<'a, T> {
+        SmsNumbersCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `inbound_sms` collection.
+    pub fn inbound_sms(&self) -> InboundSmsCollection<'a, T> {
+        InboundSmsCollection {
             client: self.client,
         }
     }
@@ -7606,5 +8036,231 @@ impl<'a, T: crate::runtime::Transport> BroadcastsCollection<'a, T> {
             effect_ids: false,
         };
         self.client.call(http).await
+    }
+}
+
+/// `sms_numbers` of Sylphx Notify: Resource type `notify.sylphx.com/SmsNumber`.
+pub struct SmsNumbersCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SmsNumbersCollection<'a, T> {
+    /// Provisions one carrier number within explicit cost limits and receives its SMS.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateSmsNumberRequest,
+    ) -> Result<SmsNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/sms_numbers",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("sms_number_id", &request.sms_number_id);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.sms_number)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Gets an SMS number binding.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetSmsNumberRequest,
+    ) -> Result<SmsNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/sms_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists an environment's SMS number bindings.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListSmsNumbersRequest,
+    ) -> Result<ListSmsNumbersResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/sms_numbers",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSmsNumbersRequest,
+    ) -> Result<Vec<SmsNumber>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.sms_numbers);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Requests carrier release and stops recurring number billing. Read status
+    /// until retired_time is set. Historical messages stay readable.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}` · permission `notify:write` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`.
+    pub async fn delete(
+        &self,
+        request: DeleteSmsNumberRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/sms_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `inbound_sms` of Sylphx Notify: Resource type `notify.sylphx.com/InboundSms`.
+pub struct InboundSmsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> InboundSmsCollection<'a, T> {
+    /// Gets one inbound SMS.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_sms/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetInboundSmsRequest,
+    ) -> Result<InboundSms, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/sms_numbers/*/inbound_sms/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists a number's inbound SMS in feed order, oldest first.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_sms` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListInboundSmsRequest,
+    ) -> Result<ListInboundSmsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/inbound_sms",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/sms_numbers/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListInboundSmsRequest,
+    ) -> Result<Vec<InboundSms>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.inbound_sms);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
     }
 }

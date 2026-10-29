@@ -35413,6 +35413,302 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Provisions one carrier number within explicit cost limits and receives its SMS."
+      },
+      "description": "Provisions one carrier number within explicit cost limits and receives its SMS.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateSmsNumber.",
+        "properties": {
+          "parent": {
+            "description": "The environment to bind the number in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          },
+          "sms_number": {
+            "additionalProperties": false,
+            "description": "The binding to create.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "monthly_cost_limit": {
+                    "description": "Maximum recurring monthly USD price, as a decimal string.",
+                    "type": "string"
+                  },
+                  "number_type": {
+                    "description": "local, mobile, toll_free, national or shared_cost.",
+                    "type": "string"
+                  },
+                  "provider": {
+                    "description": "The carrier; Telnyx is supported.",
+                    "type": "string"
+                  },
+                  "region_code": {
+                    "description": "ISO two-letter country code.",
+                    "type": "string"
+                  },
+                  "upfront_cost_limit": {
+                    "description": "Maximum one-time USD price, as a decimal string. No quote over it is ordered.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "region_code",
+                  "number_type",
+                  "provider",
+                  "upfront_cost_limit",
+                  "monthly_cost_limit"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "sms_number_id": {
+            "description": "The binding id; server-assigned when empty.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "sms_number"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.sms_numbers.create",
+      "permission": "notify:write",
+      "tool": "notify_sms_numbers_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an SMS number binding."
+      },
+      "description": "Gets an SMS number binding.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetSmsNumber.",
+        "properties": {
+          "name": {
+            "description": "The name of the binding to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.sms_numbers.get",
+      "permission": "notify:read",
+      "tool": "notify_sms_numbers_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists an environment's SMS number bindings."
+      },
+      "description": "Lists an environment's SMS number bindings.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListSmsNumbers.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.sms_numbers.list",
+      "permission": "notify:read",
+      "tool": "notify_sms_numbers_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Requests carrier release and stops recurring number billing. Read status until retired_time is set. Historical messages stay readable."
+      },
+      "description": "Requests carrier release and stops recurring number billing. Read status\nuntil retired_time is set. Historical messages stay readable.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteSmsNumber.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the number to release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.sms_numbers.delete",
+      "permission": "notify:write",
+      "tool": "notify_sms_numbers_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets one inbound SMS."
+      },
+      "description": "Gets one inbound SMS.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_sms/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetInboundSms.",
+        "properties": {
+          "name": {
+            "description": "The name of the inbound SMS to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundSms"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_sms.get",
+      "permission": "notify:read",
+      "tool": "notify_inbound_sms_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a number's inbound SMS in feed order, oldest first."
+      },
+      "description": "Lists a number's inbound SMS in feed order, oldest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_sms",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListInboundSms.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The number binding to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundSms"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_sms.list",
+      "permission": "notify:read",
+      "tool": "notify_inbound_sms_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
