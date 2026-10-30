@@ -76,6 +76,42 @@ export interface ActionResult {
 	image?: Screenshot
 }
 
+/** The request of ArchiveVolume. */
+export interface ArchiveVolumeRequest {
+	/** The workspace to archive. Its name and UID remain unchanged. */
+	name: string
+	/** Archive only if the current etag matches. */
+	etag?: string
+	/**
+	 * Check eligibility and retained-copy evidence without modifying the Volume,
+	 * creating archive objects, or releasing its source claim.
+	 */
+	validateOnly?: boolean
+}
+
+/**
+ * The result of ArchiveVolume. A pending archive can be retried safely; an
+ * ambiguous response never authorizes attaching an empty replacement.
+ */
+export interface ArchiveVolumeResponse {
+	/** The current workspace, including its unchanged resource identity. */
+	volume?: Volume
+	/**
+	 * Whether this attempt passed the eligibility and retained-copy checks.
+	 * Validation is an observation; execution always checks current state again.
+	 */
+	reclaimable?: boolean
+	/** Requested PVC bytes that archival would release, not physical storage use. */
+	requestedBytes?: string
+	/** True only after the source claim has disappeared and its archive is retained. */
+	archived?: boolean
+	/**
+	 * A bounded decision reason, such as within_grace, attached,
+	 * awaiting_offsite_coverage, coverage_unavailable, pending or archived.
+	 */
+	reason?: string
+}
+
 /** BrowserSpec configures the Chromium of a BROWSER lease. */
 export interface BrowserSpec {
 	/**
@@ -1512,6 +1548,13 @@ runtime.registerSchemas({
 		['cursor', 'cursor', 'sylphx.sandboxes.v1.Point'],
 		['image', 'image', 'sylphx.sandboxes.v1.Screenshot'],
 	],
+	'sylphx.sandboxes.v1.ArchiveVolumeRequest': [
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.sandboxes.v1.ArchiveVolumeResponse': [
+		['volume', 'volume', 'sylphx.sandboxes.v1.Volume'],
+		['requestedBytes', 'requested_bytes'],
+	],
 	'sylphx.sandboxes.v1.BrowserSpec': [
 		['userDataDir', 'user_data_dir'],
 		['startUrl', 'start_url'],
@@ -2660,6 +2703,26 @@ export class VolumesCollection {
 			body: request.volume ?? {},
 			bodyType: 'sylphx.sandboxes.v1.Volume',
 			responseType: 'sylphx.sandboxes.v1.Volume',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Archives an idle standard workspace without changing its identity or
+	 * destroying its files. Ordinary attachment restores the retained copy.
+	 * Validation reports eligibility and copy coverage without changing state.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/volumes/*}:archive` · permission `sandboxes:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`.
+	 */
+	async archive(request: ArchiveVolumeRequest): Promise<ArchiveVolumeResponse> {
+		return this.client.call<ArchiveVolumeResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/volumes/*', 'name')}:archive`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.sandboxes.v1.ArchiveVolumeRequest',
+			responseType: 'sylphx.sandboxes.v1.ArchiveVolumeResponse',
 			mutation: true,
 		})
 	}

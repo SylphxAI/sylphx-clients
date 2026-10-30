@@ -28762,6 +28762,34 @@
               "verb": "update"
             },
             {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "etag",
+                  "flag": "--etag",
+                  "summary": "Archive only if the current etag matches.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/volumes/*}:archive",
+              "method": "sandboxes.volumes.archive",
+              "permission": "sandboxes:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/volumes/{volume}"
+              },
+              "summary": "Archives an idle standard workspace without changing its identity or destroying its files. Ordinary attachment restores the retained copy. Validation reports eligibility and copy coverage without changing state.",
+              "verb": "archive"
+            },
+            {
               "confirm": {
                 "prompt": true,
                 "skip_flag": "--yes"

@@ -40267,6 +40267,45 @@
     },
     {
       "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Archives an idle standard workspace without changing its identity or destroying its files. Ordinary attachment restores the retained copy. Validation reports eligibility and copy coverage without changing state."
+      },
+      "description": "Archives an idle standard workspace without changing its identity or\ndestroying its files. Ordinary attachment restores the retained copy.\nValidation reports eligibility and copy coverage without changing state.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/volumes/*}:archive",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ArchiveVolume.",
+        "properties": {
+          "etag": {
+            "description": "Archive only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The workspace to archive. Its name and UID remain unchanged.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+          },
+          "validate_only": {
+            "description": "Check eligibility and retained-copy evidence without modifying the Volume,\ncreating archive objects, or releasing its source claim.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "sandboxes.volumes.archive",
+      "permission": "sandboxes:write",
+      "tool": "sandboxes_volumes_archive"
+    },
+    {
+      "annotations": {
         "destructiveHint": true,
         "idempotentHint": true,
         "openWorldHint": false,

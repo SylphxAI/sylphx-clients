@@ -6919,6 +6919,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'sandboxes:read',
 	},
+	'sandboxes.volumes.archive': {
+		id: 'sandboxes.volumes.archive',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/volumes/*}:archive',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/volumes/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'sandboxes:write',
+	},
 	'sandboxes.volumes.create': {
 		id: 'sandboxes.volumes.create',
 		httpMethod: 'POST',

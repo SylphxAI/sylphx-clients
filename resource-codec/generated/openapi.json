@@ -36490,6 +36490,55 @@
         },
         "type": "object"
       },
+      "sylphx.sandboxes.v1.ArchiveVolumeRequest": {
+        "description": "The request of ArchiveVolume.",
+        "properties": {
+          "etag": {
+            "description": "Archive only if the current etag matches.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The workspace to archive. Its name and UID remain unchanged.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Volume"
+          },
+          "validate_only": {
+            "description": "Check eligibility and retained-copy evidence without modifying the Volume,\ncreating archive objects, or releasing its source claim.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.sandboxes.v1.ArchiveVolumeResponse": {
+        "description": "The result of ArchiveVolume. A pending archive can be retried safely; an\nambiguous response never authorizes attaching an empty replacement.",
+        "properties": {
+          "archived": {
+            "description": "True only after the source claim has disappeared and its archive is retained.",
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "A bounded decision reason, such as within_grace, attached,\nawaiting_offsite_coverage, coverage_unavailable, pending or archived.",
+            "type": "string"
+          },
+          "reclaimable": {
+            "description": "Whether this attempt passed the eligibility and retained-copy checks.\nValidation is an observation; execution always checks current state again.",
+            "type": "boolean"
+          },
+          "requested_bytes": {
+            "description": "Requested PVC bytes that archival would release, not physical storage use.",
+            "format": "int64",
+            "type": "string"
+          },
+          "volume": {
+            "$ref": "#/components/schemas/sylphx.sandboxes.v1.Volume",
+            "description": "The current workspace, including its unchanged resource identity."
+          }
+        },
+        "type": "object"
+      },
       "sylphx.sandboxes.v1.BrowserSpec": {
         "description": "BrowserSpec configures the Chromium of a BROWSER lease.",
         "properties": {
@@ -114403,6 +114452,119 @@
           "IDEMPOTENCY_IN_PROGRESS"
         ],
         "x-sylphx-method": "sandboxes.volumes.update",
+        "x-sylphx-permission": "sandboxes:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/volumes/{volume}:archive": {
+      "post": {
+        "description": "Archives an idle standard workspace without changing its identity or\ndestroying its files. Ordinary attachment restores the retained copy.\nValidation reports eligibility and copy coverage without changing state.",
+        "operationId": "sandboxes_volumes_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "volume",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "etag": {
+                    "description": "Archive only if the current etag matches.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Check eligibility and retained-copy evidence without modifying the Volume,\ncreating archive objects, or releasing its source claim.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.sandboxes.v1.ArchiveVolumeResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Archives an idle standard workspace without changing its identity or destroying its files. Ordinary attachment restores the retained copy. Validation reports eligibility and copy coverage without changing state.",
+        "tags": [
+          "sandboxes"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNKNOWN_FIELD",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "ETAG_MISMATCH"
+        ],
+        "x-sylphx-method": "sandboxes.volumes.archive",
         "x-sylphx-permission": "sandboxes:write",
         "x-sylphx-stage": "preview"
       }

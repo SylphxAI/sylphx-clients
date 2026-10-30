@@ -117,6 +117,57 @@ pub struct ActionResult {
     pub image: Option<Screenshot>,
 }
 
+/// The request of ArchiveVolume.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ArchiveVolumeRequest {
+    /// The workspace to archive. Its name and UID remain unchanged.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Archive only if the current etag matches.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+    /// Check eligibility and retained-copy evidence without modifying the Volume,
+    /// creating archive objects, or releasing its source claim.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// The result of ArchiveVolume. A pending archive can be retried safely; an
+/// ambiguous response never authorizes attaching an empty replacement.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ArchiveVolumeResponse {
+    /// The current workspace, including its unchanged resource identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub volume: Option<Volume>,
+    /// Whether this attempt passed the eligibility and retained-copy checks.
+    /// Validation is an observation; execution always checks current state again.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reclaimable: bool,
+    /// Requested PVC bytes that archival would release, not physical storage use.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "requestedBytes"
+    )]
+    pub requested_bytes: i64,
+    /// True only after the source claim has disappeared and its archive is retained.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub archived: bool,
+    /// A bounded decision reason, such as within_grace, attached,
+    /// awaiting_offsite_coverage, coverage_unavailable, pending or archived.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
 /// BrowserSpec configures the Chromium of a BROWSER lease.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -4991,6 +5042,38 @@ impl<'a, T: crate::runtime::Transport> VolumesCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.volume)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Archives an idle standard workspace without changing its identity or
+    /// destroying its files. Ordinary attachment restores the retained copy.
+    /// Validation reports eligibility and copy coverage without changing state.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/volumes/*}:archive` · permission `sandboxes:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`.
+    pub async fn archive(
+        &self,
+        request: ArchiveVolumeRequest,
+    ) -> Result<ArchiveVolumeResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:archive",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/volumes/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

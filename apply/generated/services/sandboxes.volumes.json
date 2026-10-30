@@ -43,6 +43,13 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "sandboxes.volumes.archive",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "etag",
               "allow_missing",
