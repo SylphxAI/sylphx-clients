@@ -15,6 +15,9 @@ use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
+#[path = "support/devices_capture.rs"]
+mod devices_capture;
+
 #[tokio::test]
 async fn apply_offline_refuses_an_undeclarable_kind_without_a_backend() {
     let sb = Sandbox::new("apply-offline-refused");

@@ -12,10 +12,13 @@ use std::time::{Duration, Instant};
 use base64::Engine;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{json, Map, Value};
+use sha2::{Digest, Sha256};
 use sylphx::sandboxes as sbx;
 use sylphx::Client;
 
 use crate::{names, Failure};
+
+mod scenario;
 
 /// A device lease is a `linux-l` Sandboxes lease of kind ANDROID (§3, §4.1).
 const SHAPE: &str = "linux-l";
@@ -59,6 +62,12 @@ pub fn command() -> Command {
                 .arg(Arg::new("game-loop").long("game-loop").value_name("N")
                     .value_parser(clap::value_parser!(i64))
                     .help("Start a Test Lab game loop (com.google.intent.action.TEST_LOOP) with scenario N instead of the launcher; it ends when the app's process exits"))
+                .arg(Arg::new("scenario").long("scenario").value_name("JSON")
+                    .requires("size").conflicts_with("game-loop")
+                    .help("Run a native capture scenario through the public lease; one fresh lease for the selected size"))
+                .arg(Arg::new("size").long("size").value_name("LABEL")
+                    .requires("scenario")
+                    .help("One size label declared in --scenario; PNG dimensions are verified without rescaling"))
                 .arg(Arg::new("screenshot-every").long("screenshot-every").value_name("DURATION").default_value("5s")
                     .help("Screenshot this often while the app runs (0s takes only the final one)"))
                 .arg(Arg::new("out").long("out").value_name("DIR").default_value("device-results")
@@ -130,10 +139,19 @@ struct Opts {
     ttl: Duration,
     wait: Duration,
     game_loop: Option<i64>,
+    scenario: Option<Capture>,
     every: Duration,
     out: PathBuf,
     keep: bool,
     json: bool,
+}
+
+struct Capture {
+    scenario: scenario::Scenario,
+    display: scenario::Display,
+    steps: Vec<scenario::Step>,
+    label: String,
+    sha256: String,
 }
 
 impl Opts {
@@ -143,6 +161,21 @@ impl Opts {
             return Err(format!("{} is not a file", app.display()));
         }
         let game_loop = m.get_one::<i64>("game-loop").copied();
+        let scenario = m
+            .get_one::<String>("scenario")
+            .map(|path| {
+                let bytes = std::fs::read(path).map_err(|error| format!("{path}: {error}"))?;
+                let label = m.get_one::<String>("size").expect("required with scenario");
+                let (scenario, display, steps) = scenario::Scenario::parse(&bytes, label)?;
+                Ok::<_, String>(Capture {
+                    scenario,
+                    display,
+                    steps,
+                    label: label.clone(),
+                    sha256: format!("{:x}", Sha256::digest(&bytes)),
+                })
+            })
+            .transpose()?;
         let wait = match m.get_one::<String>("wait") {
             Some(v) => duration(v, "--wait")?,
             None if game_loop.is_some() => GAME_LOOP_WAIT,
@@ -151,6 +184,14 @@ impl Opts {
         let ttl = duration(m.get_one::<String>("ttl").expect("default"), "--ttl")?;
         if ttl < Duration::from_secs(60) {
             return Err("--ttl is 60s or more".into());
+        }
+        let out = PathBuf::from(m.get_one::<String>("out").expect("default"));
+        if scenario.is_some() && out.exists() {
+            let mut entries =
+                std::fs::read_dir(&out).map_err(|error| format!("{}: {error}", out.display()))?;
+            if entries.next().is_some() {
+                return Err("capture output is not empty; use a new --out directory".into());
+            }
         }
         Ok(Self {
             app,
@@ -164,11 +205,12 @@ impl Opts {
             ttl,
             wait,
             game_loop,
+            scenario,
             every: duration(
                 m.get_one::<String>("screenshot-every").expect("default"),
                 "--screenshot-every",
             )?,
-            out: PathBuf::from(m.get_one::<String>("out").expect("default")),
+            out,
             keep: m.get_flag("keep"),
             json: m.get_one::<String>("output").map(String::as_str) == Some("json"),
         })
@@ -206,6 +248,8 @@ struct Report {
     error: String,
     screenshots: Vec<String>,
     timings: Vec<(&'static str, u128)>,
+    capture: Option<Value>,
+    expected_stopped: bool,
 }
 
 struct Outcome {
@@ -304,15 +348,24 @@ impl Run<'_> {
             eprintln!("device: installed {}", self.r.package);
             // The launch onwards is what the collected log is about.
             self.exec(&name, &["logcat", "-c"]).await?;
-            let t = Instant::now();
-            self.launch(&name).await?;
-            self.timing("launch", t);
-            if self.r.launched {
-                eprintln!("device: launched");
+            if self.o.scenario.is_some() {
+                // Keep diagnostics even when an input guard or scenario step
+                // fails; the original error still controls the verdict.
+                if let Err(error) = self.capture(&name).await {
+                    let _ = self.collect(&name).await;
+                    return Err(error);
+                }
             } else {
-                eprintln!("device: {}", self.r.launch_error);
+                let t = Instant::now();
+                self.launch(&name).await?;
+                self.timing("launch", t);
+                if self.r.launched {
+                    eprintln!("device: launched");
+                } else {
+                    eprintln!("device: {}", self.r.launch_error);
+                }
+                self.watch(&name).await?;
             }
-            self.watch(&name).await?;
         }
         self.collect(&name).await?;
         Ok(())
@@ -442,7 +495,10 @@ impl Run<'_> {
             None => vec!["monkey", "-p", package.as_str(), "-c", LAUNCH_CATEGORY, "1"],
         };
         match self.exec(lease, &argv).await {
-            Ok(o) if o.exit_code == 0 => self.r.launched = true,
+            Ok(o) if o.exit_code == 0 => {
+                self.r.launched = true;
+                self.r.expected_stopped = false;
+            }
             Ok(o) => self.r.launch_error = format!("the launch failed: {}", tail(&o)),
             Err(e) => return Err(e),
         }
@@ -512,7 +568,12 @@ impl Run<'_> {
         self.save("screenshot-final.png", &png)?;
 
         let package = self.r.package.clone();
-        if !package.is_empty() && !self.r.crashed && self.o.game_loop.is_none() && self.r.launched {
+        if !package.is_empty()
+            && !self.r.crashed
+            && !self.r.expected_stopped
+            && self.o.game_loop.is_none()
+            && self.r.launched
+        {
             // A launcher run whose process is gone at the end left by crashing.
             if self
                 .exec(lease, &["pidof", package.as_str()])
@@ -600,6 +661,254 @@ impl Run<'_> {
     fn timing(&mut self, step: &'static str, since: Instant) {
         self.r.timings.push((step, since.elapsed().as_millis()));
     }
+
+    /// One selected display on this fresh lease. Do not carry application state
+    /// from one size to the next or run a copied private adb driver.
+    async fn capture(&mut self, lease: &str) -> Result<(), String> {
+        let capture = self.o.scenario.as_ref().expect("capture selected");
+        let bytes = std::fs::read(&self.o.app).map_err(|error| error.to_string())?;
+        self.r.capture = Some(json!({
+            "lease": lease,
+            "title": capture.scenario.title,
+            "source_commit": capture.scenario.source_commit,
+            "scenario_sha256": capture.sha256,
+            "apk_sha256": format!("{:x}", Sha256::digest(&bytes)),
+            "size": capture.label,
+            "requested_display": {"width":capture.display.width,"height":capture.display.height,"density":capture.display.density},
+            "steps": [],
+        }));
+        self.write_capture_receipt()?;
+        if capture.scenario.package != self.r.package {
+            return Err("installed package differs from the scenario; no input sent".into());
+        }
+        let dimensions = format!("{}x{}", capture.display.width, capture.display.height);
+        let density = capture.display.density.to_string();
+        self.checked_exec(lease, &["wm", "size", &dimensions])
+            .await?;
+        self.checked_exec(lease, &["wm", "density", &density])
+            .await?;
+        let size = self.checked_exec(lease, &["wm", "size"]).await?;
+        if scenario::wm_value(&size.stdout, "size").as_deref() != Some(dimensions.as_str()) {
+            return Err("device did not confirm the requested native display override".into());
+        }
+        let actual_density = self.checked_exec(lease, &["wm", "density"]).await?;
+        if scenario::wm_value(&actual_density.stdout, "density").as_deref()
+            != Some(density.as_str())
+        {
+            return Err("device did not confirm the requested native density override".into());
+        }
+        let has_input = capture.steps.iter().any(scenario::Step::input);
+        if has_input {
+            // A capture is not authorization to spend. Do not send any input
+            // unless Play billing is absent or verifiably disabled. The Android
+            // google_apis image does not necessarily include the Play Store.
+            let installed = self
+                .checked_exec(lease, &["pm", "list", "packages"])
+                .await?;
+            if !installed
+                .stdout
+                .lines()
+                .any(|line| line.trim() == "package:android")
+            {
+                return Err(
+                    "package inventory lacks its Android control; no scenario input sent".into(),
+                );
+            }
+            if installed
+                .stdout
+                .lines()
+                .any(|line| line.trim() == "package:com.android.vending")
+            {
+                self.checked_exec(
+                    lease,
+                    &["pm", "disable-user", "--user", "0", "com.android.vending"],
+                )
+                .await?;
+                let disabled = self
+                    .checked_exec(lease, &["pm", "list", "packages", "-d"])
+                    .await?;
+                if !disabled
+                    .stdout
+                    .lines()
+                    .any(|line| line.trim() == "package:com.android.vending")
+                {
+                    return Err(
+                        "billing guard could not be verified; no scenario input sent".into(),
+                    );
+                }
+            }
+        }
+        let steps = capture.steps.clone();
+        let deadline = Instant::now() + self.o.ttl.saturating_sub(Duration::from_secs(60));
+        for (index, step) in steps.iter().enumerate() {
+            if Instant::now() >= deadline {
+                return Err("scenario exceeded the lease budget".into());
+            }
+            let operation = match step {
+                scenario::Step::Launch => "launch",
+                scenario::Step::Wait(_) => "wait",
+                scenario::Step::Tap(_) => "tap",
+                scenario::Step::Swipe(..) => "swipe",
+                scenario::Step::Key(_) => "key",
+                scenario::Step::Text(_) => "text",
+                scenario::Step::Stop => "stop",
+                scenario::Step::Shot(_) => "shot",
+            };
+            self.record_capture_step(
+                json!({"index":index,"operation":operation,"state":"started",
+                "started_at_unix_ms":timestamp_ms()}),
+            )?;
+            if step.input() {
+                self.assert_foreground(lease).await?;
+            }
+            match step {
+                scenario::Step::Launch => {
+                    self.launch(lease).await?;
+                    if !self.r.launched {
+                        return Err(self.r.launch_error.clone());
+                    }
+                }
+                scenario::Step::Wait(seconds) => {
+                    let remaining = deadline.saturating_duration_since(Instant::now());
+                    if *seconds > remaining.as_secs_f64() {
+                        return Err("scenario wait exceeds the lease budget".into());
+                    }
+                    tokio::time::sleep(Duration::from_secs_f64(*seconds)).await;
+                }
+                scenario::Step::Shot(label) => {
+                    self.assert_foreground(lease).await?;
+                    let png = self.capture_png(lease).await?;
+                    let (width, height) = scenario::png_size(&png)?;
+                    let name = format!("{label}.png");
+                    self.save(&name, &png)?;
+                    let receipt = json!({"index":index,"operation":"shot","path":name,"width":width,"height":height,
+                        "sha256":format!("{:x}",Sha256::digest(&png)),"state":"success","completed_at_unix_ms":timestamp_ms()});
+                    self.complete_capture_step(receipt)?;
+                    continue;
+                }
+                scenario::Step::Tap(fractions) => {
+                    let png = self.capture_png(lease).await?;
+                    let point = scenario::point(*fractions, scenario::png_size(&png)?);
+                    self.checked_exec(lease, &["input", "tap", &point[0], &point[1]])
+                        .await?;
+                }
+                scenario::Step::Swipe(fractions, duration) => {
+                    if Duration::from_millis(*duration)
+                        > deadline.saturating_duration_since(Instant::now())
+                    {
+                        return Err("scenario swipe exceeds the lease budget".into());
+                    }
+                    let png = self.capture_png(lease).await?;
+                    let dimensions = scenario::png_size(&png)?;
+                    let start = scenario::point([fractions[0], fractions[1]], dimensions);
+                    let end = scenario::point([fractions[2], fractions[3]], dimensions);
+                    self.checked_exec(
+                        lease,
+                        &[
+                            "input",
+                            "swipe",
+                            &start[0],
+                            &start[1],
+                            &end[0],
+                            &end[1],
+                            &duration.to_string(),
+                        ],
+                    )
+                    .await?;
+                }
+                scenario::Step::Key(key) => {
+                    self.checked_exec(lease, &["input", "keyevent", key])
+                        .await?;
+                }
+                scenario::Step::Text(text) => {
+                    // The public API quotes every argv element for the Android
+                    // shell. Do not quote twice or log the entered contents.
+                    let text = text.replace(' ', "%s");
+                    self.checked_exec(lease, &["input", "text", &text]).await?;
+                }
+                scenario::Step::Stop => {
+                    self.checked_exec(lease, &["am", "force-stop", &self.r.package])
+                        .await?;
+                    self.r.expected_stopped = true;
+                }
+            }
+            self.complete_capture_step(
+                json!({"index":index,"operation":operation,"state":"success",
+                "completed_at_unix_ms":timestamp_ms()}),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn record_capture_step(&mut self, step: Value) -> Result<(), String> {
+        self.r.capture.as_mut().expect("capture receipt")["steps"]
+            .as_array_mut()
+            .expect("step array")
+            .push(step);
+        self.write_capture_receipt()
+    }
+
+    fn complete_capture_step(&mut self, step: Value) -> Result<(), String> {
+        let current = self.r.capture.as_mut().expect("capture receipt")["steps"]
+            .as_array_mut()
+            .expect("step array")
+            .last_mut()
+            .expect("started step");
+        current
+            .as_object_mut()
+            .expect("step object")
+            .extend(step.as_object().expect("completion object").clone());
+        self.write_capture_receipt()
+    }
+
+    fn write_capture_receipt(&self) -> Result<(), String> {
+        write(
+            &self.o.out.join("capture.json"),
+            serde_json::to_string_pretty(&self.r.capture)
+                .map_err(|error| error.to_string())?
+                .as_bytes(),
+        )
+    }
+
+    async fn checked_exec(&self, lease: &str, argv: &[&str]) -> Result<Exec, String> {
+        let output = self.exec(lease, argv).await?;
+        if output.exit_code != 0 {
+            // Do not echo command output; it may contain input text or IDs.
+            return Err(format!(
+                "device {} command refused with exit {}",
+                argv[0], output.exit_code
+            ));
+        }
+        Ok(output)
+    }
+
+    async fn assert_foreground(&self, lease: &str) -> Result<(), String> {
+        let activities = self
+            .checked_exec(lease, &["dumpsys", "activity", "activities"])
+            .await?;
+        let windows = self.checked_exec(lease, &["dumpsys", "window"]).await?;
+        scenario::foreground(&self.r.package, &activities.stdout, &windows.stdout)
+    }
+
+    async fn capture_png(&self, lease: &str) -> Result<Vec<u8>, String> {
+        let png = self.screenshot(lease).await?;
+        let dimensions = scenario::png_size(&png)?;
+        let display = self.o.scenario.as_ref().expect("capture selected").display;
+        if !display.matches(dimensions) {
+            return Err(format!(
+                "native PNG {}x{} differs from requested {}x{}; no input sent or image rescaled",
+                dimensions.0, dimensions.1, display.width, display.height
+            ));
+        }
+        Ok(png)
+    }
+}
+
+fn timestamp_ms() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
 }
 
 /// The environment the lease is created in: `--env`, else the linked env, else
@@ -662,6 +971,7 @@ fn report_json(r: &Report) -> Value {
         "screenshots": r.screenshots,
         "timings_ms": Value::Object(timings),
         "error": r.error,
+        "capture": r.capture,
     })
 }
 
@@ -708,7 +1018,7 @@ fn cases(r: &Report) -> Vec<Case> {
     } else {
         "the app did not launch".into()
     };
-    vec![
+    let mut result = vec![
         Case {
             name: "install",
             ok: r.installed,
@@ -724,7 +1034,15 @@ fn cases(r: &Report) -> Vec<Case> {
             ok: !r.crashed,
             message: r.crash.clone(),
         },
-    ]
+    ];
+    if r.capture.is_some() {
+        result.push(Case {
+            name: "scenario",
+            ok: r.error.is_empty(),
+            message: r.error.clone(),
+        });
+    }
+    result
 }
 
 /// The JUnit XML Firebase Test Lab also produces: one testsuite per device.
@@ -976,7 +1294,10 @@ mod tests {
                 "E/AndroidRuntime: FATAL EXCEPTION: main\nE/AndroidRuntime: Process: com.other.app, PID: 9\n",
                 false,
             ),
-            ("Process: com.example.game\nE/AndroidRuntime: FATAL EXCEPTION: main\n", false),
+            (
+                "Process: com.example.game\nE/AndroidRuntime: FATAL EXCEPTION: main\n",
+                false,
+            ),
             ("nothing at all", false),
         ];
         for (text, want) in cases {
@@ -1055,5 +1376,20 @@ mod tests {
         };
         assert_eq!(infra.code(), 2);
         assert_eq!(Outcome::interrupted().code(), 130);
+    }
+
+    #[test]
+    fn a_scenario_guard_refusal_is_also_a_failed_junit_case() {
+        let report = Report {
+            installed: true,
+            launched: true,
+            capture: Some(json!({"steps":[]})),
+            error: "focused window is not the target".into(),
+            ..Default::default()
+        };
+        let xml = junit("capture", &cases(&report));
+        assert!(xml.contains("tests=\"4\" failures=\"1\""));
+        assert!(xml.contains("name=\"scenario\""));
+        assert!(xml.contains("focused window is not the target"));
     }
 }

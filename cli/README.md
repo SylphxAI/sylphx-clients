@@ -18,6 +18,7 @@ sylphx link --env orgs/…/envs/…       # optional advanced target override fo
 sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
+sylphx devices run --app app.apk --scenario capture.json --size tablet  # native-size scenario capture
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
 sylphx build image                     # build and publish to the linked project; no registry setup
 eval "$(sylphx build cache env)"      # point local sccache and Turbo at the project's shared build cache
@@ -125,6 +126,38 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `result.json`, `junit.xml`, `logcat.txt`, and `crash.txt` into `--out`
   (`device-results/`). Exit 0 passed, 1 failed, 2 infrastructure; the lease is
   released on the way out unless `--keep`.
+  Add `--scenario capture.json --size tablet` for a named native screen sequence.
+  Each invocation selects exactly one declared size on its own fresh lease;
+  invoke again for another size rather than carrying app state across displays.
+  The scenario uses the existing device-farm JSON vocabulary:
+
+  ```json
+  {
+    "package": "com.example.game",
+    "sizes": {"phone": ["1080x2400", 420], "tablet": ["2560x1600", 240]},
+    "steps": [{"launch": true}, {"wait": 30}, {"shot": "lobby"}]
+  }
+  ```
+
+  Supported steps are `launch`, `wait` (seconds), `shot`, `tap` (two fractions),
+  `swipe` (four fractions and optional milliseconds), `key`, `text`, and `stop`.
+  Exactly one operation belongs in each step. Unsupported operations, malformed
+  fractions and unsafe or duplicate screenshot filenames fail before leasing.
+  The installed APK's application id must match `package`. Optional `title` and
+  `sourceCommit` are caller-supplied provenance labels, not build attestations.
+
+  Captures set and read back native `wm size`/density, then verify PNG dimensions
+  in either orientation without rescaling. Tap/swipe pixels derive from that
+  actual frame, not cached startup input bounds. Before any input or named shot,
+  both resumed activity and focused-window ownership must match the package;
+  unknown ownership fails closed. Input sequences also require a verified
+  absent or disabled Play billing surface, with a positive Android package
+  inventory control. This is not a substitute for reviewing the
+  scenario: never include purchases or value-spending actions without authority.
+  `capture.json` records APK/scenario/PNG hashes, native dimensions and step
+  receipts, without entered text. Success means the sequence ran, not that a
+  named image is visually the intended screen; inspect the PNGs. `--keep` leaves
+  display and billing changes on the disposable lease for diagnosis.
 - Build workspaces are owned by the admitted lease, not a persistent client
   pool. A queued Build holds no workspace PVC reservation. After Kueue admits
   the suspended Job, Kubernetes creates the Pod's generic ephemeral raw-block
