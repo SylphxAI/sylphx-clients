@@ -260,6 +260,25 @@ pub struct BucketStatus {
     pub public_url: String,
 }
 
+/// Request an owner-collected catalog observation for one database.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckDatabaseCatalogReadinessRequest {
+    /// Exact database name in the authorized environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// A stale scheduled intent yields unknown without connecting.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "expectedGeneration"
+    )]
+    pub expected_generation: Option<i64>,
+}
+
 /// The request of ConnectBucket.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -570,6 +589,139 @@ pub struct Database {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<DatabaseStatus>,
+}
+
+/// An owner-observed catalog result. Unknown is never successful evidence and
+/// cannot resolve an open episode. coverage_gap also identifies an observed
+/// missing collection prerequisite, independently of transport health.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DatabaseCatalogReadiness {
+    /// Exact authorized database name from the owner census.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub resource: String,
+    /// Resource generation against which the observation is fenced.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Owner clock time at which the observation completed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "observedAt"
+    )]
+    pub observed_at: String,
+    /// Whether complete current evidence establishes coverage or a known gap.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<CatalogReadinessState>,
+    /// Finite owner reason; never contains driver errors or credentials.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<CatalogReadinessReason>,
+    /// An affirmatively observed coverage defect that can open an episode.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "coverageGap"
+    )]
+    pub coverage_gap: bool,
+    /// Whether this attempt reached the exact approved database; absent if unobserved.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "transportReachable"
+    )]
+    pub transport_reachable: Option<bool>,
+    /// Authoritative declared signatures, present only for a complete catalog read.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "declaredFunctionCount"
+    )]
+    pub declared_function_count: Option<u32>,
+    /// The number of declared signatures which resolve, not unrelated functions.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "observedFunctionCount"
+    )]
+    pub observed_function_count: Option<u32>,
+    /// Declared signatures that did not resolve; absent for unknown observations.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "missingFunctionCount"
+    )]
+    pub missing_function_count: Option<u32>,
+    /// Resolved signatures lacking schema USAGE or function EXECUTE.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "executeMissingCount"
+    )]
+    pub execute_missing_count: Option<u32>,
+}
+
+/// One authorized production database, including explicit non-observation entries.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DatabaseCatalogTarget {
+    /// Exact authorized database name from the owner census.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub resource: String,
+    /// Resource generation against which the observation is fenced.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Protected and unsupported entries stay in the census with an explicit
+    /// reason. CATALOG_READY here means pending collection, not observed reader
+    /// eligibility or proven health.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "collectionReason"
+    )]
+    pub collection_reason: Option<CatalogReadinessReason>,
+    /// The existing resource binding is authoritative rather than a canonical Data record.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub legacy: bool,
 }
 
 /// DatabaseSpec is the caller-writable state of a Database.
@@ -2281,6 +2433,47 @@ pub struct PutValueResponse {
     pub value: Option<ValueRecord>,
 }
 
+/// Page the authorized production database census.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QueryDatabaseCatalogTargetsRequest {
+    /// Exact organization, project and environment parent.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum targets to return; defaults to 100 and is capped at 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque cursor from the preceding page in the same environment.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// A complete page of the authorized production census.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QueryDatabaseCatalogTargetsResponse {
+    /// Targets in stable resource order, including protected and legacy entries.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<DatabaseCatalogTarget>,
+    /// Cursor for the next page; empty when the census is complete.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
 /// The request of RestoreDatabase.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3187,6 +3380,165 @@ impl<'de> serde::Deserialize<'de> for BucketPublicAccessMode {
 }
 
 impl crate::runtime::QueryValue for BucketPublicAccessMode {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Finite owner evidence separating policy, transport and coverage outcomes.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum CatalogReadinessReason {
+    /// Every nonempty declared signature exists and is executable.
+    CatalogReady,
+    /// The owner proved eligibility and absence of the approved desk credential.
+    CredentialMissing,
+    /// The collection authority was refused.
+    AuthorityDenied,
+    /// A bounded connection attempt failed.
+    ConnectFailed,
+    /// Complete catalog evidence could not be collected within its bound.
+    CatalogUnavailable,
+    /// The approved database was reached but its authoritative declaration is empty.
+    ReachableZeroDeclaredFunctions,
+    /// At least one declared exact signature does not resolve.
+    DeclaredFunctionMissing,
+    /// A declared function lacks required schema or execution privilege.
+    ExecuteMissing,
+    /// Owner intent or membership changed across the observation.
+    GenerationMismatch,
+    /// Exact role, database, privilege or replica verification failed.
+    ReaderBoundaryFailed,
+    /// The explicit census entry lacks a supported observed placement.
+    UnsupportedLegacy,
+    /// Existing resource protection prevents a connection attempt.
+    ProtectedResource,
+    /// The owner has not established reader authority or eligibility.
+    ReaderNotReady,
+    /// The stored declaration fails the existing report validator.
+    DeclarationInvalid,
+    /// The reader owner has not authorized this organization/placement under
+    /// the currently served platform ownership policy. This is not a gap.
+    PlatformOwnedPolicyExcluded,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl CatalogReadinessReason {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::CatalogReady => "catalog_ready",
+            Self::CredentialMissing => "credential_missing",
+            Self::AuthorityDenied => "authority_denied",
+            Self::ConnectFailed => "connect_failed",
+            Self::CatalogUnavailable => "catalog_unavailable",
+            Self::ReachableZeroDeclaredFunctions => "reachable_zero_declared_functions",
+            Self::DeclaredFunctionMissing => "declared_function_missing",
+            Self::ExecuteMissing => "execute_missing",
+            Self::GenerationMismatch => "generation_mismatch",
+            Self::ReaderBoundaryFailed => "reader_boundary_failed",
+            Self::UnsupportedLegacy => "unsupported_legacy",
+            Self::ProtectedResource => "protected_resource",
+            Self::ReaderNotReady => "reader_not_ready",
+            Self::DeclarationInvalid => "declaration_invalid",
+            Self::PlatformOwnedPolicyExcluded => "platform_owned_policy_excluded",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "catalog_ready" => Self::CatalogReady,
+            "credential_missing" => Self::CredentialMissing,
+            "authority_denied" => Self::AuthorityDenied,
+            "connect_failed" => Self::ConnectFailed,
+            "catalog_unavailable" => Self::CatalogUnavailable,
+            "reachable_zero_declared_functions" => Self::ReachableZeroDeclaredFunctions,
+            "declared_function_missing" => Self::DeclaredFunctionMissing,
+            "execute_missing" => Self::ExecuteMissing,
+            "generation_mismatch" => Self::GenerationMismatch,
+            "reader_boundary_failed" => Self::ReaderBoundaryFailed,
+            "unsupported_legacy" => Self::UnsupportedLegacy,
+            "protected_resource" => Self::ProtectedResource,
+            "reader_not_ready" => Self::ReaderNotReady,
+            "declaration_invalid" => Self::DeclarationInvalid,
+            "platform_owned_policy_excluded" => Self::PlatformOwnedPolicyExcluded,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for CatalogReadinessReason {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CatalogReadinessReason {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for CatalogReadinessReason {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Classification of the current bounded owner observation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum CatalogReadinessState {
+    /// Complete nonempty coverage was verified.
+    Healthy,
+    /// A complete catalog read found a known aggregate-coverage gap.
+    Unhealthy,
+    /// Current evidence cannot establish catalog coverage or recovery.
+    UnknownValue,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl CatalogReadinessState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Healthy => "healthy",
+            Self::Unhealthy => "unhealthy",
+            Self::UnknownValue => "unknown",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "healthy" => Self::Healthy,
+            "unhealthy" => Self::Unhealthy,
+            "unknown" => Self::UnknownValue,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for CatalogReadinessState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CatalogReadinessState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for CatalogReadinessState {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
@@ -4273,6 +4625,64 @@ impl<'a, T: crate::runtime::Transport> DatabasesCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Observes aggregate-read coverage using the database's approved reader.
+    /// Reads catalog metadata only; never accepts SQL, credentials or row data.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/databases/*}:checkCatalogReadiness` · permission `data:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn check_catalog_readiness(
+        &self,
+        request: CheckDatabaseCatalogReadinessRequest,
+    ) -> Result<DatabaseCatalogReadiness, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:checkCatalogReadiness",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/databases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Pages the complete authorized production database population, including
+    /// legacy bindings and protected resources which cannot be observed.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/databases:queryCatalogTargets` · permission `data:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn query_catalog_targets(
+        &self,
+        request: QueryDatabaseCatalogTargetsRequest,
+    ) -> Result<QueryDatabaseCatalogTargetsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/databases:queryCatalogTargets",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 
     /// Creates a database. The Operation is done when the controller settles it.

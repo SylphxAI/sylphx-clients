@@ -152,6 +152,14 @@ export interface BucketStatus {
 	readonly publicUrl?: string
 }
 
+/** Request an owner-collected catalog observation for one database. */
+export interface CheckDatabaseCatalogReadinessRequest {
+	/** Exact database name in the authorized environment. */
+	name: string
+	/** A stale scheduled intent yields unknown without connecting. */
+	expectedGeneration?: string
+}
+
 /** The request of ConnectBucket. */
 export interface ConnectBucketRequest {
 	/** The name of the bucket. */
@@ -311,6 +319,52 @@ export interface Database {
 	spec?: DatabaseSpec
 	/** Observed state. */
 	readonly status?: DatabaseStatus
+}
+
+/**
+ * An owner-observed catalog result. Unknown is never successful evidence and
+ * cannot resolve an open episode. coverage_gap also identifies an observed
+ * missing collection prerequisite, independently of transport health.
+ */
+export interface DatabaseCatalogReadiness {
+	/** Exact authorized database name from the owner census. */
+	readonly resource?: string
+	/** Resource generation against which the observation is fenced. */
+	readonly observedGeneration?: string
+	/** Owner clock time at which the observation completed. */
+	readonly observedAt?: string
+	/** Whether complete current evidence establishes coverage or a known gap. */
+	readonly state?: CatalogReadinessState
+	/** Finite owner reason; never contains driver errors or credentials. */
+	readonly reason?: CatalogReadinessReason
+	/** An affirmatively observed coverage defect that can open an episode. */
+	readonly coverageGap?: boolean
+	/** Whether this attempt reached the exact approved database; absent if unobserved. */
+	readonly transportReachable?: boolean
+	/** Authoritative declared signatures, present only for a complete catalog read. */
+	readonly declaredFunctionCount?: number
+	/** The number of declared signatures which resolve, not unrelated functions. */
+	readonly observedFunctionCount?: number
+	/** Declared signatures that did not resolve; absent for unknown observations. */
+	readonly missingFunctionCount?: number
+	/** Resolved signatures lacking schema USAGE or function EXECUTE. */
+	readonly executeMissingCount?: number
+}
+
+/** One authorized production database, including explicit non-observation entries. */
+export interface DatabaseCatalogTarget {
+	/** Exact authorized database name from the owner census. */
+	readonly resource?: string
+	/** Resource generation against which the observation is fenced. */
+	readonly observedGeneration?: string
+	/**
+	 * Protected and unsupported entries stay in the census with an explicit
+	 * reason. CATALOG_READY here means pending collection, not observed reader
+	 * eligibility or proven health.
+	 */
+	readonly collectionReason?: CatalogReadinessReason
+	/** The existing resource binding is authoritative rather than a canonical Data record. */
+	readonly legacy?: boolean
 }
 
 /** DatabaseSpec is the caller-writable state of a Database. */
@@ -1066,6 +1120,24 @@ export interface PutValueResponse {
 	value?: ValueRecord
 }
 
+/** Page the authorized production database census. */
+export interface QueryDatabaseCatalogTargetsRequest {
+	/** Exact organization, project and environment parent. */
+	parent: string
+	/** Maximum targets to return; defaults to 100 and is capped at 1000. */
+	pageSize?: number
+	/** Opaque cursor from the preceding page in the same environment. */
+	pageToken?: string
+}
+
+/** A complete page of the authorized production census. */
+export interface QueryDatabaseCatalogTargetsResponse {
+	/** Targets in stable resource order, including protected and legacy entries. */
+	targets?: DatabaseCatalogTarget[]
+	/** Cursor for the next page; empty when the census is complete. */
+	nextPageToken?: string
+}
+
 /** The request of RestoreDatabase. */
 export interface RestoreDatabaseRequest {
 	/** The name of the database. */
@@ -1489,6 +1561,12 @@ export interface ZSetScoreValueResponse {
 /** BucketPublicAccessMode is how much of a bucket is publicly readable. */
 export type BucketPublicAccessMode = 'off' | 'read' | 'read_prefixes' | (string & {})
 
+/** Finite owner evidence separating policy, transport and coverage outcomes. */
+export type CatalogReadinessReason = 'catalog_ready' | 'credential_missing' | 'authority_denied' | 'connect_failed' | 'catalog_unavailable' | 'reachable_zero_declared_functions' | 'declared_function_missing' | 'execute_missing' | 'generation_mismatch' | 'reader_boundary_failed' | 'unsupported_legacy' | 'protected_resource' | 'reader_not_ready' | 'declaration_invalid' | 'platform_owned_policy_excluded' | (string & {})
+
+/** Classification of the current bounded owner observation. */
+export type CatalogReadinessState = 'healthy' | 'unhealthy' | 'unknown' | (string & {})
+
 /** ConnectionProfile is which Postgres path a connection takes. */
 export type ConnectionProfile = 'pooled' | 'direct' | (string & {})
 
@@ -1527,6 +1605,9 @@ runtime.registerSchemas({
 		['storageBytes', 'storage_bytes'],
 		['objectCount', 'object_count'],
 		['publicUrl', 'public_url'],
+	],
+	'sylphx.data.v1.CheckDatabaseCatalogReadinessRequest': [
+		['expectedGeneration', 'expected_generation'],
 	],
 	'sylphx.data.v1.ConnectBucketRequest': [
 		['credentialTtl', 'credential_ttl'],
@@ -1573,6 +1654,20 @@ runtime.registerSchemas({
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.data.v1.DatabaseSpec'],
 		['status', 'status', 'sylphx.data.v1.DatabaseStatus'],
+	],
+	'sylphx.data.v1.DatabaseCatalogReadiness': [
+		['observedGeneration', 'observed_generation'],
+		['observedAt', 'observed_at'],
+		['coverageGap', 'coverage_gap'],
+		['transportReachable', 'transport_reachable'],
+		['declaredFunctionCount', 'declared_function_count'],
+		['observedFunctionCount', 'observed_function_count'],
+		['missingFunctionCount', 'missing_function_count'],
+		['executeMissingCount', 'execute_missing_count'],
+	],
+	'sylphx.data.v1.DatabaseCatalogTarget': [
+		['observedGeneration', 'observed_generation'],
+		['collectionReason', 'collection_reason'],
 	],
 	'sylphx.data.v1.DatabaseSpec': [
 		['postgresVersion', 'postgres_version'],
@@ -1822,6 +1917,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.data.v1.PutValueResponse': [
 		['value', 'value', 'sylphx.data.v1.ValueRecord'],
+	],
+	'sylphx.data.v1.QueryDatabaseCatalogTargetsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.data.v1.QueryDatabaseCatalogTargetsResponse': [
+		['targets', 'targets', 'sylphx.data.v1.DatabaseCatalogTarget'],
+		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.data.v1.RestoreDatabaseRequest': [
 		['restoreTime', 'restore_time'],
@@ -2674,6 +2777,44 @@ export class DatabasesCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Observes aggregate-read coverage using the database's approved reader.
+	 * Reads catalog metadata only; never accepts SQL, credentials or row data.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/databases/*}:checkCatalogReadiness` · permission `data:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async checkCatalogReadiness(request: CheckDatabaseCatalogReadinessRequest): Promise<DatabaseCatalogReadiness> {
+		return this.client.call<DatabaseCatalogReadiness>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/databases/*', 'name')}:checkCatalogReadiness`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.data.v1.CheckDatabaseCatalogReadinessRequest',
+			responseType: 'sylphx.data.v1.DatabaseCatalogReadiness',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Pages the complete authorized production database population, including
+	 * legacy bindings and protected resources which cannot be observed.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/databases:queryCatalogTargets` · permission `data:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async queryCatalogTargets(request: QueryDatabaseCatalogTargetsRequest): Promise<QueryDatabaseCatalogTargetsResponse> {
+		return this.client.call<QueryDatabaseCatalogTargetsResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/databases:queryCatalogTargets`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.data.v1.QueryDatabaseCatalogTargetsRequest',
+			responseType: 'sylphx.data.v1.QueryDatabaseCatalogTargetsResponse',
+			mutation: true,
+		})
 	}
 
 	/**

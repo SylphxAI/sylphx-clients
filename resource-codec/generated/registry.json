@@ -2285,6 +2285,128 @@
       ]
     },
     {
+      "doc": "Finite owner evidence separating policy, transport and coverage outcomes.",
+      "name": "sylphx.data.v1.CatalogReadinessReason",
+      "package": "sylphx.data.v1",
+      "values": [
+        {
+          "doc": "Every nonempty declared signature exists and is executable.",
+          "number": 1,
+          "proto_name": "CATALOG_READINESS_REASON_CATALOG_READY",
+          "wire": "catalog_ready"
+        },
+        {
+          "doc": "The owner proved eligibility and absence of the approved desk credential.",
+          "number": 2,
+          "proto_name": "CATALOG_READINESS_REASON_CREDENTIAL_MISSING",
+          "wire": "credential_missing"
+        },
+        {
+          "doc": "The collection authority was refused.",
+          "number": 3,
+          "proto_name": "CATALOG_READINESS_REASON_AUTHORITY_DENIED",
+          "wire": "authority_denied"
+        },
+        {
+          "doc": "A bounded connection attempt failed.",
+          "number": 4,
+          "proto_name": "CATALOG_READINESS_REASON_CONNECT_FAILED",
+          "wire": "connect_failed"
+        },
+        {
+          "doc": "Complete catalog evidence could not be collected within its bound.",
+          "number": 5,
+          "proto_name": "CATALOG_READINESS_REASON_CATALOG_UNAVAILABLE",
+          "wire": "catalog_unavailable"
+        },
+        {
+          "doc": "The approved database was reached but its authoritative declaration is empty.",
+          "number": 6,
+          "proto_name": "CATALOG_READINESS_REASON_REACHABLE_ZERO_DECLARED_FUNCTIONS",
+          "wire": "reachable_zero_declared_functions"
+        },
+        {
+          "doc": "At least one declared exact signature does not resolve.",
+          "number": 7,
+          "proto_name": "CATALOG_READINESS_REASON_DECLARED_FUNCTION_MISSING",
+          "wire": "declared_function_missing"
+        },
+        {
+          "doc": "A declared function lacks required schema or execution privilege.",
+          "number": 8,
+          "proto_name": "CATALOG_READINESS_REASON_EXECUTE_MISSING",
+          "wire": "execute_missing"
+        },
+        {
+          "doc": "Owner intent or membership changed across the observation.",
+          "number": 9,
+          "proto_name": "CATALOG_READINESS_REASON_GENERATION_MISMATCH",
+          "wire": "generation_mismatch"
+        },
+        {
+          "doc": "Exact role, database, privilege or replica verification failed.",
+          "number": 10,
+          "proto_name": "CATALOG_READINESS_REASON_READER_BOUNDARY_FAILED",
+          "wire": "reader_boundary_failed"
+        },
+        {
+          "doc": "The explicit census entry lacks a supported observed placement.",
+          "number": 11,
+          "proto_name": "CATALOG_READINESS_REASON_UNSUPPORTED_LEGACY",
+          "wire": "unsupported_legacy"
+        },
+        {
+          "doc": "Existing resource protection prevents a connection attempt.",
+          "number": 12,
+          "proto_name": "CATALOG_READINESS_REASON_PROTECTED_RESOURCE",
+          "wire": "protected_resource"
+        },
+        {
+          "doc": "The owner has not established reader authority or eligibility.",
+          "number": 13,
+          "proto_name": "CATALOG_READINESS_REASON_READER_NOT_READY",
+          "wire": "reader_not_ready"
+        },
+        {
+          "doc": "The stored declaration fails the existing report validator.",
+          "number": 14,
+          "proto_name": "CATALOG_READINESS_REASON_DECLARATION_INVALID",
+          "wire": "declaration_invalid"
+        },
+        {
+          "doc": "The reader owner has not authorized this organization/placement under\nthe currently served platform ownership policy. This is not a gap.",
+          "number": 15,
+          "proto_name": "CATALOG_READINESS_REASON_PLATFORM_OWNED_POLICY_EXCLUDED",
+          "wire": "platform_owned_policy_excluded"
+        }
+      ]
+    },
+    {
+      "doc": "Classification of the current bounded owner observation.",
+      "name": "sylphx.data.v1.CatalogReadinessState",
+      "package": "sylphx.data.v1",
+      "values": [
+        {
+          "doc": "Complete nonempty coverage was verified.",
+          "number": 1,
+          "proto_name": "CATALOG_READINESS_STATE_HEALTHY",
+          "wire": "healthy"
+        },
+        {
+          "doc": "A complete catalog read found a known aggregate-coverage gap.",
+          "number": 2,
+          "proto_name": "CATALOG_READINESS_STATE_UNHEALTHY",
+          "wire": "unhealthy"
+        },
+        {
+          "doc": "Current evidence cannot establish catalog coverage or recovery.",
+          "number": 3,
+          "proto_name": "CATALOG_READINESS_STATE_UNKNOWN",
+          "wire": "unknown"
+        }
+      ]
+    },
+    {
       "doc": "ConnectionProfile is which Postgres path a connection takes.",
       "name": "sylphx.data.v1.ConnectionProfile",
       "package": "sylphx.data.v1",
@@ -43575,6 +43697,51 @@
       "package": "sylphx.data.v1"
     },
     {
+      "doc": "Request an owner-collected catalog observation for one database.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact database name in the authorized environment.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "data.sylphx.com/Database",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A stale scheduled intent yields unknown without connecting.",
+          "filterable": false,
+          "name": "expected_generation",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.CheckDatabaseCatalogReadinessRequest",
+      "package": "sylphx.data.v1"
+    },
+    {
       "doc": "The request of ConnectBucket.",
       "fields": [
         {
@@ -44389,6 +44556,305 @@
         }
       ],
       "name": "sylphx.data.v1.Database",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "An owner-observed catalog result. Unknown is never successful evidence and\ncannot resolve an open episode. coverage_gap also identifies an observed\nmissing collection prerequisite, independently of transport health.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact authorized database name from the owner census.",
+          "filterable": false,
+          "name": "resource",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Resource generation against which the observation is fenced.",
+          "filterable": false,
+          "name": "observed_generation",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Owner clock time at which the observation completed.",
+          "filterable": false,
+          "name": "observed_at",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether complete current evidence establishes coverage or a known gap.",
+          "filterable": false,
+          "name": "state",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.data.v1.CatalogReadinessState"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Finite owner reason; never contains driver errors or credentials.",
+          "filterable": false,
+          "name": "reason",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.data.v1.CatalogReadinessReason"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "An affirmatively observed coverage defect that can open an episode.",
+          "filterable": false,
+          "name": "coverage_gap",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether this attempt reached the exact approved database; absent if unobserved.",
+          "filterable": false,
+          "name": "transport_reachable",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Authoritative declared signatures, present only for a complete catalog read.",
+          "filterable": false,
+          "name": "declared_function_count",
+          "number": 8,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "uint32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The number of declared signatures which resolve, not unrelated functions.",
+          "filterable": false,
+          "name": "observed_function_count",
+          "number": 9,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "uint32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Declared signatures that did not resolve; absent for unknown observations.",
+          "filterable": false,
+          "name": "missing_function_count",
+          "number": 10,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "uint32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Resolved signatures lacking schema USAGE or function EXECUTE.",
+          "filterable": false,
+          "name": "execute_missing_count",
+          "number": 11,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "uint32"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.DatabaseCatalogReadiness",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "One authorized production database, including explicit non-observation entries.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact authorized database name from the owner census.",
+          "filterable": false,
+          "name": "resource",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Resource generation against which the observation is fenced.",
+          "filterable": false,
+          "name": "observed_generation",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Protected and unsupported entries stay in the census with an explicit\nreason. CATALOG_READY here means pending collection, not observed reader\neligibility or proven health.",
+          "filterable": false,
+          "name": "collection_reason",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.data.v1.CatalogReadinessReason"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The existing resource binding is authoritative rather than a canonical Data record.",
+          "filterable": false,
+          "name": "legacy",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.DatabaseCatalogTarget",
       "package": "sylphx.data.v1"
     },
     {
@@ -48766,6 +49232,111 @@
         }
       ],
       "name": "sylphx.data.v1.PutValueResponse",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "Page the authorized production database census.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact organization, project and environment parent.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum targets to return; defaults to 100 and is capped at 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Opaque cursor from the preceding page in the same environment.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.QueryDatabaseCatalogTargetsRequest",
+      "package": "sylphx.data.v1"
+    },
+    {
+      "doc": "A complete page of the authorized production census.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Targets in stable resource order, including protected and legacy entries.",
+          "filterable": false,
+          "name": "targets",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.data.v1.DatabaseCatalogTarget"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Cursor for the next page; empty when the census is complete.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.data.v1.QueryDatabaseCatalogTargetsResponse",
       "package": "sylphx.data.v1"
     },
     {
@@ -142435,6 +143006,86 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Observes aggregate-read coverage using the database's approved reader.\nReads catalog metadata only; never accepts SQL, credentials or row data.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/databases/{database}",
+                    "pattern": "orgs/*/projects/*/envs/*/databases/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/databases/*}:checkCatalogReadiness"
+              },
+              "id": "data.databases.check_catalog_readiness",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "data:read",
+              "proto": "sylphx.data.v1.DataService.CheckDatabaseCatalogReadiness",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.data.v1.CheckDatabaseCatalogReadinessRequest",
+              "resource_field": null,
+              "response": "sylphx.data.v1.DatabaseCatalogReadiness",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "check_catalog_readiness"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Pages the complete authorized production database population, including\nlegacy bindings and protected resources which cannot be observed.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/databases:queryCatalogTargets"
+              },
+              "id": "data.databases.query_catalog_targets",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "data:read",
+              "proto": "sylphx.data.v1.DataService.QueryDatabaseCatalogTargets",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.data.v1.QueryDatabaseCatalogTargetsRequest",
+              "resource_field": null,
+              "response": "sylphx.data.v1.QueryDatabaseCatalogTargetsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "query_catalog_targets"
             },
             {
               "cancellable": false,

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.data.v1.CatalogReadinessState",
+  "package": "sylphx.data.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CATALOG_READINESS_STATE_HEALTHY",
+      "wire": "healthy"
+    },
+    {
+      "number": 2,
+      "proto_name": "CATALOG_READINESS_STATE_UNHEALTHY",
+      "wire": "unhealthy"
+    },
+    {
+      "number": 3,
+      "proto_name": "CATALOG_READINESS_STATE_UNKNOWN",
+      "wire": "unknown"
+    }
+  ]
+}

@@ -9802,6 +9802,56 @@
               "verb": "list"
             },
             {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "expected_generation",
+                  "flag": "--expected-generation",
+                  "summary": "A stale scheduled intent yields unknown without connecting.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/databases/*}:checkCatalogReadiness",
+              "method": "data.databases.check_catalog_readiness",
+              "permission": "data:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/databases/{database}"
+              },
+              "summary": "Observes aggregate-read coverage using the database's approved reader. Reads catalog metadata only; never accepts SQL, credentials or row data.",
+              "verb": "check-catalog-readiness"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum targets to return; defaults to 100 and is capped at 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque cursor from the preceding page in the same environment.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/databases:queryCatalogTargets",
+              "method": "data.databases.query_catalog_targets",
+              "permission": "data:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Pages the complete authorized production database population, including legacy bindings and protected resources which cannot be observed.",
+              "verb": "query-catalog-targets"
+            },
+            {
               "effect": "write",
               "flags": [
                 {

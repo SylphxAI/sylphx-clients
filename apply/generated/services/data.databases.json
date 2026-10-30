@@ -23,6 +23,20 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "data.databases.check_catalog_readiness",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "data.databases.query_catalog_targets",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "database_id",
               "validate_only"

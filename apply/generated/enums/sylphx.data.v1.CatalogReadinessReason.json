@@ -1,0 +1,81 @@
+{
+  "name": "sylphx.data.v1.CatalogReadinessReason",
+  "package": "sylphx.data.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CATALOG_READINESS_REASON_CATALOG_READY",
+      "wire": "catalog_ready"
+    },
+    {
+      "number": 2,
+      "proto_name": "CATALOG_READINESS_REASON_CREDENTIAL_MISSING",
+      "wire": "credential_missing"
+    },
+    {
+      "number": 3,
+      "proto_name": "CATALOG_READINESS_REASON_AUTHORITY_DENIED",
+      "wire": "authority_denied"
+    },
+    {
+      "number": 4,
+      "proto_name": "CATALOG_READINESS_REASON_CONNECT_FAILED",
+      "wire": "connect_failed"
+    },
+    {
+      "number": 5,
+      "proto_name": "CATALOG_READINESS_REASON_CATALOG_UNAVAILABLE",
+      "wire": "catalog_unavailable"
+    },
+    {
+      "number": 6,
+      "proto_name": "CATALOG_READINESS_REASON_REACHABLE_ZERO_DECLARED_FUNCTIONS",
+      "wire": "reachable_zero_declared_functions"
+    },
+    {
+      "number": 7,
+      "proto_name": "CATALOG_READINESS_REASON_DECLARED_FUNCTION_MISSING",
+      "wire": "declared_function_missing"
+    },
+    {
+      "number": 8,
+      "proto_name": "CATALOG_READINESS_REASON_EXECUTE_MISSING",
+      "wire": "execute_missing"
+    },
+    {
+      "number": 9,
+      "proto_name": "CATALOG_READINESS_REASON_GENERATION_MISMATCH",
+      "wire": "generation_mismatch"
+    },
+    {
+      "number": 10,
+      "proto_name": "CATALOG_READINESS_REASON_READER_BOUNDARY_FAILED",
+      "wire": "reader_boundary_failed"
+    },
+    {
+      "number": 11,
+      "proto_name": "CATALOG_READINESS_REASON_UNSUPPORTED_LEGACY",
+      "wire": "unsupported_legacy"
+    },
+    {
+      "number": 12,
+      "proto_name": "CATALOG_READINESS_REASON_PROTECTED_RESOURCE",
+      "wire": "protected_resource"
+    },
+    {
+      "number": 13,
+      "proto_name": "CATALOG_READINESS_REASON_READER_NOT_READY",
+      "wire": "reader_not_ready"
+    },
+    {
+      "number": 14,
+      "proto_name": "CATALOG_READINESS_REASON_DECLARATION_INVALID",
+      "wire": "declaration_invalid"
+    },
+    {
+      "number": 15,
+      "proto_name": "CATALOG_READINESS_REASON_PLATFORM_OWNED_POLICY_EXCLUDED",
+      "wire": "platform_owned_policy_excluded"
+    }
+  ]
+}

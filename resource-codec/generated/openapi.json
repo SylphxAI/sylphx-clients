@@ -13543,6 +13543,55 @@
         },
         "type": "object"
       },
+      "sylphx.data.v1.CatalogReadinessReason": {
+        "description": "Finite owner evidence separating policy, transport and coverage outcomes.",
+        "enum": [
+          "catalog_ready",
+          "credential_missing",
+          "authority_denied",
+          "connect_failed",
+          "catalog_unavailable",
+          "reachable_zero_declared_functions",
+          "declared_function_missing",
+          "execute_missing",
+          "generation_mismatch",
+          "reader_boundary_failed",
+          "unsupported_legacy",
+          "protected_resource",
+          "reader_not_ready",
+          "declaration_invalid",
+          "platform_owned_policy_excluded"
+        ],
+        "type": "string"
+      },
+      "sylphx.data.v1.CatalogReadinessState": {
+        "description": "Classification of the current bounded owner observation.",
+        "enum": [
+          "healthy",
+          "unhealthy",
+          "unknown"
+        ],
+        "type": "string"
+      },
+      "sylphx.data.v1.CheckDatabaseCatalogReadinessRequest": {
+        "description": "Request an owner-collected catalog observation for one database.",
+        "properties": {
+          "expected_generation": {
+            "description": "A stale scheduled intent yields unknown without connecting.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact database name in the authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "data.sylphx.com/Database"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.data.v1.ConnectBucketRequest": {
         "description": "The request of ConnectBucket.",
         "properties": {
@@ -13836,6 +13885,104 @@
         "required": [
           "spec"
         ],
+        "type": "object"
+      },
+      "sylphx.data.v1.DatabaseCatalogReadiness": {
+        "description": "An owner-observed catalog result. Unknown is never successful evidence and\ncannot resolve an open episode. coverage_gap also identifies an observed\nmissing collection prerequisite, independently of transport health.",
+        "properties": {
+          "coverage_gap": {
+            "description": "An affirmatively observed coverage defect that can open an episode.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "declared_function_count": {
+            "description": "Authoritative declared signatures, present only for a complete catalog read.",
+            "format": "int32",
+            "minimum": 0,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "execute_missing_count": {
+            "description": "Resolved signatures lacking schema USAGE or function EXECUTE.",
+            "format": "int32",
+            "minimum": 0,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "missing_function_count": {
+            "description": "Declared signatures that did not resolve; absent for unknown observations.",
+            "format": "int32",
+            "minimum": 0,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "observed_at": {
+            "description": "Owner clock time at which the observation completed.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_function_count": {
+            "description": "The number of declared signatures which resolve, not unrelated functions.",
+            "format": "int32",
+            "minimum": 0,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "observed_generation": {
+            "description": "Resource generation against which the observation is fenced.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/sylphx.data.v1.CatalogReadinessReason",
+            "description": "Finite owner reason; never contains driver errors or credentials.",
+            "readOnly": true
+          },
+          "resource": {
+            "description": "Exact authorized database name from the owner census.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.data.v1.CatalogReadinessState",
+            "description": "Whether complete current evidence establishes coverage or a known gap.",
+            "readOnly": true
+          },
+          "transport_reachable": {
+            "description": "Whether this attempt reached the exact approved database; absent if unobserved.",
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.data.v1.DatabaseCatalogTarget": {
+        "description": "One authorized production database, including explicit non-observation entries.",
+        "properties": {
+          "collection_reason": {
+            "$ref": "#/components/schemas/sylphx.data.v1.CatalogReadinessReason",
+            "description": "Protected and unsupported entries stay in the census with an explicit\nreason. CATALOG_READY here means pending collection, not observed reader\neligibility or proven health.",
+            "readOnly": true
+          },
+          "legacy": {
+            "description": "The existing resource binding is authoritative rather than a canonical Data record.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "observed_generation": {
+            "description": "Resource generation against which the observation is fenced.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "resource": {
+            "description": "Exact authorized database name from the owner census.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.data.v1.DatabaseSpec": {
@@ -15413,6 +15560,45 @@
           "value": {
             "$ref": "#/components/schemas/sylphx.data.v1.ValueRecord",
             "description": "The stored entry."
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.data.v1.QueryDatabaseCatalogTargetsRequest": {
+        "description": "Page the authorized production database census.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum targets to return; defaults to 100 and is capped at 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque cursor from the preceding page in the same environment.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Exact organization, project and environment parent.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.data.v1.QueryDatabaseCatalogTargetsResponse": {
+        "description": "A complete page of the authorized production census.",
+        "properties": {
+          "next_page_token": {
+            "description": "Cursor for the next page; empty when the census is complete.",
+            "type": "string"
+          },
+          "targets": {
+            "description": "Targets in stable resource order, including protected and legacy entries.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.data.v1.DatabaseCatalogTarget"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -67978,6 +68164,110 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/databases/{database}:checkCatalogReadiness": {
+      "post": {
+        "description": "Observes aggregate-read coverage using the database's approved reader.\nReads catalog metadata only; never accepts SQL, credentials or row data.",
+        "operationId": "data_databases_check_catalog_readiness",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "database",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expected_generation": {
+                    "description": "A stale scheduled intent yields unknown without connecting.",
+                    "format": "int64",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.data.v1.DatabaseCatalogReadiness"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Observes aggregate-read coverage using the database's approved reader. Reads catalog metadata only; never accepts SQL, credentials or row data.",
+        "tags": [
+          "data"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "data.databases.check_catalog_readiness",
+        "x-sylphx-permission": "data:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/databases/{database}:connect": {
       "post": {
         "description": "Returns how to connect to the database: its endpoint and its own engine\ncredentials. The credentials are not API keys and are returned only here.",
@@ -68326,6 +68616,103 @@
         },
         "x-sylphx-method": "data.databases.rotate_credentials",
         "x-sylphx-permission": "data:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/databases:queryCatalogTargets": {
+      "post": {
+        "description": "Pages the complete authorized production database population, including\nlegacy bindings and protected resources which cannot be observed.",
+        "operationId": "data_databases_query_catalog_targets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "page_size": {
+                    "description": "Maximum targets to return; defaults to 100 and is capped at 1000.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "page_token": {
+                    "description": "Opaque cursor from the preceding page in the same environment.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.data.v1.QueryDatabaseCatalogTargetsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Pages the complete authorized production database population, including legacy bindings and protected resources which cannot be observed.",
+        "tags": [
+          "data"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "data.databases.query_catalog_targets",
+        "x-sylphx-permission": "data:read",
         "x-sylphx-stage": "preview"
       }
     },

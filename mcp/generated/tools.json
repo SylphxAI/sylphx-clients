@@ -13897,6 +13897,81 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Observes aggregate-read coverage using the database's approved reader. Reads catalog metadata only; never accepts SQL, credentials or row data."
+      },
+      "description": "Observes aggregate-read coverage using the database's approved reader.\nReads catalog metadata only; never accepts SQL, credentials or row data.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/databases/*}:checkCatalogReadiness",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request an owner-collected catalog observation for one database.",
+        "properties": {
+          "expected_generation": {
+            "description": "A stale scheduled intent yields unknown without connecting.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact database name in the authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "data.sylphx.com/Database"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "data.databases.check_catalog_readiness",
+      "permission": "data:read",
+      "tool": "data_databases_check_catalog_readiness"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Pages the complete authorized production database population, including legacy bindings and protected resources which cannot be observed."
+      },
+      "description": "Pages the complete authorized production database population, including\nlegacy bindings and protected resources which cannot be observed.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/databases:queryCatalogTargets",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Page the authorized production database census.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum targets to return; defaults to 100 and is capped at 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque cursor from the preceding page in the same environment.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Exact organization, project and environment parent.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "data.databases.query_catalog_targets",
+      "permission": "data:read",
+      "tool": "data_databases_query_catalog_targets"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
         "readOnlyHint": false,
         "title": "Creates a database. The Operation is done when the controller settles it."
       },
