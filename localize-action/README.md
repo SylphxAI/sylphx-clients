@@ -37,8 +37,10 @@ jobs:
 ```
 
 With `open-pr: "true"` the step commits only the changed locale files to
-`localization/update`, force-pushes that branch, and creates or updates one PR
-titled "Update translations" whose body is the job summary. Without it, the
+`localization/update-<run>-<attempt>-<unique suffix>`, pushes the new branch,
+and creates a PR titled "Update translations" whose body is the job summary.
+Earlier branches and their reviews keep their history. Outside GitHub Actions,
+the run and attempt default to `local` and `1`. Without it, the
 files are written into the working tree for a later step to commit.
 
 ## Inputs
@@ -55,8 +57,8 @@ files are written into the working tree for a later step to commit.
 | `api-url` | `https://api.sylphx.com` | API base URL. |
 | `fail-on-qa` | `true` | Exit 1 after writing files when QA did not pass. |
 | `max-wait` | `600` | Seconds to keep syncing until nothing is pending; then fail. |
-| `open-pr` | `false` | Commit changed files and create or update the PR. |
-| `pr-branch` | `localization/update` | Branch for the PR. |
+| `open-pr` | `false` | Commit changed files and create a PR on a new branch. |
+| `pr-branch` | `localization/update` | Branch prefix; each invocation appends a unique suffix. |
 | `github-token` | `github.token` | Used by `gh`, only when `open-pr` is true. GitHub does not run workflows on a pull request opened with the default `github.token`; pass a GitHub App or fine-grained token when the translation PR must run your CI. |
 
 ## Outputs

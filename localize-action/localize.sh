@@ -24,7 +24,7 @@ Reads its settings from environment variables:
   LOCALIZE_MAX_WAIT         seconds to keep syncing until nothing is pending (default 600)
   LOCALIZE_POLL_INTERVAL    seconds between syncs (default 2)
   LOCALIZE_OPEN_PR          true|false: commit changed files and open a PR (default false)
-  LOCALIZE_PR_BRANCH        branch for the PR (default localization/update)
+  LOCALIZE_PR_BRANCH        branch prefix for each PR (default localization/update)
   GITHUB_TOKEN              token for `gh`, used only when LOCALIZE_OPEN_PR=true
 
 Outputs are printed as key=value lines, and appended to $GITHUB_OUTPUT when set:
@@ -300,19 +300,14 @@ if [[ $OPEN_PR == true ]]; then
       die "pr-branch must name a branch of its own, not '${PR_BRANCH:-}' (the default branch is '$base')"
     git config user.name >/dev/null || git config user.name "github-actions[bot]"
     git config user.email >/dev/null || git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-    git checkout -B "$PR_BRANCH"
+    # Each invocation owns a new ref; earlier translation reviews keep their history.
+    PR_BRANCH="${PR_BRANCH}-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${WORK##*.}"
+    git check-ref-format --branch "$PR_BRANCH" >/dev/null || die "invalid pr-branch prefix"
+    git checkout -b "$PR_BRANCH"
     git add -- "${CHANGED[@]}"
     git commit -m "Update translations" -- "${CHANGED[@]}"
-    # The branch belongs to this action: it is rewritten on every run, so the
-    # lease only guards against the ref moving between this fetch and the push.
-    git fetch -q origin "+refs/heads/$PR_BRANCH:refs/remotes/origin/$PR_BRANCH" 2>/dev/null || true
-    git push --force-with-lease origin "$PR_BRANCH"
-    number=$(gh pr list --head "$PR_BRANCH" --state open --json number --jq '.[0].number // empty')
-    if [[ -n $number ]]; then
-      gh pr edit "$number" --title "Update translations" --body-file "$SUMMARY"
-    else
-      gh pr create --base "$base" --head "$PR_BRANCH" --title "Update translations" --body-file "$SUMMARY"
-    fi
+    git push origin "HEAD:refs/heads/$PR_BRANCH"
+    gh pr create --base "$base" --head "$PR_BRANCH" --title "Update translations" --body-file "$SUMMARY"
   fi
 fi
 

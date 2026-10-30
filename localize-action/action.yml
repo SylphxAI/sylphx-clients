@@ -32,10 +32,10 @@ inputs:
     description: Seconds to keep syncing until nothing is pending.
     default: "600"
   open-pr:
-    description: Commit changed locale files and create or update one pull request (true or false).
+    description: Commit changed locale files and create a pull request on a new branch (true or false).
     default: "false"
   pr-branch:
-    description: Branch used for the pull request.
+    description: Branch prefix for the pull request; each invocation appends a unique suffix.
     default: localization/update
   github-token:
     description: Token for gh, used only when open-pr is true.

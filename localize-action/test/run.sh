@@ -139,14 +139,47 @@ setup() {
   git init -q -b main . && git config user.name t && git config user.email t@t
   git add -A && git commit -qm init
   git init -q --bare "$ROOT/remote.git" && git remote add origin "$ROOT/remote.git"
+  git push -q origin main
+  git checkout -qb localization/update
+  echo review >review.txt
+  git add review.txt && git commit -qm 'Review in progress'
+  git push -q origin localization/update
+  git checkout -q main
 }
 run_case; export GH_LOG=$ROOT/gh.log; : >"$GH_LOG"
+LEGACY_SHA=$(git -C "$ROOT/remote.git" rev-parse localization/update)
+MAIN_SHA=$(git -C "$ROOT/remote.git" rev-parse main)
 echo dirty >"$ROOT/repo/unrelated.txt"
-run_script LOCALIZE_FILES='i18n/{locale}.json' LOCALIZE_OPEN_PR=true GITHUB_TOKEN=tok PATH="$ROOT/bin:$PATH"
+run_pr() {
+  run_script LOCALIZE_FILES='i18n/{locale}.json' LOCALIZE_OPEN_PR=true GITHUB_TOKEN=tok \
+    GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=1 PATH="$ROOT/bin:$PATH"
+}
+run_pr
+BRANCH=$(git -C "$ROOT/repo" branch --show-current)
 check "open-pr exits 0" '[[ $RC -eq 0 ]]'
-check "open-pr pushed branch" 'git -C "$ROOT/remote.git" rev-parse --verify -q localization/update >/dev/null'
-check "open-pr commits only locale files" '[[ $(git -C "$ROOT/remote.git" show --name-only --format= localization/update | sort | tr "\n" " ") == "i18n/fr.json i18n/zh-Hans.json " ]]'
-check "open-pr creates PR" 'grep -q "pr create --base main --head localization/update --title Update translations" "$GH_LOG"'
+check "open-pr uses a new branch" '[[ $BRANCH == localization/update-123-1-* ]]'
+check "open-pr pushed branch" 'git -C "$ROOT/remote.git" rev-parse --verify -q "$BRANCH" >/dev/null'
+check "open-pr commits only locale files" '[[ $(git -C "$ROOT/remote.git" show --name-only --format= "$BRANCH" | sort | tr "\n" " ") == "i18n/fr.json i18n/zh-Hans.json " ]]'
+check "open-pr creates PR" 'grep -q "pr create --base main --head $BRANCH --title Update translations" "$GH_LOG"'
+check "open-pr preserves existing review" '[[ $(git -C "$ROOT/remote.git" rev-parse localization/update) == "$LEGACY_SHA" ]]'
+
+FIRST_BRANCH=$BRANCH
+git -C "$ROOT/repo" checkout -q main
+run_pr
+BRANCH=$(git -C "$ROOT/repo" branch --show-current)
+check "same-run invocation exits 0" '[[ $RC -eq 0 ]]'
+check "same-run invocation uses another new branch" '[[ $BRANCH == localization/update-123-1-* && $BRANCH != "$FIRST_BRANCH" ]]'
+check "same-run invocation opens its own PR" '[[ $(grep -c "pr create" "$GH_LOG") == 2 ]]'
+check "same-run invocation preserves prior branches" '[[ $(git -C "$ROOT/remote.git" rev-parse "$FIRST_BRANCH") == $(git -C "$ROOT/repo" rev-parse "$FIRST_BRANCH") && $(git -C "$ROOT/remote.git" rev-parse localization/update) == "$LEGACY_SHA" ]]'
+check "main stays unchanged" '[[ $(git -C "$ROOT/remote.git" rev-parse main) == "$MAIN_SHA" ]]'
+
+git -C "$ROOT/repo" checkout -q main
+printf '#!/bin/sh\nexit 1\n' >"$ROOT/remote.git/hooks/pre-receive"
+chmod +x "$ROOT/remote.git/hooks/pre-receive"
+run_pr
+check "rejected push fails" '[[ $RC -ne 0 ]]'
+check "rejected push never opens or changes a PR" '[[ $(grep -c "gh pr " "$GH_LOG") == 2 ]]'
+check "rejected push preserves existing review" '[[ $(git -C "$ROOT/remote.git" rev-parse localization/update) == "$LEGACY_SHA" ]]'
 
 echo
 if ((fails > 0)); then echo "$fails check(s) failed"; exit 1; fi
