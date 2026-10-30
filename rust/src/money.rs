@@ -235,6 +235,18 @@ pub struct CatalogSpec {
         alias = "refundClawBack"
     )]
     pub refund_claw_back: Option<bool>,
+    /// Caller-owned, publicly readable application data published atomically with
+    /// the products in this revision. Money preserves it without interpreting its
+    /// schema or using it for prices, grants, checkout or processor reconciliation.
+    /// The caller validates its schema and version. At most 65536 UTF-8 bytes when
+    /// serialized as compact JSON; must be an object. Never include secrets or
+    /// personal data: the public catalog exposes this field.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "applicationData"
+    )]
+    pub application_data: Option<serde_json::Value>,
 }
 
 /// CatalogStatus is the observed state of a Catalog.

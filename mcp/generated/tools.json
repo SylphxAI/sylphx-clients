@@ -24462,6 +24462,11 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "application_data": {
+                    "additionalProperties": true,
+                    "description": "Caller-owned, publicly readable application data published atomically with\nthe products in this revision. Money preserves it without interpreting its\nschema or using it for prices, grants, checkout or processor reconciliation.\nThe caller validates its schema and version. At most 65536 UTF-8 bytes when\nserialized as compact JSON; must be an object. Never include secrets or\npersonal data: the public catalog exposes this field.",
+                    "type": "object"
+                  },
                   "client_grant_ttl": {
                     "description": "How long a signed store-purchase grant is valid, from the moment it is\nissued; a client re-verifies to renew it. Default 7 days, 1 hour to 30\ndays.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",

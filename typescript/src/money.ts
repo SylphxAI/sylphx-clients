@@ -131,6 +131,15 @@ export interface CatalogSpec {
 	 * then means on.
 	 */
 	refundClawBack?: boolean
+	/**
+	 * Caller-owned, publicly readable application data published atomically with
+	 * the products in this revision. Money preserves it without interpreting its
+	 * schema or using it for prices, grants, checkout or processor reconciliation.
+	 * The caller validates its schema and version. At most 65536 UTF-8 bytes when
+	 * serialized as compact JSON; must be an object. Never include secrets or
+	 * personal data: the public catalog exposes this field.
+	 */
+	applicationData?: Record<string, unknown>
 }
 
 /** CatalogStatus is the observed state of a Catalog. */
@@ -2647,6 +2656,7 @@ runtime.registerSchemas({
 		['products', 'products', 'sylphx.money.v1.Product'],
 		['clientGrantTtl', 'client_grant_ttl'],
 		['refundClawBack', 'refund_claw_back'],
+		['applicationData', 'application_data', undefined, 'json'],
 	],
 	'sylphx.money.v1.CatalogStatus': [
 		['observedGeneration', 'observed_generation'],

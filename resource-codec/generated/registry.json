@@ -72891,6 +72891,25 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Caller-owned, publicly readable application data published atomically with\nthe products in this revision. Money preserves it without interpreting its\nschema or using it for prices, grants, checkout or processor reconciliation.\nThe caller validates its schema and version. At most 65536 UTF-8 bytes when\nserialized as compact JSON; must be an object. Never include secrets or\npersonal data: the public catalog exposes this field.",
+          "filterable": false,
+          "name": "application_data",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "struct"
+          }
         }
       ],
       "name": "sylphx.money.v1.CatalogSpec",

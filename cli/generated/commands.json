@@ -17741,6 +17741,12 @@
                   "type": "bool"
                 },
                 {
+                  "field": "catalog.spec.application_data",
+                  "flag": "--spec.application-data",
+                  "summary": "Caller-owned, publicly readable application data published atomically with the products in this revision. Money preserves it without interpreting its schema or using it for prices, grants, checkout or processor reconciliation. The caller validates its schema and version. At most 65536 UTF-8 bytes when serialized as compact JSON; must be an object. Never include secrets or personal data: the public catalog exposes this field.",
+                  "type": "json"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the catalog when it does not exist (declarative upsert).",
