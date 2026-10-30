@@ -338,7 +338,7 @@ jobs:
           python3 -I scripts/check-publish-set.py --list > "$RUNNER_TEMP/crates-list"
           while read -r crate version; do
             if on_registry "$crate" "$version"; then echo "$crate@$version is on crates.io already"; continue; fi
-            cargo publish --locked -p "$crate"
+            cargo publish --locked --registry crates-io -p "$crate"
             for _ in $(seq 1 30); do on_registry "$crate" "$version" && break; sleep 10; done
             on_registry "$crate" "$version" || { echo "::error::$crate@$version did not appear"; exit 1; }
             echo "readback: $crate@$version"

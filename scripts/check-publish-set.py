@@ -3,7 +3,10 @@
 
 import argparse
 import json
+import os
+from pathlib import Path
 import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 
@@ -47,19 +50,29 @@ def ordered_packages(metadata):
 
 
 def dry_run(packages):
-    command = ["cargo", "publish", "--dry-run", "--locked"]
+    selected = []
     for name, version in packages:
         if registry_contains(name, version):
             print(f"registry dependency: {name}@{version}", flush=True)
         else:
-            command.extend(["--package", name])
-    if len(command) == 4:
+            selected.extend(["--package", name])
+    if not selected:
         print("all manifest versions are already on crates.io", flush=True)
         return
     # Do not overlay already-published packages with workspace sources: doing
     # so would hide an unchanged version whose registry API is stale. Cargo's
     # native multi-package dry run overlays only the actual new publish set.
-    subprocess.run(command, check=True)
+    # Cargo's temporary registry overlays crates.io with the selected archives.
+    # A source replacement would hide that overlay behind the published mirror.
+    # Verify from a fresh Cargo home and directory, leaving the caller's source
+    # configuration untouched. The manifest and lockfile still come from here.
+    manifest = Path("Cargo.toml").resolve()
+    with tempfile.TemporaryDirectory(prefix="sylphx-publish-") as directory:
+        subprocess.run([
+            "cargo", "publish", "--dry-run", "--locked", "--registry", "crates-io",
+            "--manifest-path", str(manifest), *selected,
+        ], check=True, cwd=directory,
+            env=dict(os.environ, CARGO_HOME=str(Path(directory) / "cargo-home")))
 
 
 def main():

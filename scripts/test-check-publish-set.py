@@ -4,6 +4,7 @@
 import contextlib
 import importlib.util
 import io
+import os
 from pathlib import Path
 import unittest
 from unittest import mock
@@ -57,25 +58,39 @@ class PublishSetTests(unittest.TestCase):
             module.dry_run(packages)
             return run
 
+    def assert_publish_command(self, run, selected):
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], [
+            "cargo", "publish", "--dry-run", "--locked", "--registry", "crates-io",
+            "--manifest-path", str(Path("Cargo.toml").resolve()), *selected,
+        ])
+        options = run.call_args.kwargs
+        self.assertTrue(options["check"])
+        self.assertNotEqual(Path(options["cwd"]), Path.cwd())
+        self.assertEqual(options["env"]["CARGO_HOME"], str(Path(options["cwd"]) / "cargo-home"))
+
     def test_stale_registered_lease_is_not_hidden_by_workspace_overlay(self):
         run = self.run_selection(
             [("sylphx-build-lease", "0.1.0"), ("sylphx-cli", "0.29.11")],
             [True, False],
         )
-        run.assert_called_once_with(
-            ["cargo", "publish", "--dry-run", "--locked", "--package", "sylphx-cli"],
-            check=True,
-        )
+        self.assert_publish_command(run, ["--package", "sylphx-cli"])
 
     def test_new_lease_and_consumer_are_verified_together_in_order(self):
         run = self.run_selection(
             [("sylphx-build-lease", "0.1.1"), ("sylphx-cli", "0.29.11")],
             [False, False],
         )
-        run.assert_called_once_with([
-            "cargo", "publish", "--dry-run", "--locked",
+        self.assert_publish_command(run, [
             "--package", "sylphx-build-lease", "--package", "sylphx-cli",
-        ], check=True)
+        ])
+
+    def test_publish_proof_does_not_change_the_callers_cargo_home(self):
+        with mock.patch.dict(os.environ, CARGO_HOME="/fixture/mirrored-home"):
+            run = self.run_selection([("sylphx-cli", "0.29.12")], [False])
+            self.assert_publish_command(run, ["--package", "sylphx-cli"])
+            self.assertEqual(os.environ["CARGO_HOME"], "/fixture/mirrored-home")
+            self.assertNotEqual(run.call_args.kwargs["env"]["CARGO_HOME"], os.environ["CARGO_HOME"])
 
     def test_registered_set_does_not_invoke_an_unselected_workspace_publish(self):
         self.run_selection([("sylphx-cli", "0.29.11")], [True]).assert_not_called()
