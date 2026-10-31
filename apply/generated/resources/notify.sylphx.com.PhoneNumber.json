@@ -1,0 +1,22 @@
+{
+  "collection": "phone_numbers",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "PhoneNumber",
+  "message": "sylphx.notify.v1.PhoneNumber",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}",
+  "plural": "phoneNumbers",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "phoneNumber",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/PhoneNumber"
+}

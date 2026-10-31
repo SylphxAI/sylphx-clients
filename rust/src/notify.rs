@@ -3,6 +3,50 @@
 
 #![allow(clippy::all)]
 
+/// Apply or reconcile the SAME operation after a lost response. Resupply a
+/// current token with the same operation id and route; readback precedes retry.
+/// Credentials are removed before hashing/persistence. No unattended credential
+/// refresh or background retry occurs; the provider continues executing calls.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ApplyPhoneNumberRouteRequest {
+    /// Connected line.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable logical operation id. A different route needs a different id.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// Desired voicemail settings.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voicemail: Option<PhoneVoicemailRoute>,
+    /// Transient provider session; excluded from every durable command/hash.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerSessionToken"
+    )]
+    pub provider_session_token: String,
+    /// Validate without provider or database mutation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
 /// The request of ArchiveInboxItem.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -220,6 +264,53 @@ pub struct ChannelDelivery {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub attempts: i32,
+}
+
+/// Connect an existing owned line; no provider mutation occurs.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ConnectPhoneNumberRequest {
+    /// Tenant environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Stable caller-chosen id; retries reuse this id.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "phoneNumberId"
+    )]
+    pub phone_number_id: String,
+    /// Existing E.164 number.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "phoneNumber"
+    )]
+    pub phone_number: String,
+    /// Existing provider session, held only for this synchronous request. Never
+    /// stored, logged, included in command hashes, or refreshed. Issuer lifetime
+    /// is provider-owned; transient custody does not assert a shorter lifetime.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerSessionToken"
+    )]
+    pub provider_session_token: String,
+    /// Validate ownership/config without creating a binding.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
 }
 
 /// The request of CreateBroadcast.
@@ -1285,6 +1376,17 @@ pub struct GetMessageTopicRequest {
     pub name: String,
 }
 
+/// Get a connected line's persisted observations; probe performs fresh provider reads.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetPhoneNumberRequest {
+    /// Resource to read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetPreference.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2192,6 +2294,47 @@ pub struct ListMessagesResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub messages: Vec<Message>,
     /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// List connected lines in one environment.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListPhoneNumbersRequest {
+    /// Tenant environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Page size, default 50, maximum 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Continuation token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// One page of connected lines.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListPhoneNumbersResponse {
+    /// Connected lines.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "phoneNumbers")]
+    pub phone_numbers: Vec<PhoneNumber>,
+    /// Continuation token.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -3305,6 +3448,252 @@ pub struct MessageTopic {
     pub send_limit_window: String,
 }
 
+/// A connected, existing provider-managed telephone line. The provider answers
+/// calls and records voicemail; Notify controls its route on demand. Connecting
+/// never orders a number or changes a provider subscription.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PhoneNumber {
+    /// The resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable pnum_ identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The connected line and desired voicemail route.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<PhoneNumberSpec>,
+    /// Authoritative observations, with route application separate from incoming verification.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<PhoneNumberStatus>,
+}
+
+/// A line-scoped provider receipt, without caller identity or stored audio.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PhoneNumberReceipt {
+    /// Provider's stable call identifier, scoped to this connected line.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerCallId"
+    )]
+    pub provider_call_id: String,
+    /// Original provider time. A timezone-free string is not a verified timestamp.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerDate"
+    )]
+    pub provider_date: String,
+    /// Set only when the provider timestamp carries an established offset.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiveTime"
+    )]
+    pub receive_time: String,
+    /// Applied route generation attributable to this receipt, or zero.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub generation: i64,
+    /// SHA-256 of the exact provider recording bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "audioSha256"
+    )]
+    pub audio_sha256: String,
+    /// Intended Notify mailbox's inbound email holding an identical attachment.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "inboundEmail"
+    )]
+    pub inbound_email: String,
+    /// Incoming proof; never true from configuration alone.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub verified: bool,
+    /// Safe hash of the actual call-path configuration at observation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pathDigest"
+    )]
+    pub path_digest: String,
+}
+
+/// Desired state of an existing provider-managed line.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PhoneNumberSpec {
+    /// Existing E.164 number, verified against authenticated provider inventory.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "phoneNumber"
+    )]
+    pub phone_number: String,
+    /// Provider adapter; currently switchboard_free.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub provider: String,
+    /// Desired route, admitted only through applyRoute with a durable operation id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voicemail: Option<PhoneVoicemailRoute>,
+}
+
+/// Observed state. A stored configuration alone never verifies incoming calls.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PhoneNumberStatus {
+    /// Generation represented by these observations.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Connected, RouteApplied and IncomingVerified are independent conditions.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Opaque hash of the provider-accepted session principal; never its login name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerPrincipal"
+    )]
+    pub provider_principal: String,
+    /// Immutable provider line identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerLineId"
+    )]
+    pub provider_line_id: String,
+    /// Immutable provider number identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerNumberId"
+    )]
+    pub provider_number_id: String,
+    /// Last provider readback, independent of desired state.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "observedVoicemail"
+    )]
+    pub observed_voicemail: Option<PhoneVoicemailRoute>,
+    /// Generation confirmed by provider readback.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "appliedGeneration"
+    )]
+    pub applied_generation: i64,
+    /// Generation with a scoped incoming voicemail recording delivered to its intended mailbox.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "incomingVerifiedGeneration"
+    )]
+    pub incoming_verified_generation: i64,
+    /// Safe error classification; never a provider body or credential.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastError"
+    )]
+    pub last_error: String,
+    /// Safe hash of the full last-observed provider call-path configuration.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "observedPathDigest"
+    )]
+    pub observed_path_digest: String,
+    /// Incoming-proof baseline, cleared on observed external path changes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appliedPathDigest"
+    )]
+    pub applied_path_digest: String,
+}
+
+/// Only these fields are changed; existing redirects, hours and prompts survive.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PhoneVoicemailRoute {
+    /// Whether voicemail is enabled.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub enabled: bool,
+    /// Provider wait before offering voicemail, in seconds; at most 600.
+    /// Forced transfer is separate provider configuration and is preserved.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "delaySeconds"
+    )]
+    pub delay_seconds: i32,
+    /// Intended recording-delivery address.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "emailAddress"
+    )]
+    pub email_address: String,
+}
+
 /// A Preference is a recipient's choice for one topic: which channels may carry
 /// it. Admission honors it, and unsubscribe links write it. The id is the
 /// topic.
@@ -3335,6 +3724,61 @@ pub struct Preference {
         alias = "digestInterval"
     )]
     pub digest_interval: String,
+}
+
+/// Fetch current config and a bounded day-window of line-scoped incoming receipts.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProbePhoneNumberRequest {
+    /// Connected line.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// First provider-local calendar day, YYYY-MM-DD.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startDay"
+    )]
+    pub start_day: String,
+    /// Last day inclusive; at most one day after start_day.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "endDay"
+    )]
+    pub end_day: String,
+    /// Transient provider session.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerSessionToken"
+    )]
+    pub provider_session_token: String,
+}
+
+/// Fresh provider observations and receipts. Unknown date encoding or missing
+/// identical delivered audio leaves IncomingVerified false.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProbePhoneNumberResponse {
+    /// Connected line after readback.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "phoneNumber"
+    )]
+    pub phone_number: Option<PhoneNumber>,
+    /// Provider-backed voicemail receipts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub receipts: Vec<PhoneNumberReceipt>,
 }
 
 /// Push content.
@@ -3411,6 +3855,72 @@ pub struct PushSender {
         alias = "appKey"
     )]
     pub app_key: String,
+}
+
+/// Read provider audio for an already observed line-scoped receipt. No arbitrary
+/// provider ID can be used as a lookup into another tenant or provider line.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReadPhoneNumberVoicemailRequest {
+    /// Connected line.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable provider receipt id already held by this line.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerCallId"
+    )]
+    pub provider_call_id: String,
+    /// Day window to re-establish receipt ownership.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startDay"
+    )]
+    pub start_day: String,
+    /// Last day inclusive, at most one day after start_day.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "endDay"
+    )]
+    pub end_day: String,
+    /// Transient provider session.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerSessionToken"
+    )]
+    pub provider_session_token: String,
+}
+
+/// Audio is returned on demand and never persisted by this integration.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReadPhoneNumberVoicemailResponse {
+    /// Exact provider recording bytes, maximum 2 MiB.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub audio: String,
+    /// SHA-256 of those bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "audioSha256"
+    )]
+    pub audio_sha256: String,
 }
 
 /// A Recipient is one of a customer's users, across channels: email addresses,
@@ -5349,6 +5859,13 @@ pub struct NotifyApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
+    /// The `phone_numbers` collection.
+    pub fn phone_numbers(&self) -> PhoneNumbersCollection<'a, T> {
+        PhoneNumbersCollection {
+            client: self.client,
+        }
+    }
+
     /// The `mail_domains` collection.
     pub fn mail_domains(&self) -> MailDomainsCollection<'a, T> {
         MailDomainsCollection {
@@ -5466,6 +5983,203 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
         InboundSmsCollection {
             client: self.client,
         }
+    }
+}
+
+/// `phone_numbers` of Sylphx Notify: Resource type `notify.sylphx.com/PhoneNumber`.
+pub struct PhoneNumbersCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> PhoneNumbersCollection<'a, T> {
+    /// ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/phone_numbers:connect` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn connect(
+        &self,
+        request: ConnectPhoneNumberRequest,
+    ) -> Result<PhoneNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/phone_numbers:connect",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// GetPhoneNumber: existing provider-managed lines; execution credentials are transient.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn get(
+        &self,
+        request: GetPhoneNumberRequest,
+    ) -> Result<PhoneNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/phone_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ListPhoneNumbers: existing provider-managed lines; execution credentials are transient.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/phone_numbers` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn list(
+        &self,
+        request: ListPhoneNumbersRequest,
+    ) -> Result<ListPhoneNumbersResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/phone_numbers",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListPhoneNumbersRequest,
+    ) -> Result<Vec<PhoneNumber>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.phone_numbers);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:applyRoute` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn apply_route(
+        &self,
+        request: ApplyPhoneNumberRouteRequest,
+    ) -> Result<PhoneNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:applyRoute",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/phone_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ProbePhoneNumber: existing provider-managed lines; execution credentials are transient.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:probe` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn probe(
+        &self,
+        request: ProbePhoneNumberRequest,
+    ) -> Result<ProbePhoneNumberResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:probe",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/phone_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:readVoicemail` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn read_voicemail(
+        &self,
+        request: ReadPhoneNumberVoicemailRequest,
+    ) -> Result<ReadPhoneNumberVoicemailResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:readVoicemail",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/phone_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 

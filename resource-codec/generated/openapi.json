@@ -30110,6 +30110,41 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.ApplyPhoneNumberRouteRequest": {
+        "description": "Apply or reconcile the SAME operation after a lost response. Resupply a\ncurrent token with the same operation id and route; readback precedes retry.\nCredentials are removed before hashing/persistence. No unattended credential\nrefresh or background retry occurs; the provider continues executing calls.",
+        "properties": {
+          "name": {
+            "description": "Connected line.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "operation_id": {
+            "description": "Stable logical operation id. A different route needs a different id.",
+            "type": "string"
+          },
+          "provider_session_token": {
+            "description": "Transient provider session; excluded from every durable command/hash.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "validate_only": {
+            "description": "Validate without provider or database mutation.",
+            "type": "boolean"
+          },
+          "voicemail": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PhoneVoicemailRoute",
+            "description": "Desired voicemail settings."
+          }
+        },
+        "required": [
+          "name",
+          "operation_id",
+          "voicemail",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.ArchiveInboxItemRequest": {
         "description": "The request of ArchiveInboxItem.",
         "properties": {
@@ -30345,6 +30380,41 @@
           "suppressed"
         ],
         "type": "string"
+      },
+      "sylphx.notify.v1.ConnectPhoneNumberRequest": {
+        "description": "Connect an existing owned line; no provider mutation occurs.",
+        "properties": {
+          "parent": {
+            "description": "Tenant environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "phone_number": {
+            "description": "Existing E.164 number.",
+            "type": "string"
+          },
+          "phone_number_id": {
+            "description": "Stable caller-chosen id; retries reuse this id.",
+            "type": "string"
+          },
+          "provider_session_token": {
+            "description": "Existing provider session, held only for this synchronous request. Never\nstored, logged, included in command hashes, or refreshed. Issuer lifetime\nis provider-owned; transient custody does not assert a shorter lifetime.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "validate_only": {
+            "description": "Validate ownership/config without creating a binding.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "phone_number_id",
+          "phone_number",
+          "provider_session_token"
+        ],
+        "type": "object"
       },
       "sylphx.notify.v1.CreateBroadcastRequest": {
         "description": "The request of CreateBroadcast.",
@@ -31363,6 +31433,20 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.GetPhoneNumberRequest": {
+        "description": "Get a connected line's persisted observations; probe performs fresh provider reads.",
+        "properties": {
+          "name": {
+            "description": "Resource to read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.GetPreferenceRequest": {
         "description": "The request of GetPreference.",
         "properties": {
@@ -32204,6 +32288,46 @@
           "next_page_token": {
             "description": "The token of the next page; empty on the last page.",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListPhoneNumbersRequest": {
+        "description": "List connected lines in one environment.",
+        "properties": {
+          "page_size": {
+            "description": "Page size, default 50, maximum 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Continuation token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Tenant environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListPhoneNumbersResponse": {
+        "description": "One page of connected lines.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation token.",
+            "type": "string"
+          },
+          "phone_numbers": {
+            "description": "Connected lines.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumber"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -33221,6 +33345,192 @@
         },
         "type": "object"
       },
+      "sylphx.notify.v1.PhoneNumber": {
+        "description": "A connected, existing provider-managed telephone line. The provider answers\ncalls and records voicemail; Notify controls its route on demand. Connecting\nnever orders a number or changes a provider subscription.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "The resource name.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumberSpec",
+            "description": "The connected line and desired voicemail route."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumberStatus",
+            "description": "Authoritative observations, with route application separate from incoming verification.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "Immutable pnum_ identifier.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.PhoneNumberReceipt": {
+        "description": "A line-scoped provider receipt, without caller identity or stored audio.",
+        "properties": {
+          "audio_sha256": {
+            "description": "SHA-256 of the exact provider recording bytes.",
+            "type": "string"
+          },
+          "generation": {
+            "description": "Applied route generation attributable to this receipt, or zero.",
+            "format": "int64",
+            "type": "string"
+          },
+          "inbound_email": {
+            "description": "Intended Notify mailbox's inbound email holding an identical attachment.",
+            "type": "string"
+          },
+          "path_digest": {
+            "description": "Safe hash of the actual call-path configuration at observation.",
+            "type": "string"
+          },
+          "provider_call_id": {
+            "description": "Provider's stable call identifier, scoped to this connected line.",
+            "type": "string"
+          },
+          "provider_date": {
+            "description": "Original provider time. A timezone-free string is not a verified timestamp.",
+            "type": "string"
+          },
+          "receive_time": {
+            "description": "Set only when the provider timestamp carries an established offset.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "verified": {
+            "description": "Incoming proof; never true from configuration alone.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.PhoneNumberSpec": {
+        "description": "Desired state of an existing provider-managed line.",
+        "properties": {
+          "phone_number": {
+            "description": "Existing E.164 number, verified against authenticated provider inventory.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "provider": {
+            "description": "Provider adapter; currently switchboard_free.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "voicemail": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PhoneVoicemailRoute",
+            "description": "Desired route, admitted only through applyRoute with a durable operation id."
+          }
+        },
+        "required": [
+          "phone_number",
+          "provider"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.PhoneNumberStatus": {
+        "description": "Observed state. A stored configuration alone never verifies incoming calls.",
+        "properties": {
+          "applied_generation": {
+            "description": "Generation confirmed by provider readback.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "applied_path_digest": {
+            "description": "Incoming-proof baseline, cleared on observed external path changes.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "conditions": {
+            "description": "Connected, RouteApplied and IncomingVerified are independent conditions.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "incoming_verified_generation": {
+            "description": "Generation with a scoped incoming voicemail recording delivered to its intended mailbox.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "last_error": {
+            "description": "Safe error classification; never a provider body or credential.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "Generation represented by these observations.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_path_digest": {
+            "description": "Safe hash of the full last-observed provider call-path configuration.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_voicemail": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PhoneVoicemailRoute",
+            "description": "Last provider readback, independent of desired state.",
+            "readOnly": true
+          },
+          "provider_line_id": {
+            "description": "Immutable provider line identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_number_id": {
+            "description": "Immutable provider number identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_principal": {
+            "description": "Opaque hash of the provider-accepted session principal; never its login name.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.PhoneVoicemailRoute": {
+        "description": "Only these fields are changed; existing redirects, hours and prompts survive.",
+        "properties": {
+          "delay_seconds": {
+            "description": "Provider wait before offering voicemail, in seconds; at most 600.\nForced transfer is separate provider configuration and is preserved.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "email_address": {
+            "description": "Intended recording-delivery address.",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Whether voicemail is enabled.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "delay_seconds",
+          "email_address"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.Preference": {
         "description": "A Preference is a recipient's choice for one topic: which channels may carry\nit. Admission honors it, and unsubscribe links write it. The id is the\ntopic.",
         "properties": {
@@ -33248,6 +33558,54 @@
             "description": "`prf_<cell><ulid>`; never reused.",
             "readOnly": true,
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ProbePhoneNumberRequest": {
+        "description": "Fetch current config and a bounded day-window of line-scoped incoming receipts.",
+        "properties": {
+          "end_day": {
+            "description": "Last day inclusive; at most one day after start_day.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Connected line.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "provider_session_token": {
+            "description": "Transient provider session.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "start_day": {
+            "description": "First provider-local calendar day, YYYY-MM-DD.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "start_day",
+          "end_day",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ProbePhoneNumberResponse": {
+        "description": "Fresh provider observations and receipts. Unknown date encoding or missing\nidentical delivered audio leaves IncomingVerified false.",
+        "properties": {
+          "phone_number": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumber",
+            "description": "Connected line after readback."
+          },
+          "receipts": {
+            "description": "Provider-backed voicemail receipts.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumberReceipt"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -33335,6 +33693,58 @@
           "connection",
           "app_key"
         ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ReadPhoneNumberVoicemailRequest": {
+        "description": "Read provider audio for an already observed line-scoped receipt. No arbitrary\nprovider ID can be used as a lookup into another tenant or provider line.",
+        "properties": {
+          "end_day": {
+            "description": "Last day inclusive, at most one day after start_day.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Connected line.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "provider_call_id": {
+            "description": "Stable provider receipt id already held by this line.",
+            "type": "string"
+          },
+          "provider_session_token": {
+            "description": "Transient provider session.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "start_day": {
+            "description": "Day window to re-establish receipt ownership.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "provider_call_id",
+          "start_day",
+          "end_day",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ReadPhoneNumberVoicemailResponse": {
+        "description": "Audio is returned on demand and never persisted by this integration.",
+        "properties": {
+          "audio": {
+            "contentEncoding": "base64",
+            "description": "Exact provider recording bytes, maximum 2 MiB.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "audio_sha256": {
+            "description": "SHA-256 of those bytes.",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.notify.v1.Recipient": {
@@ -92453,6 +92863,746 @@
         ],
         "x-sylphx-method": "agents.owner_pools.qualify",
         "x-sylphx-permission": "agents:qualify",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/phone_numbers": {
+      "get": {
+        "description": "ListPhoneNumbers: existing provider-managed lines; execution credentials are transient.",
+        "operationId": "notify_phone_numbers_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, default 50, maximum 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Continuation token.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListPhoneNumbersResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ListPhoneNumbers: existing provider-managed lines; execution credentials are transient.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.phone_numbers.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}": {
+      "get": {
+        "description": "GetPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+        "operationId": "notify_phone_numbers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "phone_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "GetPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.phone_numbers.get",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}:applyRoute": {
+      "post": {
+        "description": "ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient.",
+        "operationId": "notify_phone_numbers_apply_route",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "phone_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "operation_id": {
+                    "description": "Stable logical operation id. A different route needs a different id.",
+                    "type": "string"
+                  },
+                  "provider_session_token": {
+                    "description": "Transient provider session; excluded from every durable command/hash.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "validate_only": {
+                    "description": "Validate without provider or database mutation.",
+                    "type": "boolean"
+                  },
+                  "voicemail": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.PhoneVoicemailRoute",
+                    "description": "Desired voicemail settings."
+                  }
+                },
+                "required": [
+                  "operation_id",
+                  "voicemail",
+                  "provider_session_token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.phone_numbers.apply_route",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}:probe": {
+      "post": {
+        "description": "ProbePhoneNumber: existing provider-managed lines; execution credentials are transient.",
+        "operationId": "notify_phone_numbers_probe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "phone_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "end_day": {
+                    "description": "Last day inclusive; at most one day after start_day.",
+                    "type": "string"
+                  },
+                  "provider_session_token": {
+                    "description": "Transient provider session.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "start_day": {
+                    "description": "First provider-local calendar day, YYYY-MM-DD.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "start_day",
+                  "end_day",
+                  "provider_session_token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ProbePhoneNumberResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ProbePhoneNumber: existing provider-managed lines; execution credentials are transient.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.phone_numbers.probe",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}:readVoicemail": {
+      "post": {
+        "description": "ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient.",
+        "operationId": "notify_phone_numbers_read_voicemail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "phone_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "end_day": {
+                    "description": "Last day inclusive, at most one day after start_day.",
+                    "type": "string"
+                  },
+                  "provider_call_id": {
+                    "description": "Stable provider receipt id already held by this line.",
+                    "type": "string"
+                  },
+                  "provider_session_token": {
+                    "description": "Transient provider session.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "start_day": {
+                    "description": "Day window to re-establish receipt ownership.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider_call_id",
+                  "start_day",
+                  "end_day",
+                  "provider_session_token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ReadPhoneNumberVoicemailResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.phone_numbers.read_voicemail",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/phone_numbers:connect": {
+      "post": {
+        "description": "ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+        "operationId": "notify_phone_numbers_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "phone_number": {
+                    "description": "Existing E.164 number.",
+                    "type": "string"
+                  },
+                  "phone_number_id": {
+                    "description": "Stable caller-chosen id; retries reuse this id.",
+                    "type": "string"
+                  },
+                  "provider_session_token": {
+                    "description": "Existing provider session, held only for this synchronous request. Never\nstored, logged, included in command hashes, or refreshed. Issuer lifetime\nis provider-owned; transient custody does not assert a shorter lifetime.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "validate_only": {
+                    "description": "Validate ownership/config without creating a binding.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "phone_number_id",
+                  "phone_number",
+                  "provider_session_token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.PhoneNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.phone_numbers.connect",
+        "x-sylphx-permission": "notify:write",
         "x-sylphx-stage": "preview"
       }
     },

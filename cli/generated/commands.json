@@ -22310,6 +22310,229 @@
     {
       "collections": [
         {
+          "collection": "phone_numbers",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "phone_number_id",
+                  "flag": "--phone-number-id",
+                  "required": true,
+                  "summary": "Stable caller-chosen id; retries reuse this id.",
+                  "type": "string"
+                },
+                {
+                  "field": "phone_number",
+                  "flag": "--phone-number",
+                  "required": true,
+                  "summary": "Existing E.164 number.",
+                  "type": "string"
+                },
+                {
+                  "field": "provider_session_token",
+                  "flag": "--provider-session-token",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Existing provider session, held only for this synchronous request. Never stored, logged, included in command hashes, or refreshed. Issuer lifetime is provider-owned; transient custody does not assert a shorter lifetime.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/phone_numbers:connect",
+              "method": "notify.phone_numbers.connect",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+              "verb": "connect"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}",
+              "method": "notify.phone_numbers.get",
+              "permission": "notify:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}"
+              },
+              "summary": "GetPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Page size, default 50, maximum 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Continuation token.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/phone_numbers",
+              "method": "notify.phone_numbers.list",
+              "paginates": true,
+              "permission": "notify:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "ListPhoneNumbers: existing provider-managed lines; execution credentials are transient.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Stable logical operation id. A different route needs a different id.",
+                  "type": "string"
+                },
+                {
+                  "field": "voicemail",
+                  "flag": "--voicemail",
+                  "required": true,
+                  "summary": "Desired voicemail settings.",
+                  "type": "json"
+                },
+                {
+                  "field": "provider_session_token",
+                  "flag": "--provider-session-token",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Transient provider session; excluded from every durable command/hash.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:applyRoute",
+              "method": "notify.phone_numbers.apply_route",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}"
+              },
+              "summary": "ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient.",
+              "verb": "apply-route"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "start_day",
+                  "flag": "--start-day",
+                  "required": true,
+                  "summary": "First provider-local calendar day, YYYY-MM-DD.",
+                  "type": "string"
+                },
+                {
+                  "field": "end_day",
+                  "flag": "--end-day",
+                  "required": true,
+                  "summary": "Last day inclusive; at most one day after start_day.",
+                  "type": "string"
+                },
+                {
+                  "field": "provider_session_token",
+                  "flag": "--provider-session-token",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Transient provider session.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:probe",
+              "method": "notify.phone_numbers.probe",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}"
+              },
+              "summary": "ProbePhoneNumber: existing provider-managed lines; execution credentials are transient.",
+              "verb": "probe"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "provider_call_id",
+                  "flag": "--provider-call-id",
+                  "required": true,
+                  "summary": "Stable provider receipt id already held by this line.",
+                  "type": "string"
+                },
+                {
+                  "field": "start_day",
+                  "flag": "--start-day",
+                  "required": true,
+                  "summary": "Day window to re-establish receipt ownership.",
+                  "type": "string"
+                },
+                {
+                  "field": "end_day",
+                  "flag": "--end-day",
+                  "required": true,
+                  "summary": "Last day inclusive, at most one day after start_day.",
+                  "type": "string"
+                },
+                {
+                  "field": "provider_session_token",
+                  "flag": "--provider-session-token",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Transient provider session.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:readVoicemail",
+              "method": "notify.phone_numbers.read_voicemail",
+              "permission": "notify:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/phone_numbers/{phone_number}"
+              },
+              "summary": "ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient.",
+              "verb": "read-voicemail"
+            }
+          ],
+          "noun": "phone-numbers",
+          "resource_type": "notify.sylphx.com/PhoneNumber"
+        },
+        {
           "collection": "mail_domains",
           "commands": [
             {

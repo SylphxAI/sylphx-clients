@@ -709,6 +709,8 @@ pub const KSCH: Prefix = Prefix::new(
 pub const SNUM: Prefix = Prefix::new("snum", "SmsNumber", "notify", Some("sms_numbers"));
 /// InboundSms (`isms`, notify).
 pub const ISMS: Prefix = Prefix::new("isms", "InboundSms", "notify", Some("inbound_sms"));
+/// PhoneNumber (`pnum`, notify).
+pub const PNUM: Prefix = Prefix::new("pnum", "PhoneNumber", "notify", Some("phone_numbers"));
 /// UptimeCheck (`upt`, observability).
 pub const UPT: Prefix = Prefix::new("upt", "UptimeCheck", "observability", Some("uptime_checks"));
 /// ServingRoute (`svrt`, hosting).
@@ -748,5 +750,5 @@ pub const ALL: &[Prefix] = &[
     DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP,
     SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK, RVS, RVF,
     RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR, SPC, EPI,
-    KEN, KREL, KSCH, SNUM, ISMS, UPT, SVRT, SVOB, UPSRC, UPMF,
+    KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF,
 ];

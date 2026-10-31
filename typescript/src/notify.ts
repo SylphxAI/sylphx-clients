@@ -5,6 +5,25 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/**
+ * Apply or reconcile the SAME operation after a lost response. Resupply a
+ * current token with the same operation id and route; readback precedes retry.
+ * Credentials are removed before hashing/persistence. No unattended credential
+ * refresh or background retry occurs; the provider continues executing calls.
+ */
+export interface ApplyPhoneNumberRouteRequest {
+	/** Connected line. */
+	name: string
+	/** Stable logical operation id. A different route needs a different id. */
+	operationId: string
+	/** Desired voicemail settings. */
+	voicemail: PhoneVoicemailRoute
+	/** Transient provider session; excluded from every durable command/hash. */
+	providerSessionToken: string
+	/** Validate without provider or database mutation. */
+	validateOnly?: boolean
+}
+
 /** The request of ArchiveInboxItem. */
 export interface ArchiveInboxItemRequest {
 	/** The name of the inbox item. */
@@ -91,6 +110,24 @@ export interface ChannelDelivery {
 	readonly providerResponse?: string
 	/** Hand-off attempts so far. */
 	readonly attempts?: number
+}
+
+/** Connect an existing owned line; no provider mutation occurs. */
+export interface ConnectPhoneNumberRequest {
+	/** Tenant environment. */
+	parent: string
+	/** Stable caller-chosen id; retries reuse this id. */
+	phoneNumberId: string
+	/** Existing E.164 number. */
+	phoneNumber: string
+	/**
+	 * Existing provider session, held only for this synchronous request. Never
+	 * stored, logged, included in command hashes, or refreshed. Issuer lifetime
+	 * is provider-owned; transient custody does not assert a shorter lifetime.
+	 */
+	providerSessionToken: string
+	/** Validate ownership/config without creating a binding. */
+	validateOnly?: boolean
 }
 
 /** The request of CreateBroadcast. */
@@ -574,6 +611,12 @@ export interface GetMessageTopicRequest {
 	name: string
 }
 
+/** Get a connected line's persisted observations; probe performs fresh provider reads. */
+export interface GetPhoneNumberRequest {
+	/** Resource to read. */
+	name: string
+}
+
 /** The request of GetPreference. */
 export interface GetPreferenceRequest {
 	/** The name of the preference to get. */
@@ -959,6 +1002,24 @@ export interface ListMessagesResponse {
 	/** The page. */
 	messages?: Message[]
 	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** List connected lines in one environment. */
+export interface ListPhoneNumbersRequest {
+	/** Tenant environment. */
+	parent: string
+	/** Page size, default 50, maximum 1000. */
+	pageSize?: number
+	/** Continuation token. */
+	pageToken?: string
+}
+
+/** One page of connected lines. */
+export interface ListPhoneNumbersResponse {
+	/** Connected lines. */
+	phoneNumbers?: PhoneNumber[]
+	/** Continuation token. */
 	nextPageToken?: string
 }
 
@@ -1481,6 +1542,93 @@ export interface MessageTopic {
 }
 
 /**
+ * A connected, existing provider-managed telephone line. The provider answers
+ * calls and records voicemail; Notify controls its route on demand. Connecting
+ * never orders a number or changes a provider subscription.
+ */
+export interface PhoneNumber {
+	/** The resource name. */
+	name?: string
+	/** Immutable pnum_ identifier. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** The connected line and desired voicemail route. */
+	spec?: PhoneNumberSpec
+	/** Authoritative observations, with route application separate from incoming verification. */
+	readonly status?: PhoneNumberStatus
+}
+
+/** A line-scoped provider receipt, without caller identity or stored audio. */
+export interface PhoneNumberReceipt {
+	/** Provider's stable call identifier, scoped to this connected line. */
+	providerCallId?: string
+	/** Original provider time. A timezone-free string is not a verified timestamp. */
+	providerDate?: string
+	/** Set only when the provider timestamp carries an established offset. */
+	receiveTime?: string
+	/** Applied route generation attributable to this receipt, or zero. */
+	generation?: string
+	/** SHA-256 of the exact provider recording bytes. */
+	audioSha256?: string
+	/** Intended Notify mailbox's inbound email holding an identical attachment. */
+	inboundEmail?: string
+	/** Incoming proof; never true from configuration alone. */
+	verified?: boolean
+	/** Safe hash of the actual call-path configuration at observation. */
+	pathDigest?: string
+}
+
+/** Desired state of an existing provider-managed line. */
+export interface PhoneNumberSpec {
+	/** Existing E.164 number, verified against authenticated provider inventory. */
+	phoneNumber?: string
+	/** Provider adapter; currently switchboard_free. */
+	provider?: string
+	/** Desired route, admitted only through applyRoute with a durable operation id. */
+	voicemail?: PhoneVoicemailRoute
+}
+
+/** Observed state. A stored configuration alone never verifies incoming calls. */
+export interface PhoneNumberStatus {
+	/** Generation represented by these observations. */
+	readonly observedGeneration?: string
+	/** Connected, RouteApplied and IncomingVerified are independent conditions. */
+	readonly conditions?: common.Condition[]
+	/** Opaque hash of the provider-accepted session principal; never its login name. */
+	readonly providerPrincipal?: string
+	/** Immutable provider line identity. */
+	readonly providerLineId?: string
+	/** Immutable provider number identity. */
+	readonly providerNumberId?: string
+	/** Last provider readback, independent of desired state. */
+	readonly observedVoicemail?: PhoneVoicemailRoute
+	/** Generation confirmed by provider readback. */
+	readonly appliedGeneration?: string
+	/** Generation with a scoped incoming voicemail recording delivered to its intended mailbox. */
+	readonly incomingVerifiedGeneration?: string
+	/** Safe error classification; never a provider body or credential. */
+	readonly lastError?: string
+	/** Safe hash of the full last-observed provider call-path configuration. */
+	readonly observedPathDigest?: string
+	/** Incoming-proof baseline, cleared on observed external path changes. */
+	readonly appliedPathDigest?: string
+}
+
+/** Only these fields are changed; existing redirects, hours and prompts survive. */
+export interface PhoneVoicemailRoute {
+	/** Whether voicemail is enabled. */
+	enabled?: boolean
+	/**
+	 * Provider wait before offering voicemail, in seconds; at most 600.
+	 * Forced transfer is separate provider configuration and is preserved.
+	 */
+	delaySeconds?: number
+	/** Intended recording-delivery address. */
+	emailAddress?: string
+}
+
+/**
  * A Preference is a recipient's choice for one topic: which channels may carry
  * it. Admission honors it, and unsubscribe links write it. The id is the
  * topic.
@@ -1499,6 +1647,29 @@ export interface Preference {
 	 * message.
 	 */
 	digestInterval?: string
+}
+
+/** Fetch current config and a bounded day-window of line-scoped incoming receipts. */
+export interface ProbePhoneNumberRequest {
+	/** Connected line. */
+	name: string
+	/** First provider-local calendar day, YYYY-MM-DD. */
+	startDay: string
+	/** Last day inclusive; at most one day after start_day. */
+	endDay: string
+	/** Transient provider session. */
+	providerSessionToken: string
+}
+
+/**
+ * Fresh provider observations and receipts. Unknown date encoding or missing
+ * identical delivered audio leaves IncomingVerified false.
+ */
+export interface ProbePhoneNumberResponse {
+	/** Connected line after readback. */
+	phoneNumber?: PhoneNumber
+	/** Provider-backed voicemail receipts. */
+	receipts?: PhoneNumberReceipt[]
 }
 
 /** Push content. */
@@ -1531,6 +1702,31 @@ export interface PushSender {
 	connection?: string
 	/** The bundle id, package name, or web origin. */
 	appKey?: string
+}
+
+/**
+ * Read provider audio for an already observed line-scoped receipt. No arbitrary
+ * provider ID can be used as a lookup into another tenant or provider line.
+ */
+export interface ReadPhoneNumberVoicemailRequest {
+	/** Connected line. */
+	name: string
+	/** Stable provider receipt id already held by this line. */
+	providerCallId: string
+	/** Day window to re-establish receipt ownership. */
+	startDay: string
+	/** Last day inclusive, at most one day after start_day. */
+	endDay: string
+	/** Transient provider session. */
+	providerSessionToken: string
+}
+
+/** Audio is returned on demand and never persisted by this integration. */
+export interface ReadPhoneNumberVoicemailResponse {
+	/** Exact provider recording bytes, maximum 2 MiB. */
+	audio?: string
+	/** SHA-256 of those bytes. */
+	audioSha256?: string
 }
 
 /**
@@ -2016,6 +2212,12 @@ export type RouteSpamPolicy = 'deliver' | 'drop' | 'reject' | (string & {})
 export type SuppressionReason = 'bounce' | 'complaint' | 'carrier_opt_out' | 'unsubscribe' | 'uninstalled' | 'manual' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.notify.v1.ApplyPhoneNumberRouteRequest': [
+		['operationId', 'operation_id'],
+		['voicemail', 'voicemail', 'sylphx.notify.v1.PhoneVoicemailRoute'],
+		['providerSessionToken', 'provider_session_token'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.ArchiveInboxItemRequest': [],
 	'sylphx.notify.v1.Broadcast': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2041,6 +2243,12 @@ runtime.registerSchemas({
 		['receiptTime', 'receipt_time'],
 		['errorCode', 'error_code'],
 		['providerResponse', 'provider_response'],
+	],
+	'sylphx.notify.v1.ConnectPhoneNumberRequest': [
+		['phoneNumberId', 'phone_number_id'],
+		['phoneNumber', 'phone_number'],
+		['providerSessionToken', 'provider_session_token'],
+		['validateOnly', 'validate_only'],
 	],
 	'sylphx.notify.v1.CreateBroadcastRequest': [
 		['broadcastId', 'broadcast_id'],
@@ -2190,6 +2398,7 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetMailboxRequest': [],
 	'sylphx.notify.v1.GetMessageRequest': [],
 	'sylphx.notify.v1.GetMessageTopicRequest': [],
+	'sylphx.notify.v1.GetPhoneNumberRequest': [],
 	'sylphx.notify.v1.GetPreferenceRequest': [],
 	'sylphx.notify.v1.GetRecipientRequest': [],
 	'sylphx.notify.v1.GetRouteRequest': [],
@@ -2313,6 +2522,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListMessagesResponse': [
 		['messages', 'messages', 'sylphx.notify.v1.Message'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListPhoneNumbersRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.notify.v1.ListPhoneNumbersResponse': [
+		['phoneNumbers', 'phone_numbers', 'sylphx.notify.v1.PhoneNumber'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListPreferencesRequest': [
@@ -2461,9 +2678,52 @@ runtime.registerSchemas({
 		['sendLimitFeature', 'send_limit_feature'],
 		['sendLimitWindow', 'send_limit_window'],
 	],
+	'sylphx.notify.v1.PhoneNumber': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.notify.v1.PhoneNumberSpec'],
+		['status', 'status', 'sylphx.notify.v1.PhoneNumberStatus'],
+	],
+	'sylphx.notify.v1.PhoneNumberReceipt': [
+		['providerCallId', 'provider_call_id'],
+		['providerDate', 'provider_date'],
+		['receiveTime', 'receive_time'],
+		['audioSha256', 'audio_sha256'],
+		['inboundEmail', 'inbound_email'],
+		['pathDigest', 'path_digest'],
+	],
+	'sylphx.notify.v1.PhoneNumberSpec': [
+		['phoneNumber', 'phone_number'],
+		['voicemail', 'voicemail', 'sylphx.notify.v1.PhoneVoicemailRoute'],
+	],
+	'sylphx.notify.v1.PhoneNumberStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['providerPrincipal', 'provider_principal'],
+		['providerLineId', 'provider_line_id'],
+		['providerNumberId', 'provider_number_id'],
+		['observedVoicemail', 'observed_voicemail', 'sylphx.notify.v1.PhoneVoicemailRoute'],
+		['appliedGeneration', 'applied_generation'],
+		['incomingVerifiedGeneration', 'incoming_verified_generation'],
+		['lastError', 'last_error'],
+		['observedPathDigest', 'observed_path_digest'],
+		['appliedPathDigest', 'applied_path_digest'],
+	],
+	'sylphx.notify.v1.PhoneVoicemailRoute': [
+		['delaySeconds', 'delay_seconds'],
+		['emailAddress', 'email_address'],
+	],
 	'sylphx.notify.v1.Preference': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['digestInterval', 'digest_interval'],
+	],
+	'sylphx.notify.v1.ProbePhoneNumberRequest': [
+		['startDay', 'start_day'],
+		['endDay', 'end_day'],
+		['providerSessionToken', 'provider_session_token'],
+	],
+	'sylphx.notify.v1.ProbePhoneNumberResponse': [
+		['phoneNumber', 'phone_number', 'sylphx.notify.v1.PhoneNumber'],
+		['receipts', 'receipts', 'sylphx.notify.v1.PhoneNumberReceipt'],
 	],
 	'sylphx.notify.v1.PushContent': [
 		['data', 'data', undefined, 'json'],
@@ -2474,6 +2734,15 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.PushSender': [
 		['appKey', 'app_key'],
+	],
+	'sylphx.notify.v1.ReadPhoneNumberVoicemailRequest': [
+		['providerCallId', 'provider_call_id'],
+		['startDay', 'start_day'],
+		['endDay', 'end_day'],
+		['providerSessionToken', 'provider_session_token'],
+	],
+	'sylphx.notify.v1.ReadPhoneNumberVoicemailResponse': [
+		['audioSha256', 'audio_sha256'],
 	],
 	'sylphx.notify.v1.Recipient': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2644,6 +2913,8 @@ runtime.registerSchemas({
  * Namespace of Sylphx Notify on `Sylphx`.
  */
 export class NotifyApi {
+	/** The `phone_numbers` collection. */
+	readonly phoneNumbers: PhoneNumbersCollection
 	/** The `mail_domains` collection. */
 	readonly mailDomains: MailDomainsCollection
 	/** The `mail_routes` collection. */
@@ -2680,6 +2951,7 @@ export class NotifyApi {
 	readonly inboundSms: InboundSmsCollection
 
 	constructor(client: runtime.Client) {
+		this.phoneNumbers = new PhoneNumbersCollection(client)
 		this.mailDomains = new MailDomainsCollection(client)
 		this.mailRoutes = new MailRoutesCollection(client)
 		this.senders = new SendersCollection(client)
@@ -2697,6 +2969,131 @@ export class NotifyApi {
 		this.broadcasts = new BroadcastsCollection(client)
 		this.smsNumbers = new SmsNumbersCollection(client)
 		this.inboundSms = new InboundSmsCollection(client)
+	}
+}
+
+/** `phone_numbers` of Sylphx Notify: Resource type `notify.sylphx.com/PhoneNumber`. */
+export class PhoneNumbersCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/phone_numbers:connect` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async connect(request: ConnectPhoneNumberRequest): Promise<PhoneNumber> {
+		return this.client.call<PhoneNumber>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/phone_numbers:connect`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.notify.v1.ConnectPhoneNumberRequest',
+			responseType: 'sylphx.notify.v1.PhoneNumber',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * GetPhoneNumber: existing provider-managed lines; execution credentials are transient.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/phone_numbers/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async get(request: GetPhoneNumberRequest): Promise<PhoneNumber> {
+		return this.client.call<PhoneNumber>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/phone_numbers/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.PhoneNumber',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * ListPhoneNumbers: existing provider-managed lines; execution credentials are transient.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/phone_numbers` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async list(request: ListPhoneNumbersRequest): Promise<ListPhoneNumbersResponse> {
+		return this.client.call<ListPhoneNumbersResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/phone_numbers`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.notify.v1.ListPhoneNumbersResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListPhoneNumbersRequest): AsyncGenerator<PhoneNumber> {
+		let next: ListPhoneNumbersRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.phoneNumbers ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/phone_numbers/*}:applyRoute` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async applyRoute(request: ApplyPhoneNumberRouteRequest): Promise<PhoneNumber> {
+		return this.client.call<PhoneNumber>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/phone_numbers/*', 'name')}:applyRoute`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.ApplyPhoneNumberRouteRequest',
+			responseType: 'sylphx.notify.v1.PhoneNumber',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * ProbePhoneNumber: existing provider-managed lines; execution credentials are transient.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/phone_numbers/*}:probe` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async probe(request: ProbePhoneNumberRequest): Promise<ProbePhoneNumberResponse> {
+		return this.client.call<ProbePhoneNumberResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/phone_numbers/*', 'name')}:probe`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.ProbePhoneNumberRequest',
+			responseType: 'sylphx.notify.v1.ProbePhoneNumberResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/phone_numbers/*}:readVoicemail` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async readVoicemail(request: ReadPhoneNumberVoicemailRequest): Promise<ReadPhoneNumberVoicemailResponse> {
+		return this.client.call<ReadPhoneNumberVoicemailResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/phone_numbers/*', 'name')}:readVoicemail`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.ReadPhoneNumberVoicemailRequest',
+			responseType: 'sylphx.notify.v1.ReadPhoneNumberVoicemailResponse',
+			mutation: true,
+		})
 	}
 }
 

@@ -217,6 +217,7 @@ export const PREFIXES = [
 	{ prefix: 'ksch', entity: 'KnowledgeSchema', service: 'knowledge', collection: 'knowledge_schemas' },
 	{ prefix: 'snum', entity: 'SmsNumber', service: 'notify', collection: 'sms_numbers' },
 	{ prefix: 'isms', entity: 'InboundSms', service: 'notify', collection: 'inbound_sms' },
+	{ prefix: 'pnum', entity: 'PhoneNumber', service: 'notify', collection: 'phone_numbers' },
 	{ prefix: 'upt', entity: 'UptimeCheck', service: 'observability', collection: 'uptime_checks' },
 	{ prefix: 'svrt', entity: 'ServingRoute', service: 'hosting', collection: 'serving_routes' },
 	{ prefix: 'svob', entity: 'ServiceObservation', service: 'hosting', collection: 'service_observations' },

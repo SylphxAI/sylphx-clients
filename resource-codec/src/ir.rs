@@ -68,6 +68,8 @@ pub struct Method {
     pub publishable_ok: bool,
     pub supports_validate_only: bool,
     pub cancellable: bool,
+    #[serde(default)]
+    pub backend_idempotency: bool,
     pub errors: Vec<String>,
     /// Set for a protocol method (`ServiceInfo.origin`): served by its
     /// service's own host, never by the Resource API.

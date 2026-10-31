@@ -30758,6 +30758,303 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient."
+      },
+      "description": "ConnectPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/phone_numbers:connect",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Connect an existing owned line; no provider mutation occurs.",
+        "properties": {
+          "parent": {
+            "description": "Tenant environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "phone_number": {
+            "description": "Existing E.164 number.",
+            "type": "string"
+          },
+          "phone_number_id": {
+            "description": "Stable caller-chosen id; retries reuse this id.",
+            "type": "string"
+          },
+          "provider_session_token": {
+            "description": "Existing provider session, held only for this synchronous request. Never\nstored, logged, included in command hashes, or refreshed. Issuer lifetime\nis provider-owned; transient custody does not assert a shorter lifetime.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "validate_only": {
+            "description": "Validate ownership/config without creating a binding.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "phone_number_id",
+          "phone_number",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.phone_numbers.connect",
+      "permission": "notify:write",
+      "tool": "notify_phone_numbers_connect"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "GetPhoneNumber: existing provider-managed lines; execution credentials are transient."
+      },
+      "description": "GetPhoneNumber: existing provider-managed lines; execution credentials are transient.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Get a connected line's persisted observations; probe performs fresh provider reads.",
+        "properties": {
+          "name": {
+            "description": "Resource to read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.phone_numbers.get",
+      "permission": "notify:read",
+      "tool": "notify_phone_numbers_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "ListPhoneNumbers: existing provider-managed lines; execution credentials are transient."
+      },
+      "description": "ListPhoneNumbers: existing provider-managed lines; execution credentials are transient.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/phone_numbers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "List connected lines in one environment.",
+        "properties": {
+          "page_size": {
+            "description": "Page size, default 50, maximum 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Continuation token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Tenant environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.phone_numbers.list",
+      "permission": "notify:read",
+      "tool": "notify_phone_numbers_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient."
+      },
+      "description": "ApplyPhoneNumberRoute: existing provider-managed lines; execution credentials are transient.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:applyRoute",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Apply or reconcile the SAME operation after a lost response. Resupply a\ncurrent token with the same operation id and route; readback precedes retry.\nCredentials are removed before hashing/persistence. No unattended credential\nrefresh or background retry occurs; the provider continues executing calls.",
+        "properties": {
+          "name": {
+            "description": "Connected line.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "operation_id": {
+            "description": "Stable logical operation id. A different route needs a different id.",
+            "type": "string"
+          },
+          "provider_session_token": {
+            "description": "Transient provider session; excluded from every durable command/hash.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "validate_only": {
+            "description": "Validate without provider or database mutation.",
+            "type": "boolean"
+          },
+          "voicemail": {
+            "additionalProperties": false,
+            "description": "Desired voicemail settings.",
+            "properties": {
+              "delay_seconds": {
+                "description": "Provider wait before offering voicemail, in seconds; at most 600.\nForced transfer is separate provider configuration and is preserved.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "email_address": {
+                "description": "Intended recording-delivery address.",
+                "type": "string"
+              },
+              "enabled": {
+                "description": "Whether voicemail is enabled.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "enabled",
+              "delay_seconds",
+              "email_address"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id",
+          "voicemail",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.phone_numbers.apply_route",
+      "permission": "notify:write",
+      "tool": "notify_phone_numbers_apply_route"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "ProbePhoneNumber: existing provider-managed lines; execution credentials are transient."
+      },
+      "description": "ProbePhoneNumber: existing provider-managed lines; execution credentials are transient.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:probe",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Fetch current config and a bounded day-window of line-scoped incoming receipts.",
+        "properties": {
+          "end_day": {
+            "description": "Last day inclusive; at most one day after start_day.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Connected line.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "provider_session_token": {
+            "description": "Transient provider session.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "start_day": {
+            "description": "First provider-local calendar day, YYYY-MM-DD.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "start_day",
+          "end_day",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.phone_numbers.probe",
+      "permission": "notify:write",
+      "tool": "notify_phone_numbers_probe"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient."
+      },
+      "description": "ReadPhoneNumberVoicemail: existing provider-managed lines; execution credentials are transient.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/phone_numbers/*}:readVoicemail",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Read provider audio for an already observed line-scoped receipt. No arbitrary\nprovider ID can be used as a lookup into another tenant or provider line.",
+        "properties": {
+          "end_day": {
+            "description": "Last day inclusive, at most one day after start_day.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Connected line.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/PhoneNumber"
+          },
+          "provider_call_id": {
+            "description": "Stable provider receipt id already held by this line.",
+            "type": "string"
+          },
+          "provider_session_token": {
+            "description": "Transient provider session.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "start_day": {
+            "description": "Day window to re-establish receipt ownership.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "provider_call_id",
+          "start_day",
+          "end_day",
+          "provider_session_token"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.phone_numbers.read_voicemail",
+      "permission": "notify:read",
+      "tool": "notify_phone_numbers_read_voicemail"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
