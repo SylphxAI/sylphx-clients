@@ -709,6 +709,31 @@ pub const KSCH: Prefix = Prefix::new(
 pub const SNUM: Prefix = Prefix::new("snum", "SmsNumber", "notify", Some("sms_numbers"));
 /// InboundSms (`isms`, notify).
 pub const ISMS: Prefix = Prefix::new("isms", "InboundSms", "notify", Some("inbound_sms"));
+/// UptimeCheck (`upt`, observability).
+pub const UPT: Prefix = Prefix::new("upt", "UptimeCheck", "observability", Some("uptime_checks"));
+/// ServingRoute (`svrt`, hosting).
+pub const SVRT: Prefix = Prefix::new("svrt", "ServingRoute", "hosting", Some("serving_routes"));
+/// ServiceObservation (`svob`, hosting).
+pub const SVOB: Prefix = Prefix::new(
+    "svob",
+    "ServiceObservation",
+    "hosting",
+    Some("service_observations"),
+);
+/// UptimeSource (`upsrc`, observability).
+pub const UPSRC: Prefix = Prefix::new(
+    "upsrc",
+    "UptimeSource",
+    "observability",
+    Some("uptime_sources"),
+);
+/// UptimeManifest (`upmf`, hosting).
+pub const UPMF: Prefix = Prefix::new(
+    "upmf",
+    "UptimeManifest",
+    "hosting",
+    Some("uptime_manifests"),
+);
 
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
@@ -723,5 +748,5 @@ pub const ALL: &[Prefix] = &[
     DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ, NST, IDP,
     SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK, RVS, RVF,
     RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR, SPC, EPI,
-    KEN, KREL, KSCH, SNUM, ISMS,
+    KEN, KREL, KSCH, SNUM, ISMS, UPT, SVRT, SVOB, UPSRC, UPMF,
 ];

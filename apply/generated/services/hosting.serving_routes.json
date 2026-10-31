@@ -1,0 +1,26 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "hosting.serving_routes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "hosting.serving_routes.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "hosting.sylphx.com/ServingRoute"
+    }
+  ]
+}

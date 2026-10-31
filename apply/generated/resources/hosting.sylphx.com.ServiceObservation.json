@@ -1,0 +1,22 @@
+{
+  "collection": "service_observations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ServiceObservation",
+  "message": "sylphx.hosting.v1.ServiceObservation",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/service_observations/{service_observation}",
+  "plural": "serviceObservations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "hosting",
+  "shape": "record",
+  "singular": "serviceObservation",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "hosting.sylphx.com/ServiceObservation"
+}

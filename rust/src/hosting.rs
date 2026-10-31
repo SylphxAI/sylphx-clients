@@ -255,6 +255,17 @@ pub struct GetRolloutRequest {
     pub name: String,
 }
 
+/// The request of GetServiceObservation.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetServiceObservationRequest {
+    /// Service id under the service_observations collection.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetService.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -266,11 +277,33 @@ pub struct GetServiceRequest {
     pub name: String,
 }
 
+/// The request of GetServingRoute.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetServingRouteRequest {
+    /// Exact tenant-scoped route name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetSourceLink.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct GetSourceLinkRequest {
     /// The name of the source link to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Reads the current coherent source intent, without env values or secrets.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetUptimeManifestRequest {
+    /// The singleton `uptime_manifests/current` in an authorized environment.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -432,6 +465,58 @@ pub struct ListServicesResponse {
         alias = "nextPageToken"
     )]
     pub next_page_token: String,
+}
+
+/// The request of ListServingRoutes.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListServingRoutesRequest {
+    /// Exact authorized environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most 100 routes; each retains its full host/rule population.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Continuation bound to this parent and owner snapshot.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// One page of the complete serving census.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListServingRoutesResponse {
+    /// Routes in stable identity order.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "servingRoutes"
+    )]
+    pub serving_routes: Vec<ServingRoute>,
+    /// Empty only at the end of this snapshot.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+    /// Changes when routes, observations or current Release policy change.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "snapshotId"
+    )]
+    pub snapshot_id: String,
 }
 
 /// The request of ListSourceLinks.
@@ -599,6 +684,59 @@ pub struct PreviewStatus {
         alias = "expireTime"
     )]
     pub expire_time: String,
+}
+
+/// One bounded safe HTTP instrument, without request headers or a body.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProbeServiceObservationRequest {
+    /// Same-environment service observation name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// GET or HEAD; defaults to HEAD.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub method: String,
+    /// Canonical safe path; defaults to /healthz.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub path: String,
+    /// Allowed statuses; defaults to 200 through 299.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "expectStatus")]
+    pub expect_status: Vec<u32>,
+    /// Bounded literal body assertion for GET.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectBody"
+    )]
+    pub expect_body: String,
+    /// 1, 2, 5 or 10 seconds; defaults to 10 seconds.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub timeout: String,
+}
+
+/// Sanitized evidence; no response body, credential or raw network error.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProbeServiceObservationResponse {
+    /// up, unexpected_status, body_mismatch, dns_failure, tls_failure,
+    /// network_failure, timeout or unknown.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub outcome: String,
+    /// Precise unknown or refusal reason, separate from outage.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// Actual HTTP status, zero if no response was received.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: u32,
+    /// Server observation time.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sampleTime"
+    )]
+    pub sample_time: String,
 }
 
 /// The request of ResumeRollout.
@@ -807,6 +945,46 @@ pub struct ServiceHealth {
     pub startup_timeout: String,
 }
 
+/// A no-wake readiness read of one service. Reading this Resource never sends
+/// HTTP to the workload, activates it, or treats absent observations as ready.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ServiceObservation {
+    /// Uses the observed service's id.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable environment-service identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Time of the most recent owner observation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Same-environment service name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    /// ready, not_ready or unknown; idle is distinct from unavailable evidence.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub readiness: String,
+    /// Explanation without issuing a wake-up request.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// Current serving Release identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub release: String,
+}
+
 /// ServiceScaling bounds a Service's instances. A Service idles to zero unless
 /// `min_instances` is set.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -942,6 +1120,122 @@ pub struct ServiceStatus {
         alias = "readyInstances"
     )]
     pub ready_instances: i32,
+}
+
+/// One public HTTPRoute and every Host/path/backend it binds. This is an owner
+/// read projection, including default deploy hosts without Domain records.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ServingRoute {
+    /// Tenant-scoped name of this route observation.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identity of the underlying route lifetime.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Route generation and observation time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Owning same-environment service.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    /// Full declared hostname population; wildcard values stay wildcard.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hostnames: Vec<String>,
+    /// Every rule, including unsupported or unobserved ones.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rules: Vec<ServingRouteRule>,
+    /// True only when the owner has observed the current route generation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub observed: bool,
+}
+
+/// Backend selection facts; source expectation is independently Release-owned.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ServingRouteBackend {
+    /// Immutable selected revision name, when the backend is a revision.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub revision: String,
+    /// Effective positive selection weight; zero receives no traffic.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub weight: i32,
+}
+
+/// Match semantics are retained; regex/header/query matches are not invented
+/// into an exact public observation.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ServingRouteMatch {
+    /// Exact, PathPrefix, or RegularExpression.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pathType"
+    )]
+    pub path_type: String,
+    /// Exact path or path expression.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub path: String,
+    /// Empty matches any method; otherwise the exact HTTP method.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub method: String,
+    /// True when headers/query or unknown match extensions need caller input.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requiresRequestContext"
+    )]
+    pub requires_request_context: bool,
+}
+
+/// A route rule's safe probe matches and independent current Release policy.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ServingRouteRule {
+    /// Stable index in this route generation.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub index: i32,
+    /// Complete match population. No match means the default prefix /.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub matches: Vec<ServingRouteMatch>,
+    /// Every selected backend, including weight zero for truthful readback.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub backends: Vec<ServingRouteBackend>,
+    /// Current serving Release, or the admitted rollout moving this rule.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedRelease"
+    )]
+    pub expected_release: String,
+    /// Expected tenant sources from current Release members and admitted
+    /// positive-weight rollout choices; never copied from response headers.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "expectedSourceShas"
+    )]
+    pub expected_source_shas: Vec<String>,
+    /// Nonempty for redirect-only, unsupported or unavailable policy.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "unknownReason"
+    )]
+    pub unknown_reason: String,
 }
 
 /// A SourceLink links a project to one repository through Sylphx Connections.
@@ -1116,6 +1410,68 @@ pub struct UpdateSourceLinkRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// A coherent source-intent read, distinct from a currently serving Release.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeManifest {
+    /// Only `uptime_manifests/current` is supported.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable source identity scoped to this environment.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Complete source snapshot revision; callers must not order it lexically.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub revision: String,
+    /// Source commit selected by the Hosting intent owner.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceSha"
+    )]
+    pub source_sha: String,
+    /// Exact bound project manifest version.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "manifestVersion"
+    )]
+    pub manifest_version: i64,
+    /// Digest recorded for that bound source manifest.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "contentDigest"
+    )]
+    pub content_digest: String,
+    /// JSON manifest fragment containing only services[].name and
+    /// resources.telemetry.check. Valid absence is represented as an empty array.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "declarationsJson"
+    )]
+    pub declarations_json: String,
 }
 
 /// HealthProtocol is how a Service is probed.
@@ -1498,6 +1854,27 @@ pub struct HostingApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> HostingApi<'a, T> {
+    /// The `uptime_manifests` collection.
+    pub fn uptime_manifests(&self) -> UptimeManifestsCollection<'a, T> {
+        UptimeManifestsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `serving_routes` collection.
+    pub fn serving_routes(&self) -> ServingRoutesCollection<'a, T> {
+        ServingRoutesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `service_observations` collection.
+    pub fn service_observations(&self) -> ServiceObservationsCollection<'a, T> {
+        ServiceObservationsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `services` collection.
     pub fn services(&self) -> ServicesCollection<'a, T> {
         ServicesCollection {
@@ -1524,6 +1901,194 @@ impl<'a, T: crate::runtime::Transport> HostingApi<'a, T> {
         SourceLinksCollection {
             client: self.client,
         }
+    }
+}
+
+/// `uptime_manifests` of Sylphx Hosting: Resource type `hosting.sylphx.com/UptimeManifest`.
+pub struct UptimeManifestsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> UptimeManifestsCollection<'a, T> {
+    /// Reads complete check declarations from the owner's selected source intent.
+    /// Missing, unavailable or invalid sources are errors, never an empty set.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/uptime_manifests/*}` · permission `hosting:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetUptimeManifestRequest,
+    ) -> Result<UptimeManifest, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/uptime_manifests/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `serving_routes` of Sylphx Hosting: Resource type `hosting.sylphx.com/ServingRoute`.
+pub struct ServingRoutesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ServingRoutesCollection<'a, T> {
+    /// Gets an authorized public route observation.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/serving_routes/*}` · permission `hosting:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetServingRouteRequest,
+    ) -> Result<ServingRoute, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/serving_routes/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists every authorized public route; follow all pages in one snapshot.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/serving_routes` · permission `hosting:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListServingRoutesRequest,
+    ) -> Result<ListServingRoutesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/serving_routes",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListServingRoutesRequest,
+    ) -> Result<Vec<ServingRoute>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.serving_routes);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+}
+
+/// `service_observations` of Sylphx Hosting: Resource type `hosting.sylphx.com/ServiceObservation`.
+pub struct ServiceObservationsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ServiceObservationsCollection<'a, T> {
+    /// Reads readiness without invoking or waking a service.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/service_observations/*}` · permission `hosting:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetServiceObservationRequest,
+    ) -> Result<ServiceObservation, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/service_observations/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Performs one safe same-environment transport observation. Unlike a
+    /// readiness read, this explicitly requested HTTP instrument may activate
+    /// an idle service. No caller credential is forwarded to the workload.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/service_observations/*}:probe` · permission `hosting:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn probe(
+        &self,
+        request: ProbeServiceObservationRequest,
+    ) -> Result<ProbeServiceObservationResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:probe",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/service_observations/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 

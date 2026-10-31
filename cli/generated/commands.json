@@ -13456,6 +13456,149 @@
     {
       "collections": [
         {
+          "collection": "uptime_manifests",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/uptime_manifests/*}",
+              "method": "hosting.uptime_manifests.get",
+              "permission": "hosting:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_manifests/{uptime_manifest}"
+              },
+              "summary": "Reads complete check declarations from the owner's selected source intent. Missing, unavailable or invalid sources are errors, never an empty set.",
+              "verb": "get"
+            }
+          ],
+          "noun": "uptime-manifests",
+          "resource_type": "hosting.sylphx.com/UptimeManifest"
+        },
+        {
+          "collection": "serving_routes",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/serving_routes/*}",
+              "method": "hosting.serving_routes.get",
+              "permission": "hosting:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/serving_routes/{serving_route}"
+              },
+              "summary": "Gets an authorized public route observation.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most 100 routes; each retains its full host/rule population.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Continuation bound to this parent and owner snapshot.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/serving_routes",
+              "method": "hosting.serving_routes.list",
+              "paginates": true,
+              "permission": "hosting:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists every authorized public route; follow all pages in one snapshot.",
+              "verb": "list"
+            }
+          ],
+          "noun": "serving-routes",
+          "resource_type": "hosting.sylphx.com/ServingRoute"
+        },
+        {
+          "collection": "service_observations",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/service_observations/*}",
+              "method": "hosting.service_observations.get",
+              "permission": "hosting:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/service_observations/{service_observation}"
+              },
+              "summary": "Reads readiness without invoking or waking a service.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "method",
+                  "flag": "--method",
+                  "summary": "GET or HEAD; defaults to HEAD.",
+                  "type": "string"
+                },
+                {
+                  "field": "path",
+                  "flag": "--path",
+                  "summary": "Canonical safe path; defaults to /healthz.",
+                  "type": "string"
+                },
+                {
+                  "field": "expect_status",
+                  "flag": "--expect-status",
+                  "repeated": true,
+                  "summary": "Allowed statuses; defaults to 200 through 299.",
+                  "type": "int"
+                },
+                {
+                  "field": "expect_body",
+                  "flag": "--expect-body",
+                  "summary": "Bounded literal body assertion for GET.",
+                  "type": "string"
+                },
+                {
+                  "field": "timeout",
+                  "flag": "--timeout",
+                  "summary": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+                  "type": "duration"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/service_observations/*}:probe",
+              "method": "hosting.service_observations.probe",
+              "permission": "hosting:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/service_observations/{service_observation}"
+              },
+              "summary": "Performs one safe same-environment transport observation. Unlike a readiness read, this explicitly requested HTTP instrument may activate an idle service. No caller credential is forwarded to the workload.",
+              "verb": "probe"
+            }
+          ],
+          "noun": "service-observations",
+          "resource_type": "hosting.sylphx.com/ServiceObservation"
+        },
+        {
           "collection": "services",
           "commands": [
             {
@@ -13470,6 +13613,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
               },
+              "served": false,
               "summary": "Gets a service.",
               "verb": "get"
             },
@@ -13512,6 +13656,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
+              "served": false,
               "summary": "Lists services in a environment.",
               "verb": "list"
             },
@@ -13691,6 +13836,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "service",
+              "served": false,
               "summary": "Creates a service. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -13873,6 +14019,7 @@
               },
               "resource_field": "service",
               "sends_etag": true,
+              "served": false,
               "summary": "Updates a service.",
               "update_mask": "from-flags",
               "verb": "update",
@@ -13922,6 +14069,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
               },
+              "served": false,
               "summary": "Deletes a service.",
               "verb": "delete",
               "waits": {
@@ -13948,6 +14096,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts/{rollout}"
               },
+              "served": false,
               "summary": "Gets a rollout.",
               "verb": "get"
             },
@@ -13990,6 +14139,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
               },
+              "served": false,
               "summary": "Lists rollouts in a service.",
               "verb": "list"
             },
@@ -14047,6 +14197,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "rollout",
+              "served": false,
               "summary": "Creates a rollout.",
               "verb": "create"
             },
@@ -14075,6 +14226,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts/{rollout}"
               },
+              "served": false,
               "summary": "Holds a Rollout at its current wave.",
               "verb": "pause"
             },
@@ -14103,6 +14255,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts/{rollout}"
               },
+              "served": false,
               "summary": "Resumes a paused Rollout.",
               "verb": "resume"
             },
@@ -14135,6 +14288,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts/{rollout}"
               },
+              "served": false,
               "summary": "Stops a Rollout; the cells it reached return to the previous Release.",
               "verb": "abort"
             }
@@ -14157,6 +14311,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/previews/{preview}"
               },
+              "served": false,
               "summary": "Gets a preview.",
               "verb": "get"
             },
@@ -14199,6 +14354,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
+              "served": false,
               "summary": "Lists previews in a environment.",
               "verb": "list"
             },
@@ -14264,6 +14420,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "preview",
+              "served": false,
               "summary": "Creates a preview. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -14306,6 +14463,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/previews/{preview}"
               },
+              "served": false,
               "summary": "Deletes a preview.",
               "verb": "delete",
               "waits": {
@@ -14332,6 +14490,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/source_links/{source_link}"
               },
+              "served": false,
               "summary": "Gets a source link.",
               "verb": "get"
             },
@@ -14374,6 +14533,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}"
               },
+              "served": false,
               "summary": "Lists source links in a project.",
               "verb": "list"
             },
@@ -14451,6 +14611,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "source_link",
+              "served": false,
               "summary": "Creates a source link. The Operation is done when the controller settles it.",
               "verb": "create",
               "waits": {
@@ -14517,6 +14678,7 @@
               },
               "resource_field": "source_link",
               "sends_etag": true,
+              "served": false,
               "summary": "Updates a source link.",
               "update_mask": "from-flags",
               "verb": "update",
@@ -14560,6 +14722,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/source_links/{source_link}"
               },
+              "served": false,
               "summary": "Deletes a source link.",
               "verb": "delete",
               "waits": {
@@ -14575,7 +14738,6 @@
       "commands": [],
       "display_name": "Sylphx Hosting",
       "noun": "hosting",
-      "served": false,
       "stage": "preview"
     },
     {
@@ -26102,6 +26264,435 @@
     },
     {
       "collections": [
+        {
+          "collection": "uptime_sources",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/uptime_sources/*}",
+              "method": "observability.uptime_sources.get",
+              "permission": "observability:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_sources/{uptime_source}"
+              },
+              "summary": "Gets the environment's manifest subscription (`uptime_sources/manifest`).",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "uptime_source.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "uptime_source.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "uptime_source.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_source.spec.execution_delegation",
+                  "flag": "--spec.execution-delegation",
+                  "required": true,
+                  "summary": "Exact Access delegation reference; credentials never enter this resource.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_source.spec.paused",
+                  "flag": "--spec.paused",
+                  "summary": "Stops source reconciliation; existing checks keep their own pause policy.",
+                  "type": "bool"
+                }
+              ],
+              "http": "PATCH /v1/{uptime_source.name=orgs/*/projects/*/envs/*/uptime_sources/*}",
+              "method": "observability.uptime_sources.update",
+              "permission": "observability:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "uptime_source.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_sources/{uptime_source}"
+              },
+              "resource_field": "uptime_source",
+              "sends_etag": true,
+              "summary": "Configures manifest reconciliation; absent subscriptions require an empty etag.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            }
+          ],
+          "noun": "uptime-sources",
+          "resource_type": "observability.sylphx.com/UptimeSource"
+        },
+        {
+          "collection": "uptime_checks",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "uptime_check.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "uptime_check.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.public_uri",
+                  "flag": "--spec.public-uri",
+                  "summary": "HTTPS public URL, without credentials, query, fragment or redirects.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.service",
+                  "flag": "--spec.service",
+                  "summary": "Same-environment Hosting Service resource name.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.bound_public_revisions",
+                  "flag": "--spec.bound-public-revisions",
+                  "summary": "True enumerates every authorized bound public Host/path and compares independent public response identity with the selected serving Release.",
+                  "type": "bool"
+                },
+                {
+                  "field": "uptime_check.spec.instrument",
+                  "flag": "--spec.instrument",
+                  "summary": "HTTP or READY; READY is valid only for a service target.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.method",
+                  "flag": "--spec.method",
+                  "summary": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.path",
+                  "flag": "--spec.path",
+                  "summary": "Private HTTP path; defaults to /healthz. Not used by READY.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.interval",
+                  "flag": "--spec.interval",
+                  "summary": "30, 60, 300 or 900 seconds; defaults to 60 seconds.",
+                  "type": "duration"
+                },
+                {
+                  "field": "uptime_check.spec.timeout",
+                  "flag": "--spec.timeout",
+                  "summary": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+                  "type": "duration"
+                },
+                {
+                  "field": "uptime_check.spec.expect_status",
+                  "flag": "--spec.expect-status",
+                  "repeated": true,
+                  "summary": "Transport successes; defaults to 200 through 299. Denial and rate limits always remain unknown, even when included here.",
+                  "type": "int"
+                },
+                {
+                  "field": "uptime_check.spec.expect_body",
+                  "flag": "--spec.expect-body",
+                  "summary": "Bounded literal substring, only with GET.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.failures_before_alert",
+                  "flag": "--spec.failures-before-alert",
+                  "summary": "Consecutive known failures before a transport alert; defaults to two.",
+                  "type": "int"
+                },
+                {
+                  "field": "uptime_check.spec.paused",
+                  "flag": "--spec.paused",
+                  "summary": "Paused checks dispatch nothing and accrue no expected slots.",
+                  "type": "bool"
+                },
+                {
+                  "field": "uptime_check.spec.severity",
+                  "flag": "--spec.severity",
+                  "summary": "ticket or page; defaults to ticket.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.notify",
+                  "flag": "--spec.notify",
+                  "repeated": true,
+                  "summary": "Existing email: or registered webhook: targets. Events owns signing, delivery and replay. No unregistered callback is silently considered sent.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.execution_delegation",
+                  "flag": "--spec.execution-delegation",
+                  "required": true,
+                  "summary": "Access delegation naming Observability's workload principal, confined to this environment and the needed read/invoke permissions. Every dispatch exchanges it afresh; expiration or revocation prevents outbound work.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks",
+              "method": "observability.uptime_checks.create",
+              "permission": "observability:write",
+              "positional": {
+                "arg": "ID",
+                "field": "uptime_check_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "uptime_check",
+              "summary": "Creates one tenant uptime check.",
+              "verb": "create"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "target_page_token",
+                  "flag": "--target-page-token",
+                  "summary": "Continue the latest target population from status.next_target_page_token.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/uptime_checks/*}",
+              "method": "observability.uptime_checks.get",
+              "permission": "observability:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_checks/{uptime_check}"
+              },
+              "summary": "Gets one tenant uptime check.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most 100 checks per page.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation from this exact parent.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks",
+              "method": "observability.uptime_checks.list",
+              "paginates": true,
+              "permission": "observability:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists checks and aggregate status. GetUptimeCheck reads target pages.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "uptime_check.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "uptime_check.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "uptime_check.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.public_uri",
+                  "flag": "--spec.public-uri",
+                  "summary": "HTTPS public URL, without credentials, query, fragment or redirects.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.service",
+                  "flag": "--spec.service",
+                  "summary": "Same-environment Hosting Service resource name.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.bound_public_revisions",
+                  "flag": "--spec.bound-public-revisions",
+                  "summary": "True enumerates every authorized bound public Host/path and compares independent public response identity with the selected serving Release.",
+                  "type": "bool"
+                },
+                {
+                  "field": "uptime_check.spec.instrument",
+                  "flag": "--spec.instrument",
+                  "summary": "HTTP or READY; READY is valid only for a service target.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.method",
+                  "flag": "--spec.method",
+                  "summary": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.path",
+                  "flag": "--spec.path",
+                  "summary": "Private HTTP path; defaults to /healthz. Not used by READY.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.interval",
+                  "flag": "--spec.interval",
+                  "summary": "30, 60, 300 or 900 seconds; defaults to 60 seconds.",
+                  "type": "duration"
+                },
+                {
+                  "field": "uptime_check.spec.timeout",
+                  "flag": "--spec.timeout",
+                  "summary": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+                  "type": "duration"
+                },
+                {
+                  "field": "uptime_check.spec.expect_status",
+                  "flag": "--spec.expect-status",
+                  "repeated": true,
+                  "summary": "Transport successes; defaults to 200 through 299. Denial and rate limits always remain unknown, even when included here.",
+                  "type": "int"
+                },
+                {
+                  "field": "uptime_check.spec.expect_body",
+                  "flag": "--spec.expect-body",
+                  "summary": "Bounded literal substring, only with GET.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.failures_before_alert",
+                  "flag": "--spec.failures-before-alert",
+                  "summary": "Consecutive known failures before a transport alert; defaults to two.",
+                  "type": "int"
+                },
+                {
+                  "field": "uptime_check.spec.paused",
+                  "flag": "--spec.paused",
+                  "summary": "Paused checks dispatch nothing and accrue no expected slots.",
+                  "type": "bool"
+                },
+                {
+                  "field": "uptime_check.spec.severity",
+                  "flag": "--spec.severity",
+                  "summary": "ticket or page; defaults to ticket.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.notify",
+                  "flag": "--spec.notify",
+                  "repeated": true,
+                  "summary": "Existing email: or registered webhook: targets. Events owns signing, delivery and replay. No unregistered callback is silently considered sent.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.execution_delegation",
+                  "flag": "--spec.execution-delegation",
+                  "required": true,
+                  "summary": "Access delegation naming Observability's workload principal, confined to this environment and the needed read/invoke permissions. Every dispatch exchanges it afresh; expiration or revocation prevents outbound work.",
+                  "type": "string"
+                }
+              ],
+              "http": "PATCH /v1/{uptime_check.name=orgs/*/projects/*/envs/*/uptime_checks/*}",
+              "method": "observability.uptime_checks.update",
+              "permission": "observability:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "uptime_check.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_checks/{uptime_check}"
+              },
+              "resource_field": "uptime_check",
+              "sends_etag": true,
+              "summary": "Updates one tenant uptime check.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            },
+            {
+              "confirm": {
+                "prompt": true,
+                "skip_flag": "--yes"
+              },
+              "effect": "destructive",
+              "flags": [
+                {
+                  "field": "etag",
+                  "flag": "--etag",
+                  "summary": "Current resource etag.",
+                  "type": "string"
+                }
+              ],
+              "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/uptime_checks/*}",
+              "method": "observability.uptime_checks.delete",
+              "permission": "observability:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_checks/{uptime_check}"
+              },
+              "summary": "Deletes one tenant uptime check.",
+              "verb": "delete"
+            }
+          ],
+          "noun": "uptime-checks",
+          "resource_type": "observability.sylphx.com/UptimeCheck"
+        },
         {
           "collection": "log_entries",
           "commands": [

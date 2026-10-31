@@ -217,6 +217,11 @@ export const PREFIXES = [
 	{ prefix: 'ksch', entity: 'KnowledgeSchema', service: 'knowledge', collection: 'knowledge_schemas' },
 	{ prefix: 'snum', entity: 'SmsNumber', service: 'notify', collection: 'sms_numbers' },
 	{ prefix: 'isms', entity: 'InboundSms', service: 'notify', collection: 'inbound_sms' },
+	{ prefix: 'upt', entity: 'UptimeCheck', service: 'observability', collection: 'uptime_checks' },
+	{ prefix: 'svrt', entity: 'ServingRoute', service: 'hosting', collection: 'serving_routes' },
+	{ prefix: 'svob', entity: 'ServiceObservation', service: 'hosting', collection: 'service_observations' },
+	{ prefix: 'upsrc', entity: 'UptimeSource', service: 'observability', collection: 'uptime_sources' },
+	{ prefix: 'upmf', entity: 'UptimeManifest', service: 'hosting', collection: 'uptime_manifests' },
 ] as const satisfies readonly PrefixInfo[]
 
 /** A registered prefix, for example `'prj'`. */

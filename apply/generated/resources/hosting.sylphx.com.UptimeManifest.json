@@ -1,0 +1,22 @@
+{
+  "collection": "uptime_manifests",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UptimeManifest",
+  "message": "sylphx.hosting.v1.UptimeManifest",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_manifests/{uptime_manifest}",
+  "plural": "uptimeManifests",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "hosting",
+  "shape": "record",
+  "singular": "uptimeManifest",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "hosting.sylphx.com/UptimeManifest"
+}

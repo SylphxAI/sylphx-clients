@@ -1,0 +1,150 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "observed_generation",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "int64"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "conditions",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.common.v1.Condition"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "last_sample_time",
+      "number": 10,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "well_known",
+        "wkt": "timestamp"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "last_result",
+      "number": 11,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "firing",
+      "number": 12,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "bool"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "coverage",
+      "number": 13,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.observability.v1.UptimeCoverage"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "targets",
+      "number": 14,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.observability.v1.UptimeTargetStatus"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "next_target_page_token",
+      "number": 15,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    }
+  ],
+  "name": "sylphx.observability.v1.UptimeCheckStatus",
+  "package": "sylphx.observability.v1"
+}

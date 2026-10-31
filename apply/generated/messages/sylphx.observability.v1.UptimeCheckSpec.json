@@ -1,0 +1,270 @@
+{
+  "fields": [
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "public_uri",
+      "number": 1,
+      "oneof": "target",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "service",
+      "number": 2,
+      "oneof": "target",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": "hosting.sylphx.com/Service",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "bound_public_revisions",
+      "number": 3,
+      "oneof": "target",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "bool"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "instrument",
+      "number": 4,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "method",
+      "number": 5,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "path",
+      "number": 6,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "interval",
+      "number": 7,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "well_known",
+        "wkt": "duration"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "timeout",
+      "number": 8,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "well_known",
+        "wkt": "duration"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "expect_status",
+      "number": 9,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "uint32"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "expect_body",
+      "number": 10,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "failures_before_alert",
+      "number": 11,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "uint32"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "paused",
+      "number": 12,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "bool"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "severity",
+      "number": 13,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "notify",
+      "number": 14,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "execution_delegation",
+      "number": 15,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    }
+  ],
+  "name": "sylphx.observability.v1.UptimeCheckSpec",
+  "package": "sylphx.observability.v1"
+}

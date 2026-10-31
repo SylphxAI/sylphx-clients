@@ -49,6 +49,24 @@ export interface CreateSourceMapRequest {
 	sourceMap: SourceMap
 }
 
+/** Creates a check; Idempotency-Key replays the same lifecycle. */
+export interface CreateUptimeCheckRequest {
+	/** The authorized environment. */
+	parent: string
+	/** Safe observation policy. */
+	uptimeCheck: UptimeCheck
+	/** Unique DNS label, 1 through 63 characters. */
+	uptimeCheckId: string
+}
+
+/** Tombstones a lifecycle; a recreated name receives a fresh uid. */
+export interface DeleteUptimeCheckRequest {
+	/** Exact resource name. */
+	name: string
+	/** Current resource etag. */
+	etag?: string
+}
+
 /**
  * An Error Event is one immutable error occurrence, with breadcrumbs and
  * correlation.
@@ -256,6 +274,20 @@ export interface GetTraceRequest {
 	name: string
 }
 
+/** Reads one check with durable samples and coverage. */
+export interface GetUptimeCheckRequest {
+	/** Exact check name. */
+	name: string
+	/** Continue the latest target population from status.next_target_page_token. */
+	targetPageToken?: string
+}
+
+/** Reads the durable source subscription, independent of the current check set. */
+export interface GetUptimeSourceRequest {
+	/** The singleton `uptime_sources/manifest` in an authorized environment. */
+	name: string
+}
+
 /** The request of ListErrorEvents. */
 export interface ListErrorEventsRequest {
 	/** The parent to list in. */
@@ -339,6 +371,24 @@ export interface ListSourceMapsResponse {
 	/** The source maps, newest first. */
 	sourceMaps?: SourceMap[]
 	/** The token of the next page; empty on the last. */
+	nextPageToken?: string
+}
+
+/** Lists one environment, ordered by check id. */
+export interface ListUptimeChecksRequest {
+	/** The authorized environment. */
+	parent: string
+	/** At most 100 checks per page. */
+	pageSize?: number
+	/** Opaque continuation from this exact parent. */
+	pageToken?: string
+}
+
+/** One page; callers follow next_page_token to read the full population. */
+export interface ListUptimeChecksResponse {
+	/** Checks in this page. */
+	uptimeChecks?: UptimeCheck[]
+	/** Empty on the last page. */
 	nextPageToken?: string
 }
 
@@ -579,6 +629,195 @@ export interface UpdateScrubbingPolicyRequest {
 	updateMask?: string
 }
 
+/**
+ * Changes policy or pauses/resumes a check. The supplied meta.etag fences
+ * concurrent updates. A new generation invalidates every outstanding claim.
+ */
+export interface UpdateUptimeCheckRequest {
+	/** Exact resource name, etag and writable policy. */
+	uptimeCheck: UptimeCheck
+	/** Writable spec fields; omitted replaces the complete spec. */
+	updateMask?: string
+}
+
+/** Sets the subscription's delegation and pause policy; replaces the whole spec. */
+export interface UpdateUptimeSourceRequest {
+	/** Subscription with an etag from Get, or empty on initial setup. */
+	uptimeSource: UptimeSource
+	/** Only `spec` is supported; omission also replaces the whole spec. */
+	updateMask?: string
+}
+
+/**
+ * An UptimeCheck observes safe transport behavior or the public revision of
+ * every authorized bound host/path. Workflows owns its durable clock.
+ */
+export interface UptimeCheck {
+	/** The tenant-scoped check name. */
+	name?: string
+	/** A new immutable identity on every creation, including name reuse. */
+	readonly uid?: string
+	/** Resource metadata, generation and etag. */
+	meta?: common.ResourceMeta
+	/** Safe desired observation policy. */
+	spec?: UptimeCheckSpec
+	/** Durable evidence, including missing coverage. */
+	readonly status?: UptimeCheckStatus
+}
+
+/**
+ * Exactly one target is required. Private targets name a service in this
+ * environment; a ready observation never invokes or wakes that service.
+ */
+export interface UptimeCheckSpec {
+	/** HTTPS public URL, without credentials, query, fragment or redirects. */
+	publicUri?: string
+	/** Same-environment Hosting Service resource name. */
+	service?: string
+	/**
+	 * True enumerates every authorized bound public Host/path and compares
+	 * independent public response identity with the selected serving Release.
+	 */
+	boundPublicRevisions?: boolean
+	/** HTTP or READY; READY is valid only for a service target. */
+	instrument?: string
+	/** GET or HEAD; defaults to HEAD. No headers, credentials or request body. */
+	method?: string
+	/** Private HTTP path; defaults to /healthz. Not used by READY. */
+	path?: string
+	/** 30, 60, 300 or 900 seconds; defaults to 60 seconds. */
+	interval?: string
+	/** 1, 2, 5 or 10 seconds; defaults to 10 seconds. */
+	timeout?: string
+	/**
+	 * Transport successes; defaults to 200 through 299. Denial and rate limits
+	 * always remain unknown, even when included here.
+	 */
+	expectStatus?: number[]
+	/** Bounded literal substring, only with GET. */
+	expectBody?: string
+	/** Consecutive known failures before a transport alert; defaults to two. */
+	failuresBeforeAlert?: number
+	/** Paused checks dispatch nothing and accrue no expected slots. */
+	paused?: boolean
+	/** ticket or page; defaults to ticket. */
+	severity?: string
+	/**
+	 * Existing email: or registered webhook: targets. Events owns signing,
+	 * delivery and replay. No unregistered callback is silently considered sent.
+	 */
+	notify?: string[]
+	/**
+	 * Access delegation naming Observability's workload principal, confined to
+	 * this environment and the needed read/invoke permissions. Every dispatch
+	 * exchanges it afresh; expiration or revocation prevents outbound work.
+	 */
+	executionDelegation?: string
+}
+
+/**
+ * The durable check projection. Missing, denied and unknown evidence never
+ * becomes success; unknown does not resolve an open episode.
+ */
+export interface UptimeCheckStatus {
+	/** Last reconciled generation. */
+	readonly observedGeneration?: string
+	/** Ready, Reconciling, Stalled. */
+	readonly conditions?: common.Condition[]
+	/** Time of the last committed observation, absent before the first sample. */
+	readonly lastSampleTime?: string
+	/** up, down, match, mismatch or unknown. */
+	readonly lastResult?: string
+	/** Whether any target has an open firing episode. */
+	readonly firing?: boolean
+	/** Exactly the 24-hour, 7-day and 30-day windows. */
+	readonly coverage?: UptimeCoverage[]
+	/** Latest target population page (up to 100), including unknown targets. */
+	readonly targets?: UptimeTargetStatus[]
+	/** Continue with GetUptimeCheck.target_page_token; aggregates cover all targets. */
+	readonly nextTargetPageToken?: string
+}
+
+/** Coverage counts due slots over persisted active lifetimes across updates. */
+export interface UptimeCoverage {
+	/** 86400, 604800 or 2592000 seconds. */
+	readonly windowSeconds?: string
+	/** Due observations, including missing slots. */
+	readonly expected?: string
+	/** Known successful observations. */
+	readonly succeeded?: string
+	/** Known failed observations. */
+	readonly failed?: string
+	/** Received but inconclusive observations. */
+	readonly unknown?: string
+	/** Due observations with no sample. */
+	readonly missing?: string
+}
+
+/** Persistent subscription to the environment's complete source-controlled checks. */
+export interface UptimeSource {
+	/** Only `uptime_sources/manifest` is supported. */
+	name?: string
+	/** Never reused; ownership receipts survive an empty source set. */
+	readonly uid?: string
+	/** Lifecycle-bound etag and generation. */
+	meta?: common.ResourceMeta
+	/** Delegated source reconciliation policy. */
+	spec?: UptimeSourceSpec
+	/** Last applied source and visible reconciliation outcome. */
+	readonly status?: UptimeSourceStatus
+}
+
+/** A tenant human grants the Observability workload the required Access scopes. */
+export interface UptimeSourceSpec {
+	/** Exact Access delegation reference; credentials never enter this resource. */
+	executionDelegation?: string
+	/** Stops source reconciliation; existing checks keep their own pause policy. */
+	paused?: boolean
+}
+
+/** A source read failure never means a valid empty declaration set. */
+export interface UptimeSourceStatus {
+	/** Subscription generation last fully converged. */
+	readonly observedGeneration?: string
+	/** Reconciling or Ready, independently of probe health. */
+	readonly conditions?: common.Condition[]
+	/** Last fully converged source identity. */
+	readonly sourceUid?: string
+	/** Opaque owner-provided revision of the complete desired set. */
+	readonly appliedRevision?: string
+	/** Finite error code, empty after successful convergence. */
+	readonly reason?: string
+	/** Latest completed reconciliation attempt. */
+	readonly lastAttemptTime?: string
+	/** Stable attested Observability workload principal to name as delegate. */
+	readonly delegatePrincipal?: string
+}
+
+/** Latest independent public evidence for one exact bound Host/path. */
+export interface UptimeTargetStatus {
+	/** Stable target identity within this check lifecycle. */
+	readonly target?: string
+	/** Exact public URL or same-environment service name. */
+	readonly uri?: string
+	/** Current selected serving Release, never desired or merely latest source. */
+	readonly expectedRelease?: string
+	/** Admitted positive-weight source population, empty when unknown. */
+	readonly expectedSourceShas?: string[]
+	/** Exactly one validated response header, empty when unknown. */
+	readonly observedSourceSha?: string
+	/** up, down, match, mismatch or unknown. */
+	readonly result?: string
+	/** Why evidence is unknown or failed, without losing the distinction. */
+	readonly reason?: string
+	/** Actual observation time. */
+	readonly sampleTime?: string
+	/** Open episode latch; only proven equality or transport success resolves. */
+	readonly firing?: boolean
+	/** Existing Events carrier receipts; receiver delivery is read from Events. */
+	readonly eventsDeliveries?: string[]
+}
+
 /** The request of WriteLogEntries. */
 export interface WriteLogEntriesRequest {
 	/** The parent the method acts in. */
@@ -634,6 +873,11 @@ runtime.registerSchemas({
 	'sylphx.observability.v1.CreateSourceMapRequest': [
 		['sourceMap', 'source_map', 'sylphx.observability.v1.SourceMap'],
 	],
+	'sylphx.observability.v1.CreateUptimeCheckRequest': [
+		['uptimeCheck', 'uptime_check', 'sylphx.observability.v1.UptimeCheck'],
+		['uptimeCheckId', 'uptime_check_id'],
+	],
+	'sylphx.observability.v1.DeleteUptimeCheckRequest': [],
 	'sylphx.observability.v1.ErrorEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['eventTime', 'event_time'],
@@ -684,6 +928,10 @@ runtime.registerSchemas({
 	'sylphx.observability.v1.GetScrubbingPolicyRequest': [],
 	'sylphx.observability.v1.GetSourceMapRequest': [],
 	'sylphx.observability.v1.GetTraceRequest': [],
+	'sylphx.observability.v1.GetUptimeCheckRequest': [
+		['targetPageToken', 'target_page_token'],
+	],
+	'sylphx.observability.v1.GetUptimeSourceRequest': [],
 	'sylphx.observability.v1.ListErrorEventsRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -717,6 +965,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.observability.v1.ListSourceMapsResponse': [
 		['sourceMaps', 'source_maps', 'sylphx.observability.v1.SourceMap'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.observability.v1.ListUptimeChecksRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.observability.v1.ListUptimeChecksResponse': [
+		['uptimeChecks', 'uptime_checks', 'sylphx.observability.v1.UptimeCheck'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.observability.v1.LogEntry': [
@@ -793,6 +1049,62 @@ runtime.registerSchemas({
 		['scrubbingPolicy', 'scrubbing_policy', 'sylphx.observability.v1.ScrubbingPolicy'],
 		['updateMask', 'update_mask'],
 	],
+	'sylphx.observability.v1.UpdateUptimeCheckRequest': [
+		['uptimeCheck', 'uptime_check', 'sylphx.observability.v1.UptimeCheck'],
+		['updateMask', 'update_mask'],
+	],
+	'sylphx.observability.v1.UpdateUptimeSourceRequest': [
+		['uptimeSource', 'uptime_source', 'sylphx.observability.v1.UptimeSource'],
+		['updateMask', 'update_mask'],
+	],
+	'sylphx.observability.v1.UptimeCheck': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.observability.v1.UptimeCheckSpec'],
+		['status', 'status', 'sylphx.observability.v1.UptimeCheckStatus'],
+	],
+	'sylphx.observability.v1.UptimeCheckSpec': [
+		['publicUri', 'public_uri'],
+		['boundPublicRevisions', 'bound_public_revisions'],
+		['expectStatus', 'expect_status'],
+		['expectBody', 'expect_body'],
+		['failuresBeforeAlert', 'failures_before_alert'],
+		['executionDelegation', 'execution_delegation'],
+	],
+	'sylphx.observability.v1.UptimeCheckStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['lastSampleTime', 'last_sample_time'],
+		['lastResult', 'last_result'],
+		['coverage', 'coverage', 'sylphx.observability.v1.UptimeCoverage'],
+		['targets', 'targets', 'sylphx.observability.v1.UptimeTargetStatus'],
+		['nextTargetPageToken', 'next_target_page_token'],
+	],
+	'sylphx.observability.v1.UptimeCoverage': [
+		['windowSeconds', 'window_seconds'],
+	],
+	'sylphx.observability.v1.UptimeSource': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.observability.v1.UptimeSourceSpec'],
+		['status', 'status', 'sylphx.observability.v1.UptimeSourceStatus'],
+	],
+	'sylphx.observability.v1.UptimeSourceSpec': [
+		['executionDelegation', 'execution_delegation'],
+	],
+	'sylphx.observability.v1.UptimeSourceStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['sourceUid', 'source_uid'],
+		['appliedRevision', 'applied_revision'],
+		['lastAttemptTime', 'last_attempt_time'],
+		['delegatePrincipal', 'delegate_principal'],
+	],
+	'sylphx.observability.v1.UptimeTargetStatus': [
+		['expectedRelease', 'expected_release'],
+		['expectedSourceShas', 'expected_source_shas'],
+		['observedSourceSha', 'observed_source_sha'],
+		['sampleTime', 'sample_time'],
+		['eventsDeliveries', 'events_deliveries'],
+	],
 	'sylphx.observability.v1.WriteLogEntriesRequest': [
 		['logEntries', 'log_entries', 'sylphx.observability.v1.LogEntry'],
 	],
@@ -816,6 +1128,10 @@ runtime.registerSchemas({
  * Namespace of Sylphx Observability on `Sylphx`.
  */
 export class ObservabilityApi {
+	/** The `uptime_sources` collection. */
+	readonly uptimeSources: UptimeSourcesCollection
+	/** The `uptime_checks` collection. */
+	readonly uptimeChecks: UptimeChecksCollection
 	/** The `log_entries` collection. */
 	readonly logEntries: LogEntriesCollection
 	/** The `traces` collection. */
@@ -832,6 +1148,8 @@ export class ObservabilityApi {
 	readonly scrubbingPolicies: ScrubbingPoliciesCollection
 
 	constructor(client: runtime.Client) {
+		this.uptimeSources = new UptimeSourcesCollection(client)
+		this.uptimeChecks = new UptimeChecksCollection(client)
 		this.logEntries = new LogEntriesCollection(client)
 		this.traces = new TracesCollection(client)
 		this.generations = new GenerationsCollection(client)
@@ -839,6 +1157,158 @@ export class ObservabilityApi {
 		this.errorEvents = new ErrorEventsCollection(client)
 		this.sourceMaps = new SourceMapsCollection(client)
 		this.scrubbingPolicies = new ScrubbingPoliciesCollection(client)
+	}
+}
+
+/** `uptime_sources` of Sylphx Observability: Resource type `observability.sylphx.com/UptimeSource`. */
+export class UptimeSourcesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets the environment's manifest subscription (`uptime_sources/manifest`).
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/uptime_sources/*}` · permission `observability:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetUptimeSourceRequest): Promise<UptimeSource> {
+		return this.client.call<UptimeSource>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/uptime_sources/*', 'name')}`,
+			responseType: 'sylphx.observability.v1.UptimeSource',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Configures manifest reconciliation; absent subscriptions require an empty etag.
+	 *
+	 * `PATCH /v1/{uptime_source.name=orgs/*\/projects/*\/envs/*\/uptime_sources/*}` · permission `observability:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`.
+	 */
+	async update(request: UpdateUptimeSourceRequest): Promise<UptimeSource> {
+		return this.client.call<UptimeSource>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.uptimeSource?.name, 'orgs/*/projects/*/envs/*/uptime_sources/*', 'uptime_source.name')}`,
+			query: { update_mask: request.updateMask },
+			body: request.uptimeSource ?? {},
+			bodyType: 'sylphx.observability.v1.UptimeSource',
+			responseType: 'sylphx.observability.v1.UptimeSource',
+			mutation: true,
+		})
+	}
+}
+
+/** `uptime_checks` of Sylphx Observability: Resource type `observability.sylphx.com/UptimeCheck`. */
+export class UptimeChecksCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Creates one tenant uptime check.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/uptime_checks` · permission `observability:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+	 */
+	async create(request: CreateUptimeCheckRequest): Promise<UptimeCheck> {
+		return this.client.call<UptimeCheck>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/uptime_checks`,
+			query: { uptime_check_id: request.uptimeCheckId },
+			body: request.uptimeCheck ?? {},
+			bodyType: 'sylphx.observability.v1.UptimeCheck',
+			responseType: 'sylphx.observability.v1.UptimeCheck',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Gets one tenant uptime check.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/uptime_checks/*}` · permission `observability:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetUptimeCheckRequest): Promise<UptimeCheck> {
+		return this.client.call<UptimeCheck>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/uptime_checks/*', 'name')}`,
+			query: { target_page_token: request.targetPageToken },
+			responseType: 'sylphx.observability.v1.UptimeCheck',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists checks and aggregate status. GetUptimeCheck reads target pages.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/uptime_checks` · permission `observability:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+	 */
+	async list(request: ListUptimeChecksRequest): Promise<ListUptimeChecksResponse> {
+		return this.client.call<ListUptimeChecksResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/uptime_checks`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.observability.v1.ListUptimeChecksResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListUptimeChecksRequest): AsyncGenerator<UptimeCheck> {
+		let next: ListUptimeChecksRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.uptimeChecks ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Updates one tenant uptime check.
+	 *
+	 * `PATCH /v1/{uptime_check.name=orgs/*\/projects/*\/envs/*\/uptime_checks/*}` · permission `observability:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+	 */
+	async update(request: UpdateUptimeCheckRequest): Promise<UptimeCheck> {
+		return this.client.call<UptimeCheck>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.uptimeCheck?.name, 'orgs/*/projects/*/envs/*/uptime_checks/*', 'uptime_check.name')}`,
+			query: { update_mask: request.updateMask },
+			body: request.uptimeCheck ?? {},
+			bodyType: 'sylphx.observability.v1.UptimeCheck',
+			responseType: 'sylphx.observability.v1.UptimeCheck',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Deletes one tenant uptime check.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/uptime_checks/*}` · permission `observability:write` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+	 */
+	async delete(request: DeleteUptimeCheckRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/uptime_checks/*', 'name')}`,
+			query: { etag: request.etag },
+			mutation: true,
+		})
 	}
 }
 

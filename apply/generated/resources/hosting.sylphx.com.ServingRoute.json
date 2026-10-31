@@ -1,0 +1,22 @@
+{
+  "collection": "serving_routes",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ServingRoute",
+  "message": "sylphx.hosting.v1.ServingRoute",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/serving_routes/{serving_route}",
+  "plural": "servingRoutes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "hosting",
+  "shape": "record",
+  "singular": "servingRoute",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "hosting.sylphx.com/ServingRoute"
+}

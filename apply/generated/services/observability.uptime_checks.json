@@ -1,0 +1,55 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "uptime_check_id"
+            ]
+          },
+          "id": "observability.uptime_checks.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "target_page_token"
+            ]
+          },
+          "id": "observability.uptime_checks.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "observability.uptime_checks.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "observability.uptime_checks.update",
+          "kind": "update"
+        },
+        {
+          "http": {
+            "query_params": [
+              "etag"
+            ]
+          },
+          "id": "observability.uptime_checks.delete",
+          "kind": "delete"
+        }
+      ],
+      "resource_type": "observability.sylphx.com/UptimeCheck"
+    }
+  ]
+}

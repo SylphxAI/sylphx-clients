@@ -1,0 +1,22 @@
+{
+  "collection": "uptime_sources",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UptimeSource",
+  "message": "sylphx.observability.v1.UptimeSource",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_sources/{uptime_source}",
+  "plural": "uptimeSources",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "spec_status",
+  "singular": "uptimeSource",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/UptimeSource"
+}

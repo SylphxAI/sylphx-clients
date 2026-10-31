@@ -19546,6 +19546,20 @@
         ],
         "type": "object"
       },
+      "sylphx.hosting.v1.GetServiceObservationRequest": {
+        "description": "The request of GetServiceObservation.",
+        "properties": {
+          "name": {
+            "description": "Service id under the service_observations collection.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServiceObservation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.hosting.v1.GetServiceRequest": {
         "description": "The request of GetService.",
         "properties": {
@@ -19560,6 +19574,20 @@
         ],
         "type": "object"
       },
+      "sylphx.hosting.v1.GetServingRouteRequest": {
+        "description": "The request of GetServingRoute.",
+        "properties": {
+          "name": {
+            "description": "Exact tenant-scoped route name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServingRoute"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.hosting.v1.GetSourceLinkRequest": {
         "description": "The request of GetSourceLink.",
         "properties": {
@@ -19567,6 +19595,20 @@
             "description": "The name of the source link to get.",
             "type": "string",
             "x-sylphx-resource-reference": "hosting.sylphx.com/SourceLink"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.hosting.v1.GetUptimeManifestRequest": {
+        "description": "Reads the current coherent source intent, without env values or secrets.",
+        "properties": {
+          "name": {
+            "description": "The singleton `uptime_manifests/current` in an authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/UptimeManifest"
           }
         },
         "required": [
@@ -19735,6 +19777,50 @@
               "$ref": "#/components/schemas/sylphx.hosting.v1.Service"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ListServingRoutesRequest": {
+        "description": "The request of ListServingRoutes.",
+        "properties": {
+          "page_size": {
+            "description": "At most 100 routes; each retains its full host/rule population.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Continuation bound to this parent and owner snapshot.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Exact authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServingRoute"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ListServingRoutesResponse": {
+        "description": "One page of the complete serving census.",
+        "properties": {
+          "next_page_token": {
+            "description": "Empty only at the end of this snapshot.",
+            "type": "string"
+          },
+          "serving_routes": {
+            "description": "Routes in stable identity order.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.hosting.v1.ServingRoute"
+            },
+            "type": "array"
+          },
+          "snapshot_id": {
+            "description": "Changes when routes, observations or current Release policy change.",
+            "type": "string"
           }
         },
         "type": "object"
@@ -19909,6 +19995,71 @@
             "description": "The Preview's URL.",
             "readOnly": true,
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ProbeServiceObservationRequest": {
+        "description": "One bounded safe HTTP instrument, without request headers or a body.",
+        "properties": {
+          "expect_body": {
+            "description": "Bounded literal body assertion for GET.",
+            "type": "string"
+          },
+          "expect_status": {
+            "description": "Allowed statuses; defaults to 200 through 299.",
+            "items": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "method": {
+            "description": "GET or HEAD; defaults to HEAD.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Same-environment service observation name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServiceObservation"
+          },
+          "path": {
+            "description": "Canonical safe path; defaults to /healthz.",
+            "type": "string"
+          },
+          "timeout": {
+            "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ProbeServiceObservationResponse": {
+        "description": "Sanitized evidence; no response body, credential or raw network error.",
+        "properties": {
+          "outcome": {
+            "description": "up, unexpected_status, body_mismatch, dns_failure, tls_failure,\nnetwork_failure, timeout or unknown.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Precise unknown or refusal reason, separate from outage.",
+            "type": "string"
+          },
+          "sample_time": {
+            "description": "Server observation time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "description": "Actual HTTP status, zero if no response was received.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
           }
         },
         "type": "object"
@@ -20136,6 +20287,45 @@
         ],
         "type": "object"
       },
+      "sylphx.hosting.v1.ServiceObservation": {
+        "description": "A no-wake readiness read of one service. Reading this Resource never sends\nHTTP to the workload, activates it, or treats absent observations as ready.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Time of the most recent owner observation."
+          },
+          "name": {
+            "description": "Uses the observed service's id.",
+            "type": "string"
+          },
+          "readiness": {
+            "description": "ready, not_ready or unknown; idle is distinct from unavailable evidence.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "reason": {
+            "description": "Explanation without issuing a wake-up request.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "release": {
+            "description": "Current serving Release identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "service": {
+            "description": "Same-environment service name.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable environment-service identity.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.hosting.v1.ServiceScaling": {
         "description": "ServiceScaling bounds a Service's instances. A Service idles to zero unless\n`min_instances` is set.",
         "properties": {
@@ -20277,6 +20467,128 @@
           "uri": {
             "description": "The default URL: `https://<ref>.sylphx.app`, or `*.unclaimed.sylphx.app`\nfor an unclaimed project.",
             "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ServingRoute": {
+        "description": "One public HTTPRoute and every Host/path/backend it binds. This is an owner\nread projection, including default deploy hosts without Domain records.",
+        "properties": {
+          "hostnames": {
+            "description": "Full declared hostname population; wildcard values stay wildcard.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Route generation and observation time."
+          },
+          "name": {
+            "description": "Tenant-scoped name of this route observation.",
+            "type": "string"
+          },
+          "observed": {
+            "description": "True only when the owner has observed the current route generation.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "rules": {
+            "description": "Every rule, including unsupported or unobserved ones.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.hosting.v1.ServingRouteRule"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "service": {
+            "description": "Owning same-environment service.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable identity of the underlying route lifetime.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ServingRouteBackend": {
+        "description": "Backend selection facts; source expectation is independently Release-owned.",
+        "properties": {
+          "revision": {
+            "description": "Immutable selected revision name, when the backend is a revision.",
+            "type": "string"
+          },
+          "weight": {
+            "description": "Effective positive selection weight; zero receives no traffic.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ServingRouteMatch": {
+        "description": "Match semantics are retained; regex/header/query matches are not invented\ninto an exact public observation.",
+        "properties": {
+          "method": {
+            "description": "Empty matches any method; otherwise the exact HTTP method.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Exact path or path expression.",
+            "type": "string"
+          },
+          "path_type": {
+            "description": "Exact, PathPrefix, or RegularExpression.",
+            "type": "string"
+          },
+          "requires_request_context": {
+            "description": "True when headers/query or unknown match extensions need caller input.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.hosting.v1.ServingRouteRule": {
+        "description": "A route rule's safe probe matches and independent current Release policy.",
+        "properties": {
+          "backends": {
+            "description": "Every selected backend, including weight zero for truthful readback.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.hosting.v1.ServingRouteBackend"
+            },
+            "type": "array"
+          },
+          "expected_release": {
+            "description": "Current serving Release, or the admitted rollout moving this rule.",
+            "type": "string"
+          },
+          "expected_source_shas": {
+            "description": "Expected tenant sources from current Release members and admitted\npositive-weight rollout choices; never copied from response headers.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "index": {
+            "description": "Stable index in this route generation.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "matches": {
+            "description": "Complete match population. No match means the default prefix /.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.hosting.v1.ServingRouteMatch"
+            },
+            "type": "array"
+          },
+          "unknown_reason": {
+            "description": "Nonempty for redirect-only, unsupported or unavailable policy.",
             "type": "string"
           }
         },
@@ -20426,6 +20738,51 @@
         "required": [
           "source_link"
         ],
+        "type": "object"
+      },
+      "sylphx.hosting.v1.UptimeManifest": {
+        "description": "A coherent source-intent read, distinct from a currently serving Release.",
+        "properties": {
+          "content_digest": {
+            "description": "Digest recorded for that bound source manifest.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "declarations_json": {
+            "description": "JSON manifest fragment containing only services[].name and\nresources.telemetry.check. Valid absence is represented as an empty array.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "manifest_version": {
+            "description": "Exact bound project manifest version.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "Only `uptime_manifests/current` is supported.",
+            "type": "string"
+          },
+          "revision": {
+            "description": "Complete source snapshot revision; callers must not order it lexically.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "source_sha": {
+            "description": "Source commit selected by the Hosting intent owner.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable source identity scoped to this environment.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.keys.v1.CreateKeyRequest": {
@@ -33969,6 +34326,48 @@
         ],
         "type": "object"
       },
+      "sylphx.observability.v1.CreateUptimeCheckRequest": {
+        "description": "Creates a check; Idempotency-Key replays the same lifecycle.",
+        "properties": {
+          "parent": {
+            "description": "The authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          },
+          "uptime_check": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck",
+            "description": "Safe observation policy."
+          },
+          "uptime_check_id": {
+            "description": "Unique DNS label, 1 through 63 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "uptime_check",
+          "uptime_check_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.DeleteUptimeCheckRequest": {
+        "description": "Tombstones a lifecycle; a recreated name receives a fresh uid.",
+        "properties": {
+          "etag": {
+            "description": "Current resource etag.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.observability.v1.ErrorEvent": {
         "description": "An Error Event is one immutable error occurrence, with breadcrumbs and\ncorrelation.",
         "properties": {
@@ -34399,6 +34798,38 @@
         ],
         "type": "object"
       },
+      "sylphx.observability.v1.GetUptimeCheckRequest": {
+        "description": "Reads one check with durable samples and coverage.",
+        "properties": {
+          "name": {
+            "description": "Exact check name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          },
+          "target_page_token": {
+            "description": "Continue the latest target population from status.next_target_page_token.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.GetUptimeSourceRequest": {
+        "description": "Reads the durable source subscription, independent of the current check set.",
+        "properties": {
+          "name": {
+            "description": "The singleton `uptime_sources/manifest` in an authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeSource"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.observability.v1.ListErrorEventsRequest": {
         "description": "The request of ListErrorEvents.",
         "properties": {
@@ -34581,6 +35012,46 @@
             "description": "The source maps, newest first.",
             "items": {
               "$ref": "#/components/schemas/sylphx.observability.v1.SourceMap"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.observability.v1.ListUptimeChecksRequest": {
+        "description": "Lists one environment, ordered by check id.",
+        "properties": {
+          "page_size": {
+            "description": "At most 100 checks per page.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation from this exact parent.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.ListUptimeChecksResponse": {
+        "description": "One page; callers follow next_page_token to read the full population.",
+        "properties": {
+          "next_page_token": {
+            "description": "Empty on the last page.",
+            "type": "string"
+          },
+          "uptime_checks": {
+            "description": "Checks in this page.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck"
             },
             "type": "array"
           }
@@ -35078,6 +35549,409 @@
         "required": [
           "scrubbing_policy"
         ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UpdateUptimeCheckRequest": {
+        "description": "Changes policy or pauses/resumes a check. The supplied meta.etag fences\nconcurrent updates. A new generation invalidates every outstanding claim.",
+        "properties": {
+          "update_mask": {
+            "description": "Writable spec fields; omitted replaces the complete spec.",
+            "type": "string"
+          },
+          "uptime_check": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck",
+            "description": "Exact resource name, etag and writable policy."
+          }
+        },
+        "required": [
+          "uptime_check"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UpdateUptimeSourceRequest": {
+        "description": "Sets the subscription's delegation and pause policy; replaces the whole spec.",
+        "properties": {
+          "update_mask": {
+            "description": "Only `spec` is supported; omission also replaces the whole spec.",
+            "type": "string"
+          },
+          "uptime_source": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeSource",
+            "description": "Subscription with an etag from Get, or empty on initial setup."
+          }
+        },
+        "required": [
+          "uptime_source"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeCheck": {
+        "description": "An UptimeCheck observes safe transport behavior or the public revision of\nevery authorized bound host/path. Workflows owns its durable clock.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata, generation and etag."
+          },
+          "name": {
+            "description": "The tenant-scoped check name.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheckSpec",
+            "description": "Safe desired observation policy."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheckStatus",
+            "description": "Durable evidence, including missing coverage.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "A new immutable identity on every creation, including name reuse.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeCheckSpec": {
+        "description": "Exactly one target is required. Private targets name a service in this\nenvironment; a ready observation never invokes or wakes that service.",
+        "properties": {
+          "bound_public_revisions": {
+            "description": "True enumerates every authorized bound public Host/path and compares\nindependent public response identity with the selected serving Release.",
+            "type": "boolean"
+          },
+          "execution_delegation": {
+            "description": "Access delegation naming Observability's workload principal, confined to\nthis environment and the needed read/invoke permissions. Every dispatch\nexchanges it afresh; expiration or revocation prevents outbound work.",
+            "type": "string"
+          },
+          "expect_body": {
+            "description": "Bounded literal substring, only with GET.",
+            "type": "string"
+          },
+          "expect_status": {
+            "description": "Transport successes; defaults to 200 through 299. Denial and rate limits\nalways remain unknown, even when included here.",
+            "items": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "failures_before_alert": {
+            "description": "Consecutive known failures before a transport alert; defaults to two.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "instrument": {
+            "description": "HTTP or READY; READY is valid only for a service target.",
+            "type": "string"
+          },
+          "interval": {
+            "description": "30, 60, 300 or 900 seconds; defaults to 60 seconds.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "method": {
+            "description": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+            "type": "string"
+          },
+          "notify": {
+            "description": "Existing email: or registered webhook: targets. Events owns signing,\ndelivery and replay. No unregistered callback is silently considered sent.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "path": {
+            "description": "Private HTTP path; defaults to /healthz. Not used by READY.",
+            "type": "string"
+          },
+          "paused": {
+            "description": "Paused checks dispatch nothing and accrue no expected slots.",
+            "type": "boolean"
+          },
+          "public_uri": {
+            "description": "HTTPS public URL, without credentials, query, fragment or redirects.",
+            "type": "string"
+          },
+          "service": {
+            "description": "Same-environment Hosting Service resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/Service"
+          },
+          "severity": {
+            "description": "ticket or page; defaults to ticket.",
+            "type": "string"
+          },
+          "timeout": {
+            "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "execution_delegation"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeCheckStatus": {
+        "description": "The durable check projection. Missing, denied and unknown evidence never\nbecomes success; unknown does not resolve an open episode.",
+        "properties": {
+          "conditions": {
+            "description": "Ready, Reconciling, Stalled.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "coverage": {
+            "description": "Exactly the 24-hour, 7-day and 30-day windows.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCoverage"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "firing": {
+            "description": "Whether any target has an open firing episode.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "last_result": {
+            "description": "up, down, match, mismatch or unknown.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "last_sample_time": {
+            "description": "Time of the last committed observation, absent before the first sample.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "next_target_page_token": {
+            "description": "Continue with GetUptimeCheck.target_page_token; aggregates cover all targets.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "Last reconciled generation.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "targets": {
+            "description": "Latest target population page (up to 100), including unknown targets.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.observability.v1.UptimeTargetStatus"
+            },
+            "readOnly": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeCoverage": {
+        "description": "Coverage counts due slots over persisted active lifetimes across updates.",
+        "properties": {
+          "expected": {
+            "description": "Due observations, including missing slots.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "failed": {
+            "description": "Known failed observations.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "missing": {
+            "description": "Due observations with no sample.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "succeeded": {
+            "description": "Known successful observations.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "unknown": {
+            "description": "Received but inconclusive observations.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "window_seconds": {
+            "description": "86400, 604800 or 2592000 seconds.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeSource": {
+        "description": "Persistent subscription to the environment's complete source-controlled checks.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Lifecycle-bound etag and generation."
+          },
+          "name": {
+            "description": "Only `uptime_sources/manifest` is supported.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeSourceSpec",
+            "description": "Delegated source reconciliation policy."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.observability.v1.UptimeSourceStatus",
+            "description": "Last applied source and visible reconciliation outcome.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "Never reused; ownership receipts survive an empty source set.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeSourceSpec": {
+        "description": "A tenant human grants the Observability workload the required Access scopes.",
+        "properties": {
+          "execution_delegation": {
+            "description": "Exact Access delegation reference; credentials never enter this resource.",
+            "type": "string"
+          },
+          "paused": {
+            "description": "Stops source reconciliation; existing checks keep their own pause policy.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "execution_delegation"
+        ],
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeSourceStatus": {
+        "description": "A source read failure never means a valid empty declaration set.",
+        "properties": {
+          "applied_revision": {
+            "description": "Opaque owner-provided revision of the complete desired set.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "conditions": {
+            "description": "Reconciling or Ready, independently of probe health.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "delegate_principal": {
+            "description": "Stable attested Observability workload principal to name as delegate.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "last_attempt_time": {
+            "description": "Latest completed reconciliation attempt.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "Subscription generation last fully converged.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "reason": {
+            "description": "Finite error code, empty after successful convergence.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "source_uid": {
+            "description": "Last fully converged source identity.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.observability.v1.UptimeTargetStatus": {
+        "description": "Latest independent public evidence for one exact bound Host/path.",
+        "properties": {
+          "events_deliveries": {
+            "description": "Existing Events carrier receipts; receiver delivery is read from Events.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "expected_release": {
+            "description": "Current selected serving Release, never desired or merely latest source.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expected_source_shas": {
+            "description": "Admitted positive-weight source population, empty when unknown.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "firing": {
+            "description": "Open episode latch; only proven equality or transport success resolves.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "observed_source_sha": {
+            "description": "Exactly one validated response header, empty when unknown.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why evidence is unknown or failed, without losing the distinction.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "result": {
+            "description": "up, down, match, mismatch or unknown.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sample_time": {
+            "description": "Actual observation time.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "target": {
+            "description": "Stable target identity within this check lifecycle.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uri": {
+            "description": "Exact public URL or same-environment service name.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.observability.v1.WriteLogEntriesRequest": {
@@ -103979,6 +104853,215 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/service_observations/{service_observation}": {
+      "get": {
+        "description": "Reads readiness without invoking or waking a service.",
+        "operationId": "hosting_service_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "service_observation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.hosting.v1.ServiceObservation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads readiness without invoking or waking a service.",
+        "tags": [
+          "hosting"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "hosting.service_observations.get",
+        "x-sylphx-permission": "hosting:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/service_observations/{service_observation}:probe": {
+      "post": {
+        "description": "Performs one safe same-environment transport observation. Unlike a\nreadiness read, this explicitly requested HTTP instrument may activate\nan idle service. No caller credential is forwarded to the workload.",
+        "operationId": "hosting_service_observations_probe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "service_observation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expect_body": {
+                    "description": "Bounded literal body assertion for GET.",
+                    "type": "string"
+                  },
+                  "expect_status": {
+                    "description": "Allowed statuses; defaults to 200 through 299.",
+                    "items": {
+                      "format": "int32",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "method": {
+                    "description": "GET or HEAD; defaults to HEAD.",
+                    "type": "string"
+                  },
+                  "path": {
+                    "description": "Canonical safe path; defaults to /healthz.",
+                    "type": "string"
+                  },
+                  "timeout": {
+                    "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.hosting.v1.ProbeServiceObservationResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Performs one safe same-environment transport observation. Unlike a readiness read, this explicitly requested HTTP instrument may activate an idle service. No caller credential is forwarded to the workload.",
+        "tags": [
+          "hosting"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "hosting.service_observations.probe",
+        "x-sylphx-permission": "hosting:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/services": {
       "get": {
         "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists services in a environment.",
@@ -105270,6 +106353,186 @@
         "x-sylphx-method": "hosting.service_rollouts.resume",
         "x-sylphx-permission": "hosting:write",
         "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/serving_routes": {
+      "get": {
+        "description": "Lists every authorized public route; follow all pages in one snapshot.",
+        "operationId": "hosting_serving_routes_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most 100 routes; each retains its full host/rule population.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Continuation bound to this parent and owner snapshot.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.hosting.v1.ListServingRoutesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists every authorized public route; follow all pages in one snapshot.",
+        "tags": [
+          "hosting"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "hosting.serving_routes.list",
+        "x-sylphx-permission": "hosting:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/serving_routes/{serving_route}": {
+      "get": {
+        "description": "Gets an authorized public route observation.",
+        "operationId": "hosting_serving_routes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "serving_route",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.hosting.v1.ServingRoute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets an authorized public route observation.",
+        "tags": [
+          "hosting"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "hosting.serving_routes.get",
+        "x-sylphx-permission": "hosting:read",
         "x-sylphx-stage": "preview"
       }
     },
@@ -112304,6 +113567,762 @@
         ],
         "x-sylphx-method": "auth.trusted_issuers.update",
         "x-sylphx-permission": "auth:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/uptime_checks": {
+      "get": {
+        "description": "Lists checks and aggregate status. GetUptimeCheck reads target pages.",
+        "operationId": "observability_uptime_checks_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most 100 checks per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation from this exact parent.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.observability.v1.ListUptimeChecksResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists checks and aggregate status. GetUptimeCheck reads target pages.",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "observability.uptime_checks.list",
+        "x-sylphx-permission": "observability:read",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Creates one tenant uptime check.",
+        "operationId": "observability_uptime_checks_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unique DNS label, 1 through 63 characters.",
+            "in": "query",
+            "name": "uptime_check_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates one tenant uptime check.",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "observability.uptime_checks.create",
+        "x-sylphx-permission": "observability:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/uptime_checks/{uptime_check}": {
+      "delete": {
+        "description": "Deletes one tenant uptime check.",
+        "operationId": "observability_uptime_checks_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uptime_check",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Current resource etag.",
+            "in": "query",
+            "name": "etag",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Deletes one tenant uptime check.",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "observability.uptime_checks.delete",
+        "x-sylphx-permission": "observability:write",
+        "x-sylphx-stage": "preview"
+      },
+      "get": {
+        "description": "Gets one tenant uptime check.",
+        "operationId": "observability_uptime_checks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uptime_check",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Continue the latest target population from status.next_target_page_token.",
+            "in": "query",
+            "name": "target_page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one tenant uptime check.",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "observability.uptime_checks.get",
+        "x-sylphx-permission": "observability:read",
+        "x-sylphx-stage": "preview"
+      },
+      "patch": {
+        "description": "Updates one tenant uptime check.",
+        "operationId": "observability_uptime_checks_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uptime_check",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Writable spec fields; omitted replaces the complete spec.",
+            "in": "query",
+            "name": "update_mask",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated field paths.",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.observability.v1.UptimeCheck"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Updates one tenant uptime check.",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "observability.uptime_checks.update",
+        "x-sylphx-permission": "observability:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/uptime_manifests/{uptime_manifest}": {
+      "get": {
+        "description": "Reads complete check declarations from the owner's selected source intent.\nMissing, unavailable or invalid sources are errors, never an empty set.",
+        "operationId": "hosting_uptime_manifests_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uptime_manifest",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.hosting.v1.UptimeManifest"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads complete check declarations from the owner's selected source intent. Missing, unavailable or invalid sources are errors, never an empty set.",
+        "tags": [
+          "hosting"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "hosting.uptime_manifests.get",
+        "x-sylphx-permission": "hosting:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/uptime_sources/{uptime_source}": {
+      "get": {
+        "description": "Gets the environment's manifest subscription (`uptime_sources/manifest`).",
+        "operationId": "observability_uptime_sources_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uptime_source",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.observability.v1.UptimeSource"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets the environment's manifest subscription (`uptime_sources/manifest`).",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "observability.uptime_sources.get",
+        "x-sylphx-permission": "observability:read",
+        "x-sylphx-stage": "preview"
+      },
+      "patch": {
+        "description": "Configures manifest reconciliation; absent subscriptions require an empty etag.",
+        "operationId": "observability_uptime_sources_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uptime_source",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only `spec` is supported; omission also replaces the whole spec.",
+            "in": "query",
+            "name": "update_mask",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated field paths.",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.observability.v1.UptimeSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.observability.v1.UptimeSource"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Configures manifest reconciliation; absent subscriptions require an empty etag.",
+        "tags": [
+          "observability"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "ETAG_MISMATCH",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-sylphx-method": "observability.uptime_sources.update",
+        "x-sylphx-permission": "observability:write",
         "x-sylphx-stage": "preview"
       }
     },

@@ -1,0 +1,25 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "observability.uptime_sources.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask"
+            ]
+          },
+          "id": "observability.uptime_sources.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "observability.sylphx.com/UptimeSource"
+    }
+  ]
+}

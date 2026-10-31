@@ -89,6 +89,49 @@ pub struct CreateSourceMapRequest {
     pub source_map: Option<SourceMap>,
 }
 
+/// Creates a check; Idempotency-Key replays the same lifecycle.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateUptimeCheckRequest {
+    /// The authorized environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Safe observation policy.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "uptimeCheck"
+    )]
+    pub uptime_check: Option<UptimeCheck>,
+    /// Unique DNS label, 1 through 63 characters.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "uptimeCheckId"
+    )]
+    pub uptime_check_id: String,
+}
+
+/// Tombstones a lifecycle; a recreated name receives a fresh uid.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteUptimeCheckRequest {
+    /// Exact resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Current resource etag.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+}
+
 /// An Error Event is one immutable error occurrence, with breadcrumbs and
 /// correlation.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -597,6 +640,35 @@ pub struct GetTraceRequest {
     pub name: String,
 }
 
+/// Reads one check with durable samples and coverage.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetUptimeCheckRequest {
+    /// Exact check name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Continue the latest target population from status.next_target_page_token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetPageToken"
+    )]
+    pub target_page_token: String,
+}
+
+/// Reads the durable source subscription, independent of the current check set.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetUptimeSourceRequest {
+    /// The singleton `uptime_sources/manifest` in an authorized environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of ListErrorEvents.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -786,6 +858,47 @@ pub struct ListSourceMapsResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "sourceMaps")]
     pub source_maps: Vec<SourceMap>,
     /// The token of the next page; empty on the last.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Lists one environment, ordered by check id.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListUptimeChecksRequest {
+    /// The authorized environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most 100 checks per page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation from this exact parent.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// One page; callers follow next_page_token to read the full population.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListUptimeChecksResponse {
+    /// Checks in this page.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "uptimeChecks")]
+    pub uptime_checks: Vec<UptimeCheck>,
+    /// Empty on the last page.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -1356,6 +1469,466 @@ pub struct UpdateScrubbingPolicyRequest {
     pub update_mask: String,
 }
 
+/// Changes policy or pauses/resumes a check. The supplied meta.etag fences
+/// concurrent updates. A new generation invalidates every outstanding claim.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateUptimeCheckRequest {
+    /// Exact resource name, etag and writable policy.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "uptimeCheck"
+    )]
+    pub uptime_check: Option<UptimeCheck>,
+    /// Writable spec fields; omitted replaces the complete spec.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+}
+
+/// Sets the subscription's delegation and pause policy; replaces the whole spec.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateUptimeSourceRequest {
+    /// Subscription with an etag from Get, or empty on initial setup.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "uptimeSource"
+    )]
+    pub uptime_source: Option<UptimeSource>,
+    /// Only `spec` is supported; omission also replaces the whole spec.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+}
+
+/// An UptimeCheck observes safe transport behavior or the public revision of
+/// every authorized bound host/path. Workflows owns its durable clock.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeCheck {
+    /// The tenant-scoped check name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// A new immutable identity on every creation, including name reuse.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata, generation and etag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Safe desired observation policy.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<UptimeCheckSpec>,
+    /// Durable evidence, including missing coverage.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<UptimeCheckStatus>,
+}
+
+/// Exactly one target is required. Private targets name a service in this
+/// environment; a ready observation never invokes or wakes that service.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeCheckSpec {
+    /// HTTPS public URL, without credentials, query, fragment or redirects.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "publicUri")]
+    pub public_uri: Option<String>,
+    /// Same-environment Hosting Service resource name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service: Option<String>,
+    /// True enumerates every authorized bound public Host/path and compares
+    /// independent public response identity with the selected serving Release.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "boundPublicRevisions"
+    )]
+    pub bound_public_revisions: Option<bool>,
+    /// HTTP or READY; READY is valid only for a service target.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub instrument: String,
+    /// GET or HEAD; defaults to HEAD. No headers, credentials or request body.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub method: String,
+    /// Private HTTP path; defaults to /healthz. Not used by READY.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub path: String,
+    /// 30, 60, 300 or 900 seconds; defaults to 60 seconds.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub interval: String,
+    /// 1, 2, 5 or 10 seconds; defaults to 10 seconds.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub timeout: String,
+    /// Transport successes; defaults to 200 through 299. Denial and rate limits
+    /// always remain unknown, even when included here.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "expectStatus")]
+    pub expect_status: Vec<u32>,
+    /// Bounded literal substring, only with GET.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectBody"
+    )]
+    pub expect_body: String,
+    /// Consecutive known failures before a transport alert; defaults to two.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "failuresBeforeAlert"
+    )]
+    pub failures_before_alert: u32,
+    /// Paused checks dispatch nothing and accrue no expected slots.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub paused: bool,
+    /// ticket or page; defaults to ticket.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub severity: String,
+    /// Existing email: or registered webhook: targets. Events owns signing,
+    /// delivery and replay. No unregistered callback is silently considered sent.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notify: Vec<String>,
+    /// Access delegation naming Observability's workload principal, confined to
+    /// this environment and the needed read/invoke permissions. Every dispatch
+    /// exchanges it afresh; expiration or revocation prevents outbound work.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionDelegation"
+    )]
+    pub execution_delegation: String,
+}
+
+/// The durable check projection. Missing, denied and unknown evidence never
+/// becomes success; unknown does not resolve an open episode.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeCheckStatus {
+    /// Last reconciled generation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Ready, Reconciling, Stalled.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Time of the last committed observation, absent before the first sample.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastSampleTime"
+    )]
+    pub last_sample_time: String,
+    /// up, down, match, mismatch or unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastResult"
+    )]
+    pub last_result: String,
+    /// Whether any target has an open firing episode.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub firing: bool,
+    /// Exactly the 24-hour, 7-day and 30-day windows.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage: Vec<UptimeCoverage>,
+    /// Latest target population page (up to 100), including unknown targets.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<UptimeTargetStatus>,
+    /// Continue with GetUptimeCheck.target_page_token; aggregates cover all targets.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextTargetPageToken"
+    )]
+    pub next_target_page_token: String,
+}
+
+/// Coverage counts due slots over persisted active lifetimes across updates.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeCoverage {
+    /// 86400, 604800 or 2592000 seconds.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "windowSeconds"
+    )]
+    pub window_seconds: i64,
+    /// Due observations, including missing slots.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub expected: i64,
+    /// Known successful observations.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub succeeded: i64,
+    /// Known failed observations.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub failed: i64,
+    /// Received but inconclusive observations.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub unknown: i64,
+    /// Due observations with no sample.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub missing: i64,
+}
+
+/// Persistent subscription to the environment's complete source-controlled checks.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeSource {
+    /// Only `uptime_sources/manifest` is supported.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Never reused; ownership receipts survive an empty source set.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Lifecycle-bound etag and generation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Delegated source reconciliation policy.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<UptimeSourceSpec>,
+    /// Last applied source and visible reconciliation outcome.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<UptimeSourceStatus>,
+}
+
+/// A tenant human grants the Observability workload the required Access scopes.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeSourceSpec {
+    /// Exact Access delegation reference; credentials never enter this resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionDelegation"
+    )]
+    pub execution_delegation: String,
+    /// Stops source reconciliation; existing checks keep their own pause policy.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub paused: bool,
+}
+
+/// A source read failure never means a valid empty declaration set.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeSourceStatus {
+    /// Subscription generation last fully converged.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Reconciling or Ready, independently of probe health.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Last fully converged source identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceUid"
+    )]
+    pub source_uid: String,
+    /// Opaque owner-provided revision of the complete desired set.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appliedRevision"
+    )]
+    pub applied_revision: String,
+    /// Finite error code, empty after successful convergence.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// Latest completed reconciliation attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastAttemptTime"
+    )]
+    pub last_attempt_time: String,
+    /// Stable attested Observability workload principal to name as delegate.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "delegatePrincipal"
+    )]
+    pub delegate_principal: String,
+}
+
+/// Latest independent public evidence for one exact bound Host/path.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UptimeTargetStatus {
+    /// Stable target identity within this check lifecycle.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub target: String,
+    /// Exact public URL or same-environment service name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uri: String,
+    /// Current selected serving Release, never desired or merely latest source.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedRelease"
+    )]
+    pub expected_release: String,
+    /// Admitted positive-weight source population, empty when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "expectedSourceShas"
+    )]
+    pub expected_source_shas: Vec<String>,
+    /// Exactly one validated response header, empty when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "observedSourceSha"
+    )]
+    pub observed_source_sha: String,
+    /// up, down, match, mismatch or unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub result: String,
+    /// Why evidence is unknown or failed, without losing the distinction.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// Actual observation time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sampleTime"
+    )]
+    pub sample_time: String,
+    /// Open episode latch; only proven equality or transport success resolves.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub firing: bool,
+    /// Existing Events carrier receipts; receiver delivery is read from Events.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "eventsDeliveries"
+    )]
+    pub events_deliveries: Vec<String>,
+}
+
 /// The request of WriteLogEntries.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1672,6 +2245,20 @@ pub struct ObservabilityApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> ObservabilityApi<'a, T> {
+    /// The `uptime_sources` collection.
+    pub fn uptime_sources(&self) -> UptimeSourcesCollection<'a, T> {
+        UptimeSourcesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `uptime_checks` collection.
+    pub fn uptime_checks(&self) -> UptimeChecksCollection<'a, T> {
+        UptimeChecksCollection {
+            client: self.client,
+        }
+    }
+
     /// The `log_entries` collection.
     pub fn log_entries(&self) -> LogEntriesCollection<'a, T> {
         LogEntriesCollection {
@@ -1719,6 +2306,253 @@ impl<'a, T: crate::runtime::Transport> ObservabilityApi<'a, T> {
         ScrubbingPoliciesCollection {
             client: self.client,
         }
+    }
+}
+
+/// `uptime_sources` of Sylphx Observability: Resource type `observability.sylphx.com/UptimeSource`.
+pub struct UptimeSourcesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> UptimeSourcesCollection<'a, T> {
+    /// Gets the environment's manifest subscription (`uptime_sources/manifest`).
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/uptime_sources/*}` · permission `observability:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetUptimeSourceRequest,
+    ) -> Result<UptimeSource, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/uptime_sources/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Configures manifest reconciliation; absent subscriptions require an empty etag.
+    ///
+    /// `PATCH /v1/{uptime_source.name=orgs/*/projects/*/envs/*/uptime_sources/*}` · permission `observability:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`.
+    pub async fn update(
+        &self,
+        request: UpdateUptimeSourceRequest,
+    ) -> Result<UptimeSource, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .uptime_source
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/uptime_sources/*",
+                "uptime_source.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.uptime_source)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `uptime_checks` of Sylphx Observability: Resource type `observability.sylphx.com/UptimeCheck`.
+pub struct UptimeChecksCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> UptimeChecksCollection<'a, T> {
+    /// Creates one tenant uptime check.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks` · permission `observability:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+    pub async fn create(
+        &self,
+        request: CreateUptimeCheckRequest,
+    ) -> Result<UptimeCheck, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/uptime_checks",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("uptime_check_id", &request.uptime_check_id);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.uptime_check)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Gets one tenant uptime check.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/uptime_checks/*}` · permission `observability:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetUptimeCheckRequest,
+    ) -> Result<UptimeCheck, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/uptime_checks/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("target_page_token", &request.target_page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists checks and aggregate status. GetUptimeCheck reads target pages.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks` · permission `observability:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+    pub async fn list(
+        &self,
+        request: ListUptimeChecksRequest,
+    ) -> Result<ListUptimeChecksResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/uptime_checks",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListUptimeChecksRequest,
+    ) -> Result<Vec<UptimeCheck>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.uptime_checks);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Updates one tenant uptime check.
+    ///
+    /// `PATCH /v1/{uptime_check.name=orgs/*/projects/*/envs/*/uptime_checks/*}` · permission `observability:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+    pub async fn update(
+        &self,
+        request: UpdateUptimeCheckRequest,
+    ) -> Result<UptimeCheck, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .uptime_check
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/uptime_checks/*",
+                "uptime_check.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.uptime_check)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Deletes one tenant uptime check.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/uptime_checks/*}` · permission `observability:write` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`.
+    pub async fn delete(
+        &self,
+        request: DeleteUptimeCheckRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/uptime_checks/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("etag", &request.etag);
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 

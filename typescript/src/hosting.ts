@@ -119,15 +119,33 @@ export interface GetRolloutRequest {
 	name: string
 }
 
+/** The request of GetServiceObservation. */
+export interface GetServiceObservationRequest {
+	/** Service id under the service_observations collection. */
+	name: string
+}
+
 /** The request of GetService. */
 export interface GetServiceRequest {
 	/** The name of the service to get. */
 	name: string
 }
 
+/** The request of GetServingRoute. */
+export interface GetServingRouteRequest {
+	/** Exact tenant-scoped route name. */
+	name: string
+}
+
 /** The request of GetSourceLink. */
 export interface GetSourceLinkRequest {
 	/** The name of the source link to get. */
+	name: string
+}
+
+/** Reads the current coherent source intent, without env values or secrets. */
+export interface GetUptimeManifestRequest {
+	/** The singleton `uptime_manifests/current` in an authorized environment. */
 	name: string
 }
 
@@ -195,6 +213,26 @@ export interface ListServicesResponse {
 	services?: Service[]
 	/** The token of the next page; empty on the last page. */
 	nextPageToken?: string
+}
+
+/** The request of ListServingRoutes. */
+export interface ListServingRoutesRequest {
+	/** Exact authorized environment. */
+	parent: string
+	/** At most 100 routes; each retains its full host/rule population. */
+	pageSize?: number
+	/** Continuation bound to this parent and owner snapshot. */
+	pageToken?: string
+}
+
+/** One page of the complete serving census. */
+export interface ListServingRoutesResponse {
+	/** Routes in stable identity order. */
+	servingRoutes?: ServingRoute[]
+	/** Empty only at the end of this snapshot. */
+	nextPageToken?: string
+	/** Changes when routes, observations or current Release policy change. */
+	snapshotId?: string
 }
 
 /** The request of ListSourceLinks. */
@@ -268,6 +306,37 @@ export interface PreviewStatus {
 	readonly commit?: string
 	/** When an idle Preview is torn down. */
 	readonly expireTime?: string
+}
+
+/** One bounded safe HTTP instrument, without request headers or a body. */
+export interface ProbeServiceObservationRequest {
+	/** Same-environment service observation name. */
+	name: string
+	/** GET or HEAD; defaults to HEAD. */
+	method?: string
+	/** Canonical safe path; defaults to /healthz. */
+	path?: string
+	/** Allowed statuses; defaults to 200 through 299. */
+	expectStatus?: number[]
+	/** Bounded literal body assertion for GET. */
+	expectBody?: string
+	/** 1, 2, 5 or 10 seconds; defaults to 10 seconds. */
+	timeout?: string
+}
+
+/** Sanitized evidence; no response body, credential or raw network error. */
+export interface ProbeServiceObservationResponse {
+	/**
+	 * up, unexpected_status, body_mismatch, dns_failure, tls_failure,
+	 * network_failure, timeout or unknown.
+	 */
+	outcome?: string
+	/** Precise unknown or refusal reason, separate from outage. */
+	reason?: string
+	/** Actual HTTP status, zero if no response was received. */
+	status?: number
+	/** Server observation time. */
+	sampleTime?: string
 }
 
 /** The request of ResumeRollout. */
@@ -375,6 +444,27 @@ export interface ServiceHealth {
 }
 
 /**
+ * A no-wake readiness read of one service. Reading this Resource never sends
+ * HTTP to the workload, activates it, or treats absent observations as ready.
+ */
+export interface ServiceObservation {
+	/** Uses the observed service's id. */
+	name?: string
+	/** Immutable environment-service identity. */
+	readonly uid?: string
+	/** Time of the most recent owner observation. */
+	meta?: common.ResourceMeta
+	/** Same-environment service name. */
+	readonly service?: string
+	/** ready, not_ready or unknown; idle is distinct from unavailable evidence. */
+	readonly readiness?: string
+	/** Explanation without issuing a wake-up request. */
+	readonly reason?: string
+	/** Current serving Release identity. */
+	readonly release?: string
+}
+
+/**
  * ServiceScaling bounds a Service's instances. A Service idles to zero unless
  * `min_instances` is set.
  */
@@ -458,6 +548,69 @@ export interface ServiceStatus {
 }
 
 /**
+ * One public HTTPRoute and every Host/path/backend it binds. This is an owner
+ * read projection, including default deploy hosts without Domain records.
+ */
+export interface ServingRoute {
+	/** Tenant-scoped name of this route observation. */
+	name?: string
+	/** Stable identity of the underlying route lifetime. */
+	readonly uid?: string
+	/** Route generation and observation time. */
+	meta?: common.ResourceMeta
+	/** Owning same-environment service. */
+	readonly service?: string
+	/** Full declared hostname population; wildcard values stay wildcard. */
+	readonly hostnames?: string[]
+	/** Every rule, including unsupported or unobserved ones. */
+	readonly rules?: ServingRouteRule[]
+	/** True only when the owner has observed the current route generation. */
+	readonly observed?: boolean
+}
+
+/** Backend selection facts; source expectation is independently Release-owned. */
+export interface ServingRouteBackend {
+	/** Immutable selected revision name, when the backend is a revision. */
+	revision?: string
+	/** Effective positive selection weight; zero receives no traffic. */
+	weight?: number
+}
+
+/**
+ * Match semantics are retained; regex/header/query matches are not invented
+ * into an exact public observation.
+ */
+export interface ServingRouteMatch {
+	/** Exact, PathPrefix, or RegularExpression. */
+	pathType?: string
+	/** Exact path or path expression. */
+	path?: string
+	/** Empty matches any method; otherwise the exact HTTP method. */
+	method?: string
+	/** True when headers/query or unknown match extensions need caller input. */
+	requiresRequestContext?: boolean
+}
+
+/** A route rule's safe probe matches and independent current Release policy. */
+export interface ServingRouteRule {
+	/** Stable index in this route generation. */
+	index?: number
+	/** Complete match population. No match means the default prefix /. */
+	matches?: ServingRouteMatch[]
+	/** Every selected backend, including weight zero for truthful readback. */
+	backends?: ServingRouteBackend[]
+	/** Current serving Release, or the admitted rollout moving this rule. */
+	expectedRelease?: string
+	/**
+	 * Expected tenant sources from current Release members and admitted
+	 * positive-weight rollout choices; never copied from response headers.
+	 */
+	expectedSourceShas?: string[]
+	/** Nonempty for redirect-only, unsupported or unavailable policy. */
+	unknownReason?: string
+}
+
+/**
  * A SourceLink links a project to one repository through Sylphx Connections.
  * Source is read at an exact commit with a token from the credential service
  * narrowed to that repository; a webhook is only a latency hint.
@@ -528,6 +681,29 @@ export interface UpdateSourceLinkRequest {
 	validateOnly?: boolean
 }
 
+/** A coherent source-intent read, distinct from a currently serving Release. */
+export interface UptimeManifest {
+	/** Only `uptime_manifests/current` is supported. */
+	name?: string
+	/** Stable source identity scoped to this environment. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** Complete source snapshot revision; callers must not order it lexically. */
+	readonly revision?: string
+	/** Source commit selected by the Hosting intent owner. */
+	readonly sourceSha?: string
+	/** Exact bound project manifest version. */
+	readonly manifestVersion?: string
+	/** Digest recorded for that bound source manifest. */
+	readonly contentDigest?: string
+	/**
+	 * JSON manifest fragment containing only services[].name and
+	 * resources.telemetry.check. Valid absence is represented as an empty array.
+	 */
+	readonly declarationsJson?: string
+}
+
 /** HealthProtocol is how a Service is probed. */
 export type HealthProtocol = 'http' | 'tcp' | (string & {})
 
@@ -587,8 +763,11 @@ runtime.registerSchemas({
 	],
 	'sylphx.hosting.v1.GetPreviewRequest': [],
 	'sylphx.hosting.v1.GetRolloutRequest': [],
+	'sylphx.hosting.v1.GetServiceObservationRequest': [],
 	'sylphx.hosting.v1.GetServiceRequest': [],
+	'sylphx.hosting.v1.GetServingRouteRequest': [],
 	'sylphx.hosting.v1.GetSourceLinkRequest': [],
+	'sylphx.hosting.v1.GetUptimeManifestRequest': [],
 	'sylphx.hosting.v1.ListPreviewsRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -616,6 +795,15 @@ runtime.registerSchemas({
 		['services', 'services', 'sylphx.hosting.v1.Service'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.hosting.v1.ListServingRoutesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.hosting.v1.ListServingRoutesResponse': [
+		['servingRoutes', 'serving_routes', 'sylphx.hosting.v1.ServingRoute'],
+		['nextPageToken', 'next_page_token'],
+		['snapshotId', 'snapshot_id'],
+	],
 	'sylphx.hosting.v1.ListSourceLinksRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -640,6 +828,13 @@ runtime.registerSchemas({
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['expireTime', 'expire_time'],
+	],
+	'sylphx.hosting.v1.ProbeServiceObservationRequest': [
+		['expectStatus', 'expect_status'],
+		['expectBody', 'expect_body'],
+	],
+	'sylphx.hosting.v1.ProbeServiceObservationResponse': [
+		['sampleTime', 'sample_time'],
 	],
 	'sylphx.hosting.v1.ResumeRolloutRequest': [
 		['validateOnly', 'validate_only'],
@@ -670,6 +865,9 @@ runtime.registerSchemas({
 	'sylphx.hosting.v1.ServiceHealth': [
 		['startupTimeout', 'startup_timeout'],
 	],
+	'sylphx.hosting.v1.ServiceObservation': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+	],
 	'sylphx.hosting.v1.ServiceScaling': [
 		['minInstances', 'min_instances'],
 		['maxInstances', 'max_instances'],
@@ -689,6 +887,22 @@ runtime.registerSchemas({
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['readyInstances', 'ready_instances'],
+	],
+	'sylphx.hosting.v1.ServingRoute': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['rules', 'rules', 'sylphx.hosting.v1.ServingRouteRule'],
+	],
+	'sylphx.hosting.v1.ServingRouteBackend': [],
+	'sylphx.hosting.v1.ServingRouteMatch': [
+		['pathType', 'path_type'],
+		['requiresRequestContext', 'requires_request_context'],
+	],
+	'sylphx.hosting.v1.ServingRouteRule': [
+		['matches', 'matches', 'sylphx.hosting.v1.ServingRouteMatch'],
+		['backends', 'backends', 'sylphx.hosting.v1.ServingRouteBackend'],
+		['expectedRelease', 'expected_release'],
+		['expectedSourceShas', 'expected_source_shas'],
+		['unknownReason', 'unknown_reason'],
 	],
 	'sylphx.hosting.v1.SourceLink': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -718,6 +932,13 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.hosting.v1.UptimeManifest': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['sourceSha', 'source_sha'],
+		['manifestVersion', 'manifest_version'],
+		['contentDigest', 'content_digest'],
+		['declarationsJson', 'declarations_json'],
+	],
 })
 
 /**
@@ -728,6 +949,12 @@ runtime.registerSchemas({
  * Namespace of Sylphx Hosting on `Sylphx`.
  */
 export class HostingApi {
+	/** The `uptime_manifests` collection. */
+	readonly uptimeManifests: UptimeManifestsCollection
+	/** The `serving_routes` collection. */
+	readonly servingRoutes: ServingRoutesCollection
+	/** The `service_observations` collection. */
+	readonly serviceObservations: ServiceObservationsCollection
 	/** The `services` collection. */
 	readonly services: ServicesCollection
 	/** The `service_rollouts` collection. */
@@ -738,10 +965,137 @@ export class HostingApi {
 	readonly sourceLinks: SourceLinksCollection
 
 	constructor(client: runtime.Client) {
+		this.uptimeManifests = new UptimeManifestsCollection(client)
+		this.servingRoutes = new ServingRoutesCollection(client)
+		this.serviceObservations = new ServiceObservationsCollection(client)
 		this.services = new ServicesCollection(client)
 		this.serviceRollouts = new ServiceRolloutsCollection(client)
 		this.previews = new PreviewsCollection(client)
 		this.sourceLinks = new SourceLinksCollection(client)
+	}
+}
+
+/** `uptime_manifests` of Sylphx Hosting: Resource type `hosting.sylphx.com/UptimeManifest`. */
+export class UptimeManifestsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Reads complete check declarations from the owner's selected source intent.
+	 * Missing, unavailable or invalid sources are errors, never an empty set.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/uptime_manifests/*}` · permission `hosting:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetUptimeManifestRequest): Promise<UptimeManifest> {
+		return this.client.call<UptimeManifest>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/uptime_manifests/*', 'name')}`,
+			responseType: 'sylphx.hosting.v1.UptimeManifest',
+			mutation: false,
+		})
+	}
+}
+
+/** `serving_routes` of Sylphx Hosting: Resource type `hosting.sylphx.com/ServingRoute`. */
+export class ServingRoutesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets an authorized public route observation.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/serving_routes/*}` · permission `hosting:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetServingRouteRequest): Promise<ServingRoute> {
+		return this.client.call<ServingRoute>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/serving_routes/*', 'name')}`,
+			responseType: 'sylphx.hosting.v1.ServingRoute',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists every authorized public route; follow all pages in one snapshot.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/serving_routes` · permission `hosting:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListServingRoutesRequest): Promise<ListServingRoutesResponse> {
+		return this.client.call<ListServingRoutesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/serving_routes`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.hosting.v1.ListServingRoutesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListServingRoutesRequest): AsyncGenerator<ServingRoute> {
+		let next: ListServingRoutesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.servingRoutes ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+}
+
+/** `service_observations` of Sylphx Hosting: Resource type `hosting.sylphx.com/ServiceObservation`. */
+export class ServiceObservationsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Reads readiness without invoking or waking a service.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/service_observations/*}` · permission `hosting:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetServiceObservationRequest): Promise<ServiceObservation> {
+		return this.client.call<ServiceObservation>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/service_observations/*', 'name')}`,
+			responseType: 'sylphx.hosting.v1.ServiceObservation',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Performs one safe same-environment transport observation. Unlike a
+	 * readiness read, this explicitly requested HTTP instrument may activate
+	 * an idle service. No caller credential is forwarded to the workload.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/service_observations/*}:probe` · permission `hosting:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async probe(request: ProbeServiceObservationRequest): Promise<ProbeServiceObservationResponse> {
+		return this.client.call<ProbeServiceObservationResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/service_observations/*', 'name')}:probe`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.hosting.v1.ProbeServiceObservationRequest',
+			responseType: 'sylphx.hosting.v1.ProbeServiceObservationResponse',
+			mutation: true,
+		})
 	}
 }
 

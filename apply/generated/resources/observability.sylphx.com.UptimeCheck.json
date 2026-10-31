@@ -1,0 +1,22 @@
+{
+  "collection": "uptime_checks",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "UptimeCheck",
+  "message": "sylphx.observability.v1.UptimeCheck",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/uptime_checks/{uptime_check}",
+  "plural": "uptimeChecks",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "observability",
+  "shape": "spec_status",
+  "singular": "uptimeCheck",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "observability.sylphx.com/UptimeCheck"
+}

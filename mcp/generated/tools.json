@@ -19016,6 +19016,196 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Reads complete check declarations from the owner's selected source intent. Missing, unavailable or invalid sources are errors, never an empty set."
+      },
+      "description": "Reads complete check declarations from the owner's selected source intent.\nMissing, unavailable or invalid sources are errors, never an empty set.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/uptime_manifests/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Reads the current coherent source intent, without env values or secrets.",
+        "properties": {
+          "name": {
+            "description": "The singleton `uptime_manifests/current` in an authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/UptimeManifest"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.uptime_manifests.get",
+      "permission": "hosting:read",
+      "tool": "hosting_uptime_manifests_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an authorized public route observation."
+      },
+      "description": "Gets an authorized public route observation.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/serving_routes/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetServingRoute.",
+        "properties": {
+          "name": {
+            "description": "Exact tenant-scoped route name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServingRoute"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.serving_routes.get",
+      "permission": "hosting:read",
+      "tool": "hosting_serving_routes_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists every authorized public route; follow all pages in one snapshot."
+      },
+      "description": "Lists every authorized public route; follow all pages in one snapshot.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/serving_routes",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListServingRoutes.",
+        "properties": {
+          "page_size": {
+            "description": "At most 100 routes; each retains its full host/rule population.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Continuation bound to this parent and owner snapshot.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Exact authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServingRoute"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.serving_routes.list",
+      "permission": "hosting:read",
+      "tool": "hosting_serving_routes_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads readiness without invoking or waking a service."
+      },
+      "description": "Reads readiness without invoking or waking a service.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/service_observations/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetServiceObservation.",
+        "properties": {
+          "name": {
+            "description": "Service id under the service_observations collection.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServiceObservation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.service_observations.get",
+      "permission": "hosting:read",
+      "tool": "hosting_service_observations_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Performs one safe same-environment transport observation. Unlike a readiness read, this explicitly requested HTTP instrument may activate an idle service. No caller credential is forwarded to the workload."
+      },
+      "description": "Performs one safe same-environment transport observation. Unlike a\nreadiness read, this explicitly requested HTTP instrument may activate\nan idle service. No caller credential is forwarded to the workload.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/service_observations/*}:probe",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "One bounded safe HTTP instrument, without request headers or a body.",
+        "properties": {
+          "expect_body": {
+            "description": "Bounded literal body assertion for GET.",
+            "type": "string"
+          },
+          "expect_status": {
+            "description": "Allowed statuses; defaults to 200 through 299.",
+            "items": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "method": {
+            "description": "GET or HEAD; defaults to HEAD.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Same-environment service observation name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "hosting.sylphx.com/ServiceObservation"
+          },
+          "path": {
+            "description": "Canonical safe path; defaults to /healthz.",
+            "type": "string"
+          },
+          "timeout": {
+            "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "hosting.service_observations.probe",
+      "permission": "hosting:read",
+      "tool": "hosting_service_observations_probe"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a service."
       },
       "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a service.",
@@ -35871,6 +36061,551 @@
       "method_id": "notify.inbound_sms.list",
       "permission": "notify:read",
       "tool": "notify_inbound_sms_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets the environment's manifest subscription (`uptime_sources/manifest`)."
+      },
+      "description": "Gets the environment's manifest subscription (`uptime_sources/manifest`).",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/uptime_sources/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Reads the durable source subscription, independent of the current check set.",
+        "properties": {
+          "name": {
+            "description": "The singleton `uptime_sources/manifest` in an authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeSource"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_sources.get",
+      "permission": "observability:read",
+      "tool": "observability_uptime_sources_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Configures manifest reconciliation; absent subscriptions require an empty etag."
+      },
+      "description": "Configures manifest reconciliation; absent subscriptions require an empty etag.",
+      "effect": "write",
+      "http": "PATCH /v1/{uptime_source.name=orgs/*/projects/*/envs/*/uptime_sources/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Sets the subscription's delegation and pause policy; replaces the whole spec.",
+        "properties": {
+          "update_mask": {
+            "description": "Only `spec` is supported; omission also replaces the whole spec.",
+            "type": "string"
+          },
+          "uptime_source": {
+            "additionalProperties": false,
+            "description": "Subscription with an etag from Get, or empty on initial setup.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Lifecycle-bound etag and generation.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "Only `uptime_sources/manifest` is supported.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Delegated source reconciliation policy.",
+                "properties": {
+                  "execution_delegation": {
+                    "description": "Exact Access delegation reference; credentials never enter this resource.",
+                    "type": "string"
+                  },
+                  "paused": {
+                    "description": "Stops source reconciliation; existing checks keep their own pause policy.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "execution_delegation"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "uptime_source"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_sources.update",
+      "permission": "observability:write",
+      "tool": "observability_uptime_sources_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates one tenant uptime check."
+      },
+      "description": "Creates one tenant uptime check.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Creates a check; Idempotency-Key replays the same lifecycle.",
+        "properties": {
+          "parent": {
+            "description": "The authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          },
+          "uptime_check": {
+            "additionalProperties": false,
+            "description": "Safe observation policy.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata, generation and etag.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "The tenant-scoped check name.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Safe desired observation policy.",
+                "properties": {
+                  "bound_public_revisions": {
+                    "description": "True enumerates every authorized bound public Host/path and compares\nindependent public response identity with the selected serving Release.",
+                    "type": "boolean"
+                  },
+                  "execution_delegation": {
+                    "description": "Access delegation naming Observability's workload principal, confined to\nthis environment and the needed read/invoke permissions. Every dispatch\nexchanges it afresh; expiration or revocation prevents outbound work.",
+                    "type": "string"
+                  },
+                  "expect_body": {
+                    "description": "Bounded literal substring, only with GET.",
+                    "type": "string"
+                  },
+                  "expect_status": {
+                    "description": "Transport successes; defaults to 200 through 299. Denial and rate limits\nalways remain unknown, even when included here.",
+                    "items": {
+                      "format": "int32",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "failures_before_alert": {
+                    "description": "Consecutive known failures before a transport alert; defaults to two.",
+                    "format": "int32",
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "instrument": {
+                    "description": "HTTP or READY; READY is valid only for a service target.",
+                    "type": "string"
+                  },
+                  "interval": {
+                    "description": "30, 60, 300 or 900 seconds; defaults to 60 seconds.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "method": {
+                    "description": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+                    "type": "string"
+                  },
+                  "notify": {
+                    "description": "Existing email: or registered webhook: targets. Events owns signing,\ndelivery and replay. No unregistered callback is silently considered sent.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "path": {
+                    "description": "Private HTTP path; defaults to /healthz. Not used by READY.",
+                    "type": "string"
+                  },
+                  "paused": {
+                    "description": "Paused checks dispatch nothing and accrue no expected slots.",
+                    "type": "boolean"
+                  },
+                  "public_uri": {
+                    "description": "HTTPS public URL, without credentials, query, fragment or redirects.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "Same-environment Hosting Service resource name.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "hosting.sylphx.com/Service"
+                  },
+                  "severity": {
+                    "description": "ticket or page; defaults to ticket.",
+                    "type": "string"
+                  },
+                  "timeout": {
+                    "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "execution_delegation"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "uptime_check_id": {
+            "description": "Unique DNS label, 1 through 63 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "uptime_check",
+          "uptime_check_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_checks.create",
+      "permission": "observability:write",
+      "tool": "observability_uptime_checks_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets one tenant uptime check."
+      },
+      "description": "Gets one tenant uptime check.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/uptime_checks/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Reads one check with durable samples and coverage.",
+        "properties": {
+          "name": {
+            "description": "Exact check name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          },
+          "target_page_token": {
+            "description": "Continue the latest target population from status.next_target_page_token.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_checks.get",
+      "permission": "observability:read",
+      "tool": "observability_uptime_checks_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists checks and aggregate status. GetUptimeCheck reads target pages."
+      },
+      "description": "Lists checks and aggregate status. GetUptimeCheck reads target pages.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Lists one environment, ordered by check id.",
+        "properties": {
+          "page_size": {
+            "description": "At most 100 checks per page.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation from this exact parent.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The authorized environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_checks.list",
+      "permission": "observability:read",
+      "tool": "observability_uptime_checks_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates one tenant uptime check."
+      },
+      "description": "Updates one tenant uptime check.",
+      "effect": "write",
+      "http": "PATCH /v1/{uptime_check.name=orgs/*/projects/*/envs/*/uptime_checks/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Changes policy or pauses/resumes a check. The supplied meta.etag fences\nconcurrent updates. A new generation invalidates every outstanding claim.",
+        "properties": {
+          "update_mask": {
+            "description": "Writable spec fields; omitted replaces the complete spec.",
+            "type": "string"
+          },
+          "uptime_check": {
+            "additionalProperties": false,
+            "description": "Exact resource name, etag and writable policy.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata, generation and etag.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "The tenant-scoped check name.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Safe desired observation policy.",
+                "properties": {
+                  "bound_public_revisions": {
+                    "description": "True enumerates every authorized bound public Host/path and compares\nindependent public response identity with the selected serving Release.",
+                    "type": "boolean"
+                  },
+                  "execution_delegation": {
+                    "description": "Access delegation naming Observability's workload principal, confined to\nthis environment and the needed read/invoke permissions. Every dispatch\nexchanges it afresh; expiration or revocation prevents outbound work.",
+                    "type": "string"
+                  },
+                  "expect_body": {
+                    "description": "Bounded literal substring, only with GET.",
+                    "type": "string"
+                  },
+                  "expect_status": {
+                    "description": "Transport successes; defaults to 200 through 299. Denial and rate limits\nalways remain unknown, even when included here.",
+                    "items": {
+                      "format": "int32",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "failures_before_alert": {
+                    "description": "Consecutive known failures before a transport alert; defaults to two.",
+                    "format": "int32",
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "instrument": {
+                    "description": "HTTP or READY; READY is valid only for a service target.",
+                    "type": "string"
+                  },
+                  "interval": {
+                    "description": "30, 60, 300 or 900 seconds; defaults to 60 seconds.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  },
+                  "method": {
+                    "description": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+                    "type": "string"
+                  },
+                  "notify": {
+                    "description": "Existing email: or registered webhook: targets. Events owns signing,\ndelivery and replay. No unregistered callback is silently considered sent.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "path": {
+                    "description": "Private HTTP path; defaults to /healthz. Not used by READY.",
+                    "type": "string"
+                  },
+                  "paused": {
+                    "description": "Paused checks dispatch nothing and accrue no expected slots.",
+                    "type": "boolean"
+                  },
+                  "public_uri": {
+                    "description": "HTTPS public URL, without credentials, query, fragment or redirects.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "Same-environment Hosting Service resource name.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "hosting.sylphx.com/Service"
+                  },
+                  "severity": {
+                    "description": "ticket or page; defaults to ticket.",
+                    "type": "string"
+                  },
+                  "timeout": {
+                    "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "execution_delegation"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "uptime_check"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_checks.update",
+      "permission": "observability:write",
+      "tool": "observability_uptime_checks_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes one tenant uptime check."
+      },
+      "description": "Deletes one tenant uptime check.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/uptime_checks/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Tombstones a lifecycle; a recreated name receives a fresh uid.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "Current resource etag.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "observability.sylphx.com/UptimeCheck"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "observability.uptime_checks.delete",
+      "permission": "observability:write",
+      "tool": "observability_uptime_checks_delete"
     },
     {
       "annotations": {
