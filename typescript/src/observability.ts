@@ -679,7 +679,7 @@ export interface UptimeCheckSpec {
 	 * independent public response identity with the selected serving Release.
 	 */
 	boundPublicRevisions?: boolean
-	/** HTTP or READY; READY is valid only for a service target. */
+	/** HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target. */
 	instrument?: string
 	/** GET or HEAD; defaults to HEAD. No headers, credentials or request body. */
 	method?: string
@@ -687,7 +687,10 @@ export interface UptimeCheckSpec {
 	path?: string
 	/** 30, 60, 300 or 900 seconds; defaults to 60 seconds. */
 	interval?: string
-	/** 1, 2, 5 or 10 seconds; defaults to 10 seconds. */
+	/**
+	 * HTTP: 1, 2, 5 or 10 seconds. Journey: 10 through 900 seconds, including
+	 * admission and execution. Defaults to 10 seconds.
+	 */
 	timeout?: string
 	/**
 	 * Transport successes; defaults to 200 through 299. Denial and rate limits
@@ -713,6 +716,11 @@ export interface UptimeCheckSpec {
 	 * exchanges it afresh; expiration or revocation prevents outbound work.
 	 */
 	executionDelegation?: string
+	/**
+	 * Same-environment Workflows Job containing a versioned journey bundle.
+	 * It runs once per slot with no retries; it is not an HTTP request body.
+	 */
+	job?: string
 }
 
 /**

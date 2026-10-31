@@ -108698,7 +108698,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "HTTP or READY; READY is valid only for a service target.",
+          "doc": "HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.",
           "filterable": false,
           "name": "instrument",
           "number": 4,
@@ -108774,7 +108774,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+          "doc": "HTTP: 1, 2, 5 or 10 seconds. Journey: 10 through 900 seconds, including\nadmission and execution. Defaults to 10 seconds.",
           "filterable": false,
           "name": "timeout",
           "number": 8,
@@ -108915,6 +108915,23 @@
           "optional": false,
           "repeated": false,
           "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Same-environment Workflows Job containing a versioned journey bundle.\nIt runs once per slot with no retries; it is not an HTTP request body.",
+          "filterable": false,
+          "name": "job",
+          "number": 16,
+          "oneof": "target",
+          "optional": true,
+          "repeated": false,
+          "resource_reference": "workflows.sylphx.com/Job",
           "sensitive": false,
           "type": {
             "kind": "scalar",

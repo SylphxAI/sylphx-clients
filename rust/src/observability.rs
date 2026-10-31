@@ -1563,7 +1563,7 @@ pub struct UptimeCheckSpec {
         alias = "boundPublicRevisions"
     )]
     pub bound_public_revisions: Option<bool>,
-    /// HTTP or READY; READY is valid only for a service target.
+    /// HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub instrument: String,
     /// GET or HEAD; defaults to HEAD. No headers, credentials or request body.
@@ -1575,7 +1575,8 @@ pub struct UptimeCheckSpec {
     /// 30, 60, 300 or 900 seconds; defaults to 60 seconds.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub interval: String,
-    /// 1, 2, 5 or 10 seconds; defaults to 10 seconds.
+    /// HTTP: 1, 2, 5 or 10 seconds. Journey: 10 through 900 seconds, including
+    /// admission and execution. Defaults to 10 seconds.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub timeout: String,
     /// Transport successes; defaults to 200 through 299. Denial and rate limits
@@ -1617,6 +1618,10 @@ pub struct UptimeCheckSpec {
         alias = "executionDelegation"
     )]
     pub execution_delegation: String,
+    /// Same-environment Workflows Job containing a versioned journey bundle.
+    /// It runs once per slot with no retries; it is not an HTTP request body.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<String>,
 }
 
 /// The durable check projection. Missing, denied and unknown evidence never

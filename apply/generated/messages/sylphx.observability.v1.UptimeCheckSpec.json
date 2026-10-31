@@ -263,6 +263,22 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "job",
+      "number": 16,
+      "oneof": "target",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": "workflows.sylphx.com/Job",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.observability.v1.UptimeCheckSpec",

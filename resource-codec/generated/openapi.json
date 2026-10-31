@@ -36057,13 +36057,18 @@
             "type": "integer"
           },
           "instrument": {
-            "description": "HTTP or READY; READY is valid only for a service target.",
+            "description": "HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.",
             "type": "string"
           },
           "interval": {
             "description": "30, 60, 300 or 900 seconds; defaults to 60 seconds.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
+          },
+          "job": {
+            "description": "Same-environment Workflows Job containing a versioned journey bundle.\nIt runs once per slot with no retries; it is not an HTTP request body.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/Job"
           },
           "method": {
             "description": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
@@ -36098,7 +36103,7 @@
             "type": "string"
           },
           "timeout": {
-            "description": "1, 2, 5 or 10 seconds; defaults to 10 seconds.",
+            "description": "HTTP: 1, 2, 5 or 10 seconds. Journey: 10 through 900 seconds, including\nadmission and execution. Defaults to 10 seconds.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           }
