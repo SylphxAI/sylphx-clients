@@ -18,6 +18,7 @@ use sylphx::Client;
 
 use crate::{names, Failure};
 
+mod diagnostics;
 mod scenario;
 
 /// A device lease is a `linux-l` Sandboxes lease of kind ANDROID (§3, §4.1).
@@ -250,6 +251,38 @@ struct Report {
     timings: Vec<(&'static str, u128)>,
     capture: Option<Value>,
     expected_stopped: bool,
+    platform_interruption: Option<diagnostics::Interruption>,
+    logcat_truncated: bool,
+    crash_log_truncated: bool,
+}
+
+impl Report {
+    fn diagnose(&mut self, package: &str, process_missing: bool, logcat: &str, crash_log: &str) {
+        // Preserve positive app-crash/ANR evidence even when a dependency
+        // interruption is also present in the retained logs.
+        if !package.is_empty() && !self.crashed {
+            if let Some(evidence) =
+                crash_evidence(package, &[("the crash log", crash_log), ("logcat", logcat)])
+            {
+                self.crashed = true;
+                self.crash = evidence;
+            }
+        }
+        if process_missing && !self.crashed {
+            self.platform_interruption = diagnostics::dependency_interruption(package, logcat);
+            if self.platform_interruption.is_none() {
+                self.crashed = true;
+                self.crash = format!("the {package} process was gone at the end of the run");
+            }
+        }
+        if self.error.is_empty() {
+            if self.crashed {
+                self.error = self.crash.clone();
+            } else if let Some(evidence) = &self.platform_interruption {
+                self.error = evidence.message();
+            }
+        }
+    }
 }
 
 struct Outcome {
@@ -276,7 +309,7 @@ impl Outcome {
         if self.interrupted {
             return 130;
         }
-        if self.infra.is_some() {
+        if self.infra.is_some() || self.report.platform_interruption.is_some() {
             return 2;
         }
         let r = &self.report;
@@ -347,7 +380,13 @@ impl Run<'_> {
         } else {
             eprintln!("device: installed {}", self.r.package);
             // The launch onwards is what the collected log is about.
-            self.exec(&name, &["logcat", "-c"]).await?;
+            let cleared = self.exec(&name, &["logcat", "-c"]).await?;
+            if cleared.exit_code != 0 {
+                return Err(format!(
+                    "clearing the launch log failed: {}",
+                    tail(&cleared)
+                ));
+            }
             if self.o.scenario.is_some() {
                 // Keep diagnostics even when an input guard or scenario step
                 // fails; the original error still controls the verdict.
@@ -568,42 +607,28 @@ impl Run<'_> {
         self.save("screenshot-final.png", &png)?;
 
         let package = self.r.package.clone();
-        if !package.is_empty()
+        let check_process = !package.is_empty()
             && !self.r.crashed
             && !self.r.expected_stopped
             && self.o.game_loop.is_none()
-            && self.r.launched
-        {
-            // A launcher run whose process is gone at the end left by crashing.
-            if self
+            && self.r.launched;
+        let process_missing = check_process
+            && self
                 .exec(lease, &["pidof", package.as_str()])
                 .await?
                 .exit_code
-                != 0
-            {
-                self.r.crashed = true;
-                self.r.crash = format!("the {package} process was gone at the end of the run");
-            }
-        }
+                != 0;
         let logcat = self.exec(lease, &["logcat", "-d"]).await?;
         let crash_log = self.exec(lease, &["logcat", "-b", "crash", "-d"]).await?;
+        self.r.logcat_truncated = logcat.truncated;
+        self.r.crash_log_truncated = crash_log.truncated;
+        if logcat.truncated || crash_log.truncated {
+            eprintln!("device: the API truncated collected logs; result.json records which files are partial");
+        }
         write(&self.o.out.join("logcat.txt"), logcat.stdout.as_bytes())?;
         write(&self.o.out.join("crash.txt"), crash_log.stdout.as_bytes())?;
-        if !package.is_empty() && !self.r.crashed {
-            if let Some(evidence) = crash_evidence(
-                &package,
-                &[
-                    ("the crash log", &crash_log.stdout),
-                    ("logcat", &logcat.stdout),
-                ],
-            ) {
-                self.r.crashed = true;
-                self.r.crash = evidence;
-            }
-        }
-        if self.r.crashed && self.r.error.is_empty() {
-            self.r.error = self.r.crash.clone();
-        }
+        self.r
+            .diagnose(&package, process_missing, &logcat.stdout, &crash_log.stdout);
         self.timing("collect", t);
         Ok(())
     }
@@ -621,11 +646,7 @@ impl Run<'_> {
             .exec(req)
             .await
             .map_err(|e| format!("`{}` failed: {}", argv[0], why(&e)))?;
-        Ok(Exec {
-            exit_code: r.exit_code,
-            stdout: text(&r.stdout),
-            stderr: text(&r.stderr),
-        })
+        Ok(r.into())
     }
 
     /// `:act` with no actions and a screenshot set only takes a screenshot.
@@ -968,6 +989,15 @@ fn report_json(r: &Report) -> Value {
         "installed": r.installed,
         "launched": r.launched,
         "crashed": r.crashed,
+        "platform_interruption": r.platform_interruption.as_ref().map(|e| json!({
+            "kind": e.kind,
+            "pid": e.pid,
+            "dependency": e.dependency,
+            "start_log": e.started,
+            "error_log": e.error,
+            "kill_log": e.killed,
+        })),
+        "log_truncation": {"logcat": r.logcat_truncated, "crash": r.crash_log_truncated},
         "screenshots": r.screenshots,
         "timings_ms": Value::Object(timings),
         "error": r.error,
@@ -999,6 +1029,7 @@ struct Case {
     name: &'static str,
     ok: bool,
     message: String,
+    infrastructure: bool,
 }
 
 fn cases(r: &Report) -> Vec<Case> {
@@ -1023,16 +1054,23 @@ fn cases(r: &Report) -> Vec<Case> {
             name: "install",
             ok: r.installed,
             message: install,
+            infrastructure: false,
         },
         Case {
             name: "launch",
             ok: r.launched,
             message: launch,
+            infrastructure: false,
         },
         Case {
             name: "no-crash",
-            ok: !r.crashed,
-            message: r.crash.clone(),
+            ok: !r.crashed && r.platform_interruption.is_none(),
+            message: r
+                .platform_interruption
+                .as_ref()
+                .map(|e| e.message())
+                .unwrap_or_else(|| r.crash.clone()),
+            infrastructure: r.platform_interruption.is_some(),
         },
     ];
     if r.capture.is_some() {
@@ -1040,6 +1078,7 @@ fn cases(r: &Report) -> Vec<Case> {
             name: "scenario",
             ok: r.error.is_empty(),
             message: r.error.clone(),
+            infrastructure: r.platform_interruption.is_some(),
         });
     }
     result
@@ -1047,10 +1086,11 @@ fn cases(r: &Report) -> Vec<Case> {
 
 /// The JUnit XML Firebase Test Lab also produces: one testsuite per device.
 fn junit(suite: &str, cases: &[Case]) -> String {
-    let failures = cases.iter().filter(|c| !c.ok).count();
+    let failures = cases.iter().filter(|c| !c.ok && !c.infrastructure).count();
+    let errors = cases.iter().filter(|c| !c.ok && c.infrastructure).count();
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str(&format!(
-        "<testsuite name=\"{}\" tests=\"{}\" failures=\"{failures}\" errors=\"0\">\n",
+        "<testsuite name=\"{}\" tests=\"{}\" failures=\"{failures}\" errors=\"{errors}\">\n",
         escape(suite),
         cases.len()
     ));
@@ -1061,8 +1101,9 @@ fn junit(suite: &str, cases: &[Case]) -> String {
                 escape(c.name)
             ));
         } else {
+            let tag = if c.infrastructure { "error" } else { "failure" };
             xml.push_str(&format!(
-                "  <testcase classname=\"device\" name=\"{}\">\n    <failure message=\"{}\"/>\n  </testcase>\n",
+                "  <testcase classname=\"device\" name=\"{}\">\n    <{tag} message=\"{}\"/>\n  </testcase>\n",
                 escape(c.name),
                 escape(&c.message)
             ));
@@ -1202,6 +1243,18 @@ struct Exec {
     exit_code: i32,
     stdout: String,
     stderr: String,
+    truncated: bool,
+}
+
+impl From<sbx::ExecLeaseResponse> for Exec {
+    fn from(r: sbx::ExecLeaseResponse) -> Self {
+        Self {
+            exit_code: r.exit_code,
+            stdout: text(&r.stdout),
+            stderr: text(&r.stderr),
+            truncated: r.truncated,
+        }
+    }
 }
 
 /// A wire `bytes` field (base64) as text.
@@ -1345,8 +1398,113 @@ mod tests {
             exit_code: 1,
             stdout: "a\nlast line\n".into(),
             stderr: String::new(),
+            truncated: false,
         };
         assert_eq!(tail(&o), "last line");
+        let mut wire = sbx::ExecLeaseResponse::default();
+        wire.stdout = "cGFydGlhbAo=".into();
+        wire.truncated = true;
+        let decoded = Exec::from(wire);
+        assert_eq!(decoded.stdout, "partial\n");
+        assert!(decoded.truncated);
+    }
+
+    fn interrupted_log() -> String {
+        [
+            "10-31 02:08:35.355   526   555 I ActivityManager: Start proc 7255:example.game/u0a190 for next-top-activity {example.game/.Main}",
+            "10-31 02:08:36.280   526  2389 E ActivityManager: java.lang.SecurityException: Package example.services is currently frozen!",
+            "10-31 02:08:36.364   526  2389 I ActivityManager: Killing 7255:example.game/u0a190 (adj 0): stop example.services due to start failure",
+        ].join("\n")
+    }
+
+    #[test]
+    fn a_witnessed_device_interruption_is_an_infrastructure_verdict() {
+        let mut report = Report {
+            installed: true,
+            launched: true,
+            logcat_truncated: true,
+            ..Default::default()
+        };
+        report.diagnose("example.game", true, &interrupted_log(), "");
+        assert!(!report.crashed);
+        assert_eq!(report.platform_interruption.as_ref().unwrap().pid, 7255);
+        let json = report_json(&report);
+        assert_eq!(
+            json["platform_interruption"]["dependency"],
+            "example.services"
+        );
+        assert_eq!(json["log_truncation"]["logcat"], true);
+        let xml = junit("device", &cases(&report));
+        assert!(xml.contains("failures=\"0\" errors=\"1\""));
+        assert!(xml.contains("<error message="));
+        assert!(!xml.contains("<failure"));
+        assert_eq!(
+            Outcome {
+                report,
+                infra: None,
+                interrupted: false
+            }
+            .code(),
+            2
+        );
+    }
+
+    #[test]
+    fn explicit_app_crashes_and_anrs_keep_the_app_failure_verdict() {
+        for crash in [
+            "FATAL EXCEPTION: main\nProcess: example.game, PID: 7255\njava.lang.RuntimeException: failed",
+            "ANR in example.game",
+        ] {
+            let mut report = Report { installed: true, launched: true, ..Default::default() };
+            report.diagnose("example.game", true, &interrupted_log(), crash);
+            assert!(report.crashed);
+            assert!(report.platform_interruption.is_none());
+            assert!(junit("device", &cases(&report)).contains("failures=\"1\" errors=\"0\""));
+            assert_eq!(Outcome { report, infra: None, interrupted: false }.code(), 1);
+        }
+    }
+
+    #[test]
+    fn missing_process_without_causal_evidence_keeps_existing_failure() {
+        let mut report = Report {
+            installed: true,
+            launched: true,
+            ..Default::default()
+        };
+        report.diagnose("example.game", true, "another package was frozen", "");
+        assert!(report.crashed);
+        assert!(report.platform_interruption.is_none());
+        assert!(report.error.contains("process was gone"));
+        assert_eq!(
+            Outcome {
+                report,
+                infra: None,
+                interrupted: false
+            }
+            .code(),
+            1
+        );
+    }
+
+    #[test]
+    fn live_or_intentionally_stopped_processes_do_not_get_an_interruption_verdict() {
+        let mut report = Report {
+            installed: true,
+            launched: true,
+            ..Default::default()
+        };
+        report.diagnose("example.game", false, &interrupted_log(), "");
+        assert!(!report.crashed);
+        assert!(report.platform_interruption.is_none());
+        assert_eq!(
+            Outcome {
+                report,
+                infra: None,
+                interrupted: false
+            }
+            .code(),
+            0
+        );
     }
 
     #[test]
