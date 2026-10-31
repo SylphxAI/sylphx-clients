@@ -41,6 +41,12 @@ manifest version in the shipping PR; SDK versions are independent of the CLI.
 Published tags remain immutable. A publication repair ships with the next
 release; the frozen workflow does not offer a per-crate publishing mode.
 
+Next verification installs the complete candidate SDK archive into an isolated
+consumer before typechecking, tests, build and package import checks. Its SDK
+peer minimum and development version advance with required SDK APIs; a local
+source tree cannot stand in for an older published version. Both release
+workflows use `scripts/check-next-package.py`, and publish the SDK before Next.
+
 Before publication, the clients Rust CI lane and both release verification
 jobs run `python3 -I scripts/check-publish-set.py` from this workspace. The
 script supplies the complete not-yet-published set to one locked native

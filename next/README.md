@@ -99,7 +99,7 @@ remain; set a Bucket lifecycle rule if that matters.
 ## Customer-branded sign-in (App Router)
 
 The public `@sylphx/next/auth` export provides a Server Component for Next.js
-15+ with React 19. Install `@sylphx/sdk@^0.32.1` alongside this package. Auth is
+15+ with React 19. Install `@sylphx/sdk@^0.32.2` alongside this package. Auth is
 independent of the cache handlers; no Redis connection is needed.
 
 ```tsx
@@ -162,7 +162,10 @@ live region are retained. MFA/captcha challenges require an application-specific
 flow; this component fails closed with a generic error rather than returning
 a session or displaying raw upstream errors.
 
-Verification: build the sibling SDK first, then in `clients/next` run
-`bun install --no-save && bun run test && bun run typecheck && bun run build`.
+Verification: build the sibling SDK first, then from `clients/` run
+`python3 -I scripts/check-next-package.py`. It installs the SDK tarball into
+an isolated copy, runs typechecking, tests and the build, and installs the
+packed Next package with its peers to check every entry point. The published
+manifest keeps the SDK version requirement; local archive paths never ship.
 The auth tests use the generated Continue mock; social tests exercise the
 server redirect and returned-ticket contract, not external provider credentials.

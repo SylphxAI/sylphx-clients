@@ -2,9 +2,10 @@
 # Publish-time smoke test for an npm package: packs it, installs the tarball
 # into a clean project, and loads every entry point with `import` (ESM) and
 # `require` (CJS). A package that fails here is never published.
-#   scripts/smoke-npm.sh <package dir>
+#   scripts/smoke-npm.sh <package dir> [dependency tarball or peer spec ...]
 set -euo pipefail
 pkg="$(cd "$1" && pwd)"
+shift
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 (cd "$pkg" && npm pack --silent --pack-destination "$work" >/dev/null)
@@ -13,7 +14,7 @@ name="$(jq -r .name "$pkg/package.json")"
 mkdir "$work/app"
 cd "$work/app"
 echo '{"name":"smoke","private":true}' > package.json
-npm install --silent --no-audit --no-fund "$tgz"
+npm install --silent --no-audit --no-fund "$@" "$tgz"
 # Entry points: every exported subpath; a `./*` pattern expands to each
 # module file the tarball ships under its target directory.
 node - "$name" <<'JS' > entries.txt

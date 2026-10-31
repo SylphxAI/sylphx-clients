@@ -301,9 +301,12 @@ jobs:
           (cd typescript && bun install --no-save && bun run build)
           scripts/smoke-npm.sh typescript
           pack typescript
-          (cd next && bun install --no-save && bun run build)
-          scripts/smoke-npm.sh next
-          pack next
+          next_version="$(jq -r .version next/package.json)"
+          if [ "$(npm view "@sylphx/next@$next_version" version 2>/dev/null || true)" != "$next_version" ]; then
+            next_tgz="$(python3 -I .release-control/scripts/check-next-package.py --root "$GITHUB_WORKSPACE" --pack-destination "$out")"
+            next_tag="$(jq -r '.publishConfig.tag // "latest"' next/package.json)"
+            echo "$next_tgz $next_tag @sylphx/next $next_version" >> "$out/list"
+          fi
           cat "$out/list"
           echo "any=$([ -s "$out/list" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publish
