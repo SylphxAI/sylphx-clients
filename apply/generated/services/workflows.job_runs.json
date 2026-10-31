@@ -6,11 +6,27 @@
           "http": {
             "query_params": [
               "job_run_id",
-              "validate_only"
+              "validate_only",
+              "expected_job_uid",
+              "expected_job_generation",
+              "create_not_after"
             ]
           },
           "id": "workflows.job_runs.create",
           "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "job_run_id",
+              "validate_only",
+              "expected_job_uid",
+              "expected_job_generation",
+              "create_not_after"
+            ]
+          },
+          "id": "workflows.job_runs.create_pinned",
+          "kind": "custom"
         },
         {
           "http": {

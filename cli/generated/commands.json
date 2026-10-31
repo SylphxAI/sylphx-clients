@@ -32518,6 +32518,24 @@
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
                   "type": "bool"
+                },
+                {
+                  "field": "expected_job_uid",
+                  "flag": "--expected-job-uid",
+                  "summary": "Require this immutable Job identity, checked again at insertion.",
+                  "type": "string"
+                },
+                {
+                  "field": "expected_job_generation",
+                  "flag": "--expected-job-generation",
+                  "summary": "Require this generation of the frozen Job spec.",
+                  "type": "int"
+                },
+                {
+                  "field": "create_not_after",
+                  "flag": "--create-not-after",
+                  "summary": "A new run can be inserted only before this instant. Identical replay is still available afterward. Exact GET serializes with in-flight insertion.",
+                  "type": "timestamp"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/jobs/*}/job_runs",
@@ -32532,6 +32550,63 @@
               "resource_field": "job_run",
               "summary": "Starts a run of a Job now. The same `Idempotency-Key` returns the same run for 24h; a Schedule fire uses `{job}:{intended time}`. With concurrency `forbid`, a start while a run is active fails with INVALID_STATE.",
               "verb": "run"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "job_run_id",
+                  "flag": "--job-run-id",
+                  "required": true,
+                  "summary": "Permanent caller-selected run id, distinct from the server-assigned UID.",
+                  "type": "string"
+                },
+                {
+                  "field": "job_run",
+                  "flag": "--job-run",
+                  "required": true,
+                  "summary": "The run to start: `args` and `env` override the Job's for this run.",
+                  "type": "json"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "expected_job_uid",
+                  "flag": "--expected-job-uid",
+                  "required": true,
+                  "summary": "Require this immutable Job identity, checked again at insertion.",
+                  "type": "string"
+                },
+                {
+                  "field": "expected_job_generation",
+                  "flag": "--expected-job-generation",
+                  "required": true,
+                  "summary": "Require this generation of the frozen Job spec.",
+                  "type": "int"
+                },
+                {
+                  "field": "create_not_after",
+                  "flag": "--create-not-after",
+                  "required": true,
+                  "summary": "A new run can be inserted only before this instant. Identical replay is still available afterward. Exact GET serializes with in-flight insertion.",
+                  "type": "timestamp"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/jobs/*}/job_runs:createPinned",
+              "method": "workflows.job_runs.create_pinned",
+              "permission": "workflows:run",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/jobs/{job}"
+              },
+              "summary": "Starts exactly the pinned Job snapshot under a permanent caller-selected run id. Predecessor servers do not serve this route, so unsupported pins cannot silently start work. Replays return the original immutable run.",
+              "verb": "create-pinned"
             },
             {
               "effect": "read",
@@ -32640,7 +32715,7 @@
               ],
               "http": "GET /v1/{name=orgs/*/projects/*/envs/*/jobs/*/job_runs/*}:readLogs",
               "method": "workflows.job_runs.read_logs",
-              "permission": "workflows:read",
+              "permission": "workflows:run",
               "positional": {
                 "arg": "NAME",
                 "default_from_context": false,

@@ -103,6 +103,36 @@ export interface CreateJobRunRequest {
 	jobRun: JobRun
 	/** Validate and return the result without starting anything. */
 	validateOnly?: boolean
+	/** Require this immutable Job identity, checked again at insertion. */
+	expectedJobUid?: string
+	/** Require this generation of the frozen Job spec. */
+	expectedJobGeneration?: string
+	/**
+	 * A new run can be inserted only before this instant. Identical replay is
+	 * still available afterward. Exact GET serializes with in-flight insertion.
+	 */
+	createNotAfter?: string
+}
+
+/** The request of CreatePinnedJobRun. */
+export interface CreatePinnedJobRunRequest {
+	/** The job to run. */
+	parent: string
+	/** Permanent caller-selected run id, distinct from the server-assigned UID. */
+	jobRunId: string
+	/** The run to start: `args` and `env` override the Job's for this run. */
+	jobRun: JobRun
+	/** Validate and return the result without starting anything. */
+	validateOnly?: boolean
+	/** Require this immutable Job identity, checked again at insertion. */
+	expectedJobUid: string
+	/** Require this generation of the frozen Job spec. */
+	expectedJobGeneration: string
+	/**
+	 * A new run can be inserted only before this instant. Identical replay is
+	 * still available afterward. Exact GET serializes with in-flight insertion.
+	 */
+	createNotAfter: string
 }
 
 /** The request of CreateRun. */
@@ -460,6 +490,19 @@ export interface JobRun {
 	scheduleTime?: string
 	/** Start no earlier than this long after the request. */
 	startDelay?: string
+	/** Principal authenticated by Access when the run was created; not caller-writable. */
+	readonly callerPrincipalId?: string
+	/** Access key that created the run; never the key's secret value. */
+	readonly callerKeyId?: string
+	/** Immutable Job UID captured with the run's generation and spec. */
+	readonly jobUid?: string
+	/** SHA-256 of the frozen base Job spec, before this run's overrides. */
+	readonly jobSpecDigest?: string
+	/**
+	 * True only after all dispatched or ambiguously dispatched attempts have
+	 * an observed stop/retirement receipt. Cancellation acceptance is not proof.
+	 */
+	readonly stopVerified?: boolean
 }
 
 /** Metered usage of a JobRun. */
@@ -1256,6 +1299,17 @@ runtime.registerSchemas({
 		['jobRunId', 'job_run_id'],
 		['jobRun', 'job_run', 'sylphx.workflows.v1.JobRun'],
 		['validateOnly', 'validate_only'],
+		['expectedJobUid', 'expected_job_uid'],
+		['expectedJobGeneration', 'expected_job_generation'],
+		['createNotAfter', 'create_not_after'],
+	],
+	'sylphx.workflows.v1.CreatePinnedJobRunRequest': [
+		['jobRunId', 'job_run_id'],
+		['jobRun', 'job_run', 'sylphx.workflows.v1.JobRun'],
+		['validateOnly', 'validate_only'],
+		['expectedJobUid', 'expected_job_uid'],
+		['expectedJobGeneration', 'expected_job_generation'],
+		['createNotAfter', 'create_not_after'],
 	],
 	'sylphx.workflows.v1.CreateRunRequest': [
 		['runId', 'run_id'],
@@ -1361,6 +1415,11 @@ runtime.registerSchemas({
 		['usage', 'usage', 'sylphx.workflows.v1.JobRunUsage'],
 		['scheduleTime', 'schedule_time'],
 		['startDelay', 'start_delay'],
+		['callerPrincipalId', 'caller_principal_id'],
+		['callerKeyId', 'caller_key_id'],
+		['jobUid', 'job_uid'],
+		['jobSpecDigest', 'job_spec_digest'],
+		['stopVerified', 'stop_verified'],
 	],
 	'sylphx.workflows.v1.JobRunUsage': [
 		['billedDuration', 'billed_duration'],
@@ -2338,7 +2397,28 @@ export class JobRunsCollection {
 		return this.client.call<JobRun>({
 			method: 'POST',
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/jobs/*', 'parent')}/job_runs`,
-			query: { job_run_id: request.jobRunId, validate_only: request.validateOnly },
+			query: { job_run_id: request.jobRunId, validate_only: request.validateOnly, expected_job_uid: request.expectedJobUid, expected_job_generation: request.expectedJobGeneration, create_not_after: request.createNotAfter },
+			body: request.jobRun ?? {},
+			bodyType: 'sylphx.workflows.v1.JobRun',
+			responseType: 'sylphx.workflows.v1.JobRun',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Starts exactly the pinned Job snapshot under a permanent caller-selected
+	 * run id. Predecessor servers do not serve this route, so unsupported pins
+	 * cannot silently start work. Replays return the original immutable run.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/jobs/*}/job_runs:createPinned` · permission `workflows:run` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
+	 */
+	async createPinned(request: CreatePinnedJobRunRequest): Promise<JobRun> {
+		return this.client.call<JobRun>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/jobs/*', 'parent')}/job_runs:createPinned`,
+			query: { job_run_id: request.jobRunId, validate_only: request.validateOnly, expected_job_uid: request.expectedJobUid, expected_job_generation: request.expectedJobGeneration, create_not_after: request.createNotAfter },
 			body: request.jobRun ?? {},
 			bodyType: 'sylphx.workflows.v1.JobRun',
 			responseType: 'sylphx.workflows.v1.JobRun',
@@ -2414,7 +2494,7 @@ export class JobRunsCollection {
 	 * empty page on a running run waits up to that long for new lines, so a
 	 * client follows the log by passing each `next_page_token` back.
 	 *
-	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/jobs/*\/job_runs/*}:readLogs` · permission `workflows:read` · effect `read`
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/jobs/*\/job_runs/*}:readLogs` · permission `workflows:run` · effect `read`
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `PAGE_TOKEN_MISMATCH`.
 	 */

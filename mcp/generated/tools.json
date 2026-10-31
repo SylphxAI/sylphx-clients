@@ -45063,6 +45063,20 @@
         "additionalProperties": false,
         "description": "The request of CreateJobRun.",
         "properties": {
+          "create_not_after": {
+            "description": "A new run can be inserted only before this instant. Identical replay is\nstill available afterward. Exact GET serializes with in-flight insertion.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "expected_job_generation": {
+            "description": "Require this generation of the frozen Job spec.",
+            "format": "int64",
+            "type": "string"
+          },
+          "expected_job_uid": {
+            "description": "Require this immutable Job identity, checked again at insertion.",
+            "type": "string"
+          },
           "job_run": {
             "additionalProperties": false,
             "description": "The run to start: `args` and `env` override the Job's for this run.",
@@ -45150,6 +45164,127 @@
       "method_id": "workflows.job_runs.create",
       "permission": "workflows:run",
       "tool": "workflows_job_runs_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts exactly the pinned Job snapshot under a permanent caller-selected run id. Predecessor servers do not serve this route, so unsupported pins cannot silently start work. Replays return the original immutable run."
+      },
+      "description": "Starts exactly the pinned Job snapshot under a permanent caller-selected\nrun id. Predecessor servers do not serve this route, so unsupported pins\ncannot silently start work. Replays return the original immutable run.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/jobs/*}/job_runs:createPinned",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreatePinnedJobRun.",
+        "properties": {
+          "create_not_after": {
+            "description": "A new run can be inserted only before this instant. Identical replay is\nstill available afterward. Exact GET serializes with in-flight insertion.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "expected_job_generation": {
+            "description": "Require this generation of the frozen Job spec.",
+            "format": "int64",
+            "type": "string"
+          },
+          "expected_job_uid": {
+            "description": "Require this immutable Job identity, checked again at insertion.",
+            "type": "string"
+          },
+          "job_run": {
+            "additionalProperties": false,
+            "description": "The run to start: `args` and `env` override the Job's for this run.",
+            "properties": {
+              "args": {
+                "description": "Arguments of this run (the Job's when empty).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "x-sylphx-immutable": true
+              },
+              "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Environment overrides of this run.",
+                "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/jobs/{job}/job_runs/{job_run}`.",
+                "type": "string"
+              },
+              "schedule_time": {
+                "description": "Start no earlier than this: set it directly, or through `start_delay`;\nat most 365 days ahead. A run cancelled before then makes no attempt.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "start_delay": {
+                "description": "Start no earlier than this long after the request.",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "type": "object"
+          },
+          "job_run_id": {
+            "description": "Permanent caller-selected run id, distinct from the server-assigned UID.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The job to run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without starting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "job_run_id",
+          "job_run",
+          "expected_job_uid",
+          "expected_job_generation",
+          "create_not_after"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "workflows.job_runs.create_pinned",
+      "permission": "workflows:run",
+      "tool": "workflows_job_runs_create_pinned"
     },
     {
       "annotations": {
@@ -45313,7 +45448,7 @@
       },
       "long_running": false,
       "method_id": "workflows.job_runs.read_logs",
-      "permission": "workflows:read",
+      "permission": "workflows:run",
       "tool": "workflows_job_runs_read_logs"
     },
     {

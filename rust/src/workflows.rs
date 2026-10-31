@@ -235,6 +235,90 @@ pub struct CreateJobRunRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+    /// Require this immutable Job identity, checked again at insertion.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedJobUid"
+    )]
+    pub expected_job_uid: String,
+    /// Require this generation of the frozen Job spec.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedJobGeneration"
+    )]
+    pub expected_job_generation: i64,
+    /// A new run can be inserted only before this instant. Identical replay is
+    /// still available afterward. Exact GET serializes with in-flight insertion.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createNotAfter"
+    )]
+    pub create_not_after: String,
+}
+
+/// The request of CreatePinnedJobRun.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreatePinnedJobRunRequest {
+    /// The job to run.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Permanent caller-selected run id, distinct from the server-assigned UID.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "jobRunId"
+    )]
+    pub job_run_id: String,
+    /// The run to start: `args` and `env` override the Job's for this run.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "jobRun")]
+    pub job_run: Option<JobRun>,
+    /// Validate and return the result without starting anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Require this immutable Job identity, checked again at insertion.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedJobUid"
+    )]
+    pub expected_job_uid: String,
+    /// Require this generation of the frozen Job spec.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedJobGeneration"
+    )]
+    pub expected_job_generation: i64,
+    /// A new run can be inserted only before this instant. Identical replay is
+    /// still available afterward. Exact GET serializes with in-flight insertion.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createNotAfter"
+    )]
+    pub create_not_after: String,
 }
 
 /// The request of CreateRun.
@@ -1055,6 +1139,52 @@ pub struct JobRun {
         alias = "startDelay"
     )]
     pub start_delay: String,
+    /// Principal authenticated by Access when the run was created; not caller-writable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "callerPrincipalId"
+    )]
+    pub caller_principal_id: String,
+    /// Access key that created the run; never the key's secret value.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "callerKeyId"
+    )]
+    pub caller_key_id: String,
+    /// Immutable Job UID captured with the run's generation and spec.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "jobUid"
+    )]
+    pub job_uid: String,
+    /// SHA-256 of the frozen base Job spec, before this run's overrides.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "jobSpecDigest"
+    )]
+    pub job_spec_digest: String,
+    /// True only after all dispatched or ambiguously dispatched attempts have
+    /// an observed stop/retirement receipt. Cancellation acceptance is not proof.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "stopVerified"
+    )]
+    pub stop_verified: bool,
 }
 
 /// Metered usage of a JobRun.
@@ -4607,6 +4737,46 @@ impl<'a, T: crate::runtime::Transport> JobRunsCollection<'a, T> {
         let mut query = crate::runtime::Query::default();
         query.push("job_run_id", &request.job_run_id);
         query.push("validate_only", &request.validate_only);
+        query.push("expected_job_uid", &request.expected_job_uid);
+        query.push("expected_job_generation", &request.expected_job_generation);
+        query.push("create_not_after", &request.create_not_after);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.job_run)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Starts exactly the pinned Job snapshot under a permanent caller-selected
+    /// run id. Predecessor servers do not serve this route, so unsupported pins
+    /// cannot silently start work. Replays return the original immutable run.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/jobs/*}/job_runs:createPinned` · permission `workflows:run` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
+    pub async fn create_pinned(
+        &self,
+        request: CreatePinnedJobRunRequest,
+    ) -> Result<JobRun, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/job_runs:createPinned",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/jobs/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("job_run_id", &request.job_run_id);
+        query.push("validate_only", &request.validate_only);
+        query.push("expected_job_uid", &request.expected_job_uid);
+        query.push("expected_job_generation", &request.expected_job_generation);
+        query.push("create_not_after", &request.create_not_after);
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,
@@ -4731,7 +4901,7 @@ impl<'a, T: crate::runtime::Transport> JobRunsCollection<'a, T> {
     /// empty page on a running run waits up to that long for new lines, so a
     /// client follows the log by passing each `next_page_token` back.
     ///
-    /// `GET /v1/{name=orgs/*/projects/*/envs/*/jobs/*/job_runs/*}:readLogs` · permission `workflows:read` · effect `read`
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/jobs/*/job_runs/*}:readLogs` · permission `workflows:run` · effect `read`
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `PAGE_TOKEN_MISMATCH`.
     pub async fn read_logs(

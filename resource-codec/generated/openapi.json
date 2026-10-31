@@ -42213,6 +42213,20 @@
       "sylphx.workflows.v1.CreateJobRunRequest": {
         "description": "The request of CreateJobRun.",
         "properties": {
+          "create_not_after": {
+            "description": "A new run can be inserted only before this instant. Identical replay is\nstill available afterward. Exact GET serializes with in-flight insertion.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "expected_job_generation": {
+            "description": "Require this generation of the frozen Job spec.",
+            "format": "int64",
+            "type": "string"
+          },
+          "expected_job_uid": {
+            "description": "Require this immutable Job identity, checked again at insertion.",
+            "type": "string"
+          },
           "job_run": {
             "$ref": "#/components/schemas/sylphx.workflows.v1.JobRun",
             "description": "The run to start: `args` and `env` override the Job's for this run."
@@ -42234,6 +42248,51 @@
         "required": [
           "parent",
           "job_run"
+        ],
+        "type": "object"
+      },
+      "sylphx.workflows.v1.CreatePinnedJobRunRequest": {
+        "description": "The request of CreatePinnedJobRun.",
+        "properties": {
+          "create_not_after": {
+            "description": "A new run can be inserted only before this instant. Identical replay is\nstill available afterward. Exact GET serializes with in-flight insertion.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "expected_job_generation": {
+            "description": "Require this generation of the frozen Job spec.",
+            "format": "int64",
+            "type": "string"
+          },
+          "expected_job_uid": {
+            "description": "Require this immutable Job identity, checked again at insertion.",
+            "type": "string"
+          },
+          "job_run": {
+            "$ref": "#/components/schemas/sylphx.workflows.v1.JobRun",
+            "description": "The run to start: `args` and `env` override the Job's for this run."
+          },
+          "job_run_id": {
+            "description": "Permanent caller-selected run id, distinct from the server-assigned UID.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The job to run.",
+            "type": "string",
+            "x-sylphx-resource-reference": "workflows.sylphx.com/JobRun"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without starting anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "job_run_id",
+          "job_run",
+          "expected_job_uid",
+          "expected_job_generation",
+          "create_not_after"
         ],
         "type": "object"
       },
@@ -42912,6 +42971,16 @@
             "readOnly": true,
             "type": "integer"
           },
+          "caller_key_id": {
+            "description": "Access key that created the run; never the key's secret value.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "caller_principal_id": {
+            "description": "Principal authenticated by Access when the run was created; not caller-writable.",
+            "readOnly": true,
+            "type": "string"
+          },
           "create_time": {
             "description": "When the run was accepted.",
             "format": "date-time",
@@ -42941,6 +43010,16 @@
           "job_generation": {
             "description": "The Job generation the run pinned.",
             "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "job_spec_digest": {
+            "description": "SHA-256 of the frozen base Job spec, before this run's overrides.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "job_uid": {
+            "description": "Immutable Job UID captured with the run's generation and spec.",
             "readOnly": true,
             "type": "string"
           },
@@ -42988,6 +43067,11 @@
             "$ref": "#/components/schemas/sylphx.workflows.v1.JobRunState",
             "description": "The run's lifecycle state.",
             "readOnly": true
+          },
+          "stop_verified": {
+            "description": "True only after all dispatched or ambiguously dispatched attempts have\nan observed stop/retirement receipt. Cancellation acceptance is not proof.",
+            "readOnly": true,
+            "type": "boolean"
           },
           "termination_reason": {
             "description": "Why the last attempt ended other than by exiting, for example\n`OOMKilled` or `Evicted`.",
@@ -78026,6 +78110,35 @@
             }
           },
           {
+            "description": "Require this immutable Job identity, checked again at insertion.",
+            "in": "query",
+            "name": "expected_job_uid",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Require this generation of the frozen Job spec.",
+            "in": "query",
+            "name": "expected_job_generation",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A new run can be inserted only before this instant. Identical replay is\nstill available afterward. Exact GET serializes with in-flight insertion.",
+            "in": "query",
+            "name": "create_not_after",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/SylphxVersion"
           },
           {
@@ -78424,7 +78537,166 @@
           "PAGE_TOKEN_MISMATCH"
         ],
         "x-sylphx-method": "workflows.job_runs.read_logs",
-        "x-sylphx-permission": "workflows:read",
+        "x-sylphx-permission": "workflows:run",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/jobs/{job}/job_runs:createPinned": {
+      "post": {
+        "description": "Starts exactly the pinned Job snapshot under a permanent caller-selected\nrun id. Predecessor servers do not serve this route, so unsupported pins\ncannot silently start work. Replays return the original immutable run.",
+        "operationId": "workflows_job_runs_create_pinned",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Permanent caller-selected run id, distinct from the server-assigned UID.",
+            "in": "query",
+            "name": "job_run_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate and return the result without starting anything.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Require this immutable Job identity, checked again at insertion.",
+            "in": "query",
+            "name": "expected_job_uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Require this generation of the frozen Job spec.",
+            "in": "query",
+            "name": "expected_job_generation",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A new run can be inserted only before this instant. Identical replay is\nstill available afterward. Exact GET serializes with in-flight insertion.",
+            "in": "query",
+            "name": "create_not_after",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.workflows.v1.JobRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.workflows.v1.JobRun"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "402": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Starts exactly the pinned Job snapshot under a permanent caller-selected run id. Predecessor servers do not serve this route, so unsupported pins cannot silently start work. Replays return the original immutable run.",
+        "tags": [
+          "workflows"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNKNOWN_FIELD",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "PLAN_LIMIT_REACHED"
+        ],
+        "x-sylphx-method": "workflows.job_runs.create_pinned",
+        "x-sylphx-permission": "workflows:run",
         "x-sylphx-stage": "preview"
       }
     },
