@@ -603,9 +603,6 @@ impl Run<'_> {
     /// The end of the run: the final screenshot, the logs, and the verdict.
     async fn collect(&mut self, lease: &str) -> Result<(), String> {
         let t = Instant::now();
-        let png = self.screenshot(lease).await?;
-        self.save("screenshot-final.png", &png)?;
-
         let package = self.r.package.clone();
         let check_process = !package.is_empty()
             && !self.r.crashed
@@ -627,10 +624,105 @@ impl Run<'_> {
         }
         write(&self.o.out.join("logcat.txt"), logcat.stdout.as_bytes())?;
         write(&self.o.out.join("crash.txt"), crash_log.stdout.as_bytes())?;
+        let mut diagnostics = Map::new();
+        let logcat_tail = if logcat.truncated {
+            self.diagnostic(
+                lease,
+                "logcat-tail.txt",
+                &["sh", "-c", "logcat -d | tail -c 786432"],
+                &mut diagnostics,
+            )
+            .await?
+        } else {
+            String::new()
+        };
+        let crash_tail = if crash_log.truncated {
+            self.diagnostic(
+                lease,
+                "crash-tail.txt",
+                &["sh", "-c", "logcat -b crash -d | tail -c 786432"],
+                &mut diagnostics,
+            )
+            .await?
+        } else {
+            String::new()
+        };
+        let logcat_evidence = format!("{}\n{logcat_tail}", logcat.stdout);
+        let crash_evidence = format!("{}\n{crash_tail}", crash_log.stdout);
         self.r
-            .diagnose(&package, process_missing, &logcat.stdout, &crash_log.stdout);
+            .diagnose(&package, process_missing, &logcat_evidence, &crash_evidence);
+        let unfinished_capture = self.r.capture.as_ref().is_some_and(|capture| {
+            capture["steps"]
+                .as_array()
+                .is_some_and(|steps| steps.iter().any(|step| step["state"] != "success"))
+        });
+        if unfinished_capture || self.r.crashed {
+            // These snapshots may describe an earlier event. Retain them for
+            // investigation, never as an automatic verdict about this launch.
+            self.diagnostic(
+                lease,
+                "last-anr.txt",
+                &["dumpsys", "-t", "5", "activity", "lastanr"],
+                &mut diagnostics,
+            )
+            .await?;
+            self.diagnostic(
+                lease,
+                "anr-dropbox-tail.txt",
+                &[
+                    "sh",
+                    "-c",
+                    "dumpsys -t 5 dropbox --print data_app_anr | tail -c 786432",
+                ],
+                &mut diagnostics,
+            )
+            .await?;
+        }
+        if !diagnostics.is_empty() {
+            write(
+                &self.o.out.join("diagnostics.json"),
+                serde_json::to_string_pretty(&diagnostics)
+                    .map_err(|error| error.to_string())?
+                    .as_bytes(),
+            )?;
+        }
+        // A missing/ambiguous window must not discard the logs and ANR data.
+        let png = self.screenshot(lease).await?;
+        self.save("screenshot-final.png", &png)?;
         self.timing("collect", t);
         Ok(())
+    }
+
+    /// Best-effort diagnostics use the existing lease and do not hide the
+    /// original capture error if Android refuses a diagnostic command.
+    async fn diagnostic(
+        &self,
+        lease: &str,
+        file: &str,
+        argv: &[&str],
+        metadata: &mut Map<String, Value>,
+    ) -> Result<String, String> {
+        match self.exec(lease, argv).await {
+            Ok(output) => {
+                write(&self.o.out.join(file), output.stdout.as_bytes())?;
+                metadata.insert(
+                    file.into(),
+                    json!({
+                        "command": argv, "exit_code": output.exit_code,
+                        "api_truncated": output.truncated, "stderr": output.stderr,
+                    }),
+                );
+                Ok(if output.exit_code == 0 {
+                    output.stdout
+                } else {
+                    String::new()
+                })
+            }
+            Err(error) => {
+                metadata.insert(file.into(), json!({"command": argv, "error": error}));
+                Ok(String::new())
+            }
+        }
     }
 
     /// `:exec` on an ANDROID lease runs the argv on the device (§4.1). The

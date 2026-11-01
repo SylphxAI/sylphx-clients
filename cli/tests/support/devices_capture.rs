@@ -79,11 +79,42 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
                 screenshot(2560, 1600),
             ]);
         }
+        replies.push(exec_reply("1234")); // still running
+        if failure == "foreground" || failure == "none" {
+            replies.push((
+                200,
+                json!({"exit_code":0,"truncated":true,
+                "stdout":base64::engine::general_purpose::STANDARD.encode("early boot noise")}),
+            ));
+        } else {
+            replies.push(exec_reply("quiet"));
+        }
+        replies.push(exec_reply("")); // crash buffer
+        if failure == "none" {
+            replies.push(exec_reply("quiet")); // capped successful capture needs only its log tail
+        }
+        if failure == "foreground" {
+            replies.extend([
+                exec_reply("ANR in com.example.game\nInput dispatching timed out"),
+                exec_reply("ANR in com.example.game\nReason: Input dispatching timed out"),
+                exec_reply("Process: com.example.game\n\"main\" tid=1 Native\n  at example.Frame.draw(Frame.java:1)"),
+            ]);
+        } else if failure == "dimensions" {
+            // A diagnostic refusal cannot replace the original capture error.
+            replies.extend([
+                (
+                    403,
+                    json!({"error":{"code":"PERMISSION_DENIED","message":"fixture refusal"}}),
+                ),
+                exec_reply("ANR in com.example.game\nold event from before this launch"),
+            ]);
+        }
         replies.extend([
-            screenshot(2560, 1600), // final diagnostic frame
-            exec_reply("1234"),     // still running
-            exec_reply("quiet"),
-            exec_reply(""),
+            if failure == "foreground" {
+                (403, json!({"error":{"code":"PERMISSION_DENIED","message":"final screenshot unavailable"}}))
+            } else {
+                screenshot(2560, 1600)
+            },
             (200, json!({"name":lease,"status":{"state":"ending"}})),
         ]);
         let (url, log) = serve(replies).await;
@@ -155,12 +186,54 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
                 .as_str()
                 .is_some_and(|s| s.len() == 64));
             assert!(sb.dir.join("captures/lobby.png").is_file());
+            if failure == "none" {
+                assert_eq!(
+                    std::fs::read_to_string(sb.dir.join("captures/logcat-tail.txt")).unwrap(),
+                    "quiet"
+                );
+                assert!(!sb.dir.join("captures/last-anr.txt").exists());
+                assert!(!sb.dir.join("captures/anr-dropbox-tail.txt").exists());
+            }
         } else {
             assert!(
                 taps.is_empty(),
                 "wrong foreground/dimensions never sends input"
             );
             assert!(!sb.dir.join("captures/lobby.png").exists());
+            let result: Value = serde_json::from_slice(
+                &std::fs::read(sb.dir.join("captures/result.json")).unwrap(),
+            )
+            .unwrap();
+            let diagnostics: Value = serde_json::from_slice(
+                &std::fs::read(sb.dir.join("captures/diagnostics.json")).unwrap(),
+            )
+            .unwrap();
+            if failure == "foreground" {
+                assert_eq!(result["log_truncation"]["logcat"], true);
+                assert_eq!(result["crashed"], true, "late ANR evidence is retained");
+                assert_eq!(
+                    std::fs::read_to_string(sb.dir.join("captures/logcat.txt")).unwrap(),
+                    "early boot noise"
+                );
+                assert!(
+                    std::fs::read_to_string(sb.dir.join("captures/logcat-tail.txt"))
+                        .unwrap()
+                        .contains("ANR in com.example.game")
+                );
+                assert!(
+                    std::fs::read_to_string(sb.dir.join("captures/anr-dropbox-tail.txt"))
+                        .unwrap()
+                        .contains("example.Frame.draw")
+                );
+                assert_eq!(diagnostics["logcat-tail.txt"]["api_truncated"], false);
+            } else {
+                assert!(result["error"].as_str().unwrap().contains("native PNG"));
+                assert!(diagnostics["last-anr.txt"]["error"].is_string());
+                assert_eq!(
+                    result["crashed"], false,
+                    "diagnostic snapshots alone do not change the verdict"
+                );
+            }
         }
     }
 }
