@@ -187,7 +187,7 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		httpMethod: 'POST',
 		template: '/v1/{parent=orgs/*}/projects',
 		pathParams: [['parent', 'orgs/*']],
-		queryParams: ['validate_only'],
+		queryParams: ['validate_only', 'region'],
 		body: 'project',
 		longRunning: false,
 		effect: 'write',

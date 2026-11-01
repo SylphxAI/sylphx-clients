@@ -358,6 +358,12 @@
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
                   "type": "bool"
+                },
+                {
+                  "field": "region",
+                  "flag": "--region",
+                  "summary": "The region the project lives in for its whole life. A region that cannot take new projects is refused, never replaced. Unset uses the default region.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*}/projects",

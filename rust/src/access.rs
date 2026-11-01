@@ -259,6 +259,10 @@ pub struct CreateProjectRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+    /// The region the project lives in for its whole life. A region that cannot
+    /// take new projects is refused, never replaced. Unset uses the default region.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub region: String,
 }
 
 /// The request of DeleteApiKey.
@@ -1858,6 +1862,7 @@ impl<'a, T: crate::runtime::Transport> ProjectsCollection<'a, T> {
         );
         let mut query = crate::runtime::Query::default();
         query.push("validate_only", &request.validate_only);
+        query.push("region", &request.region);
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,

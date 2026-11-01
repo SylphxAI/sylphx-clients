@@ -6361,6 +6361,25 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
+          "filterable": false,
+          "name": "region",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.access.v1.CreateProjectRequest",
@@ -136923,7 +136942,8 @@
                   }
                 ],
                 "query_params": [
-                  "validate_only"
+                  "validate_only",
+                  "region"
                 ],
                 "template": "/v1/{parent=orgs/*}/projects"
               },

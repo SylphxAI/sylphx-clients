@@ -121,6 +121,11 @@ export interface CreateProjectRequest {
 	project: Project
 	/** Validate and return the result without writing anything. */
 	validateOnly?: boolean
+	/**
+	 * The region the project lives in for its whole life. A region that cannot
+	 * take new projects is refused, never replaced. Unset uses the default region.
+	 */
+	region?: string
 }
 
 /** The request of DeleteApiKey. */
@@ -1014,7 +1019,7 @@ export class ProjectsCollection {
 		return this.client.call<Project>({
 			method: 'POST',
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/projects`,
-			query: { validate_only: request.validateOnly },
+			query: { validate_only: request.validateOnly, region: request.region },
 			body: request.project ?? {},
 			bodyType: 'sylphx.access.v1.Project',
 			responseType: 'sylphx.access.v1.Project',

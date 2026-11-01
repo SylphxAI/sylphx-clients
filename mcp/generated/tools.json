@@ -506,6 +506,10 @@
             ],
             "type": "object"
           },
+          "region": {
+            "description": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
+            "type": "string"
+          },
           "validate_only": {
             "description": "Validate and return the result without writing anything.",
             "type": "boolean"
@@ -46541,6 +46545,10 @@
               "spec"
             ],
             "type": "object"
+          },
+          "region": {
+            "description": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
+            "type": "string"
           },
           "validate_only": {
             "description": "Validate and return the result without writing anything.",

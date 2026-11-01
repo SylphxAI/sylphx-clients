@@ -263,7 +263,7 @@ pub static METHODS: &[MethodSpec] = &[
         http_method: "POST",
         template: "/v1/{parent=orgs/*}/projects",
         path_params: &[("parent", "orgs/*")],
-        query_params: &["validate_only"],
+        query_params: &["validate_only", "region"],
         body: Some("project"),
         long_running: false,
         server_streaming: false,

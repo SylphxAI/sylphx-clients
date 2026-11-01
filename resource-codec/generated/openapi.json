@@ -266,6 +266,10 @@
             "$ref": "#/components/schemas/sylphx.access.v1.Project",
             "description": "The project to create; only spec and caller-writable metadata are read."
           },
+          "region": {
+            "description": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
+            "type": "string"
+          },
           "validate_only": {
             "description": "Validate and return the result without writing anything.",
             "type": "boolean"
@@ -51604,6 +51608,15 @@
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "description": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
