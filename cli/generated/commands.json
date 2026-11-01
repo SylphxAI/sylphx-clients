@@ -28610,7 +28610,8 @@
                     "general",
                     "browser",
                     "desktop",
-                    "android"
+                    "android",
+                    "ios"
                   ]
                 },
                 {
@@ -28628,7 +28629,7 @@
                 {
                   "field": "lease.spec.ttl",
                   "flag": "--spec.ttl",
-                  "summary": "The maximum wall time from grant; default 300 seconds, never past the shape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30 days for macOS). `:renew` extends it within the shape's bound. Reaching it ends the lease EXPIRED.",
+                  "summary": "The maximum wall time from grant, bounded by the selected shape. Default 300 seconds (1800 for IOS); at least 60 seconds. The Simulator shape permits at most 3600 seconds. `:renew` stays within the shape's bound. Reaching it ends the lease EXPIRED.",
                   "type": "duration"
                 },
                 {
@@ -28767,13 +28768,19 @@
                 {
                   "field": "lease.spec.device.model",
                   "flag": "--spec.device.model",
-                  "summary": "A model id from the device catalog, e.g. `pixel_7`; default `pixel_7`.",
+                  "summary": "A model from the selected kind's catalog: an Android id such as `pixel_7`, or a Simulator device type such as `com.apple.CoreSimulator.SimDeviceType.iPhone-15-Plus`. Unset selects the kind's default model.",
                   "type": "string"
                 },
                 {
                   "field": "lease.spec.device.os_version",
                   "flag": "--spec.device.os-version",
                   "summary": "The OS version, e.g. `14`; default the newest offered.",
+                  "type": "string"
+                },
+                {
+                  "field": "lease.spec.device.architecture",
+                  "flag": "--spec.device.architecture",
+                  "summary": "The required Simulator architecture; unset selects the offered architecture.",
                   "type": "string"
                 },
                 {
@@ -29364,15 +29371,32 @@
                 {
                   "field": "apk_path",
                   "flag": "--apk-path",
-                  "required": true,
-                  "summary": "The APK's path in the lease (write it with WriteLeaseFile first).",
+                  "summary": "An Android APK uploaded to the lease. Exactly one app path is required.",
                   "type": "string"
                 },
                 {
                   "field": "grant_permissions",
                   "flag": "--grant-permissions",
-                  "summary": "Grant every runtime permission the app declares.",
+                  "summary": "Grant every Android runtime permission the app declares.",
                   "type": "bool"
+                },
+                {
+                  "field": "app_path",
+                  "flag": "--app-path",
+                  "summary": "A ZIP containing one Simulator .app, uploaded to an IOS lease.",
+                  "type": "string"
+                },
+                {
+                  "field": "artifact_sha256",
+                  "flag": "--artifact-sha256",
+                  "summary": "The exact ZIP SHA256; required for a Simulator install.",
+                  "type": "string"
+                },
+                {
+                  "field": "source_revision",
+                  "flag": "--source-revision",
+                  "summary": "The caller's immutable source revision, returned in the install receipt.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:installApp",

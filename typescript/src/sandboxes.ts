@@ -320,10 +320,17 @@ export interface DeleteVolumeRequest {
  * version is refused SHAPE_NOT_OFFERED.
  */
 export interface DeviceSpec {
-	/** A model id from the device catalog, e.g. `pixel_7`; default `pixel_7`. */
+	/**
+	 * A model from the selected kind's catalog: an Android id such as
+	 * `pixel_7`, or a Simulator device type such as
+	 * `com.apple.CoreSimulator.SimDeviceType.iPhone-15-Plus`. Unset selects
+	 * the kind's default model.
+	 */
 	model?: string
 	/** The OS version, e.g. `14`; default the newest offered. */
 	osVersion?: string
+	/** The required Simulator architecture; unset selects the offered architecture. */
+	architecture?: string
 }
 
 /** DisplayInfo is a lease's effective display. */
@@ -488,16 +495,28 @@ export interface IceServer {
 export interface InstallLeaseAppRequest {
 	/** The name of the lease. */
 	name: string
-	/** The APK's path in the lease (write it with WriteLeaseFile first). */
-	apkPath: string
-	/** Grant every runtime permission the app declares. */
+	/** An Android APK uploaded to the lease. Exactly one app path is required. */
+	apkPath?: string
+	/** Grant every Android runtime permission the app declares. */
 	grantPermissions?: boolean
+	/** A ZIP containing one Simulator .app, uploaded to an IOS lease. */
+	appPath?: string
+	/** The exact ZIP SHA256; required for a Simulator install. */
+	artifactSha256?: string
+	/** The caller's immutable source revision, returned in the install receipt. */
+	sourceRevision?: string
 }
 
-/** The response of InstallLeaseApp. */
+/** The receipt of a successful app install or in-place update. */
 export interface InstallLeaseAppResponse {
-	/** The installed package name. */
+	/** The Android package or iOS bundle identifier. */
 	packageName?: string
+	/** The verified uploaded artifact SHA256. */
+	artifactSha256?: string
+	/** The source revision supplied with this exact artifact. */
+	sourceRevision?: string
+	/** UTC time of the successful install. */
+	installTime?: string
 }
 
 /**
@@ -670,10 +689,10 @@ export interface LeaseSpec {
 	 */
 	pool?: string
 	/**
-	 * The maximum wall time from grant; default 300 seconds, never past the
-	 * shape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30
-	 * days for macOS). `:renew` extends it within the shape's bound. Reaching it
-	 * ends the lease EXPIRED.
+	 * The maximum wall time from grant, bounded by the selected shape.
+	 * Default 300 seconds (1800 for IOS); at least 60 seconds. The Simulator
+	 * shape permits at most 3600 seconds. `:renew` stays within the shape's
+	 * bound. Reaching it ends the lease EXPIRED.
 	 */
 	ttl?: string
 	/**
@@ -710,7 +729,7 @@ export interface LeaseSpec {
 	 */
 	webhook?: LeaseWebhook
 	/**
-	 * The device of an ANDROID lease: model and OS version
+	 * The device of an ANDROID or IOS lease: model and OS version
 	 * (device-farm.md §2.1). The device sets the display; `display` is
 	 * ignored.
 	 */
@@ -1249,6 +1268,22 @@ export interface Shape {
 	readonly priceMicrosPerSecond?: string
 	/** The lease kinds this shape can serve. */
 	readonly kinds?: LeaseKind[]
+	/** The offered Simulator toolchain; present only on an iOS shape. */
+	readonly simulator?: SimulatorRuntime
+}
+
+/** A Simulator toolchain offered by an immutable macOS layer. */
+export interface SimulatorRuntime {
+	/** Simulator runtime identifier, for example com.apple.CoreSimulator.SimRuntime.iOS-26-2. */
+	runtimeId?: string
+	/** The installed iOS release. */
+	osVersion?: string
+	/** The architecture an app must include, for example x86_64. */
+	architecture?: string
+	/** The Xcode version and build that own this runtime. */
+	xcodeVersion?: string
+	/** Offered CoreSimulator device type identifiers. */
+	deviceModels?: string[]
 }
 
 /**
@@ -1489,7 +1524,7 @@ export type ImageFormat = 'png' | 'jpeg' | 'webp' | (string & {})
 export type LeaseEventKind = 'granted' | 'ready' | 'refused' | 'ended' | 'renewed' | 'network_changed' | 'control_acquired' | 'control_released' | 'control_expired' | 'budget_warning' | 'paused' | 'resumed' | (string & {})
 
 /** LeaseKind is what a lease's machine serves. */
-export type LeaseKind = 'general' | 'browser' | 'desktop' | 'android' | (string & {})
+export type LeaseKind = 'general' | 'browser' | 'desktop' | 'android' | 'ios' | (string & {})
 
 /**
  * LeaseRefusal is the typed reason a lease was not granted. There is no global
@@ -1653,9 +1688,15 @@ runtime.registerSchemas({
 	'sylphx.sandboxes.v1.InstallLeaseAppRequest': [
 		['apkPath', 'apk_path'],
 		['grantPermissions', 'grant_permissions'],
+		['appPath', 'app_path'],
+		['artifactSha256', 'artifact_sha256'],
+		['sourceRevision', 'source_revision'],
 	],
 	'sylphx.sandboxes.v1.InstallLeaseAppResponse': [
 		['packageName', 'package_name'],
+		['artifactSha256', 'artifact_sha256'],
+		['sourceRevision', 'source_revision'],
+		['installTime', 'install_time'],
 	],
 	'sylphx.sandboxes.v1.KeyAction': [],
 	'sylphx.sandboxes.v1.Lease': [
@@ -1857,6 +1898,13 @@ runtime.registerSchemas({
 		['minLeaseDuration', 'min_lease_duration'],
 		['maxLeaseDuration', 'max_lease_duration'],
 		['priceMicrosPerSecond', 'price_micros_per_second'],
+		['simulator', 'simulator', 'sylphx.sandboxes.v1.SimulatorRuntime'],
+	],
+	'sylphx.sandboxes.v1.SimulatorRuntime': [
+		['runtimeId', 'runtime_id'],
+		['osVersion', 'os_version'],
+		['xcodeVersion', 'xcode_version'],
+		['deviceModels', 'device_models'],
 	],
 	'sylphx.sandboxes.v1.Snapshot': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],

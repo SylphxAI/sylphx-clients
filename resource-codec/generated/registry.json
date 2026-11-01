@@ -4674,6 +4674,12 @@
           "number": 4,
           "proto_name": "LEASE_KIND_ANDROID",
           "wire": "android"
+        },
+        {
+          "doc": "An iOS Simulator in an isolated macOS VM, with simctl and XCTest.",
+          "number": 5,
+          "proto_name": "LEASE_KIND_IOS",
+          "wire": "ios"
         }
       ]
     },
@@ -115470,7 +115476,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "A model id from the device catalog, e.g. `pixel_7`; default `pixel_7`.",
+          "doc": "A model from the selected kind's catalog: an Android id such as\n`pixel_7`, or a Simulator device type such as\n`com.apple.CoreSimulator.SimDeviceType.iPhone-15-Plus`. Unset selects\nthe kind's default model.",
           "filterable": false,
           "name": "model",
           "number": 1,
@@ -115493,6 +115499,25 @@
           "filterable": false,
           "name": "os_version",
           "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The required Simulator architecture; unset selects the offered architecture.",
+          "filterable": false,
+          "name": "architecture",
+          "number": 3,
           "oneof": null,
           "optional": false,
           "repeated": false,
@@ -116373,10 +116398,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "The APK's path in the lease (write it with WriteLeaseFile first).",
+          "doc": "An Android APK uploaded to the lease. Exactly one app path is required.",
           "filterable": false,
           "name": "apk_path",
           "number": 2,
@@ -116395,7 +116420,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Grant every runtime permission the app declares.",
+          "doc": "Grant every Android runtime permission the app declares.",
           "filterable": false,
           "name": "grant_permissions",
           "number": 3,
@@ -116408,18 +116433,75 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A ZIP containing one Simulator .app, uploaded to an IOS lease.",
+          "filterable": false,
+          "name": "app_path",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The exact ZIP SHA256; required for a Simulator install.",
+          "filterable": false,
+          "name": "artifact_sha256",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The caller's immutable source revision, returned in the install receipt.",
+          "filterable": false,
+          "name": "source_revision",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.sandboxes.v1.InstallLeaseAppRequest",
       "package": "sylphx.sandboxes.v1"
     },
     {
-      "doc": "The response of InstallLeaseApp.",
+      "doc": "The receipt of a successful app install or in-place update.",
       "fields": [
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "The installed package name.",
+          "doc": "The Android package or iOS bundle identifier.",
           "filterable": false,
           "name": "package_name",
           "number": 1,
@@ -116431,6 +116513,57 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The verified uploaded artifact SHA256.",
+          "filterable": false,
+          "name": "artifact_sha256",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The source revision supplied with this exact artifact.",
+          "filterable": false,
+          "name": "source_revision",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "UTC time of the successful install.",
+          "filterable": false,
+          "name": "install_time",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
           }
         }
       ],
@@ -117203,7 +117336,7 @@
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The maximum wall time from grant; default 300 seconds, never past the\nshape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30\ndays for macOS). `:renew` extends it within the shape's bound. Reaching it\nends the lease EXPIRED.",
+          "doc": "The maximum wall time from grant, bounded by the selected shape.\nDefault 300 seconds (1800 for IOS); at least 60 seconds. The Simulator\nshape permits at most 3600 seconds. `:renew` stays within the shape's\nbound. Reaching it ends the lease EXPIRED.",
           "filterable": false,
           "name": "ttl",
           "number": 6,
@@ -117424,7 +117557,7 @@
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The device of an ANDROID lease: model and OS version\n(device-farm.md §2.1). The device sets the display; `display` is\nignored.",
+          "doc": "The device of an ANDROID or IOS lease: model and OS version\n(device-farm.md §2.1). The device sets the display; `display` is\nignored.",
           "filterable": false,
           "name": "device",
           "number": 17,
@@ -120633,9 +120766,120 @@
             "kind": "enum",
             "name": "sylphx.sandboxes.v1.LeaseKind"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The offered Simulator toolchain; present only on an iOS shape.",
+          "filterable": false,
+          "name": "simulator",
+          "number": 20,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.sandboxes.v1.SimulatorRuntime"
+          }
         }
       ],
       "name": "sylphx.sandboxes.v1.Shape",
+      "package": "sylphx.sandboxes.v1"
+    },
+    {
+      "doc": "A Simulator toolchain offered by an immutable macOS layer.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Simulator runtime identifier, for example com.apple.CoreSimulator.SimRuntime.iOS-26-2.",
+          "filterable": false,
+          "name": "runtime_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The installed iOS release.",
+          "filterable": false,
+          "name": "os_version",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The architecture an app must include, for example x86_64.",
+          "filterable": false,
+          "name": "architecture",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The Xcode version and build that own this runtime.",
+          "filterable": false,
+          "name": "xcode_version",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Offered CoreSimulator device type identifiers.",
+          "filterable": false,
+          "name": "device_models",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.sandboxes.v1.SimulatorRuntime",
       "package": "sylphx.sandboxes.v1"
     },
     {

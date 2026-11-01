@@ -574,7 +574,10 @@ pub struct DeleteVolumeRequest {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct DeviceSpec {
-    /// A model id from the device catalog, e.g. `pixel_7`; default `pixel_7`.
+    /// A model from the selected kind's catalog: an Android id such as
+    /// `pixel_7`, or a Simulator device type such as
+    /// `com.apple.CoreSimulator.SimDeviceType.iPhone-15-Plus`. Unset selects
+    /// the kind's default model.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub model: String,
     /// The OS version, e.g. `14`; default the newest offered.
@@ -584,6 +587,9 @@ pub struct DeviceSpec {
         alias = "osVersion"
     )]
     pub os_version: String,
+    /// The required Simulator architecture; unset selects the offered architecture.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub architecture: String,
 }
 
 /// DisplayInfo is a lease's effective display.
@@ -872,35 +878,75 @@ pub struct InstallLeaseAppRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// The APK's path in the lease (write it with WriteLeaseFile first).
-    ///
-    /// Field behavior: `required`.
+    /// An Android APK uploaded to the lease. Exactly one app path is required.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "apkPath"
     )]
     pub apk_path: String,
-    /// Grant every runtime permission the app declares.
+    /// Grant every Android runtime permission the app declares.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "grantPermissions"
     )]
     pub grant_permissions: bool,
+    /// A ZIP containing one Simulator .app, uploaded to an IOS lease.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appPath"
+    )]
+    pub app_path: String,
+    /// The exact ZIP SHA256; required for a Simulator install.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "artifactSha256"
+    )]
+    pub artifact_sha256: String,
+    /// The caller's immutable source revision, returned in the install receipt.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceRevision"
+    )]
+    pub source_revision: String,
 }
 
-/// The response of InstallLeaseApp.
+/// The receipt of a successful app install or in-place update.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct InstallLeaseAppResponse {
-    /// The installed package name.
+    /// The Android package or iOS bundle identifier.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "packageName"
     )]
     pub package_name: String,
+    /// The verified uploaded artifact SHA256.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "artifactSha256"
+    )]
+    pub artifact_sha256: String,
+    /// The source revision supplied with this exact artifact.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceRevision"
+    )]
+    pub source_revision: String,
+    /// UTC time of the successful install.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "installTime"
+    )]
+    pub install_time: String,
 }
 
 /// KeyAction presses a key combination, xdotool syntax: `Return`, `ctrl+c`,
@@ -1190,10 +1236,10 @@ pub struct LeaseSpec {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub pool: String,
-    /// The maximum wall time from grant; default 300 seconds, never past the
-    /// shape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30
-    /// days for macOS). `:renew` extends it within the shape's bound. Reaching it
-    /// ends the lease EXPIRED.
+    /// The maximum wall time from grant, bounded by the selected shape.
+    /// Default 300 seconds (1800 for IOS); at least 60 seconds. The Simulator
+    /// shape permits at most 3600 seconds. `:renew` stays within the shape's
+    /// bound. Reaching it ends the lease EXPIRED.
     ///
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1257,7 +1303,7 @@ pub struct LeaseSpec {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub webhook: Option<LeaseWebhook>,
-    /// The device of an ANDROID lease: model and OS version
+    /// The device of an ANDROID or IOS lease: model and OS version
     /// (device-farm.md §2.1). The device sets the display; `display` is
     /// ignored.
     ///
@@ -2422,6 +2468,44 @@ pub struct Shape {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub kinds: Vec<LeaseKind>,
+    /// The offered Simulator toolchain; present only on an iOS shape.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub simulator: Option<SimulatorRuntime>,
+}
+
+/// A Simulator toolchain offered by an immutable macOS layer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SimulatorRuntime {
+    /// Simulator runtime identifier, for example com.apple.CoreSimulator.SimRuntime.iOS-26-2.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "runtimeId"
+    )]
+    pub runtime_id: String,
+    /// The installed iOS release.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "osVersion"
+    )]
+    pub os_version: String,
+    /// The architecture an app must include, for example x86_64.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub architecture: String,
+    /// The Xcode version and build that own this runtime.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "xcodeVersion"
+    )]
+    pub xcode_version: String,
+    /// Offered CoreSimulator device type identifiers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "deviceModels")]
+    pub device_models: Vec<String>,
 }
 
 /// A Snapshot is a lease's disk and image captured at one moment. A lease
@@ -3259,6 +3343,8 @@ pub enum LeaseKind {
     /// An Android device: the same actions (tap is click, swipe is drag), adb,
     /// streams, and takeover.
     Android,
+    /// An iOS Simulator in an isolated macOS VM, with simctl and XCTest.
+    Ios,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3271,6 +3357,7 @@ impl LeaseKind {
             Self::Browser => "browser",
             Self::Desktop => "desktop",
             Self::Android => "android",
+            Self::Ios => "ios",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3282,6 +3369,7 @@ impl LeaseKind {
             "browser" => Self::Browser,
             "desktop" => Self::Desktop,
             "android" => Self::Android,
+            "ios" => Self::Ios,
             other => Self::Unknown(other.to_string()),
         }
     }

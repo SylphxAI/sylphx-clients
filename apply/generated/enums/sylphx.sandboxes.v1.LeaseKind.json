@@ -21,6 +21,11 @@
       "number": 4,
       "proto_name": "LEASE_KIND_ANDROID",
       "wire": "android"
+    },
+    {
+      "number": 5,
+      "proto_name": "LEASE_KIND_IOS",
+      "wire": "ios"
     }
   ]
 }

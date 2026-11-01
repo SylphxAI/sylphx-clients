@@ -38395,8 +38395,12 @@
       "sylphx.sandboxes.v1.DeviceSpec": {
         "description": "DeviceSpec chooses the device of a device lease. An unknown model or OS\nversion is refused SHAPE_NOT_OFFERED.",
         "properties": {
+          "architecture": {
+            "description": "The required Simulator architecture; unset selects the offered architecture.",
+            "type": "string"
+          },
           "model": {
-            "description": "A model id from the device catalog, e.g. `pixel_7`; default `pixel_7`.",
+            "description": "A model from the selected kind's catalog: an Android id such as\n`pixel_7`, or a Simulator device type such as\n`com.apple.CoreSimulator.SimDeviceType.iPhone-15-Plus`. Unset selects\nthe kind's default model.",
             "type": "string"
           },
           "os_version": {
@@ -38770,30 +38774,54 @@
         "description": "The request of InstallLeaseApp.",
         "properties": {
           "apk_path": {
-            "description": "The APK's path in the lease (write it with WriteLeaseFile first).",
+            "description": "An Android APK uploaded to the lease. Exactly one app path is required.",
+            "type": "string"
+          },
+          "app_path": {
+            "description": "A ZIP containing one Simulator .app, uploaded to an IOS lease.",
+            "type": "string"
+          },
+          "artifact_sha256": {
+            "description": "The exact ZIP SHA256; required for a Simulator install.",
             "type": "string"
           },
           "grant_permissions": {
-            "description": "Grant every runtime permission the app declares.",
+            "description": "Grant every Android runtime permission the app declares.",
             "type": "boolean"
           },
           "name": {
             "description": "The name of the lease.",
             "type": "string",
             "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          },
+          "source_revision": {
+            "description": "The caller's immutable source revision, returned in the install receipt.",
+            "type": "string"
           }
         },
         "required": [
-          "name",
-          "apk_path"
+          "name"
         ],
         "type": "object"
       },
       "sylphx.sandboxes.v1.InstallLeaseAppResponse": {
-        "description": "The response of InstallLeaseApp.",
+        "description": "The receipt of a successful app install or in-place update.",
         "properties": {
+          "artifact_sha256": {
+            "description": "The verified uploaded artifact SHA256.",
+            "type": "string"
+          },
+          "install_time": {
+            "description": "UTC time of the successful install.",
+            "format": "date-time",
+            "type": "string"
+          },
           "package_name": {
-            "description": "The installed package name.",
+            "description": "The Android package or iOS bundle identifier.",
+            "type": "string"
+          },
+          "source_revision": {
+            "description": "The source revision supplied with this exact artifact.",
             "type": "string"
           }
         },
@@ -38979,7 +39007,8 @@
           "general",
           "browser",
           "desktop",
-          "android"
+          "android",
+          "ios"
         ],
         "type": "string"
       },
@@ -39065,7 +39094,7 @@
           },
           "device": {
             "$ref": "#/components/schemas/sylphx.sandboxes.v1.DeviceSpec",
-            "description": "The device of an ANDROID lease: model and OS version\n(device-farm.md §2.1). The device sets the display; `display` is\nignored.",
+            "description": "The device of an ANDROID or IOS lease: model and OS version\n(device-farm.md §2.1). The device sets the display; `display` is\nignored.",
             "x-sylphx-immutable": true
           },
           "display": {
@@ -39132,7 +39161,7 @@
             "x-sylphx-resource-reference": "sandboxes.sylphx.com/Snapshot"
           },
           "ttl": {
-            "description": "The maximum wall time from grant; default 300 seconds, never past the\nshape's longest lease (1 minute to 24 hours for microVMs, 24 hours to 30\ndays for macOS). `:renew` extends it within the shape's bound. Reaching it\nends the lease EXPIRED.",
+            "description": "The maximum wall time from grant, bounded by the selected shape.\nDefault 300 seconds (1800 for IOS); at least 60 seconds. The Simulator\nshape permits at most 3600 seconds. `:renew` stays within the shape's\nbound. Reaching it ends the lease EXPIRED.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string",
             "x-sylphx-immutable": true
@@ -40295,6 +40324,11 @@
             "readOnly": true,
             "type": "string"
           },
+          "simulator": {
+            "$ref": "#/components/schemas/sylphx.sandboxes.v1.SimulatorRuntime",
+            "description": "The offered Simulator toolchain; present only on an iOS shape.",
+            "readOnly": true
+          },
           "uid": {
             "description": "`shp_<cell><ulid>`; never reused.",
             "readOnly": true,
@@ -40316,6 +40350,35 @@
           "macos"
         ],
         "type": "string"
+      },
+      "sylphx.sandboxes.v1.SimulatorRuntime": {
+        "description": "A Simulator toolchain offered by an immutable macOS layer.",
+        "properties": {
+          "architecture": {
+            "description": "The architecture an app must include, for example x86_64.",
+            "type": "string"
+          },
+          "device_models": {
+            "description": "Offered CoreSimulator device type identifiers.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "os_version": {
+            "description": "The installed iOS release.",
+            "type": "string"
+          },
+          "runtime_id": {
+            "description": "Simulator runtime identifier, for example com.apple.CoreSimulator.SimRuntime.iOS-26-2.",
+            "type": "string"
+          },
+          "xcode_version": {
+            "description": "The Xcode version and build that own this runtime.",
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "sylphx.sandboxes.v1.Snapshot": {
         "description": "A Snapshot is a lease's disk and image captured at one moment. A lease\ncreated with `source_snapshot` boots from it. Process memory is not\ncaptured.",
@@ -82966,17 +83029,26 @@
               "schema": {
                 "properties": {
                   "apk_path": {
-                    "description": "The APK's path in the lease (write it with WriteLeaseFile first).",
+                    "description": "An Android APK uploaded to the lease. Exactly one app path is required.",
+                    "type": "string"
+                  },
+                  "app_path": {
+                    "description": "A ZIP containing one Simulator .app, uploaded to an IOS lease.",
+                    "type": "string"
+                  },
+                  "artifact_sha256": {
+                    "description": "The exact ZIP SHA256; required for a Simulator install.",
                     "type": "string"
                   },
                   "grant_permissions": {
-                    "description": "Grant every runtime permission the app declares.",
+                    "description": "Grant every Android runtime permission the app declares.",
                     "type": "boolean"
+                  },
+                  "source_revision": {
+                    "description": "The caller's immutable source revision, returned in the install receipt.",
+                    "type": "string"
                   }
                 },
-                "required": [
-                  "apk_path"
-                ],
                 "type": "object"
               }
             }
