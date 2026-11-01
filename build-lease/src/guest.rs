@@ -20,6 +20,8 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde_json::{json, Value};
 
+mod refusal;
+
 /// How the guest failed a call.
 #[derive(Debug)]
 pub enum Fault {
@@ -230,14 +232,6 @@ pub fn envelope(v: &Value) -> Vec<u8> {
     out
 }
 
-fn fault(status: reqwest::StatusCode, body: &str) -> Fault {
-    let text: String = body.chars().take(300).collect();
-    match status.as_u16() {
-        404 | 409 | 410 | 502 | 503 => Fault::Gone(format!("guest answered {status}: {text}")),
-        _ => Fault::Other(format!("guest answered {status}: {text}")),
-    }
-}
-
 fn net(e: reqwest::Error) -> Fault {
     Fault::Gone(format!("guest unreachable: {e}"))
 }
@@ -371,8 +365,7 @@ impl Guest {
             .await
             .map_err(net)?;
         if !resp.status().is_success() {
-            let s = resp.status();
-            return Err(fault(s, &resp.text().await.unwrap_or_default()));
+            return Err(refusal::read("POST", resp).await);
         }
         Ok(())
     }
@@ -391,16 +384,17 @@ impl Guest {
             .map_err(net)?;
         let s = resp.status();
         if s.as_u16() == 404 {
+            let details = refusal::Details::capture("GET", &resp);
             let body = resp.text().await.unwrap_or_default();
             // A missing file is a 404 from envd itself; a missing sandbox is
             // the proxy's 404 naming the sandbox.
             if body.contains("sandbox") {
-                return Err(Fault::Gone(body));
+                return Err(details.fault(&body));
             }
             return Ok(None);
         }
         if !s.is_success() {
-            return Err(fault(s, &resp.text().await.unwrap_or_default()));
+            return Err(refusal::read("GET", resp).await);
         }
         resp.bytes()
             .await
@@ -452,8 +446,7 @@ impl Guest {
             .await
             .map_err(net)?;
         if !resp.status().is_success() {
-            let s = resp.status();
-            return Err(fault(s, &resp.text().await.unwrap_or_default()));
+            return Err(refusal::read("POST", resp).await);
         }
         Ok(resp)
     }
@@ -568,8 +561,7 @@ impl Guest {
             .await
             .map_err(net)?;
         if !resp.status().is_success() {
-            let s = resp.status();
-            return Err(fault(s, &resp.text().await.unwrap_or_default()));
+            return Err(refusal::read("POST", resp).await);
         }
         Ok(())
     }
@@ -587,8 +579,7 @@ impl Guest {
             .await
             .map_err(net)?;
         if resp.status().is_server_error() || resp.status().as_u16() == 410 {
-            let s = resp.status();
-            return Err(fault(s, &resp.text().await.unwrap_or_default()));
+            return Err(refusal::read("POST", resp).await);
         }
         Ok(())
     }
