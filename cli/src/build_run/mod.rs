@@ -113,7 +113,7 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this source directory; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of PATH, or its enclosing Git work tree when present. No Git initialization or manifest is required. Ordinary directories honor .gitignore; optional .sylphxignore exclusions apply to both source types. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from at most three `sylphx:` lines on stderr.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree behavior.\n\nAdmission and cold boot have a default 30m wait budget. --queue-timeout optionally overrides that budget; keep the default unless you need a different wait limit.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure before the command starts; 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --size standard -- cargo test")
+        .long_about("Runs <command> on a remote copy of PATH, or its enclosing Git work tree when present. No Git initialization or manifest is required. Ordinary directories honor .gitignore; optional .sylphxignore exclusions apply to both source types. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from at most four `sylphx:` lines on stderr.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree behavior.\n\nAdmission and cold boot have a default 30m wait budget. --queue-timeout optionally overrides that budget; keep the default unless you need a different wait limit.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure before the command starts; 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --size standard -- cargo test")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); syncs it or its enclosing Git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -530,6 +530,8 @@ impl Held {
 /// The counters of the `result` event.
 #[derive(Default)]
 struct Stats {
+    /// The last accepted machine, retained after release for failure receipts.
+    lease: Option<String>,
     bytes_up: u64,
     bytes_down: u64,
     artifacts: usize,
@@ -676,6 +678,9 @@ fn result_event(outcome: &Outcome, s: &Stats, ms: u64) -> Value {
         "bytes_down": s.bytes_down,
         "from_store": s.from_store,
     });
+    if let Some(lease) = &s.lease {
+        result["lease"] = json!(lease);
+    }
     if let Outcome::Platform { reason, .. } | Outcome::Lost(reason) = outcome {
         result["error"] = json!(reason);
     }
@@ -696,13 +701,15 @@ fn finish(out: &Out, outcome: &Outcome, s: &Stats, t0: Instant) -> Result<(), Fa
     let ms = t0.elapsed().as_millis() as u64;
     if let Outcome::Platform { reason, retryable } = outcome {
         eprintln!(
-            "sylphx: error: {reason}{}",
+            "sylphx: error: {}{}",
+            with_lease(reason, s.lease.as_deref()),
             if *retryable { " [retryable]" } else { "" }
         );
     }
     if let Outcome::Lost(reason) = outcome {
         eprintln!(
-            "sylphx: error: {reason} after the command started; it was not run again [retryable]"
+            "sylphx: error: {} after the command started; it was not run again [retryable]",
+            with_lease(reason, s.lease.as_deref())
         );
     }
     out.event(result_event(outcome, s, ms));
@@ -718,7 +725,11 @@ fn finish(out: &Out, outcome: &Outcome, s: &Stats, t0: Instant) -> Result<(), Fa
         1 => "; 1 artifact".into(),
         n => format!("; {n} artifacts"),
     };
-    out.progress(&format!("{what} in {:.1} s{arts}", ms as f64 / 1000.0));
+    out.progress(&format!(
+        "{} in {:.1} s{arts}",
+        with_lease(&what, s.lease.as_deref()),
+        ms as f64 / 1000.0
+    ));
     match outcome.code() {
         0 => Ok(()),
         c => Err(Failure::Exit(c)),
@@ -1040,7 +1051,7 @@ impl Run<'_> {
         }
         let shape = format!("build-{}", self.o.size);
         let warned = !warned_before && self.cache_warned.load(Ordering::Relaxed);
-        // At most three `sylphx:` lines: a warning takes the place of this one.
+        // A warning takes the place of this progress line.
         if !warned {
             self.out.progress(&format!(
                 "running on {shape}, cold lease-owned workspace{}",
@@ -1495,6 +1506,9 @@ impl Run<'_> {
             self.accepted_region = lease.spec.as_ref().map(|s| s.region.clone());
         }
         self.held.with(|h| h.lease = Some(lease.name.clone()));
+        self.add(|stats| stats.lease = Some(lease.name.clone()));
+        self.out
+            .progress(&with_lease("accepted build machine", Some(&lease.name)));
         Ok(lease)
     }
 
@@ -2432,6 +2446,14 @@ fn lease_label(name: &str) -> String {
         "the lease was never created".into()
     } else {
         format!("lease {name}")
+    }
+}
+
+/// Keep the machine receipt even when failure happens before source sync.
+fn with_lease(text: &str, lease: Option<&str>) -> String {
+    match lease.filter(|name| !name.is_empty() && !text.contains(*name)) {
+        Some(name) => format!("{text} (lease {})", name.rsplit('/').next().unwrap_or(name)),
+        None => text.to_string(),
     }
 }
 
@@ -3938,6 +3960,7 @@ esac
         }
         // The events as the code builds them.
         let stats = Stats {
+            lease: None,
             bytes_up: 512,
             bytes_down: 2048,
             artifacts: 0,
@@ -4259,5 +4282,38 @@ esac
             if *got { " [retryable]" } else { "" }
         );
         assert!(plain.contains(want), "{plain}");
+    }
+
+    #[test]
+    fn accepted_lease_receipts_survive_setup_failure_and_release() {
+        let name = "orgs/o/projects/p/envs/e/leases/sbx-example";
+        let stats = Stats {
+            lease: Some(name.into()),
+            ..Stats::default()
+        };
+        for outcome in [
+            Outcome::platform("upload refused", true),
+            Outcome::Lost("stream ended".into()),
+            Outcome::Ran(1),
+            Outcome::TimedOut,
+        ] {
+            assert_eq!(result_event(&outcome, &stats, 1)["lease"], name);
+        }
+        assert_eq!(
+            with_lease("upload refused", Some(name)),
+            "upload refused (lease sbx-example)"
+        );
+        assert_eq!(
+            with_lease(&format!("refused ({name})"), Some(name)),
+            format!("refused ({name})")
+        );
+        assert_eq!(with_lease("create refused", None), "create refused");
+        assert!(result_event(
+            &Outcome::platform("create refused", true),
+            &Stats::default(),
+            1
+        )
+        .get("lease")
+        .is_none());
     }
 }

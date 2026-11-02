@@ -2637,7 +2637,7 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
     let err = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(137), "{err}");
     assert!(
-        err.contains("machine_lost after the command started"),
+        err.contains("machine_lost (lease l1) after the command started"),
         "{err}"
     );
     let result: Value = String::from_utf8_lossy(&out.stdout)
@@ -2645,6 +2645,7 @@ async fn build_run_exits_137_when_the_machine_is_lost_after_the_command_started(
         .filter_map(|l| serde_json::from_str::<Value>(l).ok())
         .find(|v| v["type"] == "result")
         .expect("a result event");
+    assert_eq!(result["lease"], format!("{ENV}/leases/l1"));
     assert_eq!(result["outcome"], "lost");
     assert_eq!(result["exit_code"], 137);
     assert_eq!(result["retryable"], true);
@@ -3225,7 +3226,12 @@ async fn build_run_builds_without_the_cache_when_it_cannot_be_minted() {
             )],
             "{name}: {err}"
         );
-        assert!(sylphx_lines(&err).len() <= 3, "{name}: {err}");
+        assert!(
+            err.contains("accepted build machine (lease l1)"),
+            "{name}: {err}"
+        );
+        assert!(err.contains("exit 0 (lease l1)"), "{name}: {err}");
+        assert!(sylphx_lines(&err).len() <= 4, "{name}: {err}");
         let env = started_env(&log);
         assert!(
             env.as_object()
@@ -3260,7 +3266,9 @@ async fn build_run_no_cache_mints_nothing_and_warns_of_nothing() {
     assert_volume_free_regional_leases(&log, "hk");
     assert!(clog.lock().is_empty(), "no token was asked for");
     assert!(!err.contains("build cache"), "{err}");
-    assert_eq!(sylphx_lines(&err).len(), 3, "{err}");
+    assert!(err.contains("accepted build machine (lease l1)"), "{err}");
+    assert!(err.contains("exit 0 (lease l1)"), "{err}");
+    assert_eq!(sylphx_lines(&err).len(), 4, "{err}");
     let env = started_env(&log);
     assert!(
         env.as_object()
