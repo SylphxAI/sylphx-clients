@@ -422,8 +422,9 @@ pub struct TrustPolicySpec {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub permissions: std::collections::BTreeMap<String, String>,
-    /// The repositories a credential may cover, `owner/name`, 1 to 100, every
-    /// one owned by the Connection's account. One exchange covers exactly one.
+    /// The repositories a credential may cover: 1 to 1000 exact `owner/name`
+    /// entries, no wildcard, each owned by the Connection's account.
+    /// One exchange covers exactly one repository.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

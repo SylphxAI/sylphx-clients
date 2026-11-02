@@ -11371,7 +11371,7 @@
             "type": "object"
           },
           "repositories": {
-            "description": "The repositories a credential may cover, `owner/name`, 1 to 100, every\none owned by the Connection's account. One exchange covers exactly one.",
+            "description": "The repositories a credential may cover: 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
             "items": {
               "type": "string"
             },

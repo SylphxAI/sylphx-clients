@@ -223,8 +223,9 @@ export interface TrustPolicySpec {
 	 */
 	permissions?: Record<string, string>
 	/**
-	 * The repositories a credential may cover, `owner/name`, 1 to 100, every
-	 * one owned by the Connection's account. One exchange covers exactly one.
+	 * The repositories a credential may cover: 1 to 1000 exact `owner/name`
+	 * entries, no wildcard, each owned by the Connection's account.
+	 * One exchange covers exactly one repository.
 	 */
 	repositories?: string[]
 	/** What the credential service issues; `access_token` on the wire. */
