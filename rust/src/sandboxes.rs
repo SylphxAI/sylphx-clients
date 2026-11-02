@@ -590,6 +590,14 @@ pub struct DeviceSpec {
     /// The required Simulator architecture; unset selects the offered architecture.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub architecture: String,
+    /// Enable Vulkan on an Android emulator for native graphics tests. Default
+    /// false: Chrome WebGL uses the OpenGL ES path. Refused on IOS leases.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "vulkanEnabled"
+    )]
+    pub vulkan_enabled: bool,
 }
 
 /// DisplayInfo is a lease's effective display.

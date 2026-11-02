@@ -39329,6 +39329,10 @@
           "os_version": {
             "description": "The OS version, e.g. `14`; default the newest offered.",
             "type": "string"
+          },
+          "vulkan_enabled": {
+            "description": "Enable Vulkan on an Android emulator for native graphics tests. Default\nfalse: Chrome WebGL uses the OpenGL ES path. Refused on IOS leases.",
+            "type": "boolean"
           }
         },
         "type": "object"

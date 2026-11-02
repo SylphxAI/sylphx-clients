@@ -29448,6 +29448,12 @@
                   "type": "string"
                 },
                 {
+                  "field": "lease.spec.device.vulkan_enabled",
+                  "flag": "--spec.device.vulkan-enabled",
+                  "summary": "Enable Vulkan on an Android emulator for native graphics tests. Default false: Chrome WebGL uses the OpenGL ES path. Refused on IOS leases.",
+                  "type": "bool"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",

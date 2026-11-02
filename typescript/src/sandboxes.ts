@@ -331,6 +331,11 @@ export interface DeviceSpec {
 	osVersion?: string
 	/** The required Simulator architecture; unset selects the offered architecture. */
 	architecture?: string
+	/**
+	 * Enable Vulkan on an Android emulator for native graphics tests. Default
+	 * false: Chrome WebGL uses the OpenGL ES path. Refused on IOS leases.
+	 */
+	vulkanEnabled?: boolean
 }
 
 /** DisplayInfo is a lease's effective display. */
@@ -1657,6 +1662,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.sandboxes.v1.DeviceSpec': [
 		['osVersion', 'os_version'],
+		['vulkanEnabled', 'vulkan_enabled'],
 	],
 	'sylphx.sandboxes.v1.DisplayInfo': [],
 	'sylphx.sandboxes.v1.DisplaySpec': [],
