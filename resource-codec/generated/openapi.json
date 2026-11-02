@@ -40033,7 +40033,8 @@
           "shape_not_offered",
           "shape_not_entitled",
           "image_not_found",
-          "abuse_hold"
+          "abuse_hold",
+          "unavailable"
         ],
         "type": "string"
       },
@@ -85680,6 +85681,7 @@
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS",
           "NO_CAPACITY",
+          "UNAVAILABLE",
           "SHAPE_NOT_OFFERED",
           "PLAN_LIMIT_REACHED",
           "SPEND_LIMIT_REACHED"

@@ -1555,7 +1555,7 @@ export type LeaseKind = 'general' | 'browser' | 'desktop' | 'android' | 'ios' | 
  * LeaseRefusal is the typed reason a lease was not granted. There is no global
  * queue: a lease is granted now or refused.
  */
-export type LeaseRefusal = 'no_capacity' | 'no_matching_cell' | 'shape_not_offered' | 'shape_not_entitled' | 'image_not_found' | 'abuse_hold' | (string & {})
+export type LeaseRefusal = 'no_capacity' | 'no_matching_cell' | 'shape_not_offered' | 'shape_not_entitled' | 'image_not_found' | 'abuse_hold' | 'unavailable' | (string & {})
 
 /** LeaseState is the lease state machine (sandboxes-e2b.md §5.4). */
 export type LeaseState = 'requested' | 'granted' | 'ready' | 'paused' | 'ending' | 'ended' | 'refused' | (string & {})
@@ -2265,7 +2265,7 @@ export class LeasesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/leases` · permission `sandboxes:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RESOURCE_NOT_FOUND`, `RESOURCE_IN_USE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `NO_CAPACITY`, `SHAPE_NOT_OFFERED`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RESOURCE_NOT_FOUND`, `RESOURCE_IN_USE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `NO_CAPACITY`, `UNAVAILABLE`, `SHAPE_NOT_OFFERED`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
 	 */
 	async create(request: CreateLeaseRequest): Promise<Lease> {
 		return this.client.call<Lease>({

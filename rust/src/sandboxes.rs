@@ -3460,6 +3460,9 @@ pub enum LeaseRefusal {
     ImageNotFound,
     /// The principal is held for abuse.
     AbuseHold,
+    /// The Cell could not be reached or failed to answer; retry later. This is
+    /// not evidence that its machine capacity is exhausted.
+    Unavailable,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3474,6 +3477,7 @@ impl LeaseRefusal {
             Self::ShapeNotEntitled => "shape_not_entitled",
             Self::ImageNotFound => "image_not_found",
             Self::AbuseHold => "abuse_hold",
+            Self::Unavailable => "unavailable",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3487,6 +3491,7 @@ impl LeaseRefusal {
             "shape_not_entitled" => Self::ShapeNotEntitled,
             "image_not_found" => Self::ImageNotFound,
             "abuse_hold" => Self::AbuseHold,
+            "unavailable" => Self::Unavailable,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -4419,7 +4424,7 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/leases` · permission `sandboxes:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RESOURCE_NOT_FOUND`, `RESOURCE_IN_USE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `NO_CAPACITY`, `SHAPE_NOT_OFFERED`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RESOURCE_NOT_FOUND`, `RESOURCE_IN_USE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `NO_CAPACITY`, `UNAVAILABLE`, `SHAPE_NOT_OFFERED`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
     pub async fn create(
         &self,
         request: CreateLeaseRequest,

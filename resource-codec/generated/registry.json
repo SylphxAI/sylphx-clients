@@ -4791,6 +4791,12 @@
           "number": 6,
           "proto_name": "LEASE_REFUSAL_ABUSE_HOLD",
           "wire": "abuse_hold"
+        },
+        {
+          "doc": "The Cell could not be reached or failed to answer; retry later. This is\nnot evidence that its machine capacity is exhausted.",
+          "number": 7,
+          "proto_name": "LEASE_REFUSAL_UNAVAILABLE",
+          "wire": "unavailable"
         }
       ]
     },
@@ -170295,6 +170301,7 @@
                 "IDEMPOTENCY_KEY_REUSED",
                 "IDEMPOTENCY_IN_PROGRESS",
                 "NO_CAPACITY",
+                "UNAVAILABLE",
                 "SHAPE_NOT_OFFERED",
                 "PLAN_LIMIT_REACHED",
                 "SPEND_LIMIT_REACHED"

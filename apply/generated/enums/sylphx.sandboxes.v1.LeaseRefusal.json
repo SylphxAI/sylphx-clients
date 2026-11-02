@@ -31,6 +31,11 @@
       "number": 6,
       "proto_name": "LEASE_REFUSAL_ABUSE_HOLD",
       "wire": "abuse_hold"
+    },
+    {
+      "number": 7,
+      "proto_name": "LEASE_REFUSAL_UNAVAILABLE",
+      "wire": "unavailable"
     }
   ]
 }
