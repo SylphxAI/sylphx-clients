@@ -18,6 +18,9 @@ sylphx link --env orgs/…/envs/…       # optional advanced target override fo
 sylphx data databases create main --spec.compute-units 2
 sylphx data databases list -o json
 sylphx devices run --app app.apk       # a smoke test on a fresh Android device: device-results/
+sylphx deploy                         # a Release of this checkout's HEAD, followed until live (exit 0) or failed (exit 1, reason)
+sylphx status                         # the linked environment's live Release: per-service artifact digest and source SHA
+sylphx rollback                       # the previous served artifacts, without a build (docs/services/hosting/releases.md)
 sylphx devices run --app app.apk --scenario capture.json --size tablet  # native-size scenario capture
 sylphx build run -- cargo test        # this work tree's command on a remote build machine
 sylphx build image                     # build and publish to the linked project; no registry setup

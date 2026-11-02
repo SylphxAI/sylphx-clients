@@ -888,9 +888,7 @@ pub struct Service {
     /// Resource metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<crate::common::ResourceMeta>,
-    /// Desired state.
-    ///
-    /// Field behavior: `required`.
+    /// Desired state, omitted when no immutable public projection is available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<ServiceSpec>,
     /// Observed state.
@@ -898,6 +896,24 @@ pub struct Service {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<ServiceStatus>,
+    /// True when some desired inputs or serving observations are unavailable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "projectionIncomplete"
+    )]
+    pub projection_incomplete: bool,
+    /// Field paths not established by retained evidence.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "unavailableFields"
+    )]
+    pub unavailable_fields: Vec<String>,
 }
 
 /// ServiceBuild is the build recipe of a Service built from source.
@@ -1120,6 +1136,24 @@ pub struct ServiceStatus {
         alias = "readyInstances"
     )]
     pub ready_instances: i32,
+    /// The selected environment Release; not proof that this service runs it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currentRelease"
+    )]
+    pub current_release: String,
+    /// The persisted service lifecycle, independent of observed readiness.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lifecycleState"
+    )]
+    pub lifecycle_state: String,
 }
 
 /// One public HTTPRoute and every Host/path/backend it binds. This is an owner

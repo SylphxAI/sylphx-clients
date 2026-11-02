@@ -3,7 +3,7 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `devices`, `build run`, `build cache env`, `events listen`, `work runner`, `mcp`, `completion`) is hand-written on the
+//! `api`, `devices`, `deploy`, `status`, `rollback`, `build run`, `build cache env`, `events listen`, `work runner`, `mcp`, `completion`) is hand-written on the
 //! same SDK.
 
 mod apply;
@@ -19,6 +19,7 @@ mod events_listen;
 mod names;
 mod output;
 mod porcelain;
+mod release_cmd;
 mod token;
 mod tree;
 mod work_runner;
@@ -230,6 +231,7 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(devices::command())
+        .subcommands(release_cmd::commands())
         .subcommand(porcelain::command())
         .subcommand(work_runner::command())
         .subcommand(
@@ -305,6 +307,7 @@ async fn main() -> ExitCode {
     }
 }
 
+#[derive(Debug)]
 enum Failure {
     Usage(String),
     /// A one-line reason on stderr, exit 1.
@@ -473,6 +476,18 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "link" => link(&client().await?, sub).await,
         "devices" => devices::run(&client().await?, sub).await,
+        "deploy" | "status" | "rollback" => {
+            release_cmd::run(
+                &client().await?,
+                name,
+                sub,
+                org,
+                format,
+                sub.get_flag("yes"),
+                sub.get_flag("no-wait"),
+            )
+            .await
+        }
         "work" => work_runner::run(api_key.clone(), org, sub, format == Format::Json).await,
         "api" => {
             let method = sub.get_one::<String>("method").expect("required").clone();

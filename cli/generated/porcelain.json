@@ -28,6 +28,7 @@
       "search",
       "sync"
     ],
+    "deploy": [],
     "devices": [
       "run"
     ],
@@ -44,6 +45,8 @@
     "org": [
       "use"
     ],
+    "rollback": [],
+    "status": [],
     "token": [],
     "whoami": [],
     "work": [

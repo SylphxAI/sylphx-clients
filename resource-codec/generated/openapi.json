@@ -21142,9 +21142,14 @@
             "description": "`orgs/{org}/projects/{project}/envs/{env}/services/{service}`.",
             "type": "string"
           },
+          "projection_incomplete": {
+            "description": "True when some desired inputs or serving observations are unavailable.",
+            "readOnly": true,
+            "type": "boolean"
+          },
           "spec": {
             "$ref": "#/components/schemas/sylphx.hosting.v1.ServiceSpec",
-            "description": "Desired state."
+            "description": "Desired state, omitted when no immutable public projection is available."
           },
           "status": {
             "$ref": "#/components/schemas/sylphx.hosting.v1.ServiceStatus",
@@ -21155,11 +21160,16 @@
             "description": "`svc_<cell><ulid>`; never reused.",
             "readOnly": true,
             "type": "string"
+          },
+          "unavailable_fields": {
+            "description": "Field paths not established by retained evidence.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
           }
         },
-        "required": [
-          "spec"
-        ],
         "type": "object"
       },
       "sylphx.hosting.v1.ServiceBuild": {
@@ -21358,8 +21368,19 @@
             "readOnly": true,
             "type": "array"
           },
+          "current_release": {
+            "description": "The selected environment Release; not proof that this service runs it.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          },
           "image": {
             "description": "The image digest now serving.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "lifecycle_state": {
+            "description": "The persisted service lifecycle, independent of observed readiness.",
             "readOnly": true,
             "type": "string"
           },
@@ -37869,6 +37890,24 @@
         ],
         "type": "object"
       },
+      "sylphx.release.v1.DeployReleaseRequest": {
+        "description": "The request of DeployRelease.",
+        "properties": {
+          "commit": {
+            "description": "The full 40-character commit SHA to deploy. Missing builds may start before\na commit_not_fully_built refusal. Empty reuses live members, or the newest\nrecorded commit when there is no live Release. A commit that would move a\nlive service to an artifact built at a commit that is not this one or one\nof its ancestors is refused.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to deploy.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
       "sylphx.release.v1.GetReleaseRequest": {
         "description": "The request of GetRelease.",
         "properties": {
@@ -38036,9 +38075,27 @@
             "description": "`orgs/{org}/projects/{project}/envs/{env}/releases/{release}`.",
             "type": "string"
           },
+          "projection_incomplete": {
+            "description": "True when some immutable inputs or serving observations are unavailable.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "services": {
+            "description": "Per-service artifact provenance from the immutable Release members.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.release.v1.ReleaseServiceArtifact"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "source_sha": {
+            "description": "The immutable Release source, distinct from each carried artifact's source.",
+            "readOnly": true,
+            "type": "string"
+          },
           "spec": {
             "$ref": "#/components/schemas/sylphx.release.v1.ReleaseSpec",
-            "description": "Desired state."
+            "description": "Desired state, omitted when immutable input evidence is unavailable."
           },
           "status": {
             "$ref": "#/components/schemas/sylphx.release.v1.ReleaseStatus",
@@ -38049,11 +38106,16 @@
             "description": "`rel_<cell><ulid>`.",
             "readOnly": true,
             "type": "string"
+          },
+          "unavailable_fields": {
+            "description": "Field paths not established by retained evidence; absence is not an empty spec.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
           }
         },
-        "required": [
-          "spec"
-        ],
         "type": "object"
       },
       "sylphx.release.v1.ReleaseMember": {
@@ -38121,6 +38183,27 @@
         },
         "type": "object"
       },
+      "sylphx.release.v1.ReleaseServiceArtifact": {
+        "description": "ReleaseServiceArtifact identifies one service's actual artifact source.\nA carried artifact can have a different source SHA from the Release's commit.",
+        "properties": {
+          "artifact_digest": {
+            "description": "The immutable artifact digest selected for this service.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "service_name": {
+            "description": "The service's name in this environment.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "source_sha": {
+            "description": "The exact source commit that produced the selected artifact; empty if unknown.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.release.v1.ReleaseSpec": {
         "description": "ReleaseSpec is the caller-writable state of a Release; it never changes\nafter Create.",
         "properties": {
@@ -38156,7 +38239,7 @@
         "type": "string"
       },
       "sylphx.release.v1.ReleaseStatus": {
-        "description": "ReleaseStatus is the observed state of a Release, derived from Cell\nStatus.",
+        "description": "ReleaseStatus records controller lifecycle and separate serving observations.",
         "properties": {
           "conditions": {
             "description": "Ready, Reconciling, Stalled.",
@@ -38166,8 +38249,14 @@
             "readOnly": true,
             "type": "array"
           },
+          "current_release": {
+            "description": "The environment's selected live pointer, independent of this record's state.\nThis lifecycle selection is not evidence of current traffic convergence.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          },
           "live_time": {
-            "description": "When every cell first served the Release.",
+            "description": "When the controller recorded its live milestone; not an all-Cell observation.",
             "format": "date-time",
             "readOnly": true,
             "type": "string"
@@ -38192,11 +38281,24 @@
             "type": "string",
             "x-sylphx-resource-reference": "release.sylphx.com/Release"
           },
+          "reason": {
+            "description": "An allow-listed customer-safe lifecycle reason, without internal error text.",
+            "readOnly": true,
+            "type": "string"
+          },
           "rollout": {
             "description": "The rollout carrying this Release.",
             "readOnly": true,
             "type": "string",
             "x-sylphx-resource-reference": "release.sylphx.com/Rollout"
+          },
+          "served_hostnames": {
+            "description": "The current live Release's serving hostnames, read from reconciled Routes\nbound to this environment's Domains; empty on non-current Releases.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
           },
           "state": {
             "$ref": "#/components/schemas/sylphx.release.v1.ReleaseState",
@@ -38210,6 +38312,25 @@
             "x-sylphx-resource-reference": "release.sylphx.com/Release"
           }
         },
+        "type": "object"
+      },
+      "sylphx.release.v1.RollbackReleaseRequest": {
+        "description": "The request of RollbackRelease.",
+        "properties": {
+          "parent": {
+            "description": "The environment to roll back.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          },
+          "release": {
+            "description": "The earlier served Release to return to; empty selects the newest one\nthat served and differs from the live Release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          }
+        },
+        "required": [
+          "parent"
+        ],
         "type": "object"
       },
       "sylphx.release.v1.Rollout": {
@@ -104639,7 +104760,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/releases": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists releases in an environment, newest first by default.",
+        "description": "Lists releases in an environment, newest first by default.",
         "operationId": "release_releases_list",
         "parameters": [
           {
@@ -104744,7 +104865,6 @@
         ],
         "x-sylphx-method": "release.releases.list",
         "x-sylphx-permission": "release:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
@@ -104871,7 +104991,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/releases/{release}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a release.",
+        "description": "Gets a release.",
         "operationId": "release_releases_get",
         "parameters": [
           {
@@ -104946,7 +105066,223 @@
         ],
         "x-sylphx-method": "release.releases.get",
         "x-sylphx-permission": "release:read",
-        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/releases:deploy": {
+      "post": {
+        "description": "Deploys through the existing redeploy writer. An explicit commit can\nstart missing native builds and provision declared resources, then refuse\nwith commit_not_fully_built before recording a Release. That response\nreturns no pending operation or build IDs; read progress before resubmitting.\nWithout `commit`, reuse live members, or the newest recorded commit if no\nlive Release exists. With no prior Release, require an explicit commit.\nA recorded Release still needs normal admission and post-merge proof.\nThe Operation is done once the Release is recorded; its `status.state`\nthen follows admission and rollout.",
+        "operationId": "release_releases_deploy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "commit": {
+                    "description": "The full 40-character commit SHA to deploy. Missing builds may start before\na commit_not_fully_built refusal. Empty reuses live members, or the newest\nrecorded commit when there is no live Release. A commit that would move a\nlive service to an artifact built at a commit that is not this one or one\nof its ancestors is refused.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Deploys through the existing redeploy writer. An explicit commit can start missing native builds and provision declared resources, then refuse with commit_not_fully_built before recording a Release. That response returns no pending operation or build IDs; read progress before resubmitting. Without `commit`, reuse live members, or the newest recorded commit if no live Release exists. With no prior Release, require an explicit commit. A recorded Release still needs normal admission and post-merge proof. The Operation is done once the Release is recorded; its `status.state` then follows admission and rollout.",
+        "tags": [
+          "release"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-lro": {
+          "metadata": "sylphx.common.v1.OperationProgress",
+          "response": "sylphx.release.v1.Release"
+        },
+        "x-sylphx-method": "release.releases.deploy",
+        "x-sylphx-permission": "release:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/releases:rollback": {
+      "post": {
+        "description": "Rolls the environment back without a build: a new Release, admitted at\nonce, carrying the exact artifacts and configuration versions of the\nnewest earlier Release that served and differs from the live one, or of\n`release`. The database is not rolled back. The Operation is done once\nthe Release is recorded; its `status.state` then follows the rollout.",
+        "operationId": "release_releases_rollback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "release": {
+                    "description": "The earlier served Release to return to; empty selects the newest one\nthat served and differs from the live Release.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "release.sylphx.com/Release"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Rolls the environment back without a build: a new Release, admitted at once, carrying the exact artifacts and configuration versions of the newest earlier Release that served and differs from the live one, or of `release`. The database is not rolled back. The Operation is done once the Release is recorded; its `status.state` then follows the rollout.",
+        "tags": [
+          "release"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-lro": {
+          "metadata": "sylphx.common.v1.OperationProgress",
+          "response": "sylphx.release.v1.Release"
+        },
+        "x-sylphx-method": "release.releases.rollback",
+        "x-sylphx-permission": "release:write",
         "x-sylphx-stage": "preview"
       }
     },
@@ -110271,7 +110607,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/services": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists services in a environment.",
+        "description": "Lists services in a environment.",
         "operationId": "hosting_services_list",
         "parameters": [
           {
@@ -110376,7 +110712,6 @@
         ],
         "x-sylphx-method": "hosting.services.list",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
@@ -110638,7 +110973,7 @@
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a service.",
+        "description": "Gets a service.",
         "operationId": "hosting_services_get",
         "parameters": [
           {
@@ -110713,7 +111048,6 @@
         ],
         "x-sylphx-method": "hosting.services.get",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {

@@ -14277,7 +14277,6 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/services/{service}"
               },
-              "served": false,
               "summary": "Gets a service.",
               "verb": "get"
             },
@@ -14320,7 +14319,6 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
-              "served": false,
               "summary": "Lists services in a environment.",
               "verb": "list"
             },
@@ -28375,7 +28373,6 @@
                   "field": "release.spec.members",
                   "flag": "--spec.members",
                   "repeated": true,
-                  "required": true,
                   "summary": "The workloads, each by artifact digest. A member that names a tag or an unverified Artifact is refused.",
                   "type": "json"
                 },
@@ -28414,8 +28411,61 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "release",
+              "served": false,
               "summary": "Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.",
               "verb": "create",
+              "waits": {
+                "default": true,
+                "skip_flag": "--no-wait"
+              }
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "commit",
+                  "flag": "--commit",
+                  "summary": "The full 40-character commit SHA to deploy. Missing builds may start before a commit_not_fully_built refusal. Empty reuses live members, or the newest recorded commit when there is no live Release. A commit that would move a live service to an artifact built at a commit that is not this one or one of its ancestors is refused.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/releases:deploy",
+              "method": "release.releases.deploy",
+              "permission": "release:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Deploys through the existing redeploy writer. An explicit commit can start missing native builds and provision declared resources, then refuse with commit_not_fully_built before recording a Release. That response returns no pending operation or build IDs; read progress before resubmitting. Without `commit`, reuse live members, or the newest recorded commit if no live Release exists. With no prior Release, require an explicit commit. A recorded Release still needs normal admission and post-merge proof. The Operation is done once the Release is recorded; its `status.state` then follows admission and rollout.",
+              "verb": "deploy",
+              "waits": {
+                "default": true,
+                "skip_flag": "--no-wait"
+              }
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "release",
+                  "flag": "--release",
+                  "summary": "The earlier served Release to return to; empty selects the newest one that served and differs from the live Release.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/releases:rollback",
+              "method": "release.releases.rollback",
+              "permission": "release:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Rolls the environment back without a build: a new Release, admitted at once, carrying the exact artifacts and configuration versions of the newest earlier Release that served and differs from the live one, or of `release`. The database is not rolled back. The Operation is done once the Release is recorded; its `status.state` then follows the rollout.",
+              "verb": "rollback",
               "waits": {
                 "default": true,
                 "skip_flag": "--no-wait"
@@ -28440,6 +28490,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/rollouts/{rollout}"
               },
+              "served": false,
               "summary": "Gets a rollout.",
               "verb": "get"
             },
@@ -28482,6 +28533,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
+              "served": false,
               "summary": "Lists rollouts in an environment.",
               "verb": "list"
             }
@@ -28493,7 +28545,6 @@
       "commands": [],
       "display_name": "Sylphx Release",
       "noun": "release",
-      "served": false,
       "stage": "preview"
     },
     {

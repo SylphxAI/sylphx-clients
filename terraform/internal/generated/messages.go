@@ -673,6 +673,8 @@ func hostingServiceStatus() []def.Field {
 		{Name: "image", Kind: def.String, Flags: def.OutputOnly, Doc: "The image digest now serving."},
 		{Name: "rollout", Kind: def.String, Flags: def.OutputOnly, Doc: "The Rollout in progress, if any."},
 		{Name: "ready_instances", Kind: def.Int32, Flags: def.OutputOnly, Doc: "Instances passing health, summed over cells."},
+		{Name: "current_release", Kind: def.String, Flags: def.OutputOnly, Doc: "The selected environment Release; not proof that this service runs it."},
+		{Name: "lifecycle_state", Kind: def.String, Flags: def.OutputOnly, Doc: "The persisted service lifecycle, independent of observed readiness."},
 	}
 }
 
@@ -952,7 +954,10 @@ func releaseReleaseStatus() []def.Field {
 		{Name: "previous_release", Kind: def.String, Flags: def.OutputOnly, Doc: "The Release that was live when this one was admitted."},
 		{Name: "successor", Kind: def.String, Flags: def.OutputOnly, Doc: "The Release that replaced this one."},
 		{Name: "member_statuses", Kind: def.Message, Msg: releaseReleaseMemberStatus, Flags: def.OutputOnly, Repeated: true, Doc: "Per-member convergence."},
-		{Name: "live_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When every cell first served the Release."},
+		{Name: "live_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the controller recorded its live milestone; not an all-Cell observation."},
+		{Name: "current_release", Kind: def.String, Flags: def.OutputOnly, Doc: "The environment's selected live pointer, independent of this record's state. This lifecycle selection is not evidence of current traffic convergence."},
+		{Name: "reason", Kind: def.String, Flags: def.OutputOnly, Doc: "An allow-listed customer-safe lifecycle reason, without internal error text."},
+		{Name: "served_hostnames", Kind: def.String, Flags: def.OutputOnly, Repeated: true, Doc: "The current live Release's serving hostnames, read from reconciled Routes bound to this environment's Domains; empty on non-current Releases."},
 	}
 }
 

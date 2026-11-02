@@ -30,6 +30,20 @@
           },
           "id": "release.releases.create",
           "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "release.releases.deploy",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "release.releases.rollback",
+          "kind": "custom"
         }
       ],
       "resource_type": "release.sylphx.com/Release"

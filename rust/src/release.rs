@@ -34,6 +34,24 @@ pub struct CreateReleaseRequest {
     pub validate_only: bool,
 }
 
+/// The request of DeployRelease.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeployReleaseRequest {
+    /// The environment to deploy.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The full 40-character commit SHA to deploy. Missing builds may start before
+    /// a commit_not_fully_built refusal. Empty reuses live members, or the newest
+    /// recorded commit when there is no live Release. A commit that would move a
+    /// live service to an artifact built at a commit that is not this one or one
+    /// of its ancestors is refused.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub commit: String,
+}
+
 /// The request of GetRelease.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -196,9 +214,7 @@ pub struct Release {
     /// Resource metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<crate::common::ResourceMeta>,
-    /// Desired state.
-    ///
-    /// Field behavior: `required`.
+    /// Desired state, omitted when immutable input evidence is unavailable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<ReleaseSpec>,
     /// Observed state.
@@ -206,6 +222,38 @@ pub struct Release {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<ReleaseStatus>,
+    /// Per-service artifact provenance from the immutable Release members.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub services: Vec<ReleaseServiceArtifact>,
+    /// True when some immutable inputs or serving observations are unavailable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "projectionIncomplete"
+    )]
+    pub projection_incomplete: bool,
+    /// Field paths not established by retained evidence; absence is not an empty spec.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "unavailableFields"
+    )]
+    pub unavailable_fields: Vec<String>,
+    /// The immutable Release source, distinct from each carried artifact's source.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceSha"
+    )]
+    pub source_sha: String,
 }
 
 /// ReleaseMember is one workload of a Release.
@@ -273,6 +321,40 @@ pub struct ReleaseMemberStatus {
     pub cell_count: i32,
 }
 
+/// ReleaseServiceArtifact identifies one service's actual artifact source.
+/// A carried artifact can have a different source SHA from the Release's commit.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReleaseServiceArtifact {
+    /// The service's name in this environment.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "serviceName"
+    )]
+    pub service_name: String,
+    /// The immutable artifact digest selected for this service.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "artifactDigest"
+    )]
+    pub artifact_digest: String,
+    /// The exact source commit that produced the selected artifact; empty if unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceSha"
+    )]
+    pub source_sha: String,
+}
+
 /// ReleaseSpec is the caller-writable state of a Release; it never changes
 /// after Create.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -295,8 +377,7 @@ pub struct ReleaseSpec {
     pub rollout_policy: Option<RolloutPolicy>,
 }
 
-/// ReleaseStatus is the observed state of a Release, derived from Cell
-/// Status.
+/// ReleaseStatus records controller lifecycle and separate serving observations.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ReleaseStatus {
@@ -348,7 +429,7 @@ pub struct ReleaseStatus {
         alias = "memberStatuses"
     )]
     pub member_statuses: Vec<ReleaseMemberStatus>,
-    /// When every cell first served the Release.
+    /// When the controller recorded its live milestone; not an all-Cell observation.
     ///
     /// Field behavior: `output_only`.
     #[serde(
@@ -357,6 +438,46 @@ pub struct ReleaseStatus {
         alias = "liveTime"
     )]
     pub live_time: String,
+    /// The environment's selected live pointer, independent of this record's state.
+    /// This lifecycle selection is not evidence of current traffic convergence.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currentRelease"
+    )]
+    pub current_release: String,
+    /// An allow-listed customer-safe lifecycle reason, without internal error text.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// The current live Release's serving hostnames, read from reconciled Routes
+    /// bound to this environment's Domains; empty on non-current Releases.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "servedHostnames"
+    )]
+    pub served_hostnames: Vec<String>,
+}
+
+/// The request of RollbackRelease.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RollbackReleaseRequest {
+    /// The environment to roll back.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The earlier served Release to return to; empty selects the newest one
+    /// that served and differs from the live Release.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub release: String,
 }
 
 /// A Rollout is the progress of one Release through its waves, derived from
@@ -844,6 +965,72 @@ impl<'a, T: crate::runtime::Transport> ReleasesCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.release)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        let operation = self.client.call(http).await?;
+        Ok(crate::runtime::Operation::new(self.client, operation))
+    }
+
+    /// Deploys through the existing redeploy writer. An explicit commit can
+    /// start missing native builds and provision declared resources, then refuse
+    /// with commit_not_fully_built before recording a Release. That response
+    /// returns no pending operation or build IDs; read progress before resubmitting.
+    /// Without `commit`, reuse live members, or the newest recorded commit if no
+    /// live Release exists. With no prior Release, require an explicit commit.
+    /// A recorded Release still needs normal admission and post-merge proof.
+    /// The Operation is done once the Release is recorded; its `status.state`
+    /// then follows admission and rollout.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/releases:deploy` · permission `release:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn deploy(
+        &self,
+        request: DeployReleaseRequest,
+    ) -> Result<crate::runtime::Operation<'a, T, Release>, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/releases:deploy",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        let operation = self.client.call(http).await?;
+        Ok(crate::runtime::Operation::new(self.client, operation))
+    }
+
+    /// Rolls the environment back without a build: a new Release, admitted at
+    /// once, carrying the exact artifacts and configuration versions of the
+    /// newest earlier Release that served and differs from the live one, or of
+    /// `release`. The database is not rolled back. The Operation is done once
+    /// the Release is recorded; its `status.state` then follows the rollout.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/releases:rollback` · permission `release:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn rollback(
+        &self,
+        request: RollbackReleaseRequest,
+    ) -> Result<crate::runtime::Operation<'a, T, Release>, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/releases:rollback",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

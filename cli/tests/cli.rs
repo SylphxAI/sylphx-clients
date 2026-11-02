@@ -249,6 +249,132 @@ async fn run(sb: &Sandbox, url: &str, args: &[&str]) -> std::process::Output {
         .unwrap()
 }
 
+/// Admission's done Operation does not mean the Release is serving. Both
+/// porcelain writes must read the Release's current live pointer before exit 0.
+#[tokio::test(flavor = "multi_thread")]
+async fn release_writes_follow_their_recorded_release_until_it_serves() {
+    for verb in ["deploy", "rollback"] {
+        let sb = Sandbox::new(&format!("release-{verb}"));
+        let name = format!("{ENV}/releases/rel_new");
+        let release = json!({
+            "name": name,
+            "status": {"state": "live", "current_release": name,
+                "served_hostnames": ["app.example.com"]}
+        });
+        let (url, log) = serve(vec![
+            (200, json!({"done": true, "response": {"name": name}})),
+            (200, release.clone()),
+        ])
+        .await;
+        let args = if verb == "deploy" {
+            vec!["deploy", "--redeploy", "-o", "json"]
+        } else {
+            vec!["rollback", "--to", "rel_old", "--yes", "-o", "json"]
+        };
+        let out = run(&sb, &url, &args).await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(printed, release);
+        let log = log.lock();
+        assert_eq!(log.len(), 2);
+        assert!(log[0]
+            .line
+            .starts_with(&format!("POST /v1/{ENV}/releases:{verb} ")));
+        assert!(log[0].head.to_lowercase().contains("idempotency-key:"));
+        let body: Value = serde_json::from_str(&log[0].body).unwrap();
+        if verb == "rollback" {
+            assert_eq!(body["release"], format!("{ENV}/releases/rel_old"));
+        } else {
+            assert_eq!(body["commit"], "");
+        }
+        assert!(log[1].line.starts_with(&format!("GET /v1/{name} ")));
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn release_status_fetches_the_live_pointer_not_the_newest_release() {
+    let sb = Sandbox::new("release-status");
+    let live = format!("{ENV}/releases/rel_serving");
+    let newest = json!({"name": format!("{ENV}/releases/rel_new"),
+        "status": {"state": "rolling_out", "current_release": live}});
+    let serving = json!({"name": live,
+        "status": {"state": "live", "current_release": live}});
+    let (url, log) = serve(vec![
+        (200, json!({"releases": [newest.clone()]})),
+        (200, serving.clone()),
+    ])
+    .await;
+    let out = run(&sb, &url, &["status", "-o", "json"]).await;
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(printed, json!({"live": serving, "newest": newest}));
+    let log = log.lock();
+    assert_eq!(log.len(), 2);
+    assert!(log[0].line.starts_with(&format!("GET /v1/{ENV}/releases?")));
+    assert!(log[0].line.contains("page_size=1"));
+    assert!(log[1].line.starts_with(&format!("GET /v1/{live} ")));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn release_follow_reports_terminal_failure_instead_of_admission_success() {
+    let sb = Sandbox::new("release-failed");
+    let name = format!("{ENV}/releases/rel_failed");
+    let (url, log) = serve(vec![
+        (200, json!({"done": true, "response": {"name": name}})),
+        (
+            200,
+            json!({"name": name, "status": {"state": "failed",
+            "reason": "auto_halt:unavailable:web"}}),
+        ),
+    ])
+    .await;
+    let out = run(&sb, &url, &["deploy", "--redeploy", "-o", "json"]).await;
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("auto_halt:unavailable:web"));
+    let printed: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(printed["status"]["state"], "failed");
+    assert_eq!(log.lock().len(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn release_follow_times_out_on_stale_live_state_without_the_serving_pointer() {
+    let sb = Sandbox::new("release-stale");
+    let name = format!("{ENV}/releases/rel_stale");
+    let stale = json!({"name": name, "status": {"state": "live",
+        "current_release": format!("{ENV}/releases/rel_other")}});
+    let (url, log) = serve(vec![
+        (200, json!({"done": true, "response": {"name": name}})),
+        (200, stale.clone()),
+        (200, stale),
+    ])
+    .await;
+    let out = run(&sb, &url, &["deploy", "--redeploy", "--timeout", "1"]).await;
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("follow it with `sylphx status`"));
+    assert!(
+        out.stdout.is_empty(),
+        "a stale state must not print success"
+    );
+    assert_eq!(log.lock().len(), 3);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn release_invalid_timeout_is_refused_without_contacting_the_api() {
+    let sb = Sandbox::new("release-invalid-timeout");
+    let (url, log) = serve(vec![(200, json!({}))]).await;
+    let out = run(&sb, &url, &["deploy", "--redeploy", "--timeout", "0"]).await;
+    assert_eq!(out.status.code(), Some(2));
+    assert!(log.lock().is_empty());
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn file_flag_conflicts_are_refused_before_a_request() {
     for (collection, resource, field, flag, file_value, flag_value) in [

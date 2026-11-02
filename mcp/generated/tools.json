@@ -20301,7 +20301,7 @@
         "readOnlyHint": true,
         "title": "Gets a service."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a service.",
+      "description": "Gets a service.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/services/*}",
       "input_schema": {
@@ -20322,7 +20322,6 @@
       "long_running": false,
       "method_id": "hosting.services.get",
       "permission": "hosting:read",
-      "served": false,
       "tool": "hosting_services_get"
     },
     {
@@ -20333,7 +20332,7 @@
         "readOnlyHint": true,
         "title": "Lists services in a environment."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists services in a environment.",
+      "description": "Lists services in a environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/services",
       "input_schema": {
@@ -20371,7 +20370,6 @@
       "long_running": false,
       "method_id": "hosting.services.list",
       "permission": "hosting:read",
-      "served": false,
       "tool": "hosting_services_list"
     },
     {
@@ -20429,7 +20427,7 @@
               },
               "spec": {
                 "additionalProperties": false,
-                "description": "Desired state.",
+                "description": "Desired state, omitted when no immutable public projection is available.",
                 "properties": {
                   "command": {
                     "description": "Overrides the image's command.",
@@ -20572,9 +20570,6 @@
                 "type": "object"
               }
             },
-            "required": [
-              "spec"
-            ],
             "type": "object"
           },
           "service_id": {
@@ -20652,7 +20647,7 @@
               },
               "spec": {
                 "additionalProperties": false,
-                "description": "Desired state.",
+                "description": "Desired state, omitted when no immutable public projection is available.",
                 "properties": {
                   "command": {
                     "description": "Overrides the image's command.",
@@ -20795,9 +20790,6 @@
                 "type": "object"
               }
             },
-            "required": [
-              "spec"
-            ],
             "type": "object"
           },
           "update_mask": {
@@ -39106,7 +39098,7 @@
         "readOnlyHint": true,
         "title": "Gets a release."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a release.",
+      "description": "Gets a release.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/releases/*}",
       "input_schema": {
@@ -39127,7 +39119,6 @@
       "long_running": false,
       "method_id": "release.releases.get",
       "permission": "release:read",
-      "served": false,
       "tool": "release_releases_get"
     },
     {
@@ -39138,7 +39129,7 @@
         "readOnlyHint": true,
         "title": "Lists releases in an environment, newest first by default."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists releases in an environment, newest first by default.",
+      "description": "Lists releases in an environment, newest first by default.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/releases",
       "input_schema": {
@@ -39176,7 +39167,6 @@
       "long_running": false,
       "method_id": "release.releases.list",
       "permission": "release:read",
-      "served": false,
       "tool": "release_releases_list"
     },
     {
@@ -39234,7 +39224,7 @@
               },
               "spec": {
                 "additionalProperties": false,
-                "description": "Desired state.",
+                "description": "Desired state, omitted when immutable input evidence is unavailable.",
                 "properties": {
                   "members": {
                     "description": "The workloads, each by artifact digest. A member that names a tag or an\nunverified Artifact is refused.",
@@ -39353,9 +39343,6 @@
                 "type": "object"
               }
             },
-            "required": [
-              "spec"
-            ],
             "type": "object"
           },
           "release_id": {
@@ -39378,6 +39365,77 @@
       "permission": "release:write",
       "served": false,
       "tool": "release_releases_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deploys through the existing redeploy writer. An explicit commit can start missing native builds and provision declared resources, then refuse with commit_not_fully_built before recording a Release. That response returns no pending operation or build IDs; read progress before resubmitting. Without `commit`, reuse live members, or the newest recorded commit if no live Release exists. With no prior Release, require an explicit commit. A recorded Release still needs normal admission and post-merge proof. The Operation is done once the Release is recorded; its `status.state` then follows admission and rollout."
+      },
+      "description": "Deploys through the existing redeploy writer. An explicit commit can\nstart missing native builds and provision declared resources, then refuse\nwith commit_not_fully_built before recording a Release. That response\nreturns no pending operation or build IDs; read progress before resubmitting.\nWithout `commit`, reuse live members, or the newest recorded commit if no\nlive Release exists. With no prior Release, require an explicit commit.\nA recorded Release still needs normal admission and post-merge proof.\nThe Operation is done once the Release is recorded; its `status.state`\nthen follows admission and rollout.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/releases:deploy",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeployRelease.",
+        "properties": {
+          "commit": {
+            "description": "The full 40-character commit SHA to deploy. Missing builds may start before\na commit_not_fully_built refusal. Empty reuses live members, or the newest\nrecorded commit when there is no live Release. A commit that would move a\nlive service to an artifact built at a commit that is not this one or one\nof its ancestors is refused.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to deploy.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "release.releases.deploy",
+      "permission": "release:write",
+      "tool": "release_releases_deploy"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Rolls the environment back without a build: a new Release, admitted at once, carrying the exact artifacts and configuration versions of the newest earlier Release that served and differs from the live one, or of `release`. The database is not rolled back. The Operation is done once the Release is recorded; its `status.state` then follows the rollout."
+      },
+      "description": "Rolls the environment back without a build: a new Release, admitted at\nonce, carrying the exact artifacts and configuration versions of the\nnewest earlier Release that served and differs from the live one, or of\n`release`. The database is not rolled back. The Operation is done once\nthe Release is recorded; its `status.state` then follows the rollout.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/releases:rollback",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RollbackRelease.",
+        "properties": {
+          "parent": {
+            "description": "The environment to roll back.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          },
+          "release": {
+            "description": "The earlier served Release to return to; empty selects the newest one\nthat served and differs from the live Release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "release.releases.rollback",
+      "permission": "release:write",
+      "tool": "release_releases_rollback"
     },
     {
       "annotations": {

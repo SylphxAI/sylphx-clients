@@ -20,6 +20,20 @@ export interface CreateReleaseRequest {
 	validateOnly?: boolean
 }
 
+/** The request of DeployRelease. */
+export interface DeployReleaseRequest {
+	/** The environment to deploy. */
+	parent: string
+	/**
+	 * The full 40-character commit SHA to deploy. Missing builds may start before
+	 * a commit_not_fully_built refusal. Empty reuses live members, or the newest
+	 * recorded commit when there is no live Release. A commit that would move a
+	 * live service to an artifact built at a commit that is not this one or one
+	 * of its ancestors is refused.
+	 */
+	commit?: string
+}
+
 /** The request of GetRelease. */
 export interface GetReleaseRequest {
 	/** The name of the release to get. */
@@ -103,10 +117,18 @@ export interface Release {
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
-	/** Desired state. */
+	/** Desired state, omitted when immutable input evidence is unavailable. */
 	spec?: ReleaseSpec
 	/** Observed state. */
 	readonly status?: ReleaseStatus
+	/** Per-service artifact provenance from the immutable Release members. */
+	readonly services?: ReleaseServiceArtifact[]
+	/** True when some immutable inputs or serving observations are unavailable. */
+	readonly projectionIncomplete?: boolean
+	/** Field paths not established by retained evidence; absence is not an empty spec. */
+	readonly unavailableFields?: string[]
+	/** The immutable Release source, distinct from each carried artifact's source. */
+	readonly sourceSha?: string
 }
 
 /** ReleaseMember is one workload of a Release. */
@@ -142,6 +164,19 @@ export interface ReleaseMemberStatus {
 }
 
 /**
+ * ReleaseServiceArtifact identifies one service's actual artifact source.
+ * A carried artifact can have a different source SHA from the Release's commit.
+ */
+export interface ReleaseServiceArtifact {
+	/** The service's name in this environment. */
+	readonly serviceName?: string
+	/** The immutable artifact digest selected for this service. */
+	readonly artifactDigest?: string
+	/** The exact source commit that produced the selected artifact; empty if unknown. */
+	readonly sourceSha?: string
+}
+
+/**
  * ReleaseSpec is the caller-writable state of a Release; it never changes
  * after Create.
  */
@@ -155,10 +190,7 @@ export interface ReleaseSpec {
 	rolloutPolicy?: RolloutPolicy
 }
 
-/**
- * ReleaseStatus is the observed state of a Release, derived from Cell
- * Status.
- */
+/** ReleaseStatus records controller lifecycle and separate serving observations. */
 export interface ReleaseStatus {
 	/** The generation this status was computed from. */
 	readonly observedGeneration?: string
@@ -174,8 +206,31 @@ export interface ReleaseStatus {
 	readonly successor?: string
 	/** Per-member convergence. */
 	readonly memberStatuses?: ReleaseMemberStatus[]
-	/** When every cell first served the Release. */
+	/** When the controller recorded its live milestone; not an all-Cell observation. */
 	readonly liveTime?: string
+	/**
+	 * The environment's selected live pointer, independent of this record's state.
+	 * This lifecycle selection is not evidence of current traffic convergence.
+	 */
+	readonly currentRelease?: string
+	/** An allow-listed customer-safe lifecycle reason, without internal error text. */
+	readonly reason?: string
+	/**
+	 * The current live Release's serving hostnames, read from reconciled Routes
+	 * bound to this environment's Domains; empty on non-current Releases.
+	 */
+	readonly servedHostnames?: string[]
+}
+
+/** The request of RollbackRelease. */
+export interface RollbackReleaseRequest {
+	/** The environment to roll back. */
+	parent: string
+	/**
+	 * The earlier served Release to return to; empty selects the newest one
+	 * that served and differs from the live Release.
+	 */
+	release?: string
 }
 
 /**
@@ -263,6 +318,7 @@ runtime.registerSchemas({
 		['releaseId', 'release_id'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.release.v1.DeployReleaseRequest': [],
 	'sylphx.release.v1.GetReleaseRequest': [],
 	'sylphx.release.v1.GetRolloutRequest': [],
 	'sylphx.release.v1.ListReleasesRequest': [
@@ -290,6 +346,10 @@ runtime.registerSchemas({
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.release.v1.ReleaseSpec'],
 		['status', 'status', 'sylphx.release.v1.ReleaseStatus'],
+		['services', 'services', 'sylphx.release.v1.ReleaseServiceArtifact'],
+		['projectionIncomplete', 'projection_incomplete'],
+		['unavailableFields', 'unavailable_fields'],
+		['sourceSha', 'source_sha'],
 	],
 	'sylphx.release.v1.ReleaseMember': [
 		['config', 'config', undefined, 'map'],
@@ -301,6 +361,11 @@ runtime.registerSchemas({
 		['convergedCellCount', 'converged_cell_count'],
 		['cellCount', 'cell_count'],
 	],
+	'sylphx.release.v1.ReleaseServiceArtifact': [
+		['serviceName', 'service_name'],
+		['artifactDigest', 'artifact_digest'],
+		['sourceSha', 'source_sha'],
+	],
 	'sylphx.release.v1.ReleaseSpec': [
 		['members', 'members', 'sylphx.release.v1.ReleaseMember'],
 		['rolloutPolicy', 'rollout_policy', 'sylphx.release.v1.RolloutPolicy'],
@@ -311,7 +376,10 @@ runtime.registerSchemas({
 		['previousRelease', 'previous_release'],
 		['memberStatuses', 'member_statuses', 'sylphx.release.v1.ReleaseMemberStatus'],
 		['liveTime', 'live_time'],
+		['currentRelease', 'current_release'],
+		['servedHostnames', 'served_hostnames'],
 	],
+	'sylphx.release.v1.RollbackReleaseRequest': [],
 	'sylphx.release.v1.Rollout': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['waves', 'waves', 'sylphx.release.v1.Wave'],
@@ -417,6 +485,56 @@ export class ReleasesCollection {
 			query: { release_id: request.releaseId, validate_only: request.validateOnly },
 			body: request.release ?? {},
 			bodyType: 'sylphx.release.v1.Release',
+			responseType: 'sylphx.common.v1.Operation',
+			mutation: true,
+		})
+		return new runtime.Operation<Release>(this.client, operation, 'sylphx.release.v1.Release')
+	}
+
+	/**
+	 * Deploys through the existing redeploy writer. An explicit commit can
+	 * start missing native builds and provision declared resources, then refuse
+	 * with commit_not_fully_built before recording a Release. That response
+	 * returns no pending operation or build IDs; read progress before resubmitting.
+	 * Without `commit`, reuse live members, or the newest recorded commit if no
+	 * live Release exists. With no prior Release, require an explicit commit.
+	 * A recorded Release still needs normal admission and post-merge proof.
+	 * The Operation is done once the Release is recorded; its `status.state`
+	 * then follows admission and rollout.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/releases:deploy` · permission `release:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async deploy(request: DeployReleaseRequest): Promise<runtime.Operation<Release>> {
+		const operation = await this.client.call<common.Operation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/releases:deploy`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.release.v1.DeployReleaseRequest',
+			responseType: 'sylphx.common.v1.Operation',
+			mutation: true,
+		})
+		return new runtime.Operation<Release>(this.client, operation, 'sylphx.release.v1.Release')
+	}
+
+	/**
+	 * Rolls the environment back without a build: a new Release, admitted at
+	 * once, carrying the exact artifacts and configuration versions of the
+	 * newest earlier Release that served and differs from the live one, or of
+	 * `release`. The database is not rolled back. The Operation is done once
+	 * the Release is recorded; its `status.state` then follows the rollout.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/releases:rollback` · permission `release:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async rollback(request: RollbackReleaseRequest): Promise<runtime.Operation<Release>> {
+		const operation = await this.client.call<common.Operation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/releases:rollback`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.release.v1.RollbackReleaseRequest',
 			responseType: 'sylphx.common.v1.Operation',
 			mutation: true,
 		})

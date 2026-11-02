@@ -414,10 +414,14 @@ export interface Service {
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
-	/** Desired state. */
+	/** Desired state, omitted when no immutable public projection is available. */
 	spec?: ServiceSpec
 	/** Observed state. */
 	readonly status?: ServiceStatus
+	/** True when some desired inputs or serving observations are unavailable. */
+	readonly projectionIncomplete?: boolean
+	/** Field paths not established by retained evidence. */
+	readonly unavailableFields?: string[]
 }
 
 /** ServiceBuild is the build recipe of a Service built from source. */
@@ -545,6 +549,10 @@ export interface ServiceStatus {
 	readonly rollout?: string
 	/** Instances passing health, summed over cells. */
 	readonly readyInstances?: number
+	/** The selected environment Release; not proof that this service runs it. */
+	readonly currentRelease?: string
+	/** The persisted service lifecycle, independent of observed readiness. */
+	readonly lifecycleState?: string
 }
 
 /**
@@ -857,6 +865,8 @@ runtime.registerSchemas({
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.hosting.v1.ServiceSpec'],
 		['status', 'status', 'sylphx.hosting.v1.ServiceStatus'],
+		['projectionIncomplete', 'projection_incomplete'],
+		['unavailableFields', 'unavailable_fields'],
 	],
 	'sylphx.hosting.v1.ServiceBuild': [
 		['rootDirectory', 'root_directory'],
@@ -887,6 +897,8 @@ runtime.registerSchemas({
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['readyInstances', 'ready_instances'],
+		['currentRelease', 'current_release'],
+		['lifecycleState', 'lifecycle_state'],
 	],
 	'sylphx.hosting.v1.ServingRoute': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
