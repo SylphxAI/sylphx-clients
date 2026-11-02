@@ -136,6 +136,14 @@ export interface ButtonAction {
 	button?: MouseButton
 }
 
+/** The request of CancelExecLease. */
+export interface CancelExecLeaseRequest {
+	/** The name of the lease. */
+	name: string
+	/** The execution key from the original ExecLease request. */
+	idempotencyKey: string
+}
+
 /** ClickAction clicks a button one to three times. */
 export interface ClickAction {
 	/** Where; unset clicks at the current pointer position. */
@@ -396,8 +404,11 @@ export interface ExecLeaseRequest {
 	 */
 	user?: string
 	/**
-	 * Dispatches the command at most once per lease and key, 1-255 printable
-	 * ASCII characters. The first call claims the key before the command
+	 * Stable execution identity, 1-255 printable ASCII characters. Required
+	 * here or in the Idempotency-Key header (this field takes precedence).
+	 * Persist it with the complete request before sending; use the same key
+	 * and request to recover after any disconnect or caller restart.
+	 * The first call claims the key before the command
 	 * starts; a later call with the same key and request returns the recorded
 	 * result (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the
 	 * first still runs (the command continues after the call returns), and
@@ -410,7 +421,7 @@ export interface ExecLeaseRequest {
 
 /** The response of ExecLease. */
 export interface ExecLeaseResponse {
-	/** The exit code; -1 when killed. */
+	/** The confirmed process exit code (including a signal exit, such as 137). */
 	exitCode?: number
 	/** Standard output. */
 	stdout?: string
@@ -420,6 +431,15 @@ export interface ExecLeaseResponse {
 	truncated?: boolean
 	/** Whether the process was killed at `timeout`. */
 	timedOut?: boolean
+	/**
+	 * Whether an explicit cancellation was confirmed by process termination.
+	 * A cancellation acknowledgement alone never sets this field.
+	 */
+	cancelled?: boolean
+	/** The stable key used to dispatch this command. */
+	idempotencyKey?: string
+	/** The one dispatch identity, unchanged on every terminal replay. */
+	executionId?: string
 }
 
 /** FileEntry is one entry of a guest directory. */
@@ -1602,6 +1622,9 @@ runtime.registerSchemas({
 	'sylphx.sandboxes.v1.ButtonAction': [
 		['position', 'position', 'sylphx.sandboxes.v1.Point'],
 	],
+	'sylphx.sandboxes.v1.CancelExecLeaseRequest': [
+		['idempotencyKey', 'idempotency_key'],
+	],
 	'sylphx.sandboxes.v1.ClickAction': [
 		['position', 'position', 'sylphx.sandboxes.v1.Point'],
 	],
@@ -1677,6 +1700,8 @@ runtime.registerSchemas({
 	'sylphx.sandboxes.v1.ExecLeaseResponse': [
 		['exitCode', 'exit_code'],
 		['timedOut', 'timed_out'],
+		['idempotencyKey', 'idempotency_key'],
+		['executionId', 'execution_id'],
 	],
 	'sylphx.sandboxes.v1.FileEntry': [
 		['sizeBytes', 'size_bytes'],
@@ -2369,11 +2394,14 @@ export class LeasesCollection {
 	}
 
 	/**
-	 * Runs one command in the lease to completion and returns its output, capped
-	 * at 1 MiB per stream. With `idempotency_key` the command is dispatched at
-	 * most once per lease and key, and its recorded result is returned again,
-	 * also after the lease ended. Long-running or interactive processes use the
-	 * guest protocol at `status.endpoints.guest_uri`.
+	 * Dispatches one command at most once per lease and execution key. Each
+	 * HTTP response waits at most 20 seconds: repeat the exact request and key
+	 * after IDEMPOTENCY_IN_PROGRESS, honoring Retry-After, until the recorded
+	 * result or a terminal error arrives. Pending observations do not consume
+	 * the client's transient-error retry budget. Disconnect only stops waiting.
+	 * Results (capped at 1 MiB per stream) remain replayable after lease expiry.
+	 * An unknown outcome is never dispatched again. Interactive processes use
+	 * the guest protocol at `status.endpoints.guest_uri`.
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:exec` · permission `sandboxes:exec` · effect `write`
 	 *
@@ -2386,6 +2414,26 @@ export class LeasesCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.sandboxes.v1.ExecLeaseRequest',
 			responseType: 'sylphx.sandboxes.v1.ExecLeaseResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Requests cancellation of the existing execution key. This acknowledgement
+	 * means the request was recorded, not that the process has stopped. Observe
+	 * the exact original ExecLease request for its confirmed terminal result.
+	 * An already completed result wins; an unknown outcome remains unknown.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:cancelExec` · permission `sandboxes:exec` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `STALE_GENERATION`.
+	 */
+	async cancelExec(request: CancelExecLeaseRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/leases/*', 'name')}:cancelExec`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.sandboxes.v1.CancelExecLeaseRequest',
 			mutation: true,
 		})
 	}

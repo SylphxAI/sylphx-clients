@@ -38969,6 +38969,25 @@
         },
         "type": "object"
       },
+      "sylphx.sandboxes.v1.CancelExecLeaseRequest": {
+        "description": "The request of CancelExecLease.",
+        "properties": {
+          "idempotency_key": {
+            "description": "The execution key from the original ExecLease request.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the lease.",
+            "type": "string",
+            "x-sylphx-resource-reference": "sandboxes.sylphx.com/Lease"
+          }
+        },
+        "required": [
+          "name",
+          "idempotency_key"
+        ],
+        "type": "object"
+      },
       "sylphx.sandboxes.v1.ClickAction": {
         "description": "ClickAction clicks a button one to three times.",
         "properties": {
@@ -39458,7 +39477,7 @@
             "type": "object"
           },
           "idempotency_key": {
-            "description": "Dispatches the command at most once per lease and key, 1-255 printable\nASCII characters. The first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
+            "description": "Stable execution identity, 1-255 printable ASCII characters. Required\nhere or in the Idempotency-Key header (this field takes precedence).\nPersist it with the complete request before sending; use the same key\nand request to recover after any disconnect or caller restart.\nThe first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
             "type": "string"
           },
           "name": {
@@ -39494,10 +39513,22 @@
       "sylphx.sandboxes.v1.ExecLeaseResponse": {
         "description": "The response of ExecLease.",
         "properties": {
+          "cancelled": {
+            "description": "Whether an explicit cancellation was confirmed by process termination.\nA cancellation acknowledgement alone never sets this field.",
+            "type": "boolean"
+          },
+          "execution_id": {
+            "description": "The one dispatch identity, unchanged on every terminal replay.",
+            "type": "string"
+          },
           "exit_code": {
-            "description": "The exit code; -1 when killed.",
+            "description": "The confirmed process exit code (including a signal exit, such as 137).",
             "format": "int32",
             "type": "integer"
+          },
+          "idempotency_key": {
+            "description": "The stable key used to dispatch this command.",
+            "type": "string"
           },
           "stderr": {
             "contentEncoding": "base64",
@@ -86201,6 +86232,112 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/leases/{lease}:cancelExec": {
+      "post": {
+        "description": "Requests cancellation of the existing execution key. This acknowledgement\nmeans the request was recorded, not that the process has stopped. Observe\nthe exact original ExecLease request for its confirmed terminal result.\nAn already completed result wins; an unknown outcome remains unknown.",
+        "operationId": "sandboxes_leases_cancel_exec",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lease",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "idempotency_key": {
+                    "description": "The execution key from the original ExecLease request.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "idempotency_key"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Requests cancellation of the existing execution key. This acknowledgement means the request was recorded, not that the process has stopped. Observe the exact original ExecLease request for its confirmed terminal result. An already completed result wins; an unknown outcome remains unknown.",
+        "tags": [
+          "sandboxes"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "STALE_GENERATION"
+        ],
+        "x-sylphx-method": "sandboxes.leases.cancel_exec",
+        "x-sylphx-permission": "sandboxes:exec",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/leases/{lease}:closePort": {
       "post": {
         "description": "Stops exposing a guest port.",
@@ -86322,7 +86459,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/leases/{lease}:exec": {
       "post": {
-        "description": "Runs one command in the lease to completion and returns its output, capped\nat 1 MiB per stream. With `idempotency_key` the command is dispatched at\nmost once per lease and key, and its recorded result is returned again,\nalso after the lease ended. Long-running or interactive processes use the\nguest protocol at `status.endpoints.guest_uri`.",
+        "description": "Dispatches one command at most once per lease and execution key. Each\nHTTP response waits at most 20 seconds: repeat the exact request and key\nafter IDEMPOTENCY_IN_PROGRESS, honoring Retry-After, until the recorded\nresult or a terminal error arrives. Pending observations do not consume\nthe client's transient-error retry budget. Disconnect only stops waiting.\nResults (capped at 1 MiB per stream) remain replayable after lease expiry.\nAn unknown outcome is never dispatched again. Interactive processes use\nthe guest protocol at `status.endpoints.guest_uri`.",
         "operationId": "sandboxes_leases_exec",
         "parameters": [
           {
@@ -86384,7 +86521,7 @@
                     "type": "object"
                   },
                   "idempotency_key": {
-                    "description": "Dispatches the command at most once per lease and key, 1-255 printable\nASCII characters. The first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
+                    "description": "Stable execution identity, 1-255 printable ASCII characters. Required\nhere or in the Idempotency-Key header (this field takes precedence).\nPersist it with the complete request before sending; use the same key\nand request to recover after any disconnect or caller restart.\nThe first call claims the key before the command\nstarts; a later call with the same key and request returns the recorded\nresult (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the\nfirst still runs (the command continues after the call returns), and\n`EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same\nkey with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before\nthe command started releases the key.",
                     "type": "string"
                   },
                   "stdin": {
@@ -86448,7 +86585,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. With `idempotency_key` the command is dispatched at most once per lease and key, and its recorded result is returned again, also after the lease ended. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
+        "summary": "Dispatches one command at most once per lease and execution key. Each HTTP response waits at most 20 seconds: repeat the exact request and key after IDEMPOTENCY_IN_PROGRESS, honoring Retry-After, until the recorded result or a terminal error arrives. Pending observations do not consume the client's transient-error retry budget. Disconnect only stops waiting. Results (capped at 1 MiB per stream) remain replayable after lease expiry. An unknown outcome is never dispatched again. Interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
         "tags": [
           "sandboxes"
         ],

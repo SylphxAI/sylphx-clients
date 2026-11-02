@@ -85,6 +85,13 @@
           "http": {
             "query_params": []
           },
+          "id": "sandboxes.leases.cancel_exec",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "sandboxes.leases.read_file",
           "kind": "custom"
         },

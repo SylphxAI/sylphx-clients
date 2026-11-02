@@ -491,6 +491,36 @@ impl<T: Transport> Server<T> {
                 "no Sylphx credentials: set SYLPHX_API_KEY (an Access key) or run `sylphx login`, then restart the server",
             );
         };
+        if method_id == "sandboxes.leases.exec" {
+            let Some(key) = args["idempotency_key"]
+                .as_str()
+                .filter(|key| !key.is_empty())
+            else {
+                return tool_error("Exec needs an explicit stable idempotency_key. Save it with the complete request before calling, and reuse both after a disconnect.");
+            };
+            let pending = || {
+                tool_ok(json!({
+                    "status": "pending", "idempotency_key": key,
+                    "request": args, "retry_after_ms": 5000,
+                    "detail": "Observation is pending. Repeat this exact request and key. Disconnecting does not cancel the command; cancelExec requests cancellation."
+                }))
+            };
+            // One tool result stays bounded even when its SDK transport keeps
+            // observing. Dropping that observer never stops or rekeys the effect.
+            return match tokio::time::timeout(
+                std::time::Duration::from_secs(25),
+                client.invoke(method_id, args.clone()),
+            )
+            .await
+            {
+                Ok(Ok(value)) => tool_ok(value),
+                Ok(Err(Error::Api { code, .. })) if code.as_str() == "IDEMPOTENCY_IN_PROGRESS" => {
+                    pending()
+                }
+                Ok(Err(error)) => error_result(error),
+                Err(_) => pending(),
+            };
+        }
         match client.invoke(method_id, args).await {
             Ok(value) if entry["long_running"] == true => match wait_once(client, value).await {
                 Ok(v) => tool_ok(v),

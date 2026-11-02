@@ -29706,7 +29706,7 @@
                 {
                   "field": "idempotency_key",
                   "flag": "--idempotency-key",
-                  "summary": "Dispatches the command at most once per lease and key, 1-255 printable ASCII characters. The first call claims the key before the command starts; a later call with the same key and request returns the recorded result (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the first still runs (the command continues after the call returns), and `EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same key with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before the command started releases the key.",
+                  "summary": "Stable execution identity, 1-255 printable ASCII characters. Required here or in the Idempotency-Key header (this field takes precedence). Persist it with the complete request before sending; use the same key and request to recover after any disconnect or caller restart. The first call claims the key before the command starts; a later call with the same key and request returns the recorded result (also after the lease ended), `IDEMPOTENCY_IN_PROGRESS` while the first still runs (the command continues after the call returns), and `EXEC_OUTCOME_UNKNOWN` when the outcome was lost after dispatch. The same key with another request is `IDEMPOTENCY_KEY_REUSED`. A refusal before the command started releases the key.",
                   "type": "string"
                 }
               ],
@@ -29719,8 +29719,31 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/leases/{lease}"
               },
-              "summary": "Runs one command in the lease to completion and returns its output, capped at 1 MiB per stream. With `idempotency_key` the command is dispatched at most once per lease and key, and its recorded result is returned again, also after the lease ended. Long-running or interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
+              "summary": "Dispatches one command at most once per lease and execution key. Each HTTP response waits at most 20 seconds: repeat the exact request and key after IDEMPOTENCY_IN_PROGRESS, honoring Retry-After, until the recorded result or a terminal error arrives. Pending observations do not consume the client's transient-error retry budget. Disconnect only stops waiting. Results (capped at 1 MiB per stream) remain replayable after lease expiry. An unknown outcome is never dispatched again. Interactive processes use the guest protocol at `status.endpoints.guest_uri`.",
               "verb": "exec"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "idempotency_key",
+                  "flag": "--idempotency-key",
+                  "required": true,
+                  "summary": "The execution key from the original ExecLease request.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:cancelExec",
+              "method": "sandboxes.leases.cancel_exec",
+              "permission": "sandboxes:exec",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/leases/{lease}"
+              },
+              "summary": "Requests cancellation of the existing execution key. This acknowledgement means the request was recorded, not that the process has stopped. Observe the exact original ExecLease request for its confirmed terminal result. An already completed result wins; an unknown outcome remains unknown.",
+              "verb": "cancel-exec"
             },
             {
               "effect": "read",

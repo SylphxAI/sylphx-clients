@@ -2,16 +2,16 @@
 //! core and meta tools, confirmation of destructive calls, and errors.
 
 use std::collections::VecDeque;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use serde_json::{json, Value};
 use sylphx::{Client, Error, HttpRequest, HttpResponse, Transport};
 use sylphx_mcp::Server;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct Recorder {
-    sent: Mutex<Vec<HttpRequest>>,
-    replies: Mutex<VecDeque<(u16, Value)>>,
+    sent: Arc<Mutex<Vec<HttpRequest>>>,
+    replies: Arc<Mutex<VecDeque<(u16, Value)>>>,
 }
 
 impl Transport for Recorder {
@@ -37,7 +37,71 @@ fn server(replies: Vec<(u16, Value)>) -> Server<Recorder> {
     Server::new(Some(Client::new(rec)))
 }
 
-async fn call(s: &Server<Recorder>, method: &str, params: Value) -> Value {
+#[tokio::test]
+async fn exec_requires_a_saved_key_and_returns_recoverable_pending_or_terminal_unknown() {
+    let rec = Recorder::default();
+    rec.replies.lock().unwrap().extend([
+        (
+            409,
+            json!({"code":"IDEMPOTENCY_IN_PROGRESS","retryable":true,"effect":"applied"}),
+        ),
+        (
+            200,
+            json!({"exit_code":7,"execution_id":"one-dispatch","idempotency_key":"saved-key"}),
+        ),
+        (
+            409,
+            json!({"code":"EXEC_OUTCOME_UNKNOWN","retryable":false,"effect":"unknown"}),
+        ),
+    ]);
+    let s = Server::new(Some(Client::new(rec.clone())));
+    let mut args =
+        json!({"name":"orgs/o/projects/p/envs/e/leases/l","command":["true"],"timeout":"180s"});
+    let invoke = |args| json!({"name":"sylphx_call","arguments":{"method_id":"sandboxes.leases.exec","args":args}});
+    let missing = call(&s, "tools/call", invoke(args.clone())).await;
+    assert_eq!(missing["result"]["isError"], true);
+    assert!(rec.sent.lock().unwrap().is_empty());
+    args["idempotency_key"] = json!("saved-key");
+    let pending = call(&s, "tools/call", invoke(args.clone())).await;
+    assert_eq!(pending["result"]["isError"], false);
+    assert_eq!(pending["result"]["structuredContent"]["status"], "pending");
+    assert_eq!(pending["result"]["structuredContent"]["request"], args);
+    let terminal = call(&s, "tools/call", invoke(args.clone())).await;
+    assert_eq!(
+        terminal["result"]["structuredContent"]["execution_id"],
+        "one-dispatch"
+    );
+    let unknown = call(&s, "tools/call", invoke(args)).await;
+    assert_eq!(unknown["result"]["isError"], true);
+    let sent = rec.sent.lock().unwrap();
+    assert_eq!(sent.len(), 3);
+    assert!(sent.iter().all(|request| request == &sent[0]));
+}
+
+#[tokio::test(start_paused = true)]
+async fn exec_observation_deadline_returns_the_original_request_without_a_second_dispatch() {
+    struct Silent;
+    impl Transport for Silent {
+        async fn send(&self, _: HttpRequest) -> Result<HttpResponse, Error> {
+            std::future::pending().await
+        }
+    }
+    let s = Server::new(Some(Client::new(Silent)));
+    let args = json!({"name":"orgs/o/projects/p/envs/e/leases/l","command":["sleep","130"],"timeout":"180s","idempotency_key":"saved-key"});
+    let start = tokio::time::Instant::now();
+    let result = call(
+        &s,
+        "tools/call",
+        json!({"name":"sylphx_call","arguments":{"method_id":"sandboxes.leases.exec","args":args}}),
+    )
+    .await;
+    assert_eq!(start.elapsed(), std::time::Duration::from_secs(25));
+    assert_eq!(result["result"]["isError"], false);
+    assert_eq!(result["result"]["structuredContent"]["status"], "pending");
+    assert_eq!(result["result"]["structuredContent"]["request"], args);
+}
+
+async fn call<T: Transport>(s: &Server<T>, method: &str, params: Value) -> Value {
     s.handle(json!({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}))
         .await
         .expect("a request gets a response")

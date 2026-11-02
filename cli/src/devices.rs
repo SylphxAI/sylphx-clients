@@ -731,6 +731,9 @@ impl Run<'_> {
         let mut req = sbx::ExecLeaseRequest::default();
         req.name = lease.to_string();
         req.command = argv.iter().map(|a| a.to_string()).collect();
+        let mut key = [0u8; 16];
+        getrandom::getrandom(&mut key).map_err(|e| format!("no execution key source: {e}"))?;
+        req.idempotency_key = key.iter().map(|b| format!("{b:02x}")).collect();
         let r = self
             .client
             .sandboxes()

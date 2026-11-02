@@ -7003,6 +7003,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'sandboxes:exec',
 	},
+	'sandboxes.leases.cancel_exec': {
+		id: 'sandboxes.leases.cancel_exec',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/leases/*}:cancelExec',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/leases/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'sandboxes:exec',
+	},
 	'sandboxes.leases.close_port': {
 		id: 'sandboxes.leases.close_port',
 		httpMethod: 'POST',
