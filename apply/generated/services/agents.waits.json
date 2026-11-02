@@ -1,0 +1,50 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "operation_id",
+              "expected_goal_version"
+            ]
+          },
+          "id": "agents.waits.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.waits.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "agents.waits.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.waits.resolve",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.waits.cancel",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/AgentSessionWait"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.transfers.begin",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.transfers.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.transfers.write_part",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.transfers.finalize",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.transfers.adopt",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.transfers.abort",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "agents.sylphx.com/AgentSessionTransfer"
+    }
+  ]
+}

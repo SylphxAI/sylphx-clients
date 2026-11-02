@@ -67,6 +67,20 @@
           "http": {
             "query_params": []
           },
+          "id": "agents.agent_sessions.queue_execution",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "agents.agent_sessions.resume",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "agents.agent_sessions.send",
           "kind": "custom"
         },

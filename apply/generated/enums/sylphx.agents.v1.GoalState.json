@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.agents.v1.GoalState",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "GOAL_STATE_WORKING",
+      "wire": "working"
+    },
+    {
+      "number": 2,
+      "proto_name": "GOAL_STATE_WAITING",
+      "wire": "waiting"
+    },
+    {
+      "number": 3,
+      "proto_name": "GOAL_STATE_COMPLETED",
+      "wire": "completed"
+    },
+    {
+      "number": 4,
+      "proto_name": "GOAL_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.agents.v1.GoalControlAction",
+  "package": "sylphx.agents.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "GOAL_CONTROL_ACTION_PAUSE",
+      "wire": "pause"
+    },
+    {
+      "number": 2,
+      "proto_name": "GOAL_CONTROL_ACTION_RESUME",
+      "wire": "resume"
+    },
+    {
+      "number": 3,
+      "proto_name": "GOAL_CONTROL_ACTION_AMEND",
+      "wire": "amend"
+    }
+  ]
+}

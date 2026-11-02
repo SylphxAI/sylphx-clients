@@ -76,6 +76,16 @@
       "number": 15,
       "proto_name": "SESSION_EVENT_TYPE_SANDBOX",
       "wire": "sandbox"
+    },
+    {
+      "number": 16,
+      "proto_name": "SESSION_EVENT_TYPE_WAIT_CHANGED",
+      "wire": "wait_changed"
+    },
+    {
+      "number": 17,
+      "proto_name": "SESSION_EVENT_TYPE_WAIT_CONTINUATION",
+      "wire": "wait_continuation"
     }
   ]
 }

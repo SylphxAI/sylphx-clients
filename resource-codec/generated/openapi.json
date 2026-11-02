@@ -1261,6 +1261,44 @@
         },
         "type": "object"
       },
+      "sylphx.agents.v1.AbortAgentSessionTransferRequest": {
+        "description": "The request of AbortAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact transfer name; cannot abort an adopted Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.AdoptAgentSessionTransferRequest": {
+        "description": "The request of AdoptAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact verified transfer name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          },
+          "receipt_sha256": {
+            "description": "Exact read-back receipt durably recorded by the original source adapter.",
+            "type": "string"
+          },
+          "source_fence_sha256": {
+            "description": "The original one-writer marker attestation bound at Begin.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "receipt_sha256",
+          "source_fence_sha256"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.Agent": {
         "description": "An Agent is a versioned agent definition: model, instructions, tools, MCP\nservers, skills, memory stores, tool policy and budget. Each create or\nupdate that changes `spec` mints a new immutable AgentVersion; a session\npins the version it started on, so a change never alters a running\nconversation.",
         "properties": {
@@ -1463,6 +1501,233 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.AgentSessionGoal": {
+        "description": "An optional durable objective of one Session. Model answers, waits and\nexternal Task completion never settle it implicitly.",
+        "properties": {
+          "create_time": {
+            "description": "When this Goal was created.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "impasse": {
+            "description": "Execution held after the required repeated observation of an impasse.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Standard resource metadata.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "The exact Session-owned Goal name.",
+            "type": "string"
+          },
+          "objective": {
+            "description": "The objective, nonempty and at most 4,000 characters.",
+            "type": "string"
+          },
+          "owner_paused": {
+            "description": "Explicit owner pause; an unfinished Goal stays unfinished.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionGoalReceipt",
+            "description": "The terminal observation, retained after another Goal becomes active.",
+            "readOnly": true
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.GoalState",
+            "description": "Lifecycle; an execution hold is represented separately.",
+            "readOnly": true
+          },
+          "token_budget": {
+            "description": "Omit unless the caller explicitly requests a positive token budget.",
+            "format": "int64",
+            "type": "string"
+          },
+          "tokens_used": {
+            "description": "Observed tokens charged exactly once per runtime step.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "The platform Resource UID; the conserved Goal UUID is its name's final id.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "update_time": {
+            "description": "When this Goal last changed.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "usage_unavailable": {
+            "description": "Unknown usage holds execution when a token budget is enforced.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "version": {
+            "description": "Optimistic acceptance-contract version, starting at one.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.AgentSessionTransfer": {
+        "description": "A bounded immutable source snapshot staged on an empty destination Session.\nVerification conserves bytes and identities; it grants no execution authority.",
+        "properties": {
+          "create_time": {
+            "description": "Creation time.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "description": "Versioned source identity, transfer epoch and ordered byte/part digests.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "manifest_sha256": {
+            "description": "Digest of the checked manifest, including original Session and epoch.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Standard metadata.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "Destination Session and immutable transfer identity.",
+            "type": "string"
+          },
+          "receipt": {
+            "additionalProperties": true,
+            "description": "Original identities, destination mappings and unresolved effect holds.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "receipt_sha256": {
+            "description": "Digest the source adapter reads back before acknowledging its handoff.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "received_parts": {
+            "description": "Exact stored-part metadata. Private payload bytes are never returned.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.agents.v1.SessionTransferPart"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "source_fence_sha256": {
+            "description": "Caller attestation bound to its original durable writer fence. A digest\ndoes not prove that an external writer has stopped.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "staging, verified, adopted or aborted. Verified does not admit execution.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable Resource UID.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "update_time": {
+            "description": "Last lifecycle change time.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.agents.v1.AgentSessionWait": {
+        "description": "A durable external wait owned by a Session, optionally by its exact Goal.\nReadiness conserves observed evidence and does not authorize inference.",
+        "properties": {
+          "create_time": {
+            "description": "Creation time.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "deadline": {
+            "description": "Actual future due time; required only for a timer.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "description": "Original bounded observed evidence, retained through delivery and restart.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "goal": {
+            "description": "Optional exact Goal in this Session, never a current-Goal selector.",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Standard metadata.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "Exact name; the final segment is the conserved wait UUID.",
+            "type": "string"
+          },
+          "reference": {
+            "description": "Exact source reference for a signal; empty for a timer.",
+            "type": "string"
+          },
+          "resume_prompt": {
+            "description": "What to do after observing this wait's evidence, at most 16 KiB.",
+            "type": "string"
+          },
+          "resumed_turn": {
+            "description": "The only turn that consumed this wait; unset until resolved.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "active, ready, resolved or cancelled. Ready still requires turn admission.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "type": {
+            "description": "time or signal. Other producer types require their own admitted adapter.",
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable platform Resource UID.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "update_time": {
+            "description": "Last state change time.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "resume_prompt"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.AgentSpec": {
         "description": "AgentSpec is the caller-writable definition of an Agent. An AgentVersion\nholds a frozen copy of it.",
         "properties": {
@@ -1656,6 +1921,36 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.BeginAgentSessionTransferRequest": {
+        "description": "The request of BeginAgentSessionTransfer.",
+        "properties": {
+          "manifest": {
+            "additionalProperties": true,
+            "description": "sylphx.agents.session-continuity.v1 manifest. At most 256 parts of 256\nKiB, and 64 MiB overall. Source epoch must be a positive signed int64.",
+            "type": "object"
+          },
+          "operation_id": {
+            "description": "Permanent caller identity; exact retries return the original transfer.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Empty idle destination Session, already created through the ordinary API.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "source_fence_sha256": {
+            "description": "SHA-256 attestation of the original storage's durable writer marker.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "operation_id",
+          "manifest",
+          "source_fence_sha256"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.BuiltinTool": {
         "description": "A BuiltinTool is a tool the platform provides.",
         "properties": {
@@ -1671,6 +1966,50 @@
         },
         "required": [
           "id"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.CancelAgentSessionWaitRequest": {
+        "description": "The request of CancelAgentSessionWait.",
+        "properties": {
+          "name": {
+            "description": "Exact wait name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.CancelQueuedSessionExecutionRequest": {
+        "description": "The request of CancelQueuedSessionExecution.",
+        "properties": {
+          "expected_generation": {
+            "description": "The exact authority generation to cancel, never a newest-row selector.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact reserved execution name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/QueuedSessionExecution"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id",
+          "expected_generation"
         ],
         "type": "object"
       },
@@ -1792,6 +2131,49 @@
         },
         "type": "object"
       },
+      "sylphx.agents.v1.ControlAgentSessionGoalRequest": {
+        "description": "The request of ControlAgentSessionGoal.",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.GoalControlAction",
+            "description": "Explicit owner action. Only AMEND accepts objective/budget changes."
+          },
+          "clear_token_budget": {
+            "description": "Explicitly remove a budget when amending; incompatible with token_budget.",
+            "type": "boolean"
+          },
+          "expected_version": {
+            "description": "The contract version observed by the owner.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The exact Goal name; never a lookup of a Session's newest Goal.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          },
+          "objective": {
+            "description": "New objective, only when amending. Omission preserves the existing text.",
+            "type": "string"
+          },
+          "operation_id": {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "type": "string"
+          },
+          "token_budget": {
+            "description": "New explicit token budget, only when amending. Omission preserves it.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "action",
+          "operation_id"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.CreateAgentRequest": {
         "description": "The request of CreateAgent.",
         "properties": {
@@ -1819,6 +2201,30 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.CreateAgentSessionGoalRequest": {
+        "description": "The request of CreateAgentSessionGoal.",
+        "properties": {
+          "agent_session_goal": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionGoal",
+            "description": "Only objective and optional token_budget are caller supplied."
+          },
+          "operation_id": {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The existing Session that owns this Goal.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent",
+          "agent_session_goal",
+          "operation_id"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.CreateAgentSessionRequest": {
         "description": "The request of CreateAgentSession.",
         "properties": {
@@ -1843,6 +2249,35 @@
         "required": [
           "parent",
           "agent_session"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.CreateAgentSessionWaitRequest": {
+        "description": "The request of CreateAgentSessionWait.",
+        "properties": {
+          "agent_session_wait": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait",
+            "description": "Only type, reference/deadline, resume_prompt and optional goal are writable."
+          },
+          "expected_goal_version": {
+            "description": "Required when the wait names a Goal; its exact observed contract version.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Existing owning Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent",
+          "agent_session_wait",
+          "operation_id"
         ],
         "type": "object"
       },
@@ -2250,6 +2685,20 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.FinalizeAgentSessionTransferRequest": {
+        "description": "The request of FinalizeAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact transfer name. The immutable snapshot makes repetition idempotent.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.FunctionTool": {
         "description": "A FunctionTool is a tool whose logic is the app's own server code.",
         "properties": {
@@ -2282,6 +2731,20 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.GetAgentSessionGoalRequest": {
+        "description": "The request of GetAgentSessionGoal.",
+        "properties": {
+          "name": {
+            "description": "The exact Goal name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.GetAgentSessionRequest": {
         "description": "The request of GetAgentSession.",
         "properties": {
@@ -2289,6 +2752,34 @@
             "description": "The name of the session to get.",
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.GetAgentSessionTransferRequest": {
+        "description": "The request of GetAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact transfer name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.GetAgentSessionWaitRequest": {
+        "description": "The request of GetAgentSessionWait.",
+        "properties": {
+          "name": {
+            "description": "Exact wait name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
           }
         },
         "required": [
@@ -2352,6 +2843,20 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.GetQueuedSessionExecutionRequest": {
+        "description": "The request of GetQueuedSessionExecution.",
+        "properties": {
+          "name": {
+            "description": "Exact reserved execution name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/QueuedSessionExecution"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.GetSessionEventRequest": {
         "description": "The request of GetSessionEvent.",
         "properties": {
@@ -2365,6 +2870,25 @@
           "name"
         ],
         "type": "object"
+      },
+      "sylphx.agents.v1.GoalControlAction": {
+        "description": "An authenticated owner action; model-generated evidence cannot grant it.",
+        "enum": [
+          "pause",
+          "resume",
+          "amend"
+        ],
+        "type": "string"
+      },
+      "sylphx.agents.v1.GoalState": {
+        "description": "Goal lifecycle, independent of optional Task dispatch and execution controls.",
+        "enum": [
+          "working",
+          "waiting",
+          "completed",
+          "failed"
+        ],
+        "type": "string"
       },
       "sylphx.agents.v1.HttpTool": {
         "description": "An HttpTool is an HTTP API the gateway calls on the agent's behalf.",
@@ -2440,6 +2964,46 @@
           "arguments",
           "op_id"
         ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.ListAgentSessionWaitsRequest": {
+        "description": "The request of ListAgentSessionWaits.",
+        "properties": {
+          "page_size": {
+            "description": "Default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The preceding response's next_page_token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Existing owning Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.ListAgentSessionWaitsResponse": {
+        "description": "The response of ListAgentSessionWaits.",
+        "properties": {
+          "agent_session_waits": {
+            "description": "Ordered by conserved wait UUID.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty at the end.",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.agents.v1.ListAgentSessionsRequest": {
@@ -3382,6 +3946,124 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.QueueAgentSessionExecutionRequest": {
+        "description": "The request of QueueAgentSessionExecution.",
+        "properties": {
+          "automatic": {
+            "description": "Explicitly authorize automatic ready-wait resume with these exact captures.\nDefault false only reserves them. Requires captured agents:sessions as\nwell as runtime permissions; owner holds and ordinary admission still apply.",
+            "type": "boolean"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+            "description": "Existing handles captured by this caller for this exact future turn."
+          },
+          "expected_generation": {
+            "description": "Zero on first creation; replacing authority requires its exact generation.",
+            "format": "int64",
+            "type": "string"
+          },
+          "expected_goal_version": {
+            "description": "Required for a Goal; its observed contract version when granting authority.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "goal": {
+            "description": "Exact current Goal, or empty only when the Session has no Goal.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          },
+          "name": {
+            "description": "Existing owning Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "execution",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.QueuedSessionExecution": {
+        "description": "Explicit caller authority reserved for one exact future Session turn.\nIt reuses captured credentials; it never mints, clones or extends a grant.",
+        "properties": {
+          "automatic": {
+            "description": "Whether the caller explicitly authorized automatic wait readmission.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "blocked_reason": {
+            "description": "Current delivery/authority/owner hold, when automatic continuation is blocked.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "continuation_state": {
+            "description": "disabled, unscheduled, pending, waiting or finished; no inference implied.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "create_time": {
+            "description": "When the caller reserved this execution.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "Earliest captured handle expiry; ordinary admission revalidates all grants.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "generation": {
+            "description": "Configuration generation, advanced only by explicit replacement.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "goal": {
+            "description": "Optional exact Goal whose objective and budget this authority covers.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Standard metadata.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "Exact Session and reserved public turn number.",
+            "type": "string"
+          },
+          "state": {
+            "description": "queued, consumed, superseded or cancelled. Queued does not run inference.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "turn": {
+            "description": "Exact future turn; never selected by a model or a Task.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable platform Resource UID.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "update_time": {
+            "description": "When the state last changed.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.agents.v1.RenewalCall": {
         "description": "A pinned tool called periodically while the accepted task owns its grant.",
         "properties": {
@@ -3449,6 +4131,34 @@
         ],
         "type": "object"
       },
+      "sylphx.agents.v1.ResolveAgentSessionWaitRequest": {
+        "description": "The request of ResolveAgentSessionWait.",
+        "properties": {
+          "evidence": {
+            "additionalProperties": true,
+            "description": "Nonempty observed signal evidence; omitted for a timer.",
+            "type": "object"
+          },
+          "name": {
+            "description": "Exact wait name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          },
+          "reference": {
+            "description": "Exact recorded signal source; omitted for a timer.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id"
+        ],
+        "type": "object"
+      },
       "sylphx.agents.v1.ResultField": {
         "description": "Runtime-produced fields mapped into an authorized completion tool call.",
         "enum": [
@@ -3463,6 +4173,44 @@
           "retry_at"
         ],
         "type": "string"
+      },
+      "sylphx.agents.v1.ResumeAgentSessionRequest": {
+        "description": "The request of ResumeAgentSession.",
+        "properties": {
+          "execution": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+            "description": "Fresh handles captured for this exact next turn; no Task is required."
+          },
+          "name": {
+            "description": "Existing owning Session, which must be idle or failed.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          },
+          "queued_execution_generation": {
+            "description": "Nonzero for automatic continuation: require this exact queued authority\ngeneration, caller, Goal terms and execution. Zero is explicit fresh\ncaller admission. A delayed automatic callback never selects a replacement.",
+            "format": "int64",
+            "type": "string"
+          },
+          "waits": {
+            "description": "Exact ready owners, 1 to 16; must include all outstanding Session waits.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id",
+          "waits",
+          "execution"
+        ],
+        "type": "object"
       },
       "sylphx.agents.v1.RevokeCredentialRequest": {
         "description": "The request to revoke a captured credential handle.",
@@ -3723,6 +4471,10 @@
       "sylphx.agents.v1.SendAgentSessionMessageRequest": {
         "description": "The request of SendAgentSessionMessage.",
         "properties": {
+          "execution": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+            "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message."
+          },
           "message": {
             "$ref": "#/components/schemas/sylphx.agents.v1.Message",
             "description": "The message, 1 to 64 parts."
@@ -3833,6 +4585,14 @@
             "$ref": "#/components/schemas/sylphx.agents.v1.StepUsage",
             "description": "Observed accounting for this step; absent values are unknown, never zero.",
             "readOnly": true
+          },
+          "wait": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait",
+            "description": "For WAIT_CHANGED: a durable wait fact, without execution authority."
+          },
+          "wait_continuation": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionWaitContinuation",
+            "description": "For WAIT_CONTINUATION: ready owners consumed by exact turn admission."
           }
         },
         "type": "object"
@@ -3854,9 +4614,35 @@
           "response",
           "error",
           "usage",
-          "sandbox"
+          "sandbox",
+          "wait_changed",
+          "wait_continuation"
         ],
         "type": "string"
+      },
+      "sylphx.agents.v1.SessionGoalReceipt": {
+        "description": "An actual observation supporting terminal Goal settlement.",
+        "properties": {
+          "evidence": {
+            "additionalProperties": true,
+            "description": "Nonempty structured evidence from that surface.",
+            "type": "object"
+          },
+          "stage": {
+            "description": "The observed delivery stage.",
+            "type": "string"
+          },
+          "target": {
+            "description": "The concrete surface or artifact observed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "target",
+          "evidence"
+        ],
+        "type": "object"
       },
       "sylphx.agents.v1.SessionState": {
         "description": "SessionState is where a session is.",
@@ -3869,6 +4655,53 @@
           "archived"
         ],
         "type": "string"
+      },
+      "sylphx.agents.v1.SessionTransferPart": {
+        "description": "A content-checked part receipt, without private state or source credentials.",
+        "properties": {
+          "bytes": {
+            "description": "Exact stored byte count.",
+            "format": "int64",
+            "type": "string"
+          },
+          "index": {
+            "description": "Zero-based index in the immutable manifest.",
+            "format": "int64",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "SHA-256 of the exact binary body.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.agents.v1.SessionTurnExecution": {
+        "description": "Authority for one hosted turn of an existing session. Handles are captured\nthrough the public credential API for this exact session and turn; raw\ncredentials never enter the conversation or model context. No Task or\ncompletion callback is required.",
+        "properties": {
+          "credentials": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/sylphx.agents.v1.CredentialBinding"
+            },
+            "description": "Same-turn execution handles by alias, including inference and any pinned\ntool or repository capabilities. Each retains its existing permission gate.",
+            "type": "object"
+          },
+          "runtime_credential_handle": {
+            "description": "Same-turn captured caller authority for Workflows and lazy Sandbox APIs.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "turn": {
+            "description": "The expected next turn. A concurrent admission never changes this pin.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "turn",
+          "runtime_credential_handle"
+        ],
+        "type": "object"
       },
       "sylphx.agents.v1.SessionUsage": {
         "description": "SessionUsage is what a session has used. Model tokens are on the Sylphx AI\nmeter; this is the Agents part.",
@@ -3892,6 +4725,55 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.agents.v1.SessionWaitContinuation": {
+        "description": "Runtime input produced by consuming actual wait owners, not a user message.",
+        "properties": {
+          "waits": {
+            "description": "Conserved wait snapshots and observed evidence for this exact turn.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+            },
+            "readOnly": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.agents.v1.SettleAgentSessionGoalRequest": {
+        "description": "The request of SettleAgentSessionGoal.",
+        "properties": {
+          "expected_version": {
+            "description": "The acceptance-contract version observed by the caller.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The exact Goal name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          },
+          "operation_id": {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "type": "string"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionGoalReceipt",
+            "description": "An actual observation at the delivered environment surface."
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.GoalState",
+            "description": "Only COMPLETED and FAILED settle a Goal. Waiting is not success."
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "state",
+          "receipt",
+          "operation_id"
+        ],
         "type": "object"
       },
       "sylphx.agents.v1.Skill": {
@@ -3936,6 +4818,10 @@
       "sylphx.agents.v1.SteerAgentSessionRequest": {
         "description": "The request of SteerAgentSession.",
         "properties": {
+          "execution": {
+            "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+            "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message."
+          },
           "message": {
             "$ref": "#/components/schemas/sylphx.agents.v1.Message",
             "description": "The message, 1 to 64 parts."
@@ -4070,9 +4956,15 @@
         "description": "A ToolCall is the agent asking to call a tool. `id` is assigned by the\nruntime; the model's own tool-call id is kept only as `model_call_id`, so\na model that repeats an id never collides two calls.",
         "properties": {
           "client": {
-            "description": "Whether the client runs it (a ClientTool).",
+            "description": "Whether the client must execute this pending call. Calls rejected before\ndispatch remain in history with this false and a corresponding ToolResult.",
             "readOnly": true,
             "type": "boolean"
+          },
+          "deadline": {
+            "description": "The client call's fixed deadline. A reconnecting client never starts a\ncall after this time; retries retain the original deadline and call id.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
           },
           "id": {
             "description": "The call's id within the session, `(turn, step)` based.",
@@ -4355,6 +5247,33 @@
         },
         "required": [
           "owner_pool"
+        ],
+        "type": "object"
+      },
+      "sylphx.agents.v1.WriteAgentSessionTransferPartRequest": {
+        "description": "The request of WriteAgentSessionTransferPart.",
+        "properties": {
+          "data": {
+            "contentEncoding": "base64",
+            "description": "Base64 on the JSON wire; exact binary bytes, at most 256 KiB decoded.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "index": {
+            "description": "Zero-based declared part index.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact transfer name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name",
+          "index",
+          "data"
         ],
         "type": "object"
       },
@@ -56523,6 +57442,720 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals": {
+      "post": {
+        "description": "Creates an optional objective owned by this Session, without an external Task.\nThe operation_id keeps the original receipt beyond request replay expiry.",
+        "operationId": "agents_goals_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "in": "query",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionGoal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionGoal"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an optional objective owned by this Session, without an external Task. The operation_id keeps the original receipt beyond request replay expiry.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.goals.create",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}": {
+      "get": {
+        "description": "Reads the exact Goal, including its terminal receipt after a successor starts.",
+        "operationId": "agents_goals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionGoal"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads the exact Goal, including its terminal receipt after a successor starts.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "agents.goals.get",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}:control": {
+      "post": {
+        "description": "Applies an explicit owner control to this exact Goal/version. Pause\ninterrupts only its current execution; resume does not resolve a wait or\nclear observed usage. Amend changes only supplied objective/budget fields.",
+        "operationId": "agents_goals_control",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "action": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.GoalControlAction",
+                    "description": "Explicit owner action. Only AMEND accepts objective/budget changes."
+                  },
+                  "clear_token_budget": {
+                    "description": "Explicitly remove a budget when amending; incompatible with token_budget.",
+                    "type": "boolean"
+                  },
+                  "expected_version": {
+                    "description": "The contract version observed by the owner.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "objective": {
+                    "description": "New objective, only when amending. Omission preserves the existing text.",
+                    "type": "string"
+                  },
+                  "operation_id": {
+                    "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+                    "type": "string"
+                  },
+                  "token_budget": {
+                    "description": "New explicit token budget, only when amending. Omission preserves it.",
+                    "format": "int64",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "action",
+                  "operation_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionGoal"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Applies an explicit owner control to this exact Goal/version. Pause interrupts only its current execution; resume does not resolve a wait or clear observed usage. Amend changes only supplied objective/budget fields.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.goals.control",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}:settle": {
+      "post": {
+        "description": "Settles only the named Goal/version with an observed environment receipt.\nReplaying operation_id returns its original receipt, never its successor.",
+        "operationId": "agents_goals_settle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expected_version": {
+                    "description": "The acceptance-contract version observed by the caller.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "operation_id": {
+                    "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+                    "type": "string"
+                  },
+                  "receipt": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.SessionGoalReceipt",
+                    "description": "An actual observation at the delivered environment surface."
+                  },
+                  "state": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.GoalState",
+                    "description": "Only COMPLETED and FAILED settle a Goal. Waiting is not success."
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "state",
+                  "receipt",
+                  "operation_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionGoal"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Settles only the named Goal/version with an observed environment receipt. Replaying operation_id returns its original receipt, never its successor.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.goals.settle",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/queued_executions/{turn}": {
+      "get": {
+        "description": "Reads the state of an exact future-turn authorization.",
+        "operationId": "agents_queued_executions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.QueuedSessionExecution"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads the state of an exact future-turn authorization.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "agents.queued_executions.get",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/queued_executions/{turn}:cancel": {
+      "post": {
+        "description": "Cancels only a queued future execution; an already admitted turn retains its receipt.",
+        "operationId": "agents_queued_executions_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expected_generation": {
+                    "description": "The exact authority generation to cancel, never a newest-row selector.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "operation_id": {
+                    "description": "Permanent caller mutation identity, at most 128 bytes.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation_id",
+                  "expected_generation"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.QueuedSessionExecution"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Cancels only a queued future execution; an already admitted turn retains its receipt.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.queued_executions.cancel",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/session_events": {
       "get": {
         "description": "Lists a session's events in sequence order. To follow a session, call\nagain with the filter `sequence > N`, N the last sequence read; `wait`\nholds the call open until a newer event is appended or the wait ends.",
@@ -56730,6 +58363,1259 @@
           "RESOURCE_NOT_FOUND"
         ],
         "x-sylphx-method": "agents.session_events.get",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}": {
+      "get": {
+        "description": "Returns hashes and original/destination mappings, never private payload.",
+        "operationId": "agents_transfers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transfer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionTransfer"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Returns hashes and original/destination mappings, never private payload.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "agents.transfers.get",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}:abort": {
+      "post": {
+        "description": "Releases only a destination that has not adopted source state. Immutable\nsource bytes/epoch remain retained; source writer release is app-owned.",
+        "operationId": "agents_transfers_abort",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transfer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionTransfer"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Releases only a destination that has not adopted source state. Immutable source bytes/epoch remain retained; source writer release is app-owned.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "agents.transfers.abort",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}:adopt": {
+      "post": {
+        "description": "After the source durably records the exact verified receipt under its\nwriter fence, atomically projects conserved state without starting a turn.\nUnknown outcomes or incompatible pinned model context remain held.",
+        "operationId": "agents_transfers_adopt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transfer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "receipt_sha256": {
+                    "description": "Exact read-back receipt durably recorded by the original source adapter.",
+                    "type": "string"
+                  },
+                  "source_fence_sha256": {
+                    "description": "The original one-writer marker attestation bound at Begin.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "receipt_sha256",
+                  "source_fence_sha256"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionTransfer"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "After the source durably records the exact verified receipt under its writer fence, atomically projects conserved state without starting a turn. Unknown outcomes or incompatible pinned model context remain held.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "agents.transfers.adopt",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}:finalize": {
+      "post": {
+        "description": "Re-reads ordered parts, checks the whole snapshot and validates the\nportable state. An unknown effect stays held; this call never executes.",
+        "operationId": "agents_transfers_finalize",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transfer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionTransfer"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Re-reads ordered parts, checks the whole snapshot and validates the portable state. An unknown effect stays held; this call never executes.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "agents.transfers.finalize",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}:writePart": {
+      "post": {
+        "description": "Stores at most 256 KiB of exact bytes under its declared part digest.\nAn acknowledgement loss can repeat the identical part without mutation.",
+        "operationId": "agents_transfers_write_part",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transfer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "data": {
+                    "contentEncoding": "base64",
+                    "description": "Base64 on the JSON wire; exact binary bytes, at most 256 KiB decoded.",
+                    "type": "string",
+                    "x-sylphx-sensitive": true
+                  },
+                  "index": {
+                    "description": "Zero-based declared part index.",
+                    "format": "int64",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "index",
+                  "data"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.SessionTransferPart"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Stores at most 256 KiB of exact bytes under its declared part digest. An acknowledgement loss can repeat the identical part without mutation.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS"
+        ],
+        "x-sylphx-method": "agents.transfers.write_part",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers:begin": {
+      "post": {
+        "description": "Stages a uniquely identified source epoch on an empty idle Session.\nThe source adapter must already hold its durable one-writer fence.",
+        "operationId": "agents_transfers_begin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "manifest": {
+                    "additionalProperties": true,
+                    "description": "sylphx.agents.session-continuity.v1 manifest. At most 256 parts of 256\nKiB, and 64 MiB overall. Source epoch must be a positive signed int64.",
+                    "type": "object"
+                  },
+                  "operation_id": {
+                    "description": "Permanent caller identity; exact retries return the original transfer.",
+                    "type": "string"
+                  },
+                  "source_fence_sha256": {
+                    "description": "SHA-256 attestation of the original storage's durable writer marker.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation_id",
+                  "manifest",
+                  "source_fence_sha256"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionTransfer"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Stages a uniquely identified source epoch on an empty idle Session. The source adapter must already hold its durable one-writer fence.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-sylphx-method": "agents.transfers.begin",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits": {
+      "get": {
+        "description": "Lists durable waits, including ready undelivered owners.",
+        "operationId": "agents_waits_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default 50, clamped to 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The preceding response's next_page_token.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.ListAgentSessionWaitsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists durable waits, including ready undelivered owners.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "agents.waits.list",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Creates a durable wait on an idle Session, with permanent operation replay.",
+        "operationId": "agents_waits_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "in": "query",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when the wait names a Goal; its exact observed contract version.",
+            "in": "query",
+            "name": "expected_goal_version",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates a durable wait on an idle Session, with permanent operation replay.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.waits.create",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}": {
+      "get": {
+        "description": "Reads an exact wait and its retained evidence.",
+        "operationId": "agents_waits_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wait",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads an exact wait and its retained evidence.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "agents.waits.get",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}:cancel": {
+      "post": {
+        "description": "Cancels only this exact undelivered wait; repeated operations retain receipts.",
+        "operationId": "agents_waits_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wait",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "operation_id": {
+                    "description": "Permanent caller mutation identity, at most 128 bytes.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Cancels only this exact undelivered wait; repeated operations retain receipts.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.waits.cancel",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}:resolve": {
+      "post": {
+        "description": "Records observed signal evidence or checks a timer against its actual due time.",
+        "operationId": "agents_waits_resolve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wait",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "evidence": {
+                    "additionalProperties": true,
+                    "description": "Nonempty observed signal evidence; omitted for a timer.",
+                    "type": "object"
+                  },
+                  "operation_id": {
+                    "description": "Permanent caller mutation identity, at most 128 bytes.",
+                    "type": "string"
+                  },
+                  "reference": {
+                    "description": "Exact recorded signal source; omitted for a timer.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.AgentSessionWait"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Records observed signal evidence or checks a timer against its actual due time.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.waits.resolve",
         "x-sylphx-permission": "agents:sessions",
         "x-sylphx-stage": "preview"
       }
@@ -57201,6 +60087,279 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:queueExecution": {
+      "post": {
+        "description": "Explicitly reserves existing captured authority for one future turn, without executing it.",
+        "operationId": "agents_agent_sessions_queue_execution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "automatic": {
+                    "description": "Explicitly authorize automatic ready-wait resume with these exact captures.\nDefault false only reserves them. Requires captured agents:sessions as\nwell as runtime permissions; owner holds and ordinary admission still apply.",
+                    "type": "boolean"
+                  },
+                  "execution": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+                    "description": "Existing handles captured by this caller for this exact future turn."
+                  },
+                  "expected_generation": {
+                    "description": "Zero on first creation; replacing authority requires its exact generation.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "expected_goal_version": {
+                    "description": "Required for a Goal; its observed contract version when granting authority.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "goal": {
+                    "description": "Exact current Goal, or empty only when the Session has no Goal.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+                  },
+                  "operation_id": {
+                    "description": "Permanent caller mutation identity, at most 128 bytes.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "execution",
+                  "operation_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.QueuedSessionExecution"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Explicitly reserves existing captured authority for one future turn, without executing it.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.agent_sessions.queue_execution",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:resume": {
+      "post": {
+        "description": "Consumes all ready owners atomically with fresh exact-next-turn authority.",
+        "operationId": "agents_agent_sessions_resume",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_session",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "execution": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+                    "description": "Fresh handles captured for this exact next turn; no Task is required."
+                  },
+                  "operation_id": {
+                    "description": "Permanent caller mutation identity, at most 128 bytes.",
+                    "type": "string"
+                  },
+                  "queued_execution_generation": {
+                    "description": "Nonzero for automatic continuation: require this exact queued authority\ngeneration, caller, Goal terms and execution. Zero is explicit fresh\ncaller admission. A delayed automatic callback never selects a replacement.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "waits": {
+                    "description": "Exact ready owners, 1 to 16; must include all outstanding Session waits.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+                  }
+                },
+                "required": [
+                  "operation_id",
+                  "waits",
+                  "execution"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.agents.v1.SessionEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Consumes all ready owners atomically with fresh exact-next-turn authority.",
+        "tags": [
+          "agents"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "agents.agent_sessions.resume",
+        "x-sylphx-permission": "agents:sessions",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:send": {
       "post": {
         "description": "Sends a user message. On an idle or failed session it starts a new turn;\nwhile a turn runs it is refused with `INVALID_STATE` (use `:steer`).\nThe same `Idempotency-Key` returns the same event.",
@@ -57250,6 +60409,10 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "execution": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+                    "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message."
+                  },
                   "message": {
                     "$ref": "#/components/schemas/sylphx.agents.v1.Message",
                     "description": "The message, 1 to 64 parts."
@@ -57369,6 +60532,10 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "execution": {
+                    "$ref": "#/components/schemas/sylphx.agents.v1.SessionTurnExecution",
+                    "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message."
+                  },
                   "message": {
                     "$ref": "#/components/schemas/sylphx.agents.v1.Message",
                     "description": "The message, 1 to 64 parts."
@@ -57437,7 +60604,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:submitToolResult": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReturns the result of a client tool call; the turn continues.",
+        "description": "Returns the result of a client tool call; the turn continues.",
         "operationId": "agents_agent_sessions_submit_tool_result",
         "parameters": [
           {
@@ -57555,7 +60722,6 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.submit_tool_result",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

@@ -1166,6 +1166,156 @@
     {
       "collections": [
         {
+          "collection": "transfers",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller identity; exact retries return the original transfer.",
+                  "type": "string"
+                },
+                {
+                  "field": "manifest",
+                  "flag": "--manifest",
+                  "required": true,
+                  "summary": "sylphx.agents.session-continuity.v1 manifest. At most 256 parts of 256 KiB, and 64 MiB overall. Source epoch must be a positive signed int64.",
+                  "type": "json"
+                },
+                {
+                  "field": "source_fence_sha256",
+                  "flag": "--source-fence-sha256",
+                  "required": true,
+                  "summary": "SHA-256 attestation of the original storage's durable writer marker.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/transfers:begin",
+              "method": "agents.transfers.begin",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
+              },
+              "summary": "Stages a uniquely identified source epoch on an empty idle Session. The source adapter must already hold its durable one-writer fence.",
+              "verb": "begin"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}",
+              "method": "agents.transfers.get",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}"
+              },
+              "summary": "Returns hashes and original/destination mappings, never private payload.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "index",
+                  "flag": "--index",
+                  "required": true,
+                  "summary": "Zero-based declared part index.",
+                  "type": "int"
+                },
+                {
+                  "field": "data",
+                  "flag": "--data",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Base64 on the JSON wire; exact binary bytes, at most 256 KiB decoded.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:writePart",
+              "method": "agents.transfers.write_part",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}"
+              },
+              "summary": "Stores at most 256 KiB of exact bytes under its declared part digest. An acknowledgement loss can repeat the identical part without mutation.",
+              "verb": "write-part"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:finalize",
+              "method": "agents.transfers.finalize",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}"
+              },
+              "summary": "Re-reads ordered parts, checks the whole snapshot and validates the portable state. An unknown effect stays held; this call never executes.",
+              "verb": "finalize"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "receipt_sha256",
+                  "flag": "--receipt-sha256",
+                  "required": true,
+                  "summary": "Exact read-back receipt durably recorded by the original source adapter.",
+                  "type": "string"
+                },
+                {
+                  "field": "source_fence_sha256",
+                  "flag": "--source-fence-sha256",
+                  "required": true,
+                  "summary": "The original one-writer marker attestation bound at Begin.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:adopt",
+              "method": "agents.transfers.adopt",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}"
+              },
+              "summary": "After the source durably records the exact verified receipt under its writer fence, atomically projects conserved state without starting a turn. Unknown outcomes or incompatible pinned model context remain held.",
+              "verb": "adopt"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:abort",
+              "method": "agents.transfers.abort",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}"
+              },
+              "summary": "Releases only a destination that has not adopted source state. Immutable source bytes/epoch remain retained; source writer release is app-owned.",
+              "verb": "abort"
+            }
+          ],
+          "noun": "transfers",
+          "resource_type": "agents.sylphx.com/AgentSessionTransfer"
+        },
+        {
           "collection": "agents",
           "commands": [
             {
@@ -2394,10 +2544,114 @@
               "effect": "write",
               "flags": [
                 {
+                  "field": "execution",
+                  "flag": "--execution",
+                  "required": true,
+                  "summary": "Existing handles captured by this caller for this exact future turn.",
+                  "type": "json"
+                },
+                {
+                  "field": "goal",
+                  "flag": "--goal",
+                  "summary": "Exact current Goal, or empty only when the Session has no Goal.",
+                  "type": "string"
+                },
+                {
+                  "field": "expected_goal_version",
+                  "flag": "--expected-goal-version",
+                  "summary": "Required for a Goal; its observed contract version when granting authority.",
+                  "type": "int"
+                },
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller mutation identity, at most 128 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "expected_generation",
+                  "flag": "--expected-generation",
+                  "summary": "Zero on first creation; replacing authority requires its exact generation.",
+                  "type": "int"
+                },
+                {
+                  "field": "automatic",
+                  "flag": "--automatic",
+                  "summary": "Explicitly authorize automatic ready-wait resume with these exact captures. Default false only reserves them. Requires captured agents:sessions as well as runtime permissions; owner holds and ordinary admission still apply.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:queueExecution",
+              "method": "agents.agent_sessions.queue_execution",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
+              },
+              "summary": "Explicitly reserves existing captured authority for one future turn, without executing it.",
+              "verb": "queue-execution"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller mutation identity, at most 128 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "waits",
+                  "flag": "--waits",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Exact ready owners, 1 to 16; must include all outstanding Session waits.",
+                  "type": "string"
+                },
+                {
+                  "field": "execution",
+                  "flag": "--execution",
+                  "required": true,
+                  "summary": "Fresh handles captured for this exact next turn; no Task is required.",
+                  "type": "json"
+                },
+                {
+                  "field": "queued_execution_generation",
+                  "flag": "--queued-execution-generation",
+                  "summary": "Nonzero for automatic continuation: require this exact queued authority generation, caller, Goal terms and execution. Zero is explicit fresh caller admission. A delayed automatic callback never selects a replacement.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:resume",
+              "method": "agents.agent_sessions.resume",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
+              },
+              "summary": "Consumes all ready owners atomically with fresh exact-next-turn authority.",
+              "verb": "resume"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
                   "field": "message",
                   "flag": "--message",
                   "required": true,
                   "summary": "The message, 1 to 64 parts.",
+                  "type": "json"
+                },
+                {
+                  "field": "execution",
+                  "flag": "--execution",
+                  "summary": "Captured authority for a new hosted turn. Required when starting a turn with the hosted runtime; an active-turn steer must omit it. Admission checks the exact turn and pins these inputs atomically with the message.",
                   "type": "json"
                 }
               ],
@@ -2421,6 +2675,12 @@
                   "flag": "--message",
                   "required": true,
                   "summary": "The message, 1 to 64 parts.",
+                  "type": "json"
+                },
+                {
+                  "field": "execution",
+                  "flag": "--execution",
+                  "summary": "Captured authority for a new hosted turn. Required when starting a turn with the hosted runtime; an active-turn steer must omit it. Admission checks the exact turn and pins these inputs atomically with the message.",
                   "type": "json"
                 }
               ],
@@ -2538,13 +2798,411 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
               },
-              "served": false,
               "summary": "Returns the result of a client tool call; the turn continues.",
               "verb": "submit-tool-result"
             }
           ],
           "noun": "agent-sessions",
           "resource_type": "agents.sylphx.com/AgentSession"
+        },
+        {
+          "collection": "goals",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session_goal.objective",
+                  "flag": "--objective",
+                  "required": true,
+                  "summary": "The objective, nonempty and at most 4,000 characters.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session_goal.token_budget",
+                  "flag": "--token-budget",
+                  "summary": "Omit unless the caller explicitly requests a positive token budget.",
+                  "type": "int"
+                },
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/goals",
+              "method": "agents.goals.create",
+              "permission": "agents:sessions",
+              "positional": null,
+              "resource_field": "agent_session_goal",
+              "summary": "Creates an optional objective owned by this Session, without an external Task. The operation_id keeps the original receipt beyond request replay expiry.",
+              "verb": "create"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}",
+              "method": "agents.goals.get",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}"
+              },
+              "summary": "Reads the exact Goal, including its terminal receipt after a successor starts.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "The acceptance-contract version observed by the caller.",
+                  "type": "int"
+                },
+                {
+                  "field": "state",
+                  "flag": "--state",
+                  "required": true,
+                  "summary": "Only COMPLETED and FAILED settle a Goal. Waiting is not success.",
+                  "type": "enum",
+                  "values": [
+                    "working",
+                    "waiting",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                {
+                  "field": "receipt",
+                  "flag": "--receipt",
+                  "required": true,
+                  "summary": "An actual observation at the delivered environment surface.",
+                  "type": "json"
+                },
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}:settle",
+              "method": "agents.goals.settle",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}"
+              },
+              "summary": "Settles only the named Goal/version with an observed environment receipt. Replaying operation_id returns its original receipt, never its successor.",
+              "verb": "settle"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "The contract version observed by the owner.",
+                  "type": "int"
+                },
+                {
+                  "field": "action",
+                  "flag": "--action",
+                  "required": true,
+                  "summary": "Explicit owner action. Only AMEND accepts objective/budget changes.",
+                  "type": "enum",
+                  "values": [
+                    "pause",
+                    "resume",
+                    "amend"
+                  ]
+                },
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "objective",
+                  "flag": "--objective",
+                  "summary": "New objective, only when amending. Omission preserves the existing text.",
+                  "type": "string"
+                },
+                {
+                  "field": "token_budget",
+                  "flag": "--token-budget",
+                  "summary": "New explicit token budget, only when amending. Omission preserves it.",
+                  "type": "int"
+                },
+                {
+                  "field": "clear_token_budget",
+                  "flag": "--clear-token-budget",
+                  "summary": "Explicitly remove a budget when amending; incompatible with token_budget.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}:control",
+              "method": "agents.goals.control",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}"
+              },
+              "summary": "Applies an explicit owner control to this exact Goal/version. Pause interrupts only its current execution; resume does not resolve a wait or clear observed usage. Amend changes only supplied objective/budget fields.",
+              "verb": "control"
+            }
+          ],
+          "noun": "goals",
+          "resource_type": "agents.sylphx.com/AgentSessionGoal"
+        },
+        {
+          "collection": "waits",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session_wait.goal",
+                  "flag": "--goal",
+                  "summary": "Optional exact Goal in this Session, never a current-Goal selector.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session_wait.type",
+                  "flag": "--type",
+                  "required": true,
+                  "summary": "time or signal. Other producer types require their own admitted adapter.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session_wait.reference",
+                  "flag": "--reference",
+                  "summary": "Exact source reference for a signal; empty for a timer.",
+                  "type": "string"
+                },
+                {
+                  "field": "agent_session_wait.deadline",
+                  "flag": "--deadline",
+                  "summary": "Actual future due time; required only for a timer.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "agent_session_wait.resume_prompt",
+                  "flag": "--resume-prompt",
+                  "required": true,
+                  "summary": "What to do after observing this wait's evidence, at most 16 KiB.",
+                  "type": "string"
+                },
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller mutation identity, at most 128 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "expected_goal_version",
+                  "flag": "--expected-goal-version",
+                  "summary": "Required when the wait names a Goal; its exact observed contract version.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/waits",
+              "method": "agents.waits.create",
+              "permission": "agents:sessions",
+              "positional": null,
+              "resource_field": "agent_session_wait",
+              "summary": "Creates a durable wait on an idle Session, with permanent operation replay.",
+              "verb": "create"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}",
+              "method": "agents.waits.get",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}"
+              },
+              "summary": "Reads an exact wait and its retained evidence.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "The preceding response's next_page_token.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/waits",
+              "method": "agents.waits.list",
+              "paginates": true,
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
+              },
+              "summary": "Lists durable waits, including ready undelivered owners.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller mutation identity, at most 128 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "reference",
+                  "flag": "--reference",
+                  "summary": "Exact recorded signal source; omitted for a timer.",
+                  "type": "string"
+                },
+                {
+                  "field": "evidence",
+                  "flag": "--evidence",
+                  "summary": "Nonempty observed signal evidence; omitted for a timer.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}:resolve",
+              "method": "agents.waits.resolve",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}"
+              },
+              "summary": "Records observed signal evidence or checks a timer against its actual due time.",
+              "verb": "resolve"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller mutation identity, at most 128 bytes.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}:cancel",
+              "method": "agents.waits.cancel",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}"
+              },
+              "summary": "Cancels only this exact undelivered wait; repeated operations retain receipts.",
+              "verb": "cancel"
+            }
+          ],
+          "noun": "waits",
+          "resource_type": "agents.sylphx.com/AgentSessionWait"
+        },
+        {
+          "collection": "queued_executions",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*}",
+              "method": "agents.queued_executions.get",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/queued_executions/{turn}"
+              },
+              "summary": "Reads the state of an exact future-turn authorization.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "operation_id",
+                  "flag": "--operation-id",
+                  "required": true,
+                  "summary": "Permanent caller mutation identity, at most 128 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "expected_generation",
+                  "flag": "--expected-generation",
+                  "required": true,
+                  "summary": "The exact authority generation to cancel, never a newest-row selector.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*}:cancel",
+              "method": "agents.queued_executions.cancel",
+              "permission": "agents:sessions",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/queued_executions/{turn}"
+              },
+              "summary": "Cancels only a queued future execution; an already admitted turn retains its receipt.",
+              "verb": "cancel"
+            }
+          ],
+          "noun": "queued-executions",
+          "resource_type": "agents.sylphx.com/QueuedSessionExecution"
         },
         {
           "collection": "session_events",

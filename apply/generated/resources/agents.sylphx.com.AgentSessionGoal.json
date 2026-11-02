@@ -1,0 +1,22 @@
+{
+  "collection": "goals",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "AgentSessionGoal",
+  "message": "sylphx.agents.v1.AgentSessionGoal",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/goals/{goal}",
+  "plural": "agentSessionGoals",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "record",
+  "singular": "agentSessionGoal",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/AgentSessionGoal"
+}

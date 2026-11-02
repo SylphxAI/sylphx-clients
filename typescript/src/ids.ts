@@ -42,6 +42,7 @@ export const PREFIXES = [
 	{ prefix: 'agt', entity: 'Agent', service: 'agents', collection: 'agents' },
 	{ prefix: 'agv', entity: 'AgentVersion', service: 'agents', collection: 'agent_versions' },
 	{ prefix: 'ases', entity: 'AgentSession', service: 'agents', collection: 'agent_sessions' },
+	{ prefix: 'goal', entity: 'AgentSessionGoal', service: 'agents', collection: 'goals' },
 	{ prefix: 'sevt', entity: 'SessionEvent', service: 'agents', collection: 'session_events' },
 	{ prefix: 'mst', entity: 'MemoryStore', service: 'agents', collection: 'memory_stores' },
 	{ prefix: 'mem', entity: 'Memory', service: 'agents', collection: 'memories' },

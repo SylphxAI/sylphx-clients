@@ -7,6 +7,22 @@ import type * as common from './common.js'
 import './sandboxes.js'
 import type * as sandboxes from './sandboxes.js'
 
+/** The request of AbortAgentSessionTransfer. */
+export interface AbortAgentSessionTransferRequest {
+	/** Exact transfer name; cannot abort an adopted Session. */
+	name: string
+}
+
+/** The request of AdoptAgentSessionTransfer. */
+export interface AdoptAgentSessionTransferRequest {
+	/** Exact verified transfer name. */
+	name: string
+	/** Exact read-back receipt durably recorded by the original source adapter. */
+	receiptSha256: string
+	/** The original one-writer marker attestation bound at Begin. */
+	sourceFenceSha256: string
+}
+
 /**
  * An Agent is a versioned agent definition: model, instructions, tools, MCP
  * servers, skills, memory stores, tool policy and budget. Each create or
@@ -137,6 +153,108 @@ export interface AgentSession {
 }
 
 /**
+ * An optional durable objective of one Session. Model answers, waits and
+ * external Task completion never settle it implicitly.
+ */
+export interface AgentSessionGoal {
+	/** The exact Session-owned Goal name. */
+	name?: string
+	/** The platform Resource UID; the conserved Goal UUID is its name's final id. */
+	readonly uid?: string
+	/** Standard resource metadata. */
+	readonly meta?: common.ResourceMeta
+	/** The objective, nonempty and at most 4,000 characters. */
+	objective?: string
+	/** Omit unless the caller explicitly requests a positive token budget. */
+	tokenBudget?: string
+	/** Lifecycle; an execution hold is represented separately. */
+	readonly state?: GoalState
+	/** Optimistic acceptance-contract version, starting at one. */
+	readonly version?: number
+	/** Observed tokens charged exactly once per runtime step. */
+	readonly tokensUsed?: string
+	/** Unknown usage holds execution when a token budget is enforced. */
+	readonly usageUnavailable?: boolean
+	/** Explicit owner pause; an unfinished Goal stays unfinished. */
+	readonly ownerPaused?: boolean
+	/** Execution held after the required repeated observation of an impasse. */
+	readonly impasse?: boolean
+	/** The terminal observation, retained after another Goal becomes active. */
+	readonly receipt?: SessionGoalReceipt
+	/** When this Goal was created. */
+	readonly createTime?: string
+	/** When this Goal last changed. */
+	readonly updateTime?: string
+}
+
+/**
+ * A bounded immutable source snapshot staged on an empty destination Session.
+ * Verification conserves bytes and identities; it grants no execution authority.
+ */
+export interface AgentSessionTransfer {
+	/** Destination Session and immutable transfer identity. */
+	name?: string
+	/** Immutable Resource UID. */
+	readonly uid?: string
+	/** Standard metadata. */
+	readonly meta?: common.ResourceMeta
+	/** staging, verified, adopted or aborted. Verified does not admit execution. */
+	readonly state?: string
+	/** Versioned source identity, transfer epoch and ordered byte/part digests. */
+	readonly manifest?: Record<string, unknown>
+	/** Digest of the checked manifest, including original Session and epoch. */
+	readonly manifestSha256?: string
+	/**
+	 * Caller attestation bound to its original durable writer fence. A digest
+	 * does not prove that an external writer has stopped.
+	 */
+	readonly sourceFenceSha256?: string
+	/** Exact stored-part metadata. Private payload bytes are never returned. */
+	readonly receivedParts?: SessionTransferPart[]
+	/** Original identities, destination mappings and unresolved effect holds. */
+	readonly receipt?: Record<string, unknown>
+	/** Digest the source adapter reads back before acknowledging its handoff. */
+	readonly receiptSha256?: string
+	/** Creation time. */
+	readonly createTime?: string
+	/** Last lifecycle change time. */
+	readonly updateTime?: string
+}
+
+/**
+ * A durable external wait owned by a Session, optionally by its exact Goal.
+ * Readiness conserves observed evidence and does not authorize inference.
+ */
+export interface AgentSessionWait {
+	/** Exact name; the final segment is the conserved wait UUID. */
+	name?: string
+	/** Immutable platform Resource UID. */
+	readonly uid?: string
+	/** Standard metadata. */
+	readonly meta?: common.ResourceMeta
+	/** Optional exact Goal in this Session, never a current-Goal selector. */
+	goal?: string
+	/** time or signal. Other producer types require their own admitted adapter. */
+	type?: string
+	/** Exact source reference for a signal; empty for a timer. */
+	reference?: string
+	/** Actual future due time; required only for a timer. */
+	deadline?: string
+	/** What to do after observing this wait's evidence, at most 16 KiB. */
+	resumePrompt?: string
+	/** active, ready, resolved or cancelled. Ready still requires turn admission. */
+	readonly state?: string
+	/** Original bounded observed evidence, retained through delivery and restart. */
+	readonly evidence?: Record<string, unknown>
+	/** The only turn that consumed this wait; unset until resolved. */
+	readonly resumedTurn?: string
+	/** Creation time. */
+	readonly createTime?: string
+	/** Last state change time. */
+	readonly updateTime?: string
+}
+
+/**
  * AgentSpec is the caller-writable definition of an Agent. An AgentVersion
  * holds a frozen copy of it.
  */
@@ -250,12 +368,45 @@ export interface ArchiveAgentSessionRequest {
 	name: string
 }
 
+/** The request of BeginAgentSessionTransfer. */
+export interface BeginAgentSessionTransferRequest {
+	/** Empty idle destination Session, already created through the ordinary API. */
+	parent: string
+	/** Permanent caller identity; exact retries return the original transfer. */
+	operationId: string
+	/**
+	 * sylphx.agents.session-continuity.v1 manifest. At most 256 parts of 256
+	 * KiB, and 64 MiB overall. Source epoch must be a positive signed int64.
+	 */
+	manifest: Record<string, unknown>
+	/** SHA-256 attestation of the original storage's durable writer marker. */
+	sourceFenceSha256: string
+}
+
 /** A BuiltinTool is a tool the platform provides. */
 export interface BuiltinTool {
 	/** The built-in tool's id. */
 	id?: string
 	/** Tool-specific settings, at most 16 KiB of JSON. */
 	config?: Record<string, unknown>
+}
+
+/** The request of CancelAgentSessionWait. */
+export interface CancelAgentSessionWaitRequest {
+	/** Exact wait name. */
+	name: string
+	/** Permanent caller mutation identity, at most 128 bytes. */
+	operationId: string
+}
+
+/** The request of CancelQueuedSessionExecution. */
+export interface CancelQueuedSessionExecutionRequest {
+	/** Exact reserved execution name. */
+	name: string
+	/** Permanent caller mutation identity, at most 128 bytes. */
+	operationId: string
+	/** The exact authority generation to cancel, never a newest-row selector. */
+	expectedGeneration: string
 }
 
 /** Caller-owned grant capture; only opaque metadata is returned. */
@@ -316,6 +467,24 @@ export interface ContentPart {
 	file?: FileRef
 }
 
+/** The request of ControlAgentSessionGoal. */
+export interface ControlAgentSessionGoalRequest {
+	/** The exact Goal name; never a lookup of a Session's newest Goal. */
+	name: string
+	/** The contract version observed by the owner. */
+	expectedVersion: number
+	/** Explicit owner action. Only AMEND accepts objective/budget changes. */
+	action: GoalControlAction
+	/** Caller-stable mutation identity, nonempty and at most 128 bytes. */
+	operationId: string
+	/** New objective, only when amending. Omission preserves the existing text. */
+	objective?: string
+	/** New explicit token budget, only when amending. Omission preserves it. */
+	tokenBudget?: string
+	/** Explicitly remove a budget when amending; incompatible with token_budget. */
+	clearTokenBudget?: boolean
+}
+
 /** The request of CreateAgent. */
 export interface CreateAgentRequest {
 	/** The parent to create in. */
@@ -331,6 +500,16 @@ export interface CreateAgentRequest {
 	validateOnly?: boolean
 }
 
+/** The request of CreateAgentSessionGoal. */
+export interface CreateAgentSessionGoalRequest {
+	/** The existing Session that owns this Goal. */
+	parent: string
+	/** Only objective and optional token_budget are caller supplied. */
+	agentSessionGoal: AgentSessionGoal
+	/** Caller-stable mutation identity, nonempty and at most 128 bytes. */
+	operationId: string
+}
+
 /** The request of CreateAgentSession. */
 export interface CreateAgentSessionRequest {
 	/** The parent to create in. */
@@ -344,6 +523,18 @@ export interface CreateAgentSessionRequest {
 	agentSession: AgentSession
 	/** Validate and return the result without writing anything. */
 	validateOnly?: boolean
+}
+
+/** The request of CreateAgentSessionWait. */
+export interface CreateAgentSessionWaitRequest {
+	/** Existing owning Session. */
+	parent: string
+	/** Only type, reference/deadline, resume_prompt and optional goal are writable. */
+	agentSessionWait: AgentSessionWait
+	/** Permanent caller mutation identity, at most 128 bytes. */
+	operationId: string
+	/** Required when the wait names a Goal; its exact observed contract version. */
+	expectedGoalVersion?: number
 }
 
 /** The request of CreateMemory. */
@@ -575,6 +766,12 @@ export interface FileRef {
 	filename?: string
 }
 
+/** The request of FinalizeAgentSessionTransfer. */
+export interface FinalizeAgentSessionTransferRequest {
+	/** Exact transfer name. The immutable snapshot makes repetition idempotent. */
+	name: string
+}
+
 /** A FunctionTool is a tool whose logic is the app's own server code. */
 export interface FunctionTool {
 	/**
@@ -592,9 +789,27 @@ export interface GetAgentRequest {
 	name: string
 }
 
+/** The request of GetAgentSessionGoal. */
+export interface GetAgentSessionGoalRequest {
+	/** The exact Goal name. */
+	name: string
+}
+
 /** The request of GetAgentSession. */
 export interface GetAgentSessionRequest {
 	/** The name of the session to get. */
+	name: string
+}
+
+/** The request of GetAgentSessionTransfer. */
+export interface GetAgentSessionTransferRequest {
+	/** Exact transfer name. */
+	name: string
+}
+
+/** The request of GetAgentSessionWait. */
+export interface GetAgentSessionWaitRequest {
+	/** Exact wait name. */
 	name: string
 }
 
@@ -619,6 +834,12 @@ export interface GetMemoryStoreRequest {
 /** The request of GetOwnerPool. */
 export interface GetOwnerPoolRequest {
 	/** The name of the owner pool to get. */
+	name: string
+}
+
+/** The request of GetQueuedSessionExecution. */
+export interface GetQueuedSessionExecutionRequest {
+	/** Exact reserved execution name. */
 	name: string
 }
 
@@ -663,6 +884,24 @@ export interface InvokeToolRequest {
 	arguments: Record<string, unknown>
 	/** The stable operation identifier, reused for idempotent tool-call retries. */
 	opId: string
+}
+
+/** The request of ListAgentSessionWaits. */
+export interface ListAgentSessionWaitsRequest {
+	/** Existing owning Session. */
+	parent: string
+	/** Default 50, clamped to 1000. */
+	pageSize?: number
+	/** The preceding response's next_page_token. */
+	pageToken?: string
+}
+
+/** The response of ListAgentSessionWaits. */
+export interface ListAgentSessionWaitsResponse {
+	/** Ordered by conserved wait UUID. */
+	agentSessionWaits?: AgentSessionWait[]
+	/** Empty at the end. */
+	nextPageToken?: string
 }
 
 /** The request of ListAgentSessions. */
@@ -1117,6 +1356,61 @@ export interface QualifyOwnerPoolMemberRequest {
 	result: string
 }
 
+/** The request of QueueAgentSessionExecution. */
+export interface QueueAgentSessionExecutionRequest {
+	/** Existing owning Session. */
+	name: string
+	/** Existing handles captured by this caller for this exact future turn. */
+	execution: SessionTurnExecution
+	/** Exact current Goal, or empty only when the Session has no Goal. */
+	goal?: string
+	/** Required for a Goal; its observed contract version when granting authority. */
+	expectedGoalVersion?: number
+	/** Permanent caller mutation identity, at most 128 bytes. */
+	operationId: string
+	/** Zero on first creation; replacing authority requires its exact generation. */
+	expectedGeneration?: string
+	/**
+	 * Explicitly authorize automatic ready-wait resume with these exact captures.
+	 * Default false only reserves them. Requires captured agents:sessions as
+	 * well as runtime permissions; owner holds and ordinary admission still apply.
+	 */
+	automatic?: boolean
+}
+
+/**
+ * Explicit caller authority reserved for one exact future Session turn.
+ * It reuses captured credentials; it never mints, clones or extends a grant.
+ */
+export interface QueuedSessionExecution {
+	/** Exact Session and reserved public turn number. */
+	name?: string
+	/** Immutable platform Resource UID. */
+	readonly uid?: string
+	/** Standard metadata. */
+	readonly meta?: common.ResourceMeta
+	/** Exact future turn; never selected by a model or a Task. */
+	readonly turn?: string
+	/** queued, consumed, superseded or cancelled. Queued does not run inference. */
+	readonly state?: string
+	/** Optional exact Goal whose objective and budget this authority covers. */
+	readonly goal?: string
+	/** Earliest captured handle expiry; ordinary admission revalidates all grants. */
+	readonly expireTime?: string
+	/** When the caller reserved this execution. */
+	readonly createTime?: string
+	/** When the state last changed. */
+	readonly updateTime?: string
+	/** Configuration generation, advanced only by explicit replacement. */
+	readonly generation?: string
+	/** Whether the caller explicitly authorized automatic wait readmission. */
+	readonly automatic?: boolean
+	/** disabled, unscheduled, pending, waiting or finished; no inference implied. */
+	readonly continuationState?: string
+	/** Current delivery/authority/owner hold, when automatic continuation is blocked. */
+	readonly blockedReason?: string
+}
+
 /** A pinned tool called periodically while the accepted task owns its grant. */
 export interface RenewalCall {
 	/** The authorized renewal tool name in the pinned agent version. */
@@ -1146,6 +1440,36 @@ export interface RepositorySpec {
 	uri?: string
 	/** The commit or ref to check out; empty uses the repository's default branch. */
 	revision?: string
+}
+
+/** The request of ResolveAgentSessionWait. */
+export interface ResolveAgentSessionWaitRequest {
+	/** Exact wait name. */
+	name: string
+	/** Permanent caller mutation identity, at most 128 bytes. */
+	operationId: string
+	/** Exact recorded signal source; omitted for a timer. */
+	reference?: string
+	/** Nonempty observed signal evidence; omitted for a timer. */
+	evidence?: Record<string, unknown>
+}
+
+/** The request of ResumeAgentSession. */
+export interface ResumeAgentSessionRequest {
+	/** Existing owning Session, which must be idle or failed. */
+	name: string
+	/** Permanent caller mutation identity, at most 128 bytes. */
+	operationId: string
+	/** Exact ready owners, 1 to 16; must include all outstanding Session waits. */
+	waits: string[]
+	/** Fresh handles captured for this exact next turn; no Task is required. */
+	execution: SessionTurnExecution
+	/**
+	 * Nonzero for automatic continuation: require this exact queued authority
+	 * generation, caller, Goal terms and execution. Zero is explicit fresh
+	 * caller admission. A delayed automatic callback never selects a replacement.
+	 */
+	queuedExecutionGeneration?: string
 }
 
 /** The request to revoke a captured credential handle. */
@@ -1300,6 +1624,12 @@ export interface SendAgentSessionMessageRequest {
 	name: string
 	/** The message, 1 to 64 parts. */
 	message: Message
+	/**
+	 * Captured authority for a new hosted turn. Required when starting a turn
+	 * with the hosted runtime; an active-turn steer must omit it. Admission
+	 * checks the exact turn and pins these inputs atomically with the message.
+	 */
+	execution?: SessionTurnExecution
 }
 
 /**
@@ -1351,6 +1681,48 @@ export interface SessionEvent {
 	error?: ErrorEvent
 	/** For SANDBOX: authoritative allocation/release history, including replacements. */
 	sandbox?: SandboxActivity
+	/** For WAIT_CHANGED: a durable wait fact, without execution authority. */
+	wait?: AgentSessionWait
+	/** For WAIT_CONTINUATION: ready owners consumed by exact turn admission. */
+	waitContinuation?: SessionWaitContinuation
+}
+
+/** An actual observation supporting terminal Goal settlement. */
+export interface SessionGoalReceipt {
+	/** The observed delivery stage. */
+	stage?: string
+	/** The concrete surface or artifact observed. */
+	target?: string
+	/** Nonempty structured evidence from that surface. */
+	evidence?: Record<string, unknown>
+}
+
+/** A content-checked part receipt, without private state or source credentials. */
+export interface SessionTransferPart {
+	/** Zero-based index in the immutable manifest. */
+	index?: string
+	/** Exact stored byte count. */
+	bytes?: string
+	/** SHA-256 of the exact binary body. */
+	sha256?: string
+}
+
+/**
+ * Authority for one hosted turn of an existing session. Handles are captured
+ * through the public credential API for this exact session and turn; raw
+ * credentials never enter the conversation or model context. No Task or
+ * completion callback is required.
+ */
+export interface SessionTurnExecution {
+	/** The expected next turn. A concurrent admission never changes this pin. */
+	turn?: string
+	/** Same-turn captured caller authority for Workflows and lazy Sandbox APIs. */
+	runtimeCredentialHandle?: string
+	/**
+	 * Same-turn execution handles by alias, including inference and any pinned
+	 * tool or repository capabilities. Each retains its existing permission gate.
+	 */
+	credentials?: Record<string, CredentialBinding>
 }
 
 /**
@@ -1364,6 +1736,26 @@ export interface SessionUsage {
 	readonly gatewayCalls?: string
 	/** Spend so far in micro-USD, models and tools together. */
 	readonly spendMicros?: string
+}
+
+/** Runtime input produced by consuming actual wait owners, not a user message. */
+export interface SessionWaitContinuation {
+	/** Conserved wait snapshots and observed evidence for this exact turn. */
+	readonly waits?: AgentSessionWait[]
+}
+
+/** The request of SettleAgentSessionGoal. */
+export interface SettleAgentSessionGoalRequest {
+	/** The exact Goal name. */
+	name: string
+	/** The acceptance-contract version observed by the caller. */
+	expectedVersion: number
+	/** Only COMPLETED and FAILED settle a Goal. Waiting is not success. */
+	state: GoalState
+	/** An actual observation at the delivered environment surface. */
+	receipt: SessionGoalReceipt
+	/** Caller-stable mutation identity, nonempty and at most 128 bytes. */
+	operationId: string
 }
 
 /**
@@ -1393,6 +1785,12 @@ export interface SteerAgentSessionRequest {
 	name: string
 	/** The message, 1 to 64 parts. */
 	message: Message
+	/**
+	 * Captured authority for a new hosted turn. Required when starting a turn
+	 * with the hosted runtime; an active-turn steer must omit it. Admission
+	 * checks the exact turn and pins these inputs atomically with the message.
+	 */
+	execution?: SessionTurnExecution
 }
 
 /** Observed per-step accounting. Exact decimal USD avoids binary rounding. */
@@ -1480,8 +1878,16 @@ export interface ToolCall {
 	readonly input?: Record<string, unknown>
 	/** The model's own id for the call, as sent; never used as a key. */
 	readonly modelCallId?: string
-	/** Whether the client runs it (a ClientTool). */
+	/**
+	 * Whether the client must execute this pending call. Calls rejected before
+	 * dispatch remain in history with this false and a corresponding ToolResult.
+	 */
 	readonly client?: boolean
+	/**
+	 * The client call's fixed deadline. A reconnecting client never starts a
+	 * call after this time; retries retain the original deadline and call id.
+	 */
+	readonly deadline?: string
 }
 
 /** The request for the tools available to a session execution capability. */
@@ -1621,8 +2027,24 @@ export interface UpdateOwnerPoolRequest {
 	updateMask?: string
 }
 
+/** The request of WriteAgentSessionTransferPart. */
+export interface WriteAgentSessionTransferPartRequest {
+	/** Exact transfer name. */
+	name: string
+	/** Zero-based declared part index. */
+	index: string
+	/** Base64 on the JSON wire; exact binary bytes, at most 256 KiB decoded. */
+	data: string
+}
+
 /** ApprovalDecision is a person's answer to an approval. */
 export type ApprovalDecision = 'approve' | 'reject' | (string & {})
+
+/** An authenticated owner action; model-generated evidence cannot grant it. */
+export type GoalControlAction = 'pause' | 'resume' | 'amend' | (string & {})
+
+/** Goal lifecycle, independent of optional Task dispatch and execution controls. */
+export type GoalState = 'working' | 'waiting' | 'completed' | 'failed' | (string & {})
 
 /** MemoryScope is whose memories a store keeps apart. */
 export type MemoryScope = 'project' | 'agent' | 'end_user' | (string & {})
@@ -1640,12 +2062,17 @@ export type PolicyDecision = 'allow' | 'deny' | 'ask' | (string & {})
 export type ResultField = 'text' | 'done' | 'next' | 'where' | 'outcome' | 'awaits' | 'checkpoint' | 'counted' | 'retry_at' | (string & {})
 
 /** SessionEventType is what a session event records. */
-export type SessionEventType = 'user_message' | 'steer' | 'agent_message' | 'tool_call' | 'tool_result' | 'approval_requested' | 'approval_decided' | 'status' | 'compaction' | 'thought' | 'file_change' | 'response' | 'error' | 'usage' | 'sandbox' | (string & {})
+export type SessionEventType = 'user_message' | 'steer' | 'agent_message' | 'tool_call' | 'tool_result' | 'approval_requested' | 'approval_decided' | 'status' | 'compaction' | 'thought' | 'file_change' | 'response' | 'error' | 'usage' | 'sandbox' | 'wait_changed' | 'wait_continuation' | (string & {})
 
 /** SessionState is where a session is. */
 export type SessionState = 'idle' | 'running' | 'awaiting_approval' | 'awaiting_client' | 'failed' | 'archived' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.agents.v1.AbortAgentSessionTransferRequest': [],
+	'sylphx.agents.v1.AdoptAgentSessionTransferRequest': [
+		['receiptSha256', 'receipt_sha256'],
+		['sourceFenceSha256', 'source_fence_sha256'],
+	],
 	'sylphx.agents.v1.Agent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.agents.v1.AgentSpec'],
@@ -1673,6 +2100,35 @@ runtime.registerSchemas({
 		['archiveTime', 'archive_time'],
 		['organizationContext', 'organization_context', undefined, 'json'],
 		['organizationLayer', 'organization_layer', 'sylphx.agents.v1.OrganizationLayer'],
+	],
+	'sylphx.agents.v1.AgentSessionGoal': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['tokenBudget', 'token_budget'],
+		['tokensUsed', 'tokens_used'],
+		['usageUnavailable', 'usage_unavailable'],
+		['ownerPaused', 'owner_paused'],
+		['receipt', 'receipt', 'sylphx.agents.v1.SessionGoalReceipt'],
+		['createTime', 'create_time'],
+		['updateTime', 'update_time'],
+	],
+	'sylphx.agents.v1.AgentSessionTransfer': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['manifest', 'manifest', undefined, 'json'],
+		['manifestSha256', 'manifest_sha256'],
+		['sourceFenceSha256', 'source_fence_sha256'],
+		['receivedParts', 'received_parts', 'sylphx.agents.v1.SessionTransferPart'],
+		['receipt', 'receipt', undefined, 'json'],
+		['receiptSha256', 'receipt_sha256'],
+		['createTime', 'create_time'],
+		['updateTime', 'update_time'],
+	],
+	'sylphx.agents.v1.AgentSessionWait': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['resumePrompt', 'resume_prompt'],
+		['evidence', 'evidence', undefined, 'json'],
+		['resumedTurn', 'resumed_turn'],
+		['createTime', 'create_time'],
+		['updateTime', 'update_time'],
 	],
 	'sylphx.agents.v1.AgentSpec': [
 		['tools', 'tools', 'sylphx.agents.v1.Tool'],
@@ -1703,8 +2159,20 @@ runtime.registerSchemas({
 		['callId', 'call_id'],
 	],
 	'sylphx.agents.v1.ArchiveAgentSessionRequest': [],
+	'sylphx.agents.v1.BeginAgentSessionTransferRequest': [
+		['operationId', 'operation_id'],
+		['manifest', 'manifest', undefined, 'json'],
+		['sourceFenceSha256', 'source_fence_sha256'],
+	],
 	'sylphx.agents.v1.BuiltinTool': [
 		['config', 'config', undefined, 'json'],
+	],
+	'sylphx.agents.v1.CancelAgentSessionWaitRequest': [
+		['operationId', 'operation_id'],
+	],
+	'sylphx.agents.v1.CancelQueuedSessionExecutionRequest': [
+		['operationId', 'operation_id'],
+		['expectedGeneration', 'expected_generation'],
 	],
 	'sylphx.agents.v1.CaptureCredentialRequest': [
 		['expiresAt', 'expires_at'],
@@ -1721,15 +2189,30 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.ContentPart': [
 		['file', 'file', 'sylphx.agents.v1.FileRef'],
 	],
+	'sylphx.agents.v1.ControlAgentSessionGoalRequest': [
+		['expectedVersion', 'expected_version'],
+		['operationId', 'operation_id'],
+		['tokenBudget', 'token_budget'],
+		['clearTokenBudget', 'clear_token_budget'],
+	],
 	'sylphx.agents.v1.CreateAgentRequest': [
 		['agentId', 'agent_id'],
 		['agent', 'agent', 'sylphx.agents.v1.Agent'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.agents.v1.CreateAgentSessionGoalRequest': [
+		['agentSessionGoal', 'agent_session_goal', 'sylphx.agents.v1.AgentSessionGoal'],
+		['operationId', 'operation_id'],
+	],
 	'sylphx.agents.v1.CreateAgentSessionRequest': [
 		['agentSessionId', 'agent_session_id'],
 		['agentSession', 'agent_session', 'sylphx.agents.v1.AgentSession'],
 		['validateOnly', 'validate_only'],
+	],
+	'sylphx.agents.v1.CreateAgentSessionWaitRequest': [
+		['agentSessionWait', 'agent_session_wait', 'sylphx.agents.v1.AgentSessionWait'],
+		['operationId', 'operation_id'],
+		['expectedGoalVersion', 'expected_goal_version'],
 	],
 	'sylphx.agents.v1.CreateMemoryRequest': [
 		['memoryId', 'memory_id'],
@@ -1784,13 +2267,18 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.FileRef': [
 		['mediaType', 'media_type'],
 	],
+	'sylphx.agents.v1.FinalizeAgentSessionTransferRequest': [],
 	'sylphx.agents.v1.FunctionTool': [],
 	'sylphx.agents.v1.GetAgentRequest': [],
+	'sylphx.agents.v1.GetAgentSessionGoalRequest': [],
 	'sylphx.agents.v1.GetAgentSessionRequest': [],
+	'sylphx.agents.v1.GetAgentSessionTransferRequest': [],
+	'sylphx.agents.v1.GetAgentSessionWaitRequest': [],
 	'sylphx.agents.v1.GetAgentVersionRequest': [],
 	'sylphx.agents.v1.GetMemoryRequest': [],
 	'sylphx.agents.v1.GetMemoryStoreRequest': [],
 	'sylphx.agents.v1.GetOwnerPoolRequest': [],
+	'sylphx.agents.v1.GetQueuedSessionExecutionRequest': [],
 	'sylphx.agents.v1.GetSessionEventRequest': [],
 	'sylphx.agents.v1.HttpTool': [
 		['openapiUri', 'openapi_uri'],
@@ -1802,6 +2290,14 @@ runtime.registerSchemas({
 	'sylphx.agents.v1.InvokeToolRequest': [
 		['arguments', 'arguments', undefined, 'json'],
 		['opId', 'op_id'],
+	],
+	'sylphx.agents.v1.ListAgentSessionWaitsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.agents.v1.ListAgentSessionWaitsResponse': [
+		['agentSessionWaits', 'agent_session_waits', 'sylphx.agents.v1.AgentSessionWait'],
+		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.agents.v1.ListAgentSessionsRequest': [
 		['pageSize', 'page_size'],
@@ -1940,6 +2436,20 @@ runtime.registerSchemas({
 		['scores', 'scores', undefined, 'map'],
 		['suiteVersion', 'suite_version'],
 	],
+	'sylphx.agents.v1.QueueAgentSessionExecutionRequest': [
+		['execution', 'execution', 'sylphx.agents.v1.SessionTurnExecution'],
+		['expectedGoalVersion', 'expected_goal_version'],
+		['operationId', 'operation_id'],
+		['expectedGeneration', 'expected_generation'],
+	],
+	'sylphx.agents.v1.QueuedSessionExecution': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['expireTime', 'expire_time'],
+		['createTime', 'create_time'],
+		['updateTime', 'update_time'],
+		['continuationState', 'continuation_state'],
+		['blockedReason', 'blocked_reason'],
+	],
 	'sylphx.agents.v1.RenewalCall': [
 		['arguments', 'arguments', undefined, 'json'],
 		['cancelField', 'cancel_field'],
@@ -1949,6 +2459,15 @@ runtime.registerSchemas({
 		['idempotencyArgument', 'idempotency_argument'],
 	],
 	'sylphx.agents.v1.RepositorySpec': [],
+	'sylphx.agents.v1.ResolveAgentSessionWaitRequest': [
+		['operationId', 'operation_id'],
+		['evidence', 'evidence', undefined, 'json'],
+	],
+	'sylphx.agents.v1.ResumeAgentSessionRequest': [
+		['operationId', 'operation_id'],
+		['execution', 'execution', 'sylphx.agents.v1.SessionTurnExecution'],
+		['queuedExecutionGeneration', 'queued_execution_generation'],
+	],
 	'sylphx.agents.v1.RevokeCredentialRequest': [],
 	'sylphx.agents.v1.RotateCredentialRequest': [
 		['expiresAt', 'expires_at'],
@@ -1988,6 +2507,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.agents.v1.SendAgentSessionMessageRequest': [
 		['message', 'message', 'sylphx.agents.v1.Message'],
+		['execution', 'execution', 'sylphx.agents.v1.SessionTurnExecution'],
 	],
 	'sylphx.agents.v1.SessionEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2004,16 +2524,35 @@ runtime.registerSchemas({
 		['response', 'response', 'sylphx.agents.v1.TurnResult'],
 		['error', 'error', 'sylphx.agents.v1.ErrorEvent'],
 		['sandbox', 'sandbox', 'sylphx.agents.v1.SandboxActivity'],
+		['wait', 'wait', 'sylphx.agents.v1.AgentSessionWait'],
+		['waitContinuation', 'wait_continuation', 'sylphx.agents.v1.SessionWaitContinuation'],
+	],
+	'sylphx.agents.v1.SessionGoalReceipt': [
+		['evidence', 'evidence', undefined, 'json'],
+	],
+	'sylphx.agents.v1.SessionTransferPart': [],
+	'sylphx.agents.v1.SessionTurnExecution': [
+		['runtimeCredentialHandle', 'runtime_credential_handle'],
+		['credentials', 'credentials', 'sylphx.agents.v1.CredentialBinding', 'map'],
 	],
 	'sylphx.agents.v1.SessionUsage': [
 		['activeTurnDuration', 'active_turn_duration'],
 		['gatewayCalls', 'gateway_calls'],
 		['spendMicros', 'spend_micros'],
 	],
+	'sylphx.agents.v1.SessionWaitContinuation': [
+		['waits', 'waits', 'sylphx.agents.v1.AgentSessionWait'],
+	],
+	'sylphx.agents.v1.SettleAgentSessionGoalRequest': [
+		['expectedVersion', 'expected_version'],
+		['receipt', 'receipt', 'sylphx.agents.v1.SessionGoalReceipt'],
+		['operationId', 'operation_id'],
+	],
 	'sylphx.agents.v1.Skill': [],
 	'sylphx.agents.v1.StatusChange': [],
 	'sylphx.agents.v1.SteerAgentSessionRequest': [
 		['message', 'message', 'sylphx.agents.v1.Message'],
+		['execution', 'execution', 'sylphx.agents.v1.SessionTurnExecution'],
 	],
 	'sylphx.agents.v1.StepUsage': [
 		['inputTokens', 'input_tokens'],
@@ -2086,6 +2625,7 @@ runtime.registerSchemas({
 		['ownerPool', 'owner_pool', 'sylphx.agents.v1.OwnerPool'],
 		['updateMask', 'update_mask'],
 	],
+	'sylphx.agents.v1.WriteAgentSessionTransferPartRequest': [],
 })
 
 /**
@@ -2108,12 +2648,20 @@ runtime.registerSchemas({
  * Namespace of Sylphx Agents on `Sylphx`.
  */
 export class AgentsApi {
+	/** The `transfers` collection. */
+	readonly transfers: TransfersCollection
 	/** The `agents` collection. */
 	readonly agents: AgentsCollection
 	/** The `agent_versions` collection. */
 	readonly agentVersions: AgentVersionsCollection
 	/** The `agent_sessions` collection. */
 	readonly agentSessions: AgentSessionsCollection
+	/** The `goals` collection. */
+	readonly goals: GoalsCollection
+	/** The `waits` collection. */
+	readonly waits: WaitsCollection
+	/** The `queued_executions` collection. */
+	readonly queuedExecutions: QueuedExecutionsCollection
 	/** The `session_events` collection. */
 	readonly sessionEvents: SessionEventsCollection
 	/** The `memory_stores` collection. */
@@ -2124,13 +2672,138 @@ export class AgentsApi {
 	readonly ownerPools: OwnerPoolsCollection
 
 	constructor(client: runtime.Client) {
+		this.transfers = new TransfersCollection(client)
 		this.agents = new AgentsCollection(client)
 		this.agentVersions = new AgentVersionsCollection(client)
 		this.agentSessions = new AgentSessionsCollection(client)
+		this.goals = new GoalsCollection(client)
+		this.waits = new WaitsCollection(client)
+		this.queuedExecutions = new QueuedExecutionsCollection(client)
 		this.sessionEvents = new SessionEventsCollection(client)
 		this.memoryStores = new MemoryStoresCollection(client)
 		this.memories = new MemoriesCollection(client)
 		this.ownerPools = new OwnerPoolsCollection(client)
+	}
+}
+
+/** `transfers` of Sylphx Agents: Resource type `agents.sylphx.com/AgentSessionTransfer`. */
+export class TransfersCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Stages a uniquely identified source epoch on an empty idle Session.
+	 * The source adapter must already hold its durable one-writer fence.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/agent_sessions/*}/transfers:begin` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`.
+	 */
+	async begin(request: BeginAgentSessionTransferRequest): Promise<AgentSessionTransfer> {
+		return this.client.call<AgentSessionTransfer>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'parent')}/transfers:begin`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.agents.v1.BeginAgentSessionTransferRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionTransfer',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Returns hashes and original/destination mappings, never private payload.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/transfers/*}` · permission `agents:sessions` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetAgentSessionTransferRequest): Promise<AgentSessionTransfer> {
+		return this.client.call<AgentSessionTransfer>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*', 'name')}`,
+			responseType: 'sylphx.agents.v1.AgentSessionTransfer',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Stores at most 256 KiB of exact bytes under its declared part digest.
+	 * An acknowledgement loss can repeat the identical part without mutation.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/transfers/*}:writePart` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`.
+	 */
+	async writePart(request: WriteAgentSessionTransferPartRequest): Promise<SessionTransferPart> {
+		return this.client.call<SessionTransferPart>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*', 'name')}:writePart`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.WriteAgentSessionTransferPartRequest',
+			responseType: 'sylphx.agents.v1.SessionTransferPart',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Re-reads ordered parts, checks the whole snapshot and validates the
+	 * portable state. An unknown effect stays held; this call never executes.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/transfers/*}:finalize` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async finalize(request: FinalizeAgentSessionTransferRequest): Promise<AgentSessionTransfer> {
+		return this.client.call<AgentSessionTransfer>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*', 'name')}:finalize`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.FinalizeAgentSessionTransferRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionTransfer',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * After the source durably records the exact verified receipt under its
+	 * writer fence, atomically projects conserved state without starting a turn.
+	 * Unknown outcomes or incompatible pinned model context remain held.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/transfers/*}:adopt` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async adopt(request: AdoptAgentSessionTransferRequest): Promise<AgentSessionTransfer> {
+		return this.client.call<AgentSessionTransfer>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*', 'name')}:adopt`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.AdoptAgentSessionTransferRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionTransfer',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Releases only a destination that has not adopted source state. Immutable
+	 * source bytes/epoch remain retained; source writer release is app-owned.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/transfers/*}:abort` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async abort(request: AbortAgentSessionTransferRequest): Promise<AgentSessionTransfer> {
+		return this.client.call<AgentSessionTransfer>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*', 'name')}:abort`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.AbortAgentSessionTransferRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionTransfer',
+			mutation: true,
+		})
 	}
 }
 
@@ -2518,6 +3191,42 @@ export class AgentSessionsCollection {
 	}
 
 	/**
+	 * Explicitly reserves existing captured authority for one future turn, without executing it.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*}:queueExecution` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async queueExecution(request: QueueAgentSessionExecutionRequest): Promise<QueuedSessionExecution> {
+		return this.client.call<QueuedSessionExecution>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'name')}:queueExecution`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.QueueAgentSessionExecutionRequest',
+			responseType: 'sylphx.agents.v1.QueuedSessionExecution',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Consumes all ready owners atomically with fresh exact-next-turn authority.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*}:resume` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async resume(request: ResumeAgentSessionRequest): Promise<SessionEvent> {
+		return this.client.call<SessionEvent>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'name')}:resume`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.ResumeAgentSessionRequest',
+			responseType: 'sylphx.agents.v1.SessionEvent',
+			mutation: true,
+		})
+	}
+
+	/**
 	 * Sends a user message. On an idle or failed session it starts a new turn;
 	 * while a turn runs it is refused with `INVALID_STATE` (use `:steer`).
 	 * The same `Idempotency-Key` returns the same event.
@@ -2607,6 +3316,241 @@ export class AgentSessionsCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.agents.v1.SubmitAgentSessionToolResultRequest',
 			responseType: 'sylphx.agents.v1.SessionEvent',
+			mutation: true,
+		})
+	}
+}
+
+/** `goals` of Sylphx Agents: Resource type `agents.sylphx.com/AgentSessionGoal`. */
+export class GoalsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Creates an optional objective owned by this Session, without an external Task.
+	 * The operation_id keeps the original receipt beyond request replay expiry.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/agent_sessions/*}/goals` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateAgentSessionGoalRequest): Promise<AgentSessionGoal> {
+		return this.client.call<AgentSessionGoal>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'parent')}/goals`,
+			query: { operation_id: request.operationId },
+			body: request.agentSessionGoal ?? {},
+			bodyType: 'sylphx.agents.v1.AgentSessionGoal',
+			responseType: 'sylphx.agents.v1.AgentSessionGoal',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Reads the exact Goal, including its terminal receipt after a successor starts.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/goals/*}` · permission `agents:sessions` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetAgentSessionGoalRequest): Promise<AgentSessionGoal> {
+		return this.client.call<AgentSessionGoal>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/goals/*', 'name')}`,
+			responseType: 'sylphx.agents.v1.AgentSessionGoal',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Settles only the named Goal/version with an observed environment receipt.
+	 * Replaying operation_id returns its original receipt, never its successor.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/goals/*}:settle` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async settle(request: SettleAgentSessionGoalRequest): Promise<AgentSessionGoal> {
+		return this.client.call<AgentSessionGoal>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/goals/*', 'name')}:settle`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.SettleAgentSessionGoalRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionGoal',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Applies an explicit owner control to this exact Goal/version. Pause
+	 * interrupts only its current execution; resume does not resolve a wait or
+	 * clear observed usage. Amend changes only supplied objective/budget fields.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/goals/*}:control` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async control(request: ControlAgentSessionGoalRequest): Promise<AgentSessionGoal> {
+		return this.client.call<AgentSessionGoal>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/goals/*', 'name')}:control`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.ControlAgentSessionGoalRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionGoal',
+			mutation: true,
+		})
+	}
+}
+
+/** `waits` of Sylphx Agents: Resource type `agents.sylphx.com/AgentSessionWait`. */
+export class WaitsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Creates a durable wait on an idle Session, with permanent operation replay.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/agent_sessions/*}/waits` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateAgentSessionWaitRequest): Promise<AgentSessionWait> {
+		return this.client.call<AgentSessionWait>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'parent')}/waits`,
+			query: { operation_id: request.operationId, expected_goal_version: request.expectedGoalVersion },
+			body: request.agentSessionWait ?? {},
+			bodyType: 'sylphx.agents.v1.AgentSessionWait',
+			responseType: 'sylphx.agents.v1.AgentSessionWait',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Reads an exact wait and its retained evidence.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/waits/*}` · permission `agents:sessions` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetAgentSessionWaitRequest): Promise<AgentSessionWait> {
+		return this.client.call<AgentSessionWait>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/waits/*', 'name')}`,
+			responseType: 'sylphx.agents.v1.AgentSessionWait',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists durable waits, including ready undelivered owners.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/agent_sessions/*}/waits` · permission `agents:sessions` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListAgentSessionWaitsRequest): Promise<ListAgentSessionWaitsResponse> {
+		return this.client.call<ListAgentSessionWaitsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/agent_sessions/*', 'parent')}/waits`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.agents.v1.ListAgentSessionWaitsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListAgentSessionWaitsRequest): AsyncGenerator<AgentSessionWait> {
+		let next: ListAgentSessionWaitsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.agentSessionWaits ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Records observed signal evidence or checks a timer against its actual due time.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/waits/*}:resolve` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async resolve(request: ResolveAgentSessionWaitRequest): Promise<AgentSessionWait> {
+		return this.client.call<AgentSessionWait>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/waits/*', 'name')}:resolve`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.ResolveAgentSessionWaitRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionWait',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Cancels only this exact undelivered wait; repeated operations retain receipts.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/waits/*}:cancel` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async cancel(request: CancelAgentSessionWaitRequest): Promise<AgentSessionWait> {
+		return this.client.call<AgentSessionWait>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/waits/*', 'name')}:cancel`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.CancelAgentSessionWaitRequest',
+			responseType: 'sylphx.agents.v1.AgentSessionWait',
+			mutation: true,
+		})
+	}
+}
+
+/** `queued_executions` of Sylphx Agents: Resource type `agents.sylphx.com/QueuedSessionExecution`. */
+export class QueuedExecutionsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Reads the state of an exact future-turn authorization.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/queued_executions/*}` · permission `agents:sessions` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetQueuedSessionExecutionRequest): Promise<QueuedSessionExecution> {
+		return this.client.call<QueuedSessionExecution>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*', 'name')}`,
+			responseType: 'sylphx.agents.v1.QueuedSessionExecution',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Cancels only a queued future execution; an already admitted turn retains its receipt.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/agent_sessions/*\/queued_executions/*}:cancel` · permission `agents:sessions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async cancel(request: CancelQueuedSessionExecutionRequest): Promise<QueuedSessionExecution> {
+		return this.client.call<QueuedSessionExecution>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*', 'name')}:cancel`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.agents.v1.CancelQueuedSessionExecutionRequest',
+			responseType: 'sylphx.agents.v1.QueuedSessionExecution',
 			mutation: true,
 		})
 	}

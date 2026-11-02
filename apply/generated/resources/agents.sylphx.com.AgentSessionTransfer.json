@@ -1,0 +1,22 @@
+{
+  "collection": "transfers",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "AgentSessionTransfer",
+  "message": "sylphx.agents.v1.AgentSessionTransfer",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/transfers/{transfer}",
+  "plural": "agentSessionTransfers",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "record",
+  "singular": "agentSessionTransfer",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/AgentSessionTransfer"
+}

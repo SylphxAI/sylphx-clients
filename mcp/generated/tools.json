@@ -1697,6 +1697,231 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Stages a uniquely identified source epoch on an empty idle Session. The source adapter must already hold its durable one-writer fence."
+      },
+      "description": "Stages a uniquely identified source epoch on an empty idle Session.\nThe source adapter must already hold its durable one-writer fence.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/transfers:begin",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of BeginAgentSessionTransfer.",
+        "properties": {
+          "manifest": {
+            "additionalProperties": true,
+            "description": "sylphx.agents.session-continuity.v1 manifest. At most 256 parts of 256\nKiB, and 64 MiB overall. Source epoch must be a positive signed int64.",
+            "type": "object"
+          },
+          "operation_id": {
+            "description": "Permanent caller identity; exact retries return the original transfer.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Empty idle destination Session, already created through the ordinary API.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "source_fence_sha256": {
+            "description": "SHA-256 attestation of the original storage's durable writer marker.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "operation_id",
+          "manifest",
+          "source_fence_sha256"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.transfers.begin",
+      "permission": "agents:sessions",
+      "tool": "agents_transfers_begin"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Returns hashes and original/destination mappings, never private payload."
+      },
+      "description": "Returns hashes and original/destination mappings, never private payload.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact transfer name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.transfers.get",
+      "permission": "agents:sessions",
+      "tool": "agents_transfers_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Stores at most 256 KiB of exact bytes under its declared part digest. An acknowledgement loss can repeat the identical part without mutation."
+      },
+      "description": "Stores at most 256 KiB of exact bytes under its declared part digest.\nAn acknowledgement loss can repeat the identical part without mutation.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:writePart",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of WriteAgentSessionTransferPart.",
+        "properties": {
+          "data": {
+            "contentEncoding": "base64",
+            "description": "Base64 on the JSON wire; exact binary bytes, at most 256 KiB decoded.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "index": {
+            "description": "Zero-based declared part index.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact transfer name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name",
+          "index",
+          "data"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.transfers.write_part",
+      "permission": "agents:sessions",
+      "tool": "agents_transfers_write_part"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Re-reads ordered parts, checks the whole snapshot and validates the portable state. An unknown effect stays held; this call never executes."
+      },
+      "description": "Re-reads ordered parts, checks the whole snapshot and validates the\nportable state. An unknown effect stays held; this call never executes.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:finalize",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of FinalizeAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact transfer name. The immutable snapshot makes repetition idempotent.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.transfers.finalize",
+      "permission": "agents:sessions",
+      "tool": "agents_transfers_finalize"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "After the source durably records the exact verified receipt under its writer fence, atomically projects conserved state without starting a turn. Unknown outcomes or incompatible pinned model context remain held."
+      },
+      "description": "After the source durably records the exact verified receipt under its\nwriter fence, atomically projects conserved state without starting a turn.\nUnknown outcomes or incompatible pinned model context remain held.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:adopt",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AdoptAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact verified transfer name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          },
+          "receipt_sha256": {
+            "description": "Exact read-back receipt durably recorded by the original source adapter.",
+            "type": "string"
+          },
+          "source_fence_sha256": {
+            "description": "The original one-writer marker attestation bound at Begin.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "receipt_sha256",
+          "source_fence_sha256"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.transfers.adopt",
+      "permission": "agents:sessions",
+      "tool": "agents_transfers_adopt"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Releases only a destination that has not adopted source state. Immutable source bytes/epoch remain retained; source writer release is app-owned."
+      },
+      "description": "Releases only a destination that has not adopted source state. Immutable\nsource bytes/epoch remain retained; source writer release is app-owned.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:abort",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AbortAgentSessionTransfer.",
+        "properties": {
+          "name": {
+            "description": "Exact transfer name; cannot abort an adopted Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionTransfer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.transfers.abort",
+      "permission": "agents:sessions",
+      "tool": "agents_transfers_abort"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Captures an existing grant for one session and purpose; never issues a key."
       },
       "description": "Captures an existing grant for one session and purpose; never issues a key.",
@@ -4024,6 +4249,223 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Explicitly reserves existing captured authority for one future turn, without executing it."
+      },
+      "description": "Explicitly reserves existing captured authority for one future turn, without executing it.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:queueExecution",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of QueueAgentSessionExecution.",
+        "properties": {
+          "automatic": {
+            "description": "Explicitly authorize automatic ready-wait resume with these exact captures.\nDefault false only reserves them. Requires captured agents:sessions as\nwell as runtime permissions; owner holds and ordinary admission still apply.",
+            "type": "boolean"
+          },
+          "execution": {
+            "additionalProperties": false,
+            "description": "Existing handles captured by this caller for this exact future turn.",
+            "properties": {
+              "credentials": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+                  "properties": {
+                    "connection": {
+                      "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                    },
+                    "end_user_provider": {
+                      "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                      "type": "string"
+                    },
+                    "handle": {
+                      "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                      "type": "string",
+                      "x-sylphx-sensitive": true
+                    },
+                    "placement": {
+                      "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                      "type": "string"
+                    },
+                    "secret": {
+                      "description": "A Kernel Secret of this environment, by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Same-turn execution handles by alias, including inference and any pinned\ntool or repository capabilities. Each retains its existing permission gate.",
+                "type": "object"
+              },
+              "runtime_credential_handle": {
+                "description": "Same-turn captured caller authority for Workflows and lazy Sandbox APIs.",
+                "type": "string",
+                "x-sylphx-sensitive": true
+              },
+              "turn": {
+                "description": "The expected next turn. A concurrent admission never changes this pin.",
+                "format": "int64",
+                "type": "string"
+              }
+            },
+            "required": [
+              "turn",
+              "runtime_credential_handle"
+            ],
+            "type": "object"
+          },
+          "expected_generation": {
+            "description": "Zero on first creation; replacing authority requires its exact generation.",
+            "format": "int64",
+            "type": "string"
+          },
+          "expected_goal_version": {
+            "description": "Required for a Goal; its observed contract version when granting authority.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "goal": {
+            "description": "Exact current Goal, or empty only when the Session has no Goal.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          },
+          "name": {
+            "description": "Existing owning Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "execution",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.queue_execution",
+      "permission": "agents:sessions",
+      "tool": "agents_agent_sessions_queue_execution"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Consumes all ready owners atomically with fresh exact-next-turn authority."
+      },
+      "description": "Consumes all ready owners atomically with fresh exact-next-turn authority.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:resume",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ResumeAgentSession.",
+        "properties": {
+          "execution": {
+            "additionalProperties": false,
+            "description": "Fresh handles captured for this exact next turn; no Task is required.",
+            "properties": {
+              "credentials": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+                  "properties": {
+                    "connection": {
+                      "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                    },
+                    "end_user_provider": {
+                      "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                      "type": "string"
+                    },
+                    "handle": {
+                      "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                      "type": "string",
+                      "x-sylphx-sensitive": true
+                    },
+                    "placement": {
+                      "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                      "type": "string"
+                    },
+                    "secret": {
+                      "description": "A Kernel Secret of this environment, by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Same-turn execution handles by alias, including inference and any pinned\ntool or repository capabilities. Each retains its existing permission gate.",
+                "type": "object"
+              },
+              "runtime_credential_handle": {
+                "description": "Same-turn captured caller authority for Workflows and lazy Sandbox APIs.",
+                "type": "string",
+                "x-sylphx-sensitive": true
+              },
+              "turn": {
+                "description": "The expected next turn. A concurrent admission never changes this pin.",
+                "format": "int64",
+                "type": "string"
+              }
+            },
+            "required": [
+              "turn",
+              "runtime_credential_handle"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "Existing owning Session, which must be idle or failed.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          },
+          "queued_execution_generation": {
+            "description": "Nonzero for automatic continuation: require this exact queued authority\ngeneration, caller, Goal terms and execution. Zero is explicit fresh\ncaller admission. A delayed automatic callback never selects a replacement.",
+            "format": "int64",
+            "type": "string"
+          },
+          "waits": {
+            "description": "Exact ready owners, 1 to 16; must include all outstanding Session waits.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id",
+          "waits",
+          "execution"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.agent_sessions.resume",
+      "permission": "agents:sessions",
+      "tool": "agents_agent_sessions_resume"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Sends a user message. On an idle or failed session it starts a new turn; while a turn runs it is refused with `INVALID_STATE` (use `:steer`). The same `Idempotency-Key` returns the same event."
       },
       "description": "Sends a user message. On an idle or failed session it starts a new turn;\nwhile a turn runs it is refused with `INVALID_STATE` (use `:steer`).\nThe same `Idempotency-Key` returns the same event.",
@@ -4033,6 +4475,61 @@
         "additionalProperties": false,
         "description": "The request of SendAgentSessionMessage.",
         "properties": {
+          "execution": {
+            "additionalProperties": false,
+            "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message.",
+            "properties": {
+              "credentials": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+                  "properties": {
+                    "connection": {
+                      "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                    },
+                    "end_user_provider": {
+                      "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                      "type": "string"
+                    },
+                    "handle": {
+                      "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                      "type": "string",
+                      "x-sylphx-sensitive": true
+                    },
+                    "placement": {
+                      "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                      "type": "string"
+                    },
+                    "secret": {
+                      "description": "A Kernel Secret of this environment, by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Same-turn execution handles by alias, including inference and any pinned\ntool or repository capabilities. Each retains its existing permission gate.",
+                "type": "object"
+              },
+              "runtime_credential_handle": {
+                "description": "Same-turn captured caller authority for Workflows and lazy Sandbox APIs.",
+                "type": "string",
+                "x-sylphx-sensitive": true
+              },
+              "turn": {
+                "description": "The expected next turn. A concurrent admission never changes this pin.",
+                "format": "int64",
+                "type": "string"
+              }
+            },
+            "required": [
+              "turn",
+              "runtime_credential_handle"
+            ],
+            "type": "object"
+          },
           "message": {
             "additionalProperties": false,
             "description": "The message, 1 to 64 parts.",
@@ -4112,6 +4609,61 @@
         "additionalProperties": false,
         "description": "The request of SteerAgentSession.",
         "properties": {
+          "execution": {
+            "additionalProperties": false,
+            "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message.",
+            "properties": {
+              "credentials": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+                  "properties": {
+                    "connection": {
+                      "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                    },
+                    "end_user_provider": {
+                      "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                      "type": "string"
+                    },
+                    "handle": {
+                      "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                      "type": "string",
+                      "x-sylphx-sensitive": true
+                    },
+                    "placement": {
+                      "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                      "type": "string"
+                    },
+                    "secret": {
+                      "description": "A Kernel Secret of this environment, by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Same-turn execution handles by alias, including inference and any pinned\ntool or repository capabilities. Each retains its existing permission gate.",
+                "type": "object"
+              },
+              "runtime_credential_handle": {
+                "description": "Same-turn captured caller authority for Workflows and lazy Sandbox APIs.",
+                "type": "string",
+                "x-sylphx-sensitive": true
+              },
+              "turn": {
+                "description": "The expected next turn. A concurrent admission never changes this pin.",
+                "format": "int64",
+                "type": "string"
+              }
+            },
+            "required": [
+              "turn",
+              "runtime_credential_handle"
+            ],
+            "type": "object"
+          },
           "message": {
             "additionalProperties": false,
             "description": "The message, 1 to 64 parts.",
@@ -4273,7 +4825,7 @@
         "readOnlyHint": false,
         "title": "Returns the result of a client tool call; the turn continues."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Returns the result of a client tool call; the turn continues.",
+      "description": "Returns the result of a client tool call; the turn continues.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:submitToolResult",
       "input_schema": {
@@ -4307,8 +4859,545 @@
       "long_running": false,
       "method_id": "agents.agent_sessions.submit_tool_result",
       "permission": "agents:sessions",
-      "served": false,
       "tool": "agents_agent_sessions_submit_tool_result"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates an optional objective owned by this Session, without an external Task. The operation_id keeps the original receipt beyond request replay expiry."
+      },
+      "description": "Creates an optional objective owned by this Session, without an external Task.\nThe operation_id keeps the original receipt beyond request replay expiry.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/goals",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateAgentSessionGoal.",
+        "properties": {
+          "agent_session_goal": {
+            "additionalProperties": false,
+            "description": "Only objective and optional token_budget are caller supplied.",
+            "properties": {
+              "name": {
+                "description": "The exact Session-owned Goal name.",
+                "type": "string"
+              },
+              "objective": {
+                "description": "The objective, nonempty and at most 4,000 characters.",
+                "type": "string"
+              },
+              "token_budget": {
+                "description": "Omit unless the caller explicitly requests a positive token budget.",
+                "format": "int64",
+                "type": "string"
+              }
+            },
+            "required": [
+              "objective"
+            ],
+            "type": "object"
+          },
+          "operation_id": {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The existing Session that owns this Goal.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent",
+          "agent_session_goal",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.goals.create",
+      "permission": "agents:sessions",
+      "tool": "agents_goals_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads the exact Goal, including its terminal receipt after a successor starts."
+      },
+      "description": "Reads the exact Goal, including its terminal receipt after a successor starts.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAgentSessionGoal.",
+        "properties": {
+          "name": {
+            "description": "The exact Goal name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.goals.get",
+      "permission": "agents:sessions",
+      "tool": "agents_goals_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Settles only the named Goal/version with an observed environment receipt. Replaying operation_id returns its original receipt, never its successor."
+      },
+      "description": "Settles only the named Goal/version with an observed environment receipt.\nReplaying operation_id returns its original receipt, never its successor.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}:settle",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of SettleAgentSessionGoal.",
+        "properties": {
+          "expected_version": {
+            "description": "The acceptance-contract version observed by the caller.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The exact Goal name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          },
+          "operation_id": {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "type": "string"
+          },
+          "receipt": {
+            "additionalProperties": false,
+            "description": "An actual observation at the delivered environment surface.",
+            "properties": {
+              "evidence": {
+                "additionalProperties": true,
+                "description": "Nonempty structured evidence from that surface.",
+                "type": "object"
+              },
+              "stage": {
+                "description": "The observed delivery stage.",
+                "type": "string"
+              },
+              "target": {
+                "description": "The concrete surface or artifact observed.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "stage",
+              "target",
+              "evidence"
+            ],
+            "type": "object"
+          },
+          "state": {
+            "description": "Only COMPLETED and FAILED settle a Goal. Waiting is not success.",
+            "enum": [
+              "working",
+              "waiting",
+              "completed",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "state",
+          "receipt",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.goals.settle",
+      "permission": "agents:sessions",
+      "tool": "agents_goals_settle"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Applies an explicit owner control to this exact Goal/version. Pause interrupts only its current execution; resume does not resolve a wait or clear observed usage. Amend changes only supplied objective/budget fields."
+      },
+      "description": "Applies an explicit owner control to this exact Goal/version. Pause\ninterrupts only its current execution; resume does not resolve a wait or\nclear observed usage. Amend changes only supplied objective/budget fields.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}:control",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ControlAgentSessionGoal.",
+        "properties": {
+          "action": {
+            "description": "Explicit owner action. Only AMEND accepts objective/budget changes.",
+            "enum": [
+              "pause",
+              "resume",
+              "amend"
+            ],
+            "type": "string"
+          },
+          "clear_token_budget": {
+            "description": "Explicitly remove a budget when amending; incompatible with token_budget.",
+            "type": "boolean"
+          },
+          "expected_version": {
+            "description": "The contract version observed by the owner.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The exact Goal name; never a lookup of a Session's newest Goal.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionGoal"
+          },
+          "objective": {
+            "description": "New objective, only when amending. Omission preserves the existing text.",
+            "type": "string"
+          },
+          "operation_id": {
+            "description": "Caller-stable mutation identity, nonempty and at most 128 bytes.",
+            "type": "string"
+          },
+          "token_budget": {
+            "description": "New explicit token budget, only when amending. Omission preserves it.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "action",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.goals.control",
+      "permission": "agents:sessions",
+      "tool": "agents_goals_control"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a durable wait on an idle Session, with permanent operation replay."
+      },
+      "description": "Creates a durable wait on an idle Session, with permanent operation replay.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/waits",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateAgentSessionWait.",
+        "properties": {
+          "agent_session_wait": {
+            "additionalProperties": false,
+            "description": "Only type, reference/deadline, resume_prompt and optional goal are writable.",
+            "properties": {
+              "deadline": {
+                "description": "Actual future due time; required only for a timer.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "goal": {
+                "description": "Optional exact Goal in this Session, never a current-Goal selector.",
+                "type": "string"
+              },
+              "name": {
+                "description": "Exact name; the final segment is the conserved wait UUID.",
+                "type": "string"
+              },
+              "reference": {
+                "description": "Exact source reference for a signal; empty for a timer.",
+                "type": "string"
+              },
+              "resume_prompt": {
+                "description": "What to do after observing this wait's evidence, at most 16 KiB.",
+                "type": "string"
+              },
+              "type": {
+                "description": "time or signal. Other producer types require their own admitted adapter.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "resume_prompt"
+            ],
+            "type": "object"
+          },
+          "expected_goal_version": {
+            "description": "Required when the wait names a Goal; its exact observed contract version.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Existing owning Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent",
+          "agent_session_wait",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.waits.create",
+      "permission": "agents:sessions",
+      "tool": "agents_waits_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads an exact wait and its retained evidence."
+      },
+      "description": "Reads an exact wait and its retained evidence.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAgentSessionWait.",
+        "properties": {
+          "name": {
+            "description": "Exact wait name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.waits.get",
+      "permission": "agents:sessions",
+      "tool": "agents_waits_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists durable waits, including ready undelivered owners."
+      },
+      "description": "Lists durable waits, including ready undelivered owners.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/waits",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListAgentSessionWaits.",
+        "properties": {
+          "page_size": {
+            "description": "Default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The preceding response's next_page_token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Existing owning Session.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSession"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.waits.list",
+      "permission": "agents:sessions",
+      "tool": "agents_waits_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Records observed signal evidence or checks a timer against its actual due time."
+      },
+      "description": "Records observed signal evidence or checks a timer against its actual due time.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}:resolve",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ResolveAgentSessionWait.",
+        "properties": {
+          "evidence": {
+            "additionalProperties": true,
+            "description": "Nonempty observed signal evidence; omitted for a timer.",
+            "type": "object"
+          },
+          "name": {
+            "description": "Exact wait name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          },
+          "reference": {
+            "description": "Exact recorded signal source; omitted for a timer.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.waits.resolve",
+      "permission": "agents:sessions",
+      "tool": "agents_waits_resolve"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Cancels only this exact undelivered wait; repeated operations retain receipts."
+      },
+      "description": "Cancels only this exact undelivered wait; repeated operations retain receipts.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}:cancel",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CancelAgentSessionWait.",
+        "properties": {
+          "name": {
+            "description": "Exact wait name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/AgentSessionWait"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.waits.cancel",
+      "permission": "agents:sessions",
+      "tool": "agents_waits_cancel"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads the state of an exact future-turn authorization."
+      },
+      "description": "Reads the state of an exact future-turn authorization.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetQueuedSessionExecution.",
+        "properties": {
+          "name": {
+            "description": "Exact reserved execution name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/QueuedSessionExecution"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.queued_executions.get",
+      "permission": "agents:sessions",
+      "tool": "agents_queued_executions_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Cancels only a queued future execution; an already admitted turn retains its receipt."
+      },
+      "description": "Cancels only a queued future execution; an already admitted turn retains its receipt.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*}:cancel",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CancelQueuedSessionExecution.",
+        "properties": {
+          "expected_generation": {
+            "description": "The exact authority generation to cancel, never a newest-row selector.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact reserved execution name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "agents.sylphx.com/QueuedSessionExecution"
+          },
+          "operation_id": {
+            "description": "Permanent caller mutation identity, at most 128 bytes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "operation_id",
+          "expected_generation"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "agents.queued_executions.cancel",
+      "permission": "agents:sessions",
+      "tool": "agents_queued_executions_cancel"
     },
     {
       "annotations": {
@@ -47771,6 +48860,61 @@
         "additionalProperties": false,
         "description": "The request of SendAgentSessionMessage.",
         "properties": {
+          "execution": {
+            "additionalProperties": false,
+            "description": "Captured authority for a new hosted turn. Required when starting a turn\nwith the hosted runtime; an active-turn steer must omit it. Admission\nchecks the exact turn and pins these inputs atomically with the message.",
+            "properties": {
+              "credentials": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "description": "A CredentialBinding names where the gateway takes a credential from. The\nvalue is resolved at egress only; the model, the event log and traces see\nthe binding, never the value.",
+                  "properties": {
+                    "connection": {
+                      "description": "A Kernel Connection (a third-party OAuth installation), by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+                    },
+                    "end_user_provider": {
+                      "description": "The end user's own grant in Sylphx Auth's agent token vault, by\nprovider id; the session's end user must hold it.",
+                      "type": "string"
+                    },
+                    "handle": {
+                      "description": "An opaque credential handle issued for this session, resolved only at\negress. This is never a credential value.",
+                      "type": "string",
+                      "x-sylphx-sensitive": true
+                    },
+                    "placement": {
+                      "description": "How the value is sent: `bearer` (default), `header:<Name>` or\n`query:<name>`.",
+                      "type": "string"
+                    },
+                    "secret": {
+                      "description": "A Kernel Secret of this environment, by name.",
+                      "type": "string",
+                      "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Same-turn execution handles by alias, including inference and any pinned\ntool or repository capabilities. Each retains its existing permission gate.",
+                "type": "object"
+              },
+              "runtime_credential_handle": {
+                "description": "Same-turn captured caller authority for Workflows and lazy Sandbox APIs.",
+                "type": "string",
+                "x-sylphx-sensitive": true
+              },
+              "turn": {
+                "description": "The expected next turn. A concurrent admission never changes this pin.",
+                "format": "int64",
+                "type": "string"
+              }
+            },
+            "required": [
+              "turn",
+              "runtime_credential_handle"
+            ],
+            "type": "object"
+          },
           "message": {
             "additionalProperties": false,
             "description": "The message, 1 to 64 parts.",

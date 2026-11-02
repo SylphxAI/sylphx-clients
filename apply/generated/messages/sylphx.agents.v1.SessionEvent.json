@@ -339,6 +339,38 @@
         "kind": "message",
         "name": "sylphx.agents.v1.SandboxActivity"
       }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "wait",
+      "number": 30,
+      "oneof": "payload",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.agents.v1.AgentSessionWait"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "wait_continuation",
+      "number": 31,
+      "oneof": "payload",
+      "optional": true,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.agents.v1.SessionWaitContinuation"
+      }
     }
   ],
   "name": "sylphx.agents.v1.SessionEvent",

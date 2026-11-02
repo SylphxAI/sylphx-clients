@@ -3,6 +3,46 @@
 
 #![allow(clippy::all)]
 
+/// The request of AbortAgentSessionTransfer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AbortAgentSessionTransferRequest {
+    /// Exact transfer name; cannot abort an adopted Session.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of AdoptAgentSessionTransfer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AdoptAgentSessionTransferRequest {
+    /// Exact verified transfer name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Exact read-back receipt durably recorded by the original source adapter.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiptSha256"
+    )]
+    pub receipt_sha256: String,
+    /// The original one-writer marker attestation bound at Begin.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceFenceSha256"
+    )]
+    pub source_fence_sha256: String,
+}
+
 /// An Agent is a versioned agent definition: model, instructions, tools, MCP
 /// servers, skills, memory stores, tool policy and budget. Each create or
 /// update that changes `spec` mints a new immutable AgentVersion; a session
@@ -250,6 +290,282 @@ pub struct AgentSession {
     pub organization_layer: Option<OrganizationLayer>,
 }
 
+/// An optional durable objective of one Session. Model answers, waits and
+/// external Task completion never settle it implicitly.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AgentSessionGoal {
+    /// The exact Session-owned Goal name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The platform Resource UID; the conserved Goal UUID is its name's final id.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Standard resource metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The objective, nonempty and at most 4,000 characters.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub objective: String,
+    /// Omit unless the caller explicitly requests a positive token budget.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "tokenBudget"
+    )]
+    pub token_budget: Option<i64>,
+    /// Lifecycle; an execution hold is represented separately.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<GoalState>,
+    /// Optimistic acceptance-contract version, starting at one.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub version: i32,
+    /// Observed tokens charged exactly once per runtime step.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "tokensUsed"
+    )]
+    pub tokens_used: i64,
+    /// Unknown usage holds execution when a token budget is enforced.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "usageUnavailable"
+    )]
+    pub usage_unavailable: bool,
+    /// Explicit owner pause; an unfinished Goal stays unfinished.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ownerPaused"
+    )]
+    pub owner_paused: bool,
+    /// Execution held after the required repeated observation of an impasse.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub impasse: bool,
+    /// The terminal observation, retained after another Goal becomes active.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<SessionGoalReceipt>,
+    /// When this Goal was created.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// When this Goal last changed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateTime"
+    )]
+    pub update_time: String,
+}
+
+/// A bounded immutable source snapshot staged on an empty destination Session.
+/// Verification conserves bytes and identities; it grants no execution authority.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AgentSessionTransfer {
+    /// Destination Session and immutable transfer identity.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable Resource UID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Standard metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// staging, verified, adopted or aborted. Verified does not admit execution.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Versioned source identity, transfer epoch and ordered byte/part digests.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manifest: Option<serde_json::Value>,
+    /// Digest of the checked manifest, including original Session and epoch.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "manifestSha256"
+    )]
+    pub manifest_sha256: String,
+    /// Caller attestation bound to its original durable writer fence. A digest
+    /// does not prove that an external writer has stopped.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceFenceSha256"
+    )]
+    pub source_fence_sha256: String,
+    /// Exact stored-part metadata. Private payload bytes are never returned.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "receivedParts"
+    )]
+    pub received_parts: Vec<SessionTransferPart>,
+    /// Original identities, destination mappings and unresolved effect holds.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<serde_json::Value>,
+    /// Digest the source adapter reads back before acknowledging its handoff.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiptSha256"
+    )]
+    pub receipt_sha256: String,
+    /// Creation time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// Last lifecycle change time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateTime"
+    )]
+    pub update_time: String,
+}
+
+/// A durable external wait owned by a Session, optionally by its exact Goal.
+/// Readiness conserves observed evidence and does not authorize inference.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AgentSessionWait {
+    /// Exact name; the final segment is the conserved wait UUID.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable platform Resource UID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Standard metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Optional exact Goal in this Session, never a current-Goal selector.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub goal: String,
+    /// time or signal. Other producer types require their own admitted adapter.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub r#type: String,
+    /// Exact source reference for a signal; empty for a timer.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reference: String,
+    /// Actual future due time; required only for a timer.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub deadline: String,
+    /// What to do after observing this wait's evidence, at most 16 KiB.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "resumePrompt"
+    )]
+    pub resume_prompt: String,
+    /// active, ready, resolved or cancelled. Ready still requires turn admission.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Original bounded observed evidence, retained through delivery and restart.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<serde_json::Value>,
+    /// The only turn that consumed this wait; unset until resolved.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "resumedTurn"
+    )]
+    pub resumed_turn: Option<i64>,
+    /// Creation time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// Last state change time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateTime"
+    )]
+    pub update_time: String,
+}
+
 /// AgentSpec is the caller-writable definition of an Agent. An AgentVersion
 /// holds a frozen copy of it.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -462,6 +778,41 @@ pub struct ArchiveAgentSessionRequest {
     pub name: String,
 }
 
+/// The request of BeginAgentSessionTransfer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginAgentSessionTransferRequest {
+    /// Empty idle destination Session, already created through the ordinary API.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Permanent caller identity; exact retries return the original transfer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// sylphx.agents.session-continuity.v1 manifest. At most 256 parts of 256
+    /// KiB, and 64 MiB overall. Source epoch must be a positive signed int64.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manifest: Option<serde_json::Value>,
+    /// SHA-256 attestation of the original storage's durable writer marker.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceFenceSha256"
+    )]
+    pub source_fence_sha256: String,
+}
+
 /// A BuiltinTool is a tool the platform provides.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -474,6 +825,56 @@ pub struct BuiltinTool {
     /// Tool-specific settings, at most 16 KiB of JSON.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config: Option<serde_json::Value>,
+}
+
+/// The request of CancelAgentSessionWait.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CancelAgentSessionWaitRequest {
+    /// Exact wait name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Permanent caller mutation identity, at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+}
+
+/// The request of CancelQueuedSessionExecution.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CancelQueuedSessionExecutionRequest {
+    /// Exact reserved execution name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Permanent caller mutation identity, at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// The exact authority generation to cancel, never a newest-row selector.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedGeneration"
+    )]
+    pub expected_generation: i64,
 }
 
 /// Caller-owned grant capture; only opaque metadata is returned.
@@ -588,6 +989,58 @@ pub struct ContentPart {
     pub file: Option<FileRef>,
 }
 
+/// The request of ControlAgentSessionGoal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ControlAgentSessionGoalRequest {
+    /// The exact Goal name; never a lookup of a Session's newest Goal.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The contract version observed by the owner.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i32,
+    /// Explicit owner action. Only AMEND accepts objective/budget changes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action: Option<GoalControlAction>,
+    /// Caller-stable mutation identity, nonempty and at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// New objective, only when amending. Omission preserves the existing text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub objective: Option<String>,
+    /// New explicit token budget, only when amending. Omission preserves it.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "tokenBudget"
+    )]
+    pub token_budget: Option<i64>,
+    /// Explicitly remove a budget when amending; incompatible with token_budget.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clearTokenBudget"
+    )]
+    pub clear_token_budget: bool,
+}
+
 /// The request of CreateAgent.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -617,6 +1070,35 @@ pub struct CreateAgentRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// The request of CreateAgentSessionGoal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateAgentSessionGoalRequest {
+    /// The existing Session that owns this Goal.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Only objective and optional token_budget are caller supplied.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "agentSessionGoal"
+    )]
+    pub agent_session_goal: Option<AgentSessionGoal>,
+    /// Caller-stable mutation identity, nonempty and at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
 }
 
 /// The request of CreateAgentSession.
@@ -652,6 +1134,42 @@ pub struct CreateAgentSessionRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// The request of CreateAgentSessionWait.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateAgentSessionWaitRequest {
+    /// Existing owning Session.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Only type, reference/deadline, resume_prompt and optional goal are writable.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "agentSessionWait"
+    )]
+    pub agent_session_wait: Option<AgentSessionWait>,
+    /// Permanent caller mutation identity, at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// Required when the wait names a Goal; its exact observed contract version.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedGoalVersion"
+    )]
+    pub expected_goal_version: i32,
 }
 
 /// The request of CreateMemory.
@@ -1095,6 +1613,17 @@ pub struct FileRef {
     pub filename: String,
 }
 
+/// The request of FinalizeAgentSessionTransfer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct FinalizeAgentSessionTransferRequest {
+    /// Exact transfer name. The immutable snapshot makes repetition idempotent.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// A FunctionTool is a tool whose logic is the app's own server code.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1121,11 +1650,44 @@ pub struct GetAgentRequest {
     pub name: String,
 }
 
+/// The request of GetAgentSessionGoal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetAgentSessionGoalRequest {
+    /// The exact Goal name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetAgentSession.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct GetAgentSessionRequest {
     /// The name of the session to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetAgentSessionTransfer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetAgentSessionTransferRequest {
+    /// Exact transfer name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetAgentSessionWait.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetAgentSessionWaitRequest {
+    /// Exact wait name.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1170,6 +1732,17 @@ pub struct GetMemoryStoreRequest {
 #[non_exhaustive]
 pub struct GetOwnerPoolRequest {
     /// The name of the owner pool to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetQueuedSessionExecution.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetQueuedSessionExecutionRequest {
+    /// Exact reserved execution name.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1261,6 +1834,51 @@ pub struct InvokeToolRequest {
         alias = "opId"
     )]
     pub op_id: String,
+}
+
+/// The request of ListAgentSessionWaits.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListAgentSessionWaitsRequest {
+    /// Existing owning Session.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// The preceding response's next_page_token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListAgentSessionWaits.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListAgentSessionWaitsResponse {
+    /// Ordered by conserved wait UUID.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "agentSessionWaits"
+    )]
+    pub agent_session_waits: Vec<AgentSessionWait>,
+    /// Empty at the end.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListAgentSessions.
@@ -2212,6 +2830,154 @@ pub struct QualifyOwnerPoolMemberRequest {
     pub result: String,
 }
 
+/// The request of QueueAgentSessionExecution.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QueueAgentSessionExecutionRequest {
+    /// Existing owning Session.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Existing handles captured by this caller for this exact future turn.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<SessionTurnExecution>,
+    /// Exact current Goal, or empty only when the Session has no Goal.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub goal: String,
+    /// Required for a Goal; its observed contract version when granting authority.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedGoalVersion"
+    )]
+    pub expected_goal_version: i32,
+    /// Permanent caller mutation identity, at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// Zero on first creation; replacing authority requires its exact generation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedGeneration"
+    )]
+    pub expected_generation: i64,
+    /// Explicitly authorize automatic ready-wait resume with these exact captures.
+    /// Default false only reserves them. Requires captured agents:sessions as
+    /// well as runtime permissions; owner holds and ordinary admission still apply.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub automatic: bool,
+}
+
+/// Explicit caller authority reserved for one exact future Session turn.
+/// It reuses captured credentials; it never mints, clones or extends a grant.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QueuedSessionExecution {
+    /// Exact Session and reserved public turn number.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable platform Resource UID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Standard metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Exact future turn; never selected by a model or a Task.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub turn: i64,
+    /// queued, consumed, superseded or cancelled. Queued does not run inference.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Optional exact Goal whose objective and budget this authority covers.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub goal: String,
+    /// Earliest captured handle expiry; ordinary admission revalidates all grants.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+    /// When the caller reserved this execution.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// When the state last changed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateTime"
+    )]
+    pub update_time: String,
+    /// Configuration generation, advanced only by explicit replacement.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub generation: i64,
+    /// Whether the caller explicitly authorized automatic wait readmission.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub automatic: bool,
+    /// disabled, unscheduled, pending, waiting or finished; no inference implied.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "continuationState"
+    )]
+    pub continuation_state: String,
+    /// Current delivery/authority/owner hold, when automatic continuation is blocked.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "blockedReason"
+    )]
+    pub blocked_reason: String,
+}
+
 /// A pinned tool called periodically while the accepted task owns its grant.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2279,6 +3045,72 @@ pub struct RepositorySpec {
     /// The commit or ref to check out; empty uses the repository's default branch.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub revision: String,
+}
+
+/// The request of ResolveAgentSessionWait.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ResolveAgentSessionWaitRequest {
+    /// Exact wait name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Permanent caller mutation identity, at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// Exact recorded signal source; omitted for a timer.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reference: String,
+    /// Nonempty observed signal evidence; omitted for a timer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<serde_json::Value>,
+}
+
+/// The request of ResumeAgentSession.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ResumeAgentSessionRequest {
+    /// Existing owning Session, which must be idle or failed.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Permanent caller mutation identity, at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
+    /// Exact ready owners, 1 to 16; must include all outstanding Session waits.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waits: Vec<String>,
+    /// Fresh handles captured for this exact next turn; no Task is required.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<SessionTurnExecution>,
+    /// Nonzero for automatic continuation: require this exact queued authority
+    /// generation, caller, Goal terms and execution. Zero is explicit fresh
+    /// caller admission. A delayed automatic callback never selects a replacement.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "queuedExecutionGeneration"
+    )]
+    pub queued_execution_generation: i64,
 }
 
 /// The request to revoke a captured credential handle.
@@ -2594,6 +3426,11 @@ pub struct SendAgentSessionMessageRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<Message>,
+    /// Captured authority for a new hosted turn. Required when starting a turn
+    /// with the hosted runtime; an active-turn steer must omit it. Admission
+    /// checks the exact turn and pins these inputs atomically with the message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<SessionTurnExecution>,
 }
 
 /// A SessionEvent is one entry of a session's append-only log: a user
@@ -2705,6 +3542,91 @@ pub struct SessionEvent {
     /// For SANDBOX: authoritative allocation/release history, including replacements.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<SandboxActivity>,
+    /// For WAIT_CHANGED: a durable wait fact, without execution authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait: Option<AgentSessionWait>,
+    /// For WAIT_CONTINUATION: ready owners consumed by exact turn admission.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "waitContinuation"
+    )]
+    pub wait_continuation: Option<SessionWaitContinuation>,
+}
+
+/// An actual observation supporting terminal Goal settlement.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SessionGoalReceipt {
+    /// The observed delivery stage.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub stage: String,
+    /// The concrete surface or artifact observed.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub target: String,
+    /// Nonempty structured evidence from that surface.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<serde_json::Value>,
+}
+
+/// A content-checked part receipt, without private state or source credentials.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SessionTransferPart {
+    /// Zero-based index in the immutable manifest.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub index: i64,
+    /// Exact stored byte count.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub bytes: i64,
+    /// SHA-256 of the exact binary body.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
+}
+
+/// Authority for one hosted turn of an existing session. Handles are captured
+/// through the public credential API for this exact session and turn; raw
+/// credentials never enter the conversation or model context. No Task or
+/// completion callback is required.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SessionTurnExecution {
+    /// The expected next turn. A concurrent admission never changes this pin.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub turn: i64,
+    /// Same-turn captured caller authority for Workflows and lazy Sandbox APIs.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "runtimeCredentialHandle"
+    )]
+    pub runtime_credential_handle: String,
+    /// Same-turn execution handles by alias, including inference and any pinned
+    /// tool or repository capabilities. Each retains its existing permission gate.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub credentials: std::collections::BTreeMap<String, CredentialBinding>,
 }
 
 /// SessionUsage is what a session has used. Model tokens are on the Sylphx AI
@@ -2741,6 +3663,56 @@ pub struct SessionUsage {
         alias = "spendMicros"
     )]
     pub spend_micros: i64,
+}
+
+/// Runtime input produced by consuming actual wait owners, not a user message.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SessionWaitContinuation {
+    /// Conserved wait snapshots and observed evidence for this exact turn.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waits: Vec<AgentSessionWait>,
+}
+
+/// The request of SettleAgentSessionGoal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SettleAgentSessionGoalRequest {
+    /// The exact Goal name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The acceptance-contract version observed by the caller.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i32,
+    /// Only COMPLETED and FAILED settle a Goal. Waiting is not success.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<GoalState>,
+    /// An actual observation at the delivered environment surface.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<SessionGoalReceipt>,
+    /// Caller-stable mutation identity, nonempty and at most 128 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "operationId"
+    )]
+    pub operation_id: String,
 }
 
 /// A Skill is an instruction pack the agent loads when its description
@@ -2795,6 +3767,11 @@ pub struct SteerAgentSessionRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<Message>,
+    /// Captured authority for a new hosted turn. Required when starting a turn
+    /// with the hosted runtime; an active-turn steer must omit it. Admission
+    /// checks the exact turn and pins these inputs atomically with the message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<SessionTurnExecution>,
 }
 
 /// Observed per-step accounting. Exact decimal USD avoids binary rounding.
@@ -2968,11 +3945,18 @@ pub struct ToolCall {
         alias = "modelCallId"
     )]
     pub model_call_id: String,
-    /// Whether the client runs it (a ClientTool).
+    /// Whether the client must execute this pending call. Calls rejected before
+    /// dispatch remain in history with this false and a corresponding ToolResult.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub client: bool,
+    /// The client call's fixed deadline. A reconnecting client never starts a
+    /// call after this time; retries retain the original deadline and call id.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub deadline: String,
 }
 
 /// The request for the tools available to a session execution capability.
@@ -3289,6 +4273,31 @@ pub struct UpdateOwnerPoolRequest {
     pub update_mask: String,
 }
 
+/// The request of WriteAgentSessionTransferPart.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct WriteAgentSessionTransferPartRequest {
+    /// Exact transfer name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Zero-based declared part index.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub index: i64,
+    /// Base64 on the JSON wire; exact binary bytes, at most 256 KiB decoded.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub data: String,
+}
+
 /// ApprovalDecision is a person's answer to an approval.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -3335,6 +4344,120 @@ impl<'de> serde::Deserialize<'de> for ApprovalDecision {
 }
 
 impl crate::runtime::QueryValue for ApprovalDecision {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// An authenticated owner action; model-generated evidence cannot grant it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum GoalControlAction {
+    /// Hold the Goal and interrupt its exact current execution atomically.
+    Pause,
+    /// Clear owner pause and impasse without changing usage or resolving waits.
+    Resume,
+    /// Change only explicit objective/token-budget fields while execution is idle.
+    Amend,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl GoalControlAction {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Pause => "pause",
+            Self::Resume => "resume",
+            Self::Amend => "amend",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "pause" => Self::Pause,
+            "resume" => Self::Resume,
+            "amend" => Self::Amend,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for GoalControlAction {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for GoalControlAction {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for GoalControlAction {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Goal lifecycle, independent of optional Task dispatch and execution controls.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum GoalState {
+    /// The objective is owed.
+    Working,
+    /// An owned external wait is unresolved; this is not terminal success.
+    Waiting,
+    /// The objective has a completion receipt.
+    Completed,
+    /// The objective was dropped with an explicit environment receipt.
+    Failed,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl GoalState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Working => "working",
+            Self::Waiting => "waiting",
+            Self::Completed => "completed",
+            Self::Failed => "failed",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "working" => Self::Working,
+            "waiting" => Self::Waiting,
+            "completed" => Self::Completed,
+            "failed" => Self::Failed,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for GoalState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for GoalState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for GoalState {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
@@ -3677,6 +4800,10 @@ pub enum SessionEventType {
     Usage,
     /// An authoritative sandbox allocation or confirmed release.
     Sandbox,
+    /// A Session wait was created, became ready or was cancelled.
+    WaitChanged,
+    /// An authorized turn consumed the named ready waits.
+    WaitContinuation,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3700,6 +4827,8 @@ impl SessionEventType {
             Self::Error => "error",
             Self::Usage => "usage",
             Self::Sandbox => "sandbox",
+            Self::WaitChanged => "wait_changed",
+            Self::WaitContinuation => "wait_continuation",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3722,6 +4851,8 @@ impl SessionEventType {
             "error" => Self::Error,
             "usage" => Self::Usage,
             "sandbox" => Self::Sandbox,
+            "wait_changed" => Self::WaitChanged,
+            "wait_continuation" => Self::WaitContinuation,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -3842,6 +4973,13 @@ pub struct AgentsApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> AgentsApi<'a, T> {
+    /// The `transfers` collection.
+    pub fn transfers(&self) -> TransfersCollection<'a, T> {
+        TransfersCollection {
+            client: self.client,
+        }
+    }
+
     /// The `agents` collection.
     pub fn agents(&self) -> AgentsCollection<'a, T> {
         AgentsCollection {
@@ -3859,6 +4997,27 @@ impl<'a, T: crate::runtime::Transport> AgentsApi<'a, T> {
     /// The `agent_sessions` collection.
     pub fn agent_sessions(&self) -> AgentSessionsCollection<'a, T> {
         AgentSessionsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `goals` collection.
+    pub fn goals(&self) -> GoalsCollection<'a, T> {
+        GoalsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `waits` collection.
+    pub fn waits(&self) -> WaitsCollection<'a, T> {
+        WaitsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `queued_executions` collection.
+    pub fn queued_executions(&self) -> QueuedExecutionsCollection<'a, T> {
+        QueuedExecutionsCollection {
             client: self.client,
         }
     }
@@ -3889,6 +5048,199 @@ impl<'a, T: crate::runtime::Transport> AgentsApi<'a, T> {
         OwnerPoolsCollection {
             client: self.client,
         }
+    }
+}
+
+/// `transfers` of Sylphx Agents: Resource type `agents.sylphx.com/AgentSessionTransfer`.
+pub struct TransfersCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> TransfersCollection<'a, T> {
+    /// Stages a uniquely identified source epoch on an empty idle Session.
+    /// The source adapter must already hold its durable one-writer fence.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/transfers:begin` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`.
+    pub async fn begin(
+        &self,
+        request: BeginAgentSessionTransferRequest,
+    ) -> Result<AgentSessionTransfer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/transfers:begin",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "parent"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Returns hashes and original/destination mappings, never private payload.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}` · permission `agents:sessions` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetAgentSessionTransferRequest,
+    ) -> Result<AgentSessionTransfer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Stores at most 256 KiB of exact bytes under its declared part digest.
+    /// An acknowledgement loss can repeat the identical part without mutation.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:writePart` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`.
+    pub async fn write_part(
+        &self,
+        request: WriteAgentSessionTransferPartRequest,
+    ) -> Result<SessionTransferPart, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:writePart",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Re-reads ordered parts, checks the whole snapshot and validates the
+    /// portable state. An unknown effect stays held; this call never executes.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:finalize` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn finalize(
+        &self,
+        request: FinalizeAgentSessionTransferRequest,
+    ) -> Result<AgentSessionTransfer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:finalize",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// After the source durably records the exact verified receipt under its
+    /// writer fence, atomically projects conserved state without starting a turn.
+    /// Unknown outcomes or incompatible pinned model context remain held.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:adopt` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn adopt(
+        &self,
+        request: AdoptAgentSessionTransferRequest,
+    ) -> Result<AgentSessionTransfer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:adopt",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Releases only a destination that has not adopted source state. Immutable
+    /// source bytes/epoch remain retained; source writer release is app-owned.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*}:abort` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn abort(
+        &self,
+        request: AbortAgentSessionTransferRequest,
+    ) -> Result<AgentSessionTransfer, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:abort",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/transfers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 
@@ -4499,6 +5851,66 @@ impl<'a, T: crate::runtime::Transport> AgentSessionsCollection<'a, T> {
         self.client.call(http).await
     }
 
+    /// Explicitly reserves existing captured authority for one future turn, without executing it.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:queueExecution` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn queue_execution(
+        &self,
+        request: QueueAgentSessionExecutionRequest,
+    ) -> Result<QueuedSessionExecution, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:queueExecution",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Consumes all ready owners atomically with fresh exact-next-turn authority.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:resume` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn resume(
+        &self,
+        request: ResumeAgentSessionRequest,
+    ) -> Result<SessionEvent, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:resume",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
     /// Sends a user message. On an idle or failed session it starts a new turn;
     /// while a turn runs it is refused with `INVALID_STATE` (use `:steer`).
     /// The same `Idempotency-Key` returns the same event.
@@ -4637,6 +6049,382 @@ impl<'a, T: crate::runtime::Transport> AgentSessionsCollection<'a, T> {
             crate::runtime::path_param(
                 &request.name,
                 "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `goals` of Sylphx Agents: Resource type `agents.sylphx.com/AgentSessionGoal`.
+pub struct GoalsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> GoalsCollection<'a, T> {
+    /// Creates an optional objective owned by this Session, without an external Task.
+    /// The operation_id keeps the original receipt beyond request replay expiry.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/goals` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateAgentSessionGoalRequest,
+    ) -> Result<AgentSessionGoal, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/goals",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("operation_id", &request.operation_id);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.agent_session_goal)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reads the exact Goal, including its terminal receipt after a successor starts.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}` · permission `agents:sessions` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetAgentSessionGoalRequest,
+    ) -> Result<AgentSessionGoal, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/goals/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Settles only the named Goal/version with an observed environment receipt.
+    /// Replaying operation_id returns its original receipt, never its successor.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}:settle` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn settle(
+        &self,
+        request: SettleAgentSessionGoalRequest,
+    ) -> Result<AgentSessionGoal, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:settle",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/goals/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Applies an explicit owner control to this exact Goal/version. Pause
+    /// interrupts only its current execution; resume does not resolve a wait or
+    /// clear observed usage. Amend changes only supplied objective/budget fields.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/goals/*}:control` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn control(
+        &self,
+        request: ControlAgentSessionGoalRequest,
+    ) -> Result<AgentSessionGoal, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:control",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/goals/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `waits` of Sylphx Agents: Resource type `agents.sylphx.com/AgentSessionWait`.
+pub struct WaitsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> WaitsCollection<'a, T> {
+    /// Creates a durable wait on an idle Session, with permanent operation replay.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/waits` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateAgentSessionWaitRequest,
+    ) -> Result<AgentSessionWait, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/waits",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("operation_id", &request.operation_id);
+        query.push("expected_goal_version", &request.expected_goal_version);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.agent_session_wait)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reads an exact wait and its retained evidence.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}` · permission `agents:sessions` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetAgentSessionWaitRequest,
+    ) -> Result<AgentSessionWait, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/waits/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists durable waits, including ready undelivered owners.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/agent_sessions/*}/waits` · permission `agents:sessions` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListAgentSessionWaitsRequest,
+    ) -> Result<ListAgentSessionWaitsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/waits",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/agent_sessions/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListAgentSessionWaitsRequest,
+    ) -> Result<Vec<AgentSessionWait>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.agent_session_waits);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Records observed signal evidence or checks a timer against its actual due time.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}:resolve` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn resolve(
+        &self,
+        request: ResolveAgentSessionWaitRequest,
+    ) -> Result<AgentSessionWait, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:resolve",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/waits/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Cancels only this exact undelivered wait; repeated operations retain receipts.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/waits/*}:cancel` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn cancel(
+        &self,
+        request: CancelAgentSessionWaitRequest,
+    ) -> Result<AgentSessionWait, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:cancel",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/waits/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `queued_executions` of Sylphx Agents: Resource type `agents.sylphx.com/QueuedSessionExecution`.
+pub struct QueuedExecutionsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> QueuedExecutionsCollection<'a, T> {
+    /// Reads the state of an exact future-turn authorization.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*}` · permission `agents:sessions` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetQueuedSessionExecutionRequest,
+    ) -> Result<QueuedSessionExecution, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Cancels only a queued future execution; an already admitted turn retains its receipt.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*}:cancel` · permission `agents:sessions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn cancel(
+        &self,
+        request: CancelQueuedSessionExecutionRequest,
+    ) -> Result<QueuedSessionExecution, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:cancel",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/agent_sessions/*/queued_executions/*",
                 "name"
             )?
         );

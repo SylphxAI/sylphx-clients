@@ -1,0 +1,22 @@
+{
+  "collection": "waits",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "AgentSessionWait",
+  "message": "sylphx.agents.v1.AgentSessionWait",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}/waits/{wait}",
+  "plural": "agentSessionWaits",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "agents",
+  "shape": "record",
+  "singular": "agentSessionWait",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "agents.sylphx.com/AgentSessionWait"
+}
