@@ -17,8 +17,8 @@ export interface AiSpendLimit {
 }
 
 /**
- * An ApiKey is a credential of one environment, or an org-wide key of an
- * org (it acts on every project of the org), issued only by Access (the
+ * An ApiKey is a credential of one environment, a project CI credential,
+ * or an org-wide key (it acts on every project of the org), issued only by Access (the
  * platform has one key system). The secret is returned once, by Create and
  * Roll, and never again.
  */
@@ -1260,14 +1260,14 @@ export class ApiKeysCollection {
 	async get(request: GetApiKeyRequest): Promise<ApiKey> {
 		return this.client.call<ApiKey>({
 			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*', 'name')}`,
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*', 'name')}`,
 			responseType: 'sylphx.access.v1.ApiKey',
 			mutation: false,
 		})
 	}
 
 	/**
-	 * Lists API keys in an environment, or the org-wide keys of an org.
+	 * Lists API keys in an environment, project, or org.
 	 *
 	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/api_keys` · permission `access:read` · effect `read`
 	 *
@@ -1276,7 +1276,7 @@ export class ApiKeysCollection {
 	async list(request: ListApiKeysRequest): Promise<ListApiKeysResponse> {
 		return this.client.call<ListApiKeysResponse>({
 			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*|orgs/*', 'parent')}/api_keys`,
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*|orgs/*/projects/*|orgs/*', 'parent')}/api_keys`,
 			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
 			responseType: 'sylphx.access.v1.ListApiKeysResponse',
 			mutation: false,
@@ -1342,7 +1342,7 @@ export class ApiKeysCollection {
 	async delete(request: DeleteApiKeyRequest): Promise<Record<string, never>> {
 		return this.client.call<Record<string, never>>({
 			method: 'DELETE',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*', 'name')}`,
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*', 'name')}`,
 			query: { etag: request.etag, validate_only: request.validateOnly },
 			mutation: true,
 		})
@@ -1359,7 +1359,7 @@ export class ApiKeysCollection {
 	async revoke(request: RevokeApiKeyRequest): Promise<ApiKey> {
 		return this.client.call<ApiKey>({
 			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*', 'name')}:revoke`,
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*', 'name')}:revoke`,
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.access.v1.RevokeApiKeyRequest',
 			responseType: 'sylphx.access.v1.ApiKey',

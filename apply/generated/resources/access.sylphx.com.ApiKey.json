@@ -1,5 +1,6 @@
 {
   "alt_patterns": [
+    "orgs/{org}/projects/{project}/api_keys/{api_key}",
     "orgs/{org}/api_keys/{api_key}"
   ],
   "collection": "api_keys",

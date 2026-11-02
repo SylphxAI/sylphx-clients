@@ -883,7 +883,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}"
               },
-              "summary": "Lists API keys in an environment, or the org-wide keys of an org.",
+              "summary": "Lists API keys in an environment, project, or org.",
               "verb": "list"
             },
             {

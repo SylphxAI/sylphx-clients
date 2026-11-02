@@ -25,7 +25,7 @@ pub static METHODS: &[MethodSpec] = &[
         template: "/v1/{name=orgs/*/projects/*/envs/*/api_keys/*}",
         path_params: &[(
             "name",
-            "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*",
+            "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*",
         )],
         query_params: &["etag", "validate_only"],
         body: None,
@@ -42,7 +42,7 @@ pub static METHODS: &[MethodSpec] = &[
         template: "/v1/{name=orgs/*/projects/*/envs/*/api_keys/*}",
         path_params: &[(
             "name",
-            "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*",
+            "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*",
         )],
         query_params: &[],
         body: None,
@@ -57,7 +57,10 @@ pub static METHODS: &[MethodSpec] = &[
         id: "access.api_keys.list",
         http_method: "GET",
         template: "/v1/{parent=orgs/*/projects/*/envs/*}/api_keys",
-        path_params: &[("parent", "orgs/*/projects/*/envs/*|orgs/*")],
+        path_params: &[(
+            "parent",
+            "orgs/*/projects/*/envs/*|orgs/*/projects/*|orgs/*",
+        )],
         query_params: &["page_size", "page_token", "filter", "order_by"],
         body: None,
         long_running: false,
@@ -73,7 +76,7 @@ pub static METHODS: &[MethodSpec] = &[
         template: "/v1/{name=orgs/*/projects/*/envs/*/api_keys/*}:revoke",
         path_params: &[(
             "name",
-            "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*",
+            "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*",
         )],
         query_params: &[],
         body: Some("*"),

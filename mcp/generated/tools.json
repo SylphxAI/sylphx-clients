@@ -1223,9 +1223,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Lists API keys in an environment, or the org-wide keys of an org."
+        "title": "Lists API keys in an environment, project, or org."
       },
-      "description": "Lists API keys in an environment, or the org-wide keys of an org.",
+      "description": "Lists API keys in an environment, project, or org.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/api_keys",
       "input_schema": {

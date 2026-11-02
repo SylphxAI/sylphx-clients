@@ -5726,7 +5726,7 @@
       "package": "sylphx.access.v1"
     },
     {
-      "doc": "An ApiKey is a credential of one environment, or an org-wide key of an\norg (it acts on every project of the org), issued only by Access (the\nplatform has one key system). The secret is returned once, by Create and\nRoll, and never again.",
+      "doc": "An ApiKey is a credential of one environment, a project CI credential,\nor an org-wide key (it acts on every project of the org), issued only by Access (the\nplatform has one key system). The secret is returned once, by Create and\nRoll, and never again.",
       "fields": [
         {
           "behaviors": [
@@ -133163,6 +133163,7 @@
   "resources": [
     {
       "alt_patterns": [
+        "orgs/{org}/projects/{project}/api_keys/{api_key}",
         "orgs/{org}/api_keys/{api_key}"
       ],
       "collection": "api_keys",
@@ -137453,6 +137454,10 @@
                   {
                     "alt_patterns": [
                       {
+                        "named_pattern": "orgs/{org}/projects/{project}/api_keys/{api_key}",
+                        "pattern": "orgs/*/projects/*/api_keys/*"
+                      },
+                      {
                         "named_pattern": "orgs/{org}/api_keys/{api_key}",
                         "pattern": "orgs/*/api_keys/*"
                       }
@@ -137484,7 +137489,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists API keys in an environment, or the org-wide keys of an org.",
+              "doc": "Lists API keys in an environment, project, or org.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
@@ -137498,6 +137503,10 @@
                 "path_params": [
                   {
                     "alt_patterns": [
+                      {
+                        "named_pattern": "orgs/{org}/projects/{project}",
+                        "pattern": "orgs/*/projects/*"
+                      },
                       {
                         "named_pattern": "orgs/{org}",
                         "pattern": "orgs/*"
@@ -137661,6 +137670,10 @@
                   {
                     "alt_patterns": [
                       {
+                        "named_pattern": "orgs/{org}/projects/{project}/api_keys/{api_key}",
+                        "pattern": "orgs/*/projects/*/api_keys/*"
+                      },
+                      {
                         "named_pattern": "orgs/{org}/api_keys/{api_key}",
                         "pattern": "orgs/*/api_keys/*"
                       }
@@ -137712,6 +137725,10 @@
                 "path_params": [
                   {
                     "alt_patterns": [
+                      {
+                        "named_pattern": "orgs/{org}/projects/{project}/api_keys/{api_key}",
+                        "pattern": "orgs/*/projects/*/api_keys/*"
+                      },
                       {
                         "named_pattern": "orgs/{org}/api_keys/{api_key}",
                         "pattern": "orgs/*/api_keys/*"

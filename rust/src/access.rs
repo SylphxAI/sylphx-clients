@@ -26,8 +26,8 @@ pub struct AiSpendLimit {
     pub daily_usd_minor: i64,
 }
 
-/// An ApiKey is a credential of one environment, or an org-wide key of an
-/// org (it acts on every project of the org), issued only by Access (the
+/// An ApiKey is a credential of one environment, a project CI credential,
+/// or an org-wide key (it acts on every project of the org), issued only by Access (the
 /// platform has one key system). The secret is returned once, by Create and
 /// Roll, and never again.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -2243,14 +2243,7 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
     pub async fn get(&self, request: GetApiKeyRequest) -> Result<ApiKey, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*",
-                "name"
-            )?
-        );
+        let path = format!("/v1/{}", crate::runtime::path_param(&request.name, "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*", "name")?);
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "GET",
@@ -2264,7 +2257,7 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists API keys in an environment, or the org-wide keys of an org.
+    /// Lists API keys in an environment, project, or org.
     ///
     /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/api_keys` · permission `access:read` · effect `read`
     ///
@@ -2277,7 +2270,7 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
             "/v1/{}/api_keys",
             crate::runtime::path_param(
                 &request.parent,
-                "orgs/*/projects/*/envs/*|orgs/*",
+                "orgs/*/projects/*/envs/*|orgs/*/projects/*|orgs/*",
                 "parent"
             )?
         );
@@ -2390,14 +2383,7 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
         &self,
         request: DeleteApiKeyRequest,
     ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*",
-                "name"
-            )?
-        );
+        let path = format!("/v1/{}", crate::runtime::path_param(&request.name, "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*", "name")?);
         let mut query = crate::runtime::Query::default();
         query.push("etag", &request.etag);
         query.push("validate_only", &request.validate_only);
@@ -2423,14 +2409,7 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
         &self,
         request: RevokeApiKeyRequest,
     ) -> Result<ApiKey, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}:revoke",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/api_keys/*",
-                "name"
-            )?
-        );
+        let path = format!("/v1/{}:revoke", crate::runtime::path_param(&request.name, "orgs/*/projects/*/envs/*/api_keys/*|orgs/*/projects/*/api_keys/*|orgs/*/api_keys/*", "name")?);
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "POST",
