@@ -71,3 +71,10 @@ the accepted deployment identity; `parse` pins its local trust domain.
 Constructing or parsing a name is not identity proof or tenant authorization;
 parse an SVID's identity only after cryptographic validation.
 
+
+The managed Build Rust cache wrapper runs with the build template's Bash,
+not `/bin/sh`: Cargo passes binary target names verbatim in
+`CARGO_BIN_EXE_<name>`, including hyphens and other non-shell identifier
+characters. Both the cached and direct-compiler paths preserve those names,
+argument bytes and compiler exit codes. Cache startup remains lazy and a
+cache outage does not replay compiler errors.

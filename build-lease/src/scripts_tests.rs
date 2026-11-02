@@ -317,6 +317,108 @@ fn compiler_errors_are_never_retried_with_or_without_cache() {
 }
 
 #[test]
+fn compiler_wrapper_preserves_cargo_environment_arguments_and_exit_codes() {
+    // Cargo creates these names natively; a shell cannot export the hyphenated
+    // names. Neither receiver may use /bin/sh, which would hide this regression.
+    let environment = [
+        ("CARGO_BIN_EXE_site-pack", "/tmp/site pack\nproducer"),
+        ("CARGO_BIN_EXE_site-server", "/tmp/site-server"),
+        ("CARGO_BIN_EXE_siteservercontrol", "underscore control"),
+        ("CARGO_BIN_EXE_a.b+工具", "punctuation and unicode"),
+    ];
+    let expected_environment = serde_json::to_value(
+        environment
+            .into_iter()
+            .collect::<std::collections::BTreeMap<_, _>>(),
+    )
+    .unwrap();
+    let arguments = ["", "with spaces", "quote'\"", "line\nbreak", "--flag=*"];
+    for cache_state in ["ready", "failed", "start", "outage"] {
+        for exit in [0, 23] {
+            let workspace = Workspace::new();
+            let output = workspace.run(":", &[]);
+            assert!(output.status.success());
+            let state = workspace.0.join(".sylphx/lazy-cache");
+            if matches!(cache_state, "ready" | "failed") {
+                workspace.file(&format!(".sylphx/lazy-cache/{cache_state}"), "");
+            }
+            workspace.file(
+                "bin/compiler-probe",
+                r#"#!/usr/bin/python3
+import json, os, sys
+print(json.dumps({"environment": {k: v for k, v in os.environ.items() if k.startswith("CARGO_BIN_EXE_")}, "arguments": sys.argv[1:]}))
+sys.exit(int(os.environ["TEST_COMPILE_STATUS"]))
+"#,
+            );
+            workspace.file(
+                "bin/sccache-probe",
+                r#"#!/usr/bin/python3
+import json, os, sys
+with open(os.environ["TEST_WORKSPACE"] + "/cache-entry", "a") as output:
+    output.write(json.dumps({"environment": {k: v for k, v in os.environ.items() if k.startswith("CARGO_BIN_EXE_")}, "arguments": sys.argv[1:]}) + "\n")
+if sys.argv[1:] == ["--start-server"]:
+    sys.exit(int(os.environ["TEST_CACHE_STATUS"]))
+assert os.environ["SCCACHE_IGNORE_SERVER_IO_ERROR"] == "1"
+os.execv(sys.argv[1], sys.argv[1:])
+"#,
+            );
+            for name in ["compiler-probe", "sccache-probe"] {
+                std::fs::set_permissions(
+                    workspace.0.join("bin").join(name),
+                    std::fs::Permissions::from_mode(0o755),
+                )
+                .unwrap();
+            }
+            let compiler = workspace.0.join("bin/compiler-probe");
+            let cache = workspace.0.join("bin/sccache-probe");
+            let mut command = Command::new(state.join("bin/rustc-wrapper"));
+            command
+                .arg(&compiler)
+                .args(arguments)
+                .env_clear()
+                .env("PATH", "/usr/bin:/bin")
+                .envs(environment)
+                .env("TEST_WORKSPACE", &workspace.0)
+                .env("TEST_COMPILE_STATUS", exit.to_string())
+                .env(
+                    "TEST_CACHE_STATUS",
+                    if cache_state == "outage" { "2" } else { "0" },
+                )
+                .env("SYLPHX_BUILD_CACHE_STATE", &state)
+                .env("SYLPHX_BUILD_SCCACHE", &cache);
+            let output = command.output().unwrap();
+            assert_eq!(output.status.code(), Some(exit), "{cache_state}");
+            let entry: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(entry["environment"], expected_environment, "{cache_state}");
+            assert_eq!(entry["arguments"], serde_json::json!(arguments));
+            let entries =
+                std::fs::read_to_string(workspace.0.join("cache-entry")).unwrap_or_default();
+            let entries: Vec<serde_json::Value> = entries
+                .lines()
+                .map(|line| serde_json::from_str(line).unwrap())
+                .collect();
+            assert_eq!(
+                entries.len(),
+                match cache_state {
+                    "ready" | "outage" => 1,
+                    "start" => 2,
+                    "failed" => 0,
+                    _ => unreachable!(),
+                }
+            );
+            for entry in entries {
+                assert_eq!(entry["environment"], expected_environment, "{cache_state}");
+                if entry["arguments"] != serde_json::json!(["--start-server"]) {
+                    let mut delegated = vec![compiler.to_str().unwrap()];
+                    delegated.extend(arguments);
+                    assert_eq!(entry["arguments"], serde_json::json!(delegated));
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn explicit_wrappers_including_empty_always_win() {
     for wrapper in ["mine", ""] {
         let workspace = Workspace::new();

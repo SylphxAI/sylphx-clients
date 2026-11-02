@@ -321,7 +321,9 @@ if [ "${CARGO_INCREMENTAL:-0}" != 1 ] && [ "${RUSTC_WRAPPER+x}" != x ] && comman
   if [ "$E" != 1 ] || [ -n "${SCCACHE_WEBDAV_ENDPOINT:-}" ]; then
     export SYLPHX_BUILD_SCCACHE=$(command -v sccache)
     cat > "$SYLPHX_BUILD_CACHE_STATE/bin/rustc-wrapper" <<'SYLPHX_RUSTC'
-#!/bin/sh
+#!/bin/bash
+# Cargo passes binary names verbatim in CARGO_BIN_EXE_<name>. The build
+# template includes Bash; unlike dash it preserves non-shell environment names.
 S=$SYLPHX_BUILD_CACHE_STATE
 warn() {
   # Cargo suppresses stderr from successful rustc metadata probes. Do not
