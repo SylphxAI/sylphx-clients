@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/next",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Customer-branded App Router sign-in and shared Next.js ISR/use-cache handlers.",
 	"license": "MIT",
 	"type": "module",
