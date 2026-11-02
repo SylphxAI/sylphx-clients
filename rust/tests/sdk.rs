@@ -394,6 +394,7 @@ mod http {
         },
         StallHeaders,
         StallBody,
+        DisconnectBody,
     }
 
     /// Serves `replies` in order, one per connection, recording requests.
@@ -464,6 +465,11 @@ mod http {
                         tokio::time::sleep(delay).await;
                         (status, extra, body)
                     }
+                    Reply::DisconnectBody => {
+                        sock.write_all(b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 100\r\nconnection: close\r\n\r\n{").await.unwrap();
+                        sock.shutdown().await.ok();
+                        continue;
+                    }
                     Reply::StallHeaders | Reply::StallBody => {
                         if matches!(reply, Reply::StallBody) {
                             sock.write_all(b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 100\r\nconnection: close\r\n\r\n{").await.unwrap();
@@ -513,6 +519,219 @@ mod http {
     fn problem(code: &str, status: u16, retryable: bool) -> serde_json::Value {
         json!({"type": "about:blank", "title": code, "status": status, "detail": "d", "code": code,
                "grpc_status": "UNAVAILABLE", "retryable": retryable, "effect": "none"})
+    }
+
+    fn build_request() -> serde_json::Value {
+        json!({"parent": "orgs/org_a/projects/prj_a", "command": ["true"], "timeout": "180s"})
+    }
+
+    #[tokio::test]
+    async fn build_pending_is_observation_not_an_error_retry() {
+        for max_retries in [0, 3] {
+            let mut replies = vec![
+                (
+                    409,
+                    "retry-after: 0\r\n",
+                    problem("IDEMPOTENCY_IN_PROGRESS", 409, true)
+                );
+                6
+            ];
+            replies.push((
+                200,
+                "",
+                json!({"name": "orgs/org_a/operations/op_a", "done": false}),
+            ));
+            let (url, seen) = serve(replies).await;
+            let client = Client::new(
+                HttpTransport::builder()
+                    .base_url(&url)
+                    .max_retries(max_retries)
+                    .build()
+                    .unwrap(),
+            );
+            let result = client
+                .invoke("build.builds.run", build_request())
+                .await
+                .unwrap();
+            assert_eq!(result["name"], "orgs/org_a/operations/op_a");
+            let seen = seen.lock().unwrap();
+            assert_eq!(seen.len(), 7);
+            for sent in seen.iter() {
+                assert_eq!(sent.body, seen[0].body);
+                assert_eq!(
+                    header(&sent.head, "idempotency-key"),
+                    header(&seen[0].head, "idempotency-key")
+                );
+                assert!(header(&sent.head, "idempotency-key").is_some());
+                assert!(header(&sent.head, "sylphx-request-timeout").is_none());
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn pending_does_not_reset_or_spend_the_transient_budget() {
+        let mut replies = vec![(503, "retry-after: 0\r\n", problem("UNAVAILABLE", 503, true))];
+        replies.extend(vec![
+            (
+                409,
+                "retry-after: 0\r\n",
+                problem("IDEMPOTENCY_IN_PROGRESS", 409, true)
+            );
+            6
+        ]);
+        replies.push((503, "retry-after: 0\r\n", problem("UNAVAILABLE", 503, true)));
+        let (url, seen) = serve(replies).await;
+        let client = Client::new(
+            HttpTransport::builder()
+                .base_url(&url)
+                .max_retries(1)
+                .build()
+                .unwrap(),
+        );
+        let err = client
+            .invoke("build.builds.run", build_request())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, Error::Api { status: 503, .. }), "{err}");
+        assert_eq!(seen.lock().unwrap().len(), 8);
+    }
+
+    #[tokio::test]
+    async fn pending_requires_exact_status_code_and_retryable_and_honors_deadline() {
+        for (status, code, retryable, extra) in [
+            (409, "OUTCOME_UNKNOWN", false, ""),
+            (409, "IDEMPOTENCY_IN_PROGRESS", false, ""),
+            (409, "ETAG_MISMATCH", true, ""),
+            (503, "IDEMPOTENCY_IN_PROGRESS", true, ""),
+            (409, "IDEMPOTENCY_IN_PROGRESS", true, "retry-after: 30\r\n"),
+        ] {
+            let (url, seen) = serve(vec![(status, extra, problem(code, status, retryable))]).await;
+            let client = Client::new(
+                HttpTransport::builder()
+                    .base_url(&url)
+                    .max_retries(0)
+                    .timeout(std::time::Duration::from_millis(100))
+                    .build()
+                    .unwrap(),
+            );
+            let error = client
+                .invoke("build.builds.run", build_request())
+                .await
+                .unwrap_err();
+            match error {
+                Error::Api { code: actual, .. } => assert_eq!(actual.as_str(), code),
+                other => panic!("{other}"),
+            }
+            assert_eq!(seen.lock().unwrap().len(), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn pending_honors_retry_after_and_the_original_deadline() {
+        use std::time::{Duration, Instant};
+        let (url, seen) = serve(vec![
+            (
+                409,
+                "retry-after: 1\r\n",
+                problem("IDEMPOTENCY_IN_PROGRESS", 409, true),
+            ),
+            (
+                409,
+                "retry-after: 1\r\n",
+                problem("IDEMPOTENCY_IN_PROGRESS", 409, true),
+            ),
+        ])
+        .await;
+        let client = Client::new(
+            HttpTransport::builder()
+                .base_url(&url)
+                .max_retries(0)
+                .build()
+                .unwrap(),
+        )
+        .with_deadline(Instant::now() + Duration::from_millis(1800));
+        let start = Instant::now();
+        let error = client
+            .invoke("build.builds.run", build_request())
+            .await
+            .unwrap_err();
+        assert!(matches!(error, Error::Api { status: 409, .. }), "{error}");
+        assert!(start.elapsed() >= Duration::from_secs(1));
+        assert!(start.elapsed() < Duration::from_millis(1800));
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 2);
+        let first: u64 = header(&seen[0].head, "sylphx-request-timeout")
+            .unwrap()
+            .parse()
+            .unwrap();
+        let second: u64 = header(&seen[1].head, "sylphx-request-timeout")
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(second + 900 < first);
+    }
+
+    #[tokio::test]
+    async fn body_disconnect_reconnects_the_same_build_request_and_key() {
+        let (url, seen) = serve_script(vec![
+            Reply::DisconnectBody,
+            Reply::Json {
+                status: 200,
+                extra: "",
+                body: json!({"name": "orgs/org_a/operations/op_a"}),
+                delay: std::time::Duration::ZERO,
+            },
+        ])
+        .await;
+        let client = Client::new(
+            HttpTransport::builder()
+                .base_url(&url)
+                .max_retries(1)
+                .build()
+                .unwrap(),
+        );
+        let result = client
+            .invoke("build.builds.run", build_request())
+            .await
+            .unwrap();
+        assert_eq!(result["name"], "orgs/org_a/operations/op_a");
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 2);
+        assert_eq!(seen[0].body, seen[1].body);
+        assert_eq!(
+            header(&seen[0].head, "idempotency-key"),
+            header(&seen[1].head, "idempotency-key")
+        );
+    }
+
+    #[tokio::test]
+    async fn cancelling_pending_observation_stops_resends() {
+        use std::time::Duration;
+        let (url, seen) = serve(vec![
+            (
+                409,
+                "retry-after: 1\r\n",
+                problem("IDEMPOTENCY_IN_PROGRESS", 409, true)
+            );
+            2
+        ])
+        .await;
+        let handle = tokio::spawn(async move {
+            client(&url)
+                .invoke("build.builds.run", build_request())
+                .await
+        });
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while seen.lock().unwrap().is_empty() {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        handle.abort();
+        assert!(handle.await.unwrap_err().is_cancelled());
+        tokio::time::sleep(Duration::from_millis(1100)).await;
+        assert_eq!(seen.lock().unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -736,6 +955,43 @@ mod http {
                     }
                 }
             }
+        }
+    }
+
+    #[tokio::test]
+    async fn a_long_call_deadline_does_not_replace_a_shorter_socket_timeout() {
+        use std::time::{Duration, Instant};
+
+        for body in [false, true] {
+            let (url, seen) = serve_script(vec![if body {
+                Reply::StallBody
+            } else {
+                Reply::StallHeaders
+            }])
+            .await;
+            let client = Client::new(
+                HttpTransport::builder()
+                    .base_url(&url)
+                    .http_client(
+                        reqwest::Client::builder()
+                            .no_proxy()
+                            .timeout(Duration::from_millis(250))
+                            .build()
+                            .unwrap(),
+                    )
+                    .max_retries(0)
+                    .build()
+                    .unwrap(),
+            )
+            .with_deadline(Instant::now() + Duration::from_secs(60));
+            let error = tokio::time::timeout(Duration::from_secs(2), deadline_read(&client, false))
+                .await
+                .expect("the caller's shorter HTTP timeout must still apply")
+                .unwrap_err();
+            assert!(matches!(error, Error::Transport(_)), "{error}");
+            // The HTTP timeout may fire before headers are fully sent on a busy
+            // runtime; it must still win over the 60s logical-call deadline.
+            assert!(seen.lock().unwrap().len() <= 1);
         }
     }
 

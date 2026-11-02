@@ -61,7 +61,8 @@ export interface ClientOptions {
 	baseUrl?: string
 	/** Pins `Sylphx-Version` (spec §5); by default the key's or org's pin applies. */
 	apiVersion?: string
-	/** Whole-call deadline in milliseconds, retries included; sent as `Sylphx-Request-Timeout`. */
+	/** Whole-call deadline in milliseconds, retries included; sent only to the Resource API.
+	 * Without it, each exchange is bounded to 120s, not the entire observation. */
 	timeoutMs?: number
 	/** Retries of a retryable answer; default 3. */
 	maxRetries?: number
@@ -309,23 +310,32 @@ export class Client {
 			body = JSON.stringify(toWire(call.bodyType, call.body))
 		}
 		const deadline = this.timeoutMs === undefined ? undefined : Date.now() + this.timeoutMs
-		for (let attempt = 0; ; attempt++) {
+		let attempt = 0
+		for (;;) {
 			let response: Response
+			let text: string
 			try {
 				const init: RequestInit = { method: call.method, headers: { ...headers }, body: body ?? null }
-				if (deadline !== undefined && !protocol) {
-					const left = deadline - Date.now()
-					if (left <= 0) throw new Error('deadline exceeded before the request was sent')
-					;(init.headers as Record<string, string>)['sylphx-request-timeout'] = String(left)
-					init.signal = AbortSignal.timeout(left)
+				const left = deadline === undefined ? undefined : deadline - Date.now()
+				if (left !== undefined && left <= 0) throw new Error('deadline exceeded before the request was sent')
+				if (left !== undefined && !protocol)
+					(init.headers as Record<string, string>)['sylphx-request-timeout'] = String(left)
+				// AbortController also works in WebViews without AbortSignal.timeout.
+				const controller = new AbortController()
+				init.signal = controller.signal
+				const timer = setTimeout(() => controller.abort(), Math.min(left ?? 120_000, 120_000))
+				try {
+					response = await this.fetchImpl(url, init)
+					text = await response.text()
+				} finally {
+					clearTimeout(timer)
 				}
-				response = await this.fetchImpl(url, init)
 			} catch (error) {
 				// A GET, or a mutation carrying its idempotency key, is safe to resend.
 				if (once || attempt >= this.maxRetries || !(await this.backoff(attempt, undefined, deadline))) throw error
+				attempt++
 				continue
 			}
-			const text = await response.text()
 			const json: unknown = text === '' ? {} : JSON.parse(text)
 			if (response.ok) return fromWire(call.responseType, json) as T
 			// RFC 9457 (the Resource API) has no `error` member; a service's own
@@ -337,6 +347,13 @@ export class Client {
 			) as ProblemDetails
 			const retryable = RETRYABLE_STATUS.has(response.status) || problem.retryable === true
 			const retryAfter = Number(response.headers.get('retry-after') ?? Number.NaN)
+			// An accepted keyed mutation is still running. Observing the same
+			// effect is progress, not another failed transport attempt. Keep the
+			// exact body/key and the caller's original whole-call deadline.
+			if (response.status === 409 && problem.code === 'IDEMPOTENCY_IN_PROGRESS' && problem.retryable === true && !once) {
+				if (await this.backoff(0, Number.isFinite(retryAfter) ? retryAfter * 1000 : 1000, deadline)) continue
+				throw new SylphxError(problem, response.status, response.headers.get('sylphx-request-id') ?? undefined)
+			}
 			if (
 				!retryable ||
 				once ||
@@ -345,6 +362,7 @@ export class Client {
 			) {
 				throw new SylphxError(problem, response.status, response.headers.get('sylphx-request-id') ?? undefined)
 			}
+			attempt++
 		}
 	}
 

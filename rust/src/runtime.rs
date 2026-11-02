@@ -714,7 +714,8 @@ impl HttpTransportBuilder {
         self
     }
     /// The whole-call deadline, including response bodies and retries, for every
-    /// origin (default 120s). Explicit deadlines are sent as
+    /// origin. Without this setting, each exchange is bounded to 120s while
+    /// accepted effects can be observed until terminal. Explicit deadlines are sent as
     /// `Sylphx-Request-Timeout` only to the Resource API.
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = Some(timeout);
@@ -889,9 +890,9 @@ impl HttpTransport {
                     "deadline exceeded before the request was sent".into(),
                 ));
             }
-            // A protocol origin omits Resource API headers, not local socket
-            // deadlines. Reqwest's request timeout includes the response body.
-            rb = rb.timeout(left);
+            // Protocol origins omit Resource API headers, not local deadlines.
+            // The exchange below bounds headers and body without overriding
+            // the HTTP client's independently configured socket timeout.
             if !protocol && (self.timeout.is_some() || self.deadline.is_some()) {
                 rb = rb.header("Sylphx-Request-Timeout", left.as_millis().to_string());
             }
@@ -899,35 +900,43 @@ impl HttpTransport {
         if let Some(body) = &request.body {
             rb = rb.json(body);
         }
-        let response = rb
-            .send()
-            .await
-            .map_err(|e| Error::Transport(e.to_string()))?;
-        let status = response.status().as_u16();
-        let header = |name: &str| {
-            response
-                .headers()
-                .get(name)
-                .and_then(|v| v.to_str().ok())
-                .map(str::to_string)
+        let exchange = async {
+            let response = rb
+                .send()
+                .await
+                .map_err(|e| Error::Transport(e.to_string()))?;
+            let status = response.status().as_u16();
+            let header = |name: &str| {
+                response
+                    .headers()
+                    .get(name)
+                    .and_then(|v| v.to_str().ok())
+                    .map(str::to_string)
+            };
+            let request_id = header("sylphx-request-id");
+            let retry_after = header("retry-after")
+                .and_then(|v| v.trim().parse::<u64>().ok())
+                .map(std::time::Duration::from_secs);
+            let body = response
+                .bytes()
+                .await
+                .map_err(|e| Error::Transport(e.to_string()))?
+                .to_vec();
+            Ok((
+                HttpResponse {
+                    status,
+                    request_id,
+                    body,
+                },
+                retry_after,
+            ))
         };
-        let request_id = header("sylphx-request-id");
-        let retry_after = header("retry-after")
-            .and_then(|v| v.trim().parse::<u64>().ok())
-            .map(std::time::Duration::from_secs);
-        let body = response
-            .bytes()
-            .await
-            .map_err(|e| Error::Transport(e.to_string()))?
-            .to_vec();
-        Ok((
-            HttpResponse {
-                status,
-                request_id,
-                body,
-            },
-            retry_after,
-        ))
+        match deadline {
+            Some(deadline) => tokio::time::timeout_at(deadline.into(), exchange)
+                .await
+                .map_err(|_| Error::Transport("request deadline exceeded".into()))?,
+            None => exchange.await,
+        }
     }
 }
 
@@ -965,13 +974,28 @@ impl HttpTransport {
             (Some(d), Some(t)) => Some(d.min(std::time::Instant::now() + t)),
             (Some(d), None) => Some(d),
             (None, Some(t)) => Some(std::time::Instant::now() + t),
-            (None, None) => Some(std::time::Instant::now() + DEFAULT_SOCKET_TIMEOUT),
+            // The reqwest client bounds each socket exchange. Only an
+            // explicitly configured deadline bounds the whole logical call,
+            // which can observe a long-running accepted effect many times.
+            (None, None) => None,
         };
         let mut attempt = 0u32;
         loop {
             let result = self
                 .send_once(&request, key.as_deref(), headers, deadline)
                 .await;
+            if resend {
+                if let Ok((response, after)) = &result {
+                    if in_progress(response) {
+                        let wait = after.unwrap_or(std::time::Duration::from_secs(1));
+                        if deadline.is_some_and(|d| std::time::Instant::now() + wait >= d) {
+                            return result.map(|(r, _)| r);
+                        }
+                        tokio::time::sleep(wait).await;
+                        continue;
+                    }
+                }
+            }
             let retry_after = match &result {
                 Ok((r, after)) if retryable_status(r) => *after,
                 // A GET, or a mutation that carries an idempotency key, is
@@ -990,6 +1014,15 @@ impl HttpTransport {
             attempt += 1;
         }
     }
+}
+
+/// Pending observation of the same accepted effect, separate from the
+/// transient-error retry budget. Permanent/unknown outcomes never match.
+#[cfg(feature = "http")]
+fn in_progress(response: &HttpResponse) -> bool {
+    response.status == 409
+        && serde_json::from_slice::<serde_json::Value>(&response.body)
+            .is_ok_and(|v| v["code"] == "IDEMPOTENCY_IN_PROGRESS" && v["retryable"] == true)
 }
 
 /// Whether an answer may be retried: 429, 502, 503, 504, or a problem body
