@@ -1,0 +1,41 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.processor_events.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter"
+            ]
+          },
+          "id": "money.processor_events.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.processor_events.retry",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.processor_events.dismiss",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/ProcessorEvent"
+    }
+  ]
+}

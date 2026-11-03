@@ -375,6 +375,47 @@ pub struct CheckEntitlementResponse {
     pub source: String,
 }
 
+/// Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe
+/// calls, with the stored credential; no refresh, key rotation or state write.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckMerchantAccountProcessorPermissionsRequest {
+    /// Merchant account resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Response for CheckMerchantAccountProcessorPermissions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckMerchantAccountProcessorPermissionsResponse {
+    /// Merchant account resource name.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "merchantAccount"
+    )]
+    pub merchant_account: String,
+    /// True for a live merchant.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub livemode: bool,
+    /// All probes, including unavailable results (not a false success).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permissions: Vec<ProcessorReadPermission>,
+    /// Probe completion time.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "checkTime"
+    )]
+    pub check_time: String,
+    /// Fixed warnings; missing access does not stop checkout.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
+}
+
 /// The request of CheckUsageStanding.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1367,6 +1408,29 @@ pub struct DisconnectMerchantAccountRequest {
     pub name: String,
 }
 
+/// Request for DismissProcessorEvent. Only an owned test-mode payout
+/// observation may be dismissed. Live, unknown-mode and payment events are
+/// refused. The inbox row and audit remain; no payment or grant is changed.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DismissProcessorEventRequest {
+    /// Event resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The event's current meta.etag.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+    /// Must be `test_processor_observation`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
 /// An Entitlement Grant is one feature a subject holds, from one source: a
 /// subscription, an order, a store purchase, or a manual grant. Money derives
 /// it; a client event never writes one.
@@ -1641,6 +1705,17 @@ pub struct GetMerchantAccountRequest {
 #[non_exhaustive]
 pub struct GetPortalSessionRequest {
     /// The name of the portal session to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request for GetProcessorEvent.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetProcessorEventRequest {
+    /// Event resource name.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -2499,6 +2574,54 @@ pub struct ListMerchantAccountsResponse {
     pub next_page_token: String,
 }
 
+/// Request for ListProcessorEvents.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListProcessorEventsRequest {
+    /// Environment resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Default 50, at most 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Token from the preceding page, bound to environment and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// Only `state = "held"` (the default), `pending`, `applied`, or `dismissed`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+}
+
+/// Response for ListProcessorEvents.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListProcessorEventsResponse {
+    /// Events ordered by received time and event id.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "processorEvents"
+    )]
+    pub processor_events: Vec<ProcessorEvent>,
+    /// Empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
 /// The request of ListRevenueFacts.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3076,6 +3199,34 @@ pub struct MerchantAccount {
         alias = "automaticTax"
     )]
     pub automatic_tax: bool,
+    /// Payouts and Balance read probes. Missing access only delays bookkeeping;
+    /// it never disconnects this account or prevents checkout.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "processorReadPermissions"
+    )]
+    pub processor_read_permissions: Vec<ProcessorReadPermission>,
+    /// When these probes ran. Unset means not checked yet.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "processorPermissionsCheckTime"
+    )]
+    pub processor_permissions_check_time: String,
+    /// Fixed, actionable warnings; never Stripe response bodies or credentials.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "processorWarnings"
+    )]
+    pub processor_warnings: Vec<String>,
 }
 
 /// A Portal Session is a hosted page where a subject manages its
@@ -3193,6 +3344,153 @@ pub struct Price {
         alias = "introductoryUnitAmounts"
     )]
     pub introductory_unit_amounts: std::collections::BTreeMap<String, String>,
+}
+
+/// A stored Stripe hint. No payload, customer details, credential or raw error
+/// is returned. Recovery never creates a grant or writes a ledger entry: retry
+/// schedules the existing authenticated, idempotent application path.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProcessorEvent {
+    /// Name; the final segment is Stripe's event id.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable, server-derived id.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Metadata; meta.etag is required on recovery calls.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Stripe account id, never the customer's identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accountId"
+    )]
+    pub account_id: String,
+    /// Stripe event type.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "eventType"
+    )]
+    pub event_type: String,
+    /// Stripe object id (not a payload).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "objectId"
+    )]
+    pub object_id: String,
+    /// `pending`, `held`, `applied` or `dismissed`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// `processor_permission_denied`, `attempts_exhausted`, or empty.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holdReason"
+    )]
+    pub hold_reason: String,
+    /// Number of failed application attempts.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub attempts: i32,
+    /// Whether the owning merchant is live. Read only when mode_known is true.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub livemode: bool,
+    /// False when the owning merchant cannot be resolved; never assumes test.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "modeKnown"
+    )]
+    pub mode_known: bool,
+    /// Last audited recovery decision, if any. Full history is retained.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "lastRecovery"
+    )]
+    pub last_recovery: Option<ProcessorEventRecovery>,
+}
+
+/// An audited operator decision. No arbitrary free text or personal data.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProcessorEventRecovery {
+    /// Stable receipt identity, scoped to this event and revision.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiptId"
+    )]
+    pub receipt_id: String,
+    /// `retry` or `dismiss`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub action: String,
+    /// `operator_retry`, `permissions_restored`, or `test_processor_observation`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// The verified caller's principal, never supplied by the caller.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub principal: String,
+    /// Commit's decision time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+}
+
+/// One read capability; failure never disables taking payments.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ProcessorReadPermission {
+    /// `payouts` or `balance` (Stripe's Payouts and Balance read permissions).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub permission: String,
+    /// `granted`, `missing` (403), or `unavailable` (no conclusion).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
 }
 
 /// A Product is one thing sold, with its prices and the features it grants.
@@ -3393,6 +3691,27 @@ pub struct RetireLicenceKeyRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// Request for RetryProcessorEvent. Queues a held event once; no inline replay.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RetryProcessorEventRequest {
+    /// Event resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The event's current meta.etag, required to avoid racing another decision.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+    /// `operator_retry` or `permissions_restored`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
 }
 
 /// One day or month of a RevenueSummary.
@@ -5749,6 +6068,20 @@ pub struct MoneyApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
+    /// The `processor_events` collection.
+    pub fn processor_events(&self) -> ProcessorEventsCollection<'a, T> {
+        ProcessorEventsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `merchant_accounts` collection.
+    pub fn merchant_accounts(&self) -> MerchantAccountsCollection<'a, T> {
+        MerchantAccountsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `price_catalogs` collection.
     pub fn price_catalogs(&self) -> PriceCatalogsCollection<'a, T> {
         PriceCatalogsCollection {
@@ -5787,13 +6120,6 @@ impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
     /// The `entitlement_grants` collection.
     pub fn entitlement_grants(&self) -> EntitlementGrantsCollection<'a, T> {
         EntitlementGrantsCollection {
-            client: self.client,
-        }
-    }
-
-    /// The `merchant_accounts` collection.
-    pub fn merchant_accounts(&self) -> MerchantAccountsCollection<'a, T> {
-        MerchantAccountsCollection {
             client: self.client,
         }
     }
@@ -5915,6 +6241,383 @@ impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
         ExchangeRatesCollection {
             client: self.client,
         }
+    }
+}
+
+/// `processor_events` of Sylphx Money: Resource type `money.sylphx.com/ProcessorEvent`.
+pub struct ProcessorEventsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ProcessorEventsCollection<'a, T> {
+    /// Gets one stored processor hint, with its safe hold reason.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}` · permission `billing:processor_events:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetProcessorEventRequest,
+    ) -> Result<ProcessorEvent, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/processor_events/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists stored processor hints; defaults to held events.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/processor_events` · permission `billing:processor_events:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListProcessorEventsRequest,
+    ) -> Result<ListProcessorEventsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/processor_events",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListProcessorEventsRequest,
+    ) -> Result<Vec<ProcessorEvent>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.processor_events);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:retry` · permission `billing:processor_events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`.
+    pub async fn retry(
+        &self,
+        request: RetryProcessorEventRequest,
+    ) -> Result<ProcessorEvent, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:retry",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/processor_events/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:dismiss` · permission `billing:processor_events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`.
+    pub async fn dismiss(
+        &self,
+        request: DismissProcessorEventRequest,
+    ) -> Result<ProcessorEvent, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:dismiss",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/processor_events/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `merchant_accounts` of Sylphx Money: Resource type `money.sylphx.com/MerchantAccount`.
+pub struct MerchantAccountsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> MerchantAccountsCollection<'a, T> {
+    /// Checks Payouts and Balance read without modifying a merchant, its key or checkout.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:checkProcessorPermissions` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn check_processor_permissions(
+        &self,
+        request: CheckMerchantAccountProcessorPermissionsRequest,
+    ) -> Result<CheckMerchantAccountProcessorPermissionsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:checkProcessorPermissions",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/merchant_accounts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Gets a merchant account.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetMerchantAccountRequest,
+    ) -> Result<MerchantAccount, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/merchant_accounts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists merchant accounts.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListMerchantAccountsRequest,
+    ) -> Result<ListMerchantAccountsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/merchant_accounts",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListMerchantAccountsRequest,
+    ) -> Result<Vec<MerchantAccount>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.merchant_accounts);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Starts connecting a Stripe account: returns the processor's authorisation
+    /// URL for an org owner to open, which the processor's redirect completes.
+    /// With a restricted key in the request the account connects at once
+    /// instead, and the connected merchant account comes back in the response.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn connect(
+        &self,
+        request: ConnectMerchantAccountRequest,
+    ) -> Result<ConnectMerchantAccountResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/merchant_accounts:connect",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reads the connected account back from the processor.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn refresh(
+        &self,
+        request: RefreshMerchantAccountRequest,
+    ) -> Result<MerchantAccount, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:refresh",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/merchant_accounts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Disconnects the account: Sylphx loses access; checkout is refused.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect` · permission `billing:write` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn disconnect(
+        &self,
+        request: DisconnectMerchantAccountRequest,
+    ) -> Result<MerchantAccount, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:disconnect",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/merchant_accounts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Updates the merchant account's own settings: the fields named in `update_mask`.
+    ///
+    /// `PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateMerchantAccountRequest,
+    ) -> Result<MerchantAccount, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .merchant_account
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/merchant_accounts/*",
+                "merchant_account.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.merchant_account)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 
@@ -6791,211 +7494,6 @@ impl<'a, T: crate::runtime::Transport> EntitlementGrantsCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.entitlement_grant)?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-}
-
-/// `merchant_accounts` of Sylphx Money: Resource type `money.sylphx.com/MerchantAccount`.
-pub struct MerchantAccountsCollection<'a, T> {
-    client: &'a crate::runtime::Client<T>,
-}
-
-impl<'a, T: crate::runtime::Transport> MerchantAccountsCollection<'a, T> {
-    /// Gets a merchant account.
-    ///
-    /// `GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}` · permission `billing:read` · effect `read`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
-    pub async fn get(
-        &self,
-        request: GetMerchantAccountRequest,
-    ) -> Result<MerchantAccount, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/merchant_accounts/*",
-                "name"
-            )?
-        );
-        let query = crate::runtime::Query::default();
-        let http = crate::runtime::HttpRequest {
-            method: "GET",
-            path,
-            query: query.0,
-            body: None,
-            mutation: false,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Lists merchant accounts.
-    ///
-    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts` · permission `billing:read` · effect `read`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
-    pub async fn list(
-        &self,
-        request: ListMerchantAccountsRequest,
-    ) -> Result<ListMerchantAccountsResponse, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}/merchant_accounts",
-            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("page_size", &request.page_size);
-        query.push("page_token", &request.page_token);
-        let http = crate::runtime::HttpRequest {
-            method: "GET",
-            path,
-            query: query.0,
-            body: None,
-            mutation: false,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Every page of [`Self::list`], collected.
-    pub async fn list_all(
-        &self,
-        mut request: ListMerchantAccountsRequest,
-    ) -> Result<Vec<MerchantAccount>, crate::runtime::Error> {
-        let mut items = Vec::new();
-        loop {
-            let page = self.list(request.clone()).await?;
-            items.extend(page.merchant_accounts);
-            if page.next_page_token.is_empty() {
-                return Ok(items);
-            }
-            request.page_token = page.next_page_token;
-        }
-    }
-
-    /// Starts connecting a Stripe account: returns the processor's authorisation
-    /// URL for an org owner to open, which the processor's redirect completes.
-    /// With a restricted key in the request the account connects at once
-    /// instead, and the connected merchant account comes back in the response.
-    ///
-    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect` · permission `billing:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
-    pub async fn connect(
-        &self,
-        request: ConnectMerchantAccountRequest,
-    ) -> Result<ConnectMerchantAccountResponse, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}/merchant_accounts:connect",
-            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
-        );
-        let query = crate::runtime::Query::default();
-        let http = crate::runtime::HttpRequest {
-            method: "POST",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body_without(&request, &["parent"])?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Reads the connected account back from the processor.
-    ///
-    /// `POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh` · permission `billing:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
-    pub async fn refresh(
-        &self,
-        request: RefreshMerchantAccountRequest,
-    ) -> Result<MerchantAccount, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}:refresh",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/merchant_accounts/*",
-                "name"
-            )?
-        );
-        let query = crate::runtime::Query::default();
-        let http = crate::runtime::HttpRequest {
-            method: "POST",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body_without(&request, &["name"])?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Disconnects the account: Sylphx loses access; checkout is refused.
-    ///
-    /// `POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect` · permission `billing:write` · effect `destructive`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
-    pub async fn disconnect(
-        &self,
-        request: DisconnectMerchantAccountRequest,
-    ) -> Result<MerchantAccount, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}:disconnect",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/merchant_accounts/*",
-                "name"
-            )?
-        );
-        let query = crate::runtime::Query::default();
-        let http = crate::runtime::HttpRequest {
-            method: "POST",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body_without(&request, &["name"])?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Updates the merchant account's own settings: the fields named in `update_mask`.
-    ///
-    /// `PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}` · permission `billing:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
-    pub async fn update(
-        &self,
-        request: UpdateMerchantAccountRequest,
-    ) -> Result<MerchantAccount, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                request
-                    .merchant_account
-                    .as_ref()
-                    .map(|v| v.name.as_str())
-                    .unwrap_or(""),
-                "orgs/*/projects/*/envs/*/merchant_accounts/*",
-                "merchant_account.name"
-            )?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("update_mask", &request.update_mask);
-        let http = crate::runtime::HttpRequest {
-            method: "PATCH",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body(&request.merchant_account)?),
             mutation: true,
             origin: None,
             effect_ids: false,

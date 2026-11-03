@@ -25731,6 +25731,448 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Gets one stored processor hint, with its safe hold reason."
+      },
+      "description": "Gets one stored processor hint, with its safe hold reason.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for GetProcessorEvent.",
+        "properties": {
+          "name": {
+            "description": "Event resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.processor_events.get",
+      "permission": "billing:processor_events:read",
+      "tool": "money_processor_events_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists stored processor hints; defaults to held events."
+      },
+      "description": "Lists stored processor hints; defaults to held events.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/processor_events",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for ListProcessorEvents.",
+        "properties": {
+          "filter": {
+            "description": "Only `state = \"held\"` (the default), `pending`, `applied`, or `dismissed`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Default 50, at most 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Token from the preceding page, bound to environment and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Environment resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.processor_events.list",
+      "permission": "billing:processor_events:read",
+      "tool": "money_processor_events_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required."
+      },
+      "description": "Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:retry",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for RetryProcessorEvent. Queues a held event once; no inline replay.",
+        "properties": {
+          "etag": {
+            "description": "The event's current meta.etag, required to avoid racing another decision.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Event resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          },
+          "reason": {
+            "description": "`operator_retry` or `permissions_restored`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "etag",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.processor_events.retry",
+      "permission": "billing:processor_events:write",
+      "tool": "money_processor_events_retry"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused."
+      },
+      "description": "Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:dismiss",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for DismissProcessorEvent. Only an owned test-mode payout\nobservation may be dismissed. Live, unknown-mode and payment events are\nrefused. The inbox row and audit remain; no payment or grant is changed.",
+        "properties": {
+          "etag": {
+            "description": "The event's current meta.etag.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Event resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          },
+          "reason": {
+            "description": "Must be `test_processor_observation`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "etag",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.processor_events.dismiss",
+      "permission": "billing:processor_events:write",
+      "tool": "money_processor_events_dismiss"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Checks Payouts and Balance read without modifying a merchant, its key or checkout."
+      },
+      "description": "Checks Payouts and Balance read without modifying a merchant, its key or checkout.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:checkProcessorPermissions",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe\ncalls, with the stored credential; no refresh, key rotation or state write.",
+        "properties": {
+          "name": {
+            "description": "Merchant account resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.check_processor_permissions",
+      "permission": "billing:read",
+      "tool": "money_merchant_accounts_check_processor_permissions"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a merchant account."
+      },
+      "description": "Gets a merchant account.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetMerchantAccount.",
+        "properties": {
+          "name": {
+            "description": "The name of the merchant account to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.get",
+      "permission": "billing:read",
+      "tool": "money_merchant_accounts_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists merchant accounts."
+      },
+      "description": "Lists merchant accounts.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListMerchantAccounts.",
+        "properties": {
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.list",
+      "permission": "billing:read",
+      "tool": "money_merchant_accounts_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Starts connecting a Stripe account: returns the processor's authorisation URL for an org owner to open, which the processor's redirect completes. With a restricted key in the request the account connects at once instead, and the connected merchant account comes back in the response."
+      },
+      "description": "Starts connecting a Stripe account: returns the processor's authorisation\nURL for an org owner to open, which the processor's redirect completes.\nWith a restricted key in the request the account connects at once\ninstead, and the connected merchant account comes back in the response.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ConnectMerchantAccount.",
+        "properties": {
+          "merchant_account_id": {
+            "description": "The merchant account id; default `default`.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment whose seller this becomes.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          },
+          "restricted_key": {
+            "description": "A Stripe restricted key (`rk_test_…` or `rk_live_…`); when set, no OAuth\nhappens: the account is read and connected at once. Write-only: sealed on\nwrite, never returned, never logged. A secret key (`sk_…`) is refused,\nbecause a restricted key can be limited to what payments need.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "return_url": {
+            "description": "Where the browser returns after the processor, with `status` and, on\nsuccess, `merchant_account` in the query. HTTPS only. Required for the\nOAuth connection; unused, and so optional, with `restricted_key`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.connect",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_connect"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Reads the connected account back from the processor."
+      },
+      "description": "Reads the connected account back from the processor.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of RefreshMerchantAccount.",
+        "properties": {
+          "name": {
+            "description": "The merchant account to read back.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.refresh",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_refresh"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Disconnects the account: Sylphx loses access; checkout is refused."
+      },
+      "description": "Disconnects the account: Sylphx loses access; checkout is refused.",
+      "effect": "destructive",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DisconnectMerchantAccount.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The merchant account to disconnect.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.disconnect",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_disconnect"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates the merchant account's own settings: the fields named in `update_mask`."
+      },
+      "description": "Updates the merchant account's own settings: the fields named in `update_mask`.",
+      "effect": "write",
+      "http": "PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateMerchantAccount.",
+        "properties": {
+          "merchant_account": {
+            "additionalProperties": false,
+            "description": "The merchant account with its new values; `name` selects it.",
+            "properties": {
+              "automatic_tax": {
+                "description": "Whether Stripe computes tax on this merchant's checkouts and usage\ninvoices (its own cost decision: Stripe Tax charges per transaction).\nOff by default. Writable through `UpdateMerchantAccount`\n(`update_mask = \"automatic_tax\"`). Turning it on is refused while a live\n`post_tax_settlement` credit grant exists.",
+                "type": "boolean"
+              },
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}`;\nthe environment's seller is `default`.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to change.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "merchant_account"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.merchant_accounts.update",
+      "permission": "billing:write",
+      "tool": "money_merchant_accounts_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets the environment's catalog."
       },
       "description": "Gets the environment's catalog.",
@@ -27435,260 +27877,6 @@
       "method_id": "money.entitlement_grants.create",
       "permission": "billing:test_grants:write",
       "tool": "money_entitlement_grants_create"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": false,
-        "readOnlyHint": true,
-        "title": "Gets a merchant account."
-      },
-      "description": "Gets a merchant account.",
-      "effect": "read",
-      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of GetMerchantAccount.",
-        "properties": {
-          "name": {
-            "description": "The name of the merchant account to get.",
-            "type": "string",
-            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "money.merchant_accounts.get",
-      "permission": "billing:read",
-      "tool": "money_merchant_accounts_get"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": false,
-        "readOnlyHint": true,
-        "title": "Lists merchant accounts."
-      },
-      "description": "Lists merchant accounts.",
-      "effect": "read",
-      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of ListMerchantAccounts.",
-        "properties": {
-          "page_size": {
-            "description": "At most this many; default 50, clamped to 1000.",
-            "format": "int32",
-            "type": "integer"
-          },
-          "page_token": {
-            "description": "`next_page_token` of the previous page.",
-            "type": "string"
-          },
-          "parent": {
-            "description": "The parent to list in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
-          }
-        },
-        "required": [
-          "parent"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "money.merchant_accounts.list",
-      "permission": "billing:read",
-      "tool": "money_merchant_accounts_list"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Starts connecting a Stripe account: returns the processor's authorisation URL for an org owner to open, which the processor's redirect completes. With a restricted key in the request the account connects at once instead, and the connected merchant account comes back in the response."
-      },
-      "description": "Starts connecting a Stripe account: returns the processor's authorisation\nURL for an org owner to open, which the processor's redirect completes.\nWith a restricted key in the request the account connects at once\ninstead, and the connected merchant account comes back in the response.",
-      "effect": "write",
-      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of ConnectMerchantAccount.",
-        "properties": {
-          "merchant_account_id": {
-            "description": "The merchant account id; default `default`.",
-            "type": "string"
-          },
-          "parent": {
-            "description": "The environment whose seller this becomes.",
-            "type": "string",
-            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
-          },
-          "restricted_key": {
-            "description": "A Stripe restricted key (`rk_test_…` or `rk_live_…`); when set, no OAuth\nhappens: the account is read and connected at once. Write-only: sealed on\nwrite, never returned, never logged. A secret key (`sk_…`) is refused,\nbecause a restricted key can be limited to what payments need.",
-            "type": "string",
-            "writeOnly": true,
-            "x-sylphx-sensitive": true
-          },
-          "return_url": {
-            "description": "Where the browser returns after the processor, with `status` and, on\nsuccess, `merchant_account` in the query. HTTPS only. Required for the\nOAuth connection; unused, and so optional, with `restricted_key`.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "parent"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "money.merchant_accounts.connect",
-      "permission": "billing:write",
-      "tool": "money_merchant_accounts_connect"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Reads the connected account back from the processor."
-      },
-      "description": "Reads the connected account back from the processor.",
-      "effect": "write",
-      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of RefreshMerchantAccount.",
-        "properties": {
-          "name": {
-            "description": "The merchant account to read back.",
-            "type": "string",
-            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "money.merchant_accounts.refresh",
-      "permission": "billing:write",
-      "tool": "money_merchant_accounts_refresh"
-    },
-    {
-      "annotations": {
-        "destructiveHint": true,
-        "idempotentHint": false,
-        "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Disconnects the account: Sylphx loses access; checkout is refused."
-      },
-      "description": "Disconnects the account: Sylphx loses access; checkout is refused.",
-      "effect": "destructive",
-      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of DisconnectMerchantAccount.",
-        "properties": {
-          "confirm": {
-            "const": true,
-            "description": "Must be true: this call destroys or revokes.",
-            "type": "boolean"
-          },
-          "name": {
-            "description": "The merchant account to disconnect.",
-            "type": "string",
-            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
-          }
-        },
-        "required": [
-          "name",
-          "confirm"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "money.merchant_accounts.disconnect",
-      "permission": "billing:write",
-      "tool": "money_merchant_accounts_disconnect"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Updates the merchant account's own settings: the fields named in `update_mask`."
-      },
-      "description": "Updates the merchant account's own settings: the fields named in `update_mask`.",
-      "effect": "write",
-      "http": "PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of UpdateMerchantAccount.",
-        "properties": {
-          "merchant_account": {
-            "additionalProperties": false,
-            "description": "The merchant account with its new values; `name` selects it.",
-            "properties": {
-              "automatic_tax": {
-                "description": "Whether Stripe computes tax on this merchant's checkouts and usage\ninvoices (its own cost decision: Stripe Tax charges per transaction).\nOff by default. Writable through `UpdateMerchantAccount`\n(`update_mask = \"automatic_tax\"`). Turning it on is refused while a live\n`post_tax_settlement` credit grant exists.",
-                "type": "boolean"
-              },
-              "meta": {
-                "additionalProperties": false,
-                "description": "Resource metadata.",
-                "properties": {
-                  "annotations": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, unindexed annotations.",
-                    "type": "object"
-                  },
-                  "display_name": {
-                    "description": "Caller-writable human-readable name.",
-                    "type": "string"
-                  },
-                  "labels": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
-                    "type": "object"
-                  }
-                },
-                "type": "object"
-              },
-              "name": {
-                "description": "`orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}`;\nthe environment's seller is `default`.",
-                "type": "string"
-              }
-            },
-            "type": "object"
-          },
-          "update_mask": {
-            "description": "The fields to change.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "merchant_account"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "money.merchant_accounts.update",
-      "permission": "billing:write",
-      "tool": "money_merchant_accounts_update"
     },
     {
       "annotations": {

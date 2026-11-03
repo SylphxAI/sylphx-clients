@@ -6,6 +6,13 @@
           "http": {
             "query_params": []
           },
+          "id": "money.merchant_accounts.check_processor_permissions",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "money.merchant_accounts.get",
           "kind": "get"
         },

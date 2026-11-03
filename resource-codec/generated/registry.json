@@ -77679,6 +77679,124 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe\ncalls, with the stored credential; no refresh, key rotation or state write.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Merchant account resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/MerchantAccount",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CheckMerchantAccountProcessorPermissionsRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "Response for CheckMerchantAccountProcessorPermissions.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Merchant account resource name.",
+          "filterable": false,
+          "name": "merchant_account",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "True for a live merchant.",
+          "filterable": false,
+          "name": "livemode",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "All probes, including unavailable results (not a false success).",
+          "filterable": false,
+          "name": "permissions",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.ProcessorReadPermission"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Probe completion time.",
+          "filterable": false,
+          "name": "check_time",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Fixed warnings; missing access does not stop checkout.",
+          "filterable": false,
+          "name": "warnings",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of CheckUsageStanding.",
       "fields": [
         {
@@ -80110,6 +80228,70 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "Request for DismissProcessorEvent. Only an owned test-mode payout\nobservation may be dismissed. Live, unknown-mode and payment events are\nrefused. The inbox row and audit remain; no payment or grant is changed.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Event resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/ProcessorEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The event's current meta.etag.",
+          "filterable": false,
+          "name": "etag",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Must be `test_processor_observation`.",
+          "filterable": false,
+          "name": "reason",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.DismissProcessorEventRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "An Entitlement Grant is one feature a subject holds, from one source: a\nsubscription, an order, a store purchase, or a manual grant. Money derives\nit; a client event never writes one.",
       "fields": [
         {
@@ -80889,6 +81071,32 @@
         }
       ],
       "name": "sylphx.money.v1.GetPortalSessionRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "Request for GetProcessorEvent.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Event resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/ProcessorEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.GetProcessorEventRequest",
       "package": "sylphx.money.v1"
     },
     {
@@ -83103,6 +83311,130 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "Request for ListProcessorEvents.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Environment resource name.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/ProcessorEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Default 50, at most 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Token from the preceding page, bound to environment and filter.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Only `state = \"held\"` (the default), `pending`, `applied`, or `dismissed`.",
+          "filterable": false,
+          "name": "filter",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ListProcessorEventsRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "Response for ListProcessorEvents.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Events ordered by received time and event id.",
+          "filterable": false,
+          "name": "processor_events",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.ProcessorEvent"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ListProcessorEventsResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of ListRevenueFacts.",
       "fields": [
         {
@@ -84572,6 +84904,63 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Payouts and Balance read probes. Missing access only delays bookkeeping;\nit never disconnects this account or prevents checkout.",
+          "filterable": false,
+          "name": "processor_read_permissions",
+          "number": 24,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.ProcessorReadPermission"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When these probes ran. Unset means not checked yet.",
+          "filterable": false,
+          "name": "processor_permissions_check_time",
+          "number": 25,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Fixed, actionable warnings; never Stripe response bodies or credentials.",
+          "filterable": false,
+          "name": "processor_warnings",
+          "number": 26,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.MerchantAccount",
@@ -84882,6 +85271,388 @@
         }
       ],
       "name": "sylphx.money.v1.Price",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "A stored Stripe hint. No payload, customer details, credential or raw error\nis returned. Recovery never creates a grant or writes a ledger entry: retry\nschedules the existing authenticated, idempotent application path.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "Name; the final segment is Stripe's event id.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable, server-derived id.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Metadata; meta.etag is required on recovery calls.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stripe account id, never the customer's identity.",
+          "filterable": false,
+          "name": "account_id",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stripe event type.",
+          "filterable": false,
+          "name": "event_type",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stripe object id (not a payload).",
+          "filterable": false,
+          "name": "object_id",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`pending`, `held`, `applied` or `dismissed`.",
+          "filterable": false,
+          "name": "state",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`processor_permission_denied`, `attempts_exhausted`, or empty.",
+          "filterable": false,
+          "name": "hold_reason",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Number of failed application attempts.",
+          "filterable": false,
+          "name": "attempts",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether the owning merchant is live. Read only when mode_known is true.",
+          "filterable": false,
+          "name": "livemode",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "False when the owning merchant cannot be resolved; never assumes test.",
+          "filterable": false,
+          "name": "mode_known",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Last audited recovery decision, if any. Full history is retained.",
+          "filterable": false,
+          "name": "last_recovery",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.ProcessorEventRecovery"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ProcessorEvent",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "An audited operator decision. No arbitrary free text or personal data.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable receipt identity, scoped to this event and revision.",
+          "filterable": false,
+          "name": "receipt_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`retry` or `dismiss`.",
+          "filterable": false,
+          "name": "action",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`operator_retry`, `permissions_restored`, or `test_processor_observation`.",
+          "filterable": false,
+          "name": "reason",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The verified caller's principal, never supplied by the caller.",
+          "filterable": false,
+          "name": "principal",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Commit's decision time.",
+          "filterable": false,
+          "name": "create_time",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ProcessorEventRecovery",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "One read capability; failure never disables taking payments.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`payouts` or `balance` (Stripe's Payouts and Balance read permissions).",
+          "filterable": false,
+          "name": "permission",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`granted`, `missing` (403), or `unavailable` (no conclusion).",
+          "filterable": false,
+          "name": "state",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ProcessorReadPermission",
       "package": "sylphx.money.v1"
     },
     {
@@ -85451,6 +86222,70 @@
         }
       ],
       "name": "sylphx.money.v1.RetireLicenceKeyRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "Request for RetryProcessorEvent. Queues a held event once; no inline replay.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Event resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/ProcessorEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The event's current meta.etag, required to avoid racing another decision.",
+          "filterable": false,
+          "name": "etag",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "`operator_retry` or `permissions_restored`.",
+          "filterable": false,
+          "name": "reason",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.RetryProcessorEventRequest",
       "package": "sylphx.money.v1"
     },
     {
@@ -138344,6 +139179,28 @@
       "type": "money.sylphx.com/PriceCatalog"
     },
     {
+      "collection": "processor_events",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "ProcessorEvent",
+      "message": "sylphx.money.v1.ProcessorEvent",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}",
+      "plural": "processorEvents",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "money",
+      "shape": "record",
+      "singular": "processorEvent",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "money.sylphx.com/ProcessorEvent"
+    },
+    {
       "collection": "revenue_facts",
       "controller": "",
       "deletion_protection": false,
@@ -159532,6 +160389,484 @@
             {
               "cancellable": false,
               "cli_verb": "",
+              "doc": "Gets one stored processor hint, with its safe hold reason.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}",
+                    "pattern": "orgs/*/projects/*/envs/*/processor_events/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/processor_events/*}"
+              },
+              "id": "money.processor_events.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:processor_events:read",
+              "proto": "sylphx.money.v1.MoneyService.GetProcessorEvent",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.GetProcessorEventRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ProcessorEvent",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists stored processor hints; defaults to held events.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "filter"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/processor_events"
+              },
+              "id": "money.processor_events.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.money.v1.ProcessorEvent",
+                "items_field": "processor_events"
+              },
+              "permission": "billing:processor_events:read",
+              "proto": "sylphx.money.v1.MoneyService.ListProcessorEvents",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ListProcessorEventsRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ListProcessorEventsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}",
+                    "pattern": "orgs/*/projects/*/envs/*/processor_events/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:retry"
+              },
+              "id": "money.processor_events.retry",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:processor_events:write",
+              "proto": "sylphx.money.v1.MoneyService.RetryProcessorEvent",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.RetryProcessorEventRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ProcessorEvent",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "retry"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}",
+                    "pattern": "orgs/*/projects/*/envs/*/processor_events/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:dismiss"
+              },
+              "id": "money.processor_events.dismiss",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:processor_events:write",
+              "proto": "sylphx.money.v1.MoneyService.DismissProcessorEvent",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.DismissProcessorEventRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ProcessorEvent",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "dismiss"
+            }
+          ],
+          "name": "processor_events",
+          "resource_type": "money.sylphx.com/ProcessorEvent"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Checks Payouts and Balance read without modifying a merchant, its key or checkout.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
+                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:checkProcessorPermissions"
+              },
+              "id": "money.merchant_accounts.check_processor_permissions",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:read",
+              "proto": "sylphx.money.v1.MoneyService.CheckMerchantAccountProcessorPermissions",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.CheckMerchantAccountProcessorPermissionsRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "check_processor_permissions"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Gets a merchant account.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
+                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}"
+              },
+              "id": "money.merchant_accounts.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:read",
+              "proto": "sylphx.money.v1.MoneyService.GetMerchantAccount",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.GetMerchantAccountRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.MerchantAccount",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists merchant accounts.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts"
+              },
+              "id": "money.merchant_accounts.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.money.v1.MerchantAccount",
+                "items_field": "merchant_accounts"
+              },
+              "permission": "billing:read",
+              "proto": "sylphx.money.v1.MoneyService.ListMerchantAccounts",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ListMerchantAccountsRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ListMerchantAccountsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Starts connecting a Stripe account: returns the processor's authorisation\nURL for an org owner to open, which the processor's redirect completes.\nWith a restricted key in the request the account connects at once\ninstead, and the connected merchant account comes back in the response.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect"
+              },
+              "id": "money.merchant_accounts.connect",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.ConnectMerchantAccount",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ConnectMerchantAccountRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ConnectMerchantAccountResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "connect"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Reads the connected account back from the processor.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
+                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh"
+              },
+              "id": "money.merchant_accounts.refresh",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.RefreshMerchantAccount",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.RefreshMerchantAccountRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.MerchantAccount",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "refresh"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Disconnects the account: Sylphx loses access; checkout is refused.",
+              "effect": "destructive",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
+                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect"
+              },
+              "id": "money.merchant_accounts.disconnect",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.DisconnectMerchantAccount",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.DisconnectMerchantAccountRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.MerchantAccount",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "disconnect"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Updates the merchant account's own settings: the fields named in `update_mask`.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNKNOWN_FIELD",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "merchant_account",
+                "method": "PATCH",
+                "path_params": [
+                  {
+                    "field": "merchant_account.name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
+                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
+                  }
+                ],
+                "query_params": [
+                  "update_mask"
+                ],
+                "template": "/v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}"
+              },
+              "id": "money.merchant_accounts.update",
+              "kind": "update",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.UpdateMerchantAccount",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.UpdateMerchantAccountRequest",
+              "resource_field": "merchant_account",
+              "response": "sylphx.money.v1.MerchantAccount",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "update"
+            }
+          ],
+          "name": "merchant_accounts",
+          "resource_type": "money.sylphx.com/MerchantAccount"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
               "doc": "Gets the environment's catalog.",
               "effect": "read",
               "errors": [
@@ -160642,264 +161977,6 @@
           ],
           "name": "entitlement_grants",
           "resource_type": "money.sylphx.com/EntitlementGrant"
-        },
-        {
-          "methods": [
-            {
-              "cancellable": false,
-              "cli_verb": "",
-              "doc": "Gets a merchant account.",
-              "effect": "read",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "RESOURCE_NOT_FOUND"
-              ],
-              "http": {
-                "body": null,
-                "method": "GET",
-                "path_params": [
-                  {
-                    "field": "name",
-                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
-                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
-                  }
-                ],
-                "query_params": [],
-                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}"
-              },
-              "id": "money.merchant_accounts.get",
-              "kind": "get",
-              "lro": null,
-              "mcp": "default",
-              "page": null,
-              "permission": "billing:read",
-              "proto": "sylphx.money.v1.MoneyService.GetMerchantAccount",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.money.v1.GetMerchantAccountRequest",
-              "resource_field": null,
-              "response": "sylphx.money.v1.MerchantAccount",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "get"
-            },
-            {
-              "cancellable": false,
-              "cli_verb": "",
-              "doc": "Lists merchant accounts.",
-              "effect": "read",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "INVALID_FIELD",
-                "PAGE_TOKEN_MISMATCH"
-              ],
-              "http": {
-                "body": null,
-                "method": "GET",
-                "path_params": [
-                  {
-                    "field": "parent",
-                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
-                    "pattern": "orgs/*/projects/*/envs/*"
-                  }
-                ],
-                "query_params": [
-                  "page_size",
-                  "page_token"
-                ],
-                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts"
-              },
-              "id": "money.merchant_accounts.list",
-              "kind": "list",
-              "lro": null,
-              "mcp": "default",
-              "page": {
-                "item": "sylphx.money.v1.MerchantAccount",
-                "items_field": "merchant_accounts"
-              },
-              "permission": "billing:read",
-              "proto": "sylphx.money.v1.MoneyService.ListMerchantAccounts",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.money.v1.ListMerchantAccountsRequest",
-              "resource_field": null,
-              "response": "sylphx.money.v1.ListMerchantAccountsResponse",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "list"
-            },
-            {
-              "cancellable": false,
-              "cli_verb": "",
-              "doc": "Starts connecting a Stripe account: returns the processor's authorisation\nURL for an org owner to open, which the processor's redirect completes.\nWith a restricted key in the request the account connects at once\ninstead, and the connected merchant account comes back in the response.",
-              "effect": "write",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "INVALID_FIELD",
-                "UNAVAILABLE"
-              ],
-              "http": {
-                "body": "*",
-                "method": "POST",
-                "path_params": [
-                  {
-                    "field": "parent",
-                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
-                    "pattern": "orgs/*/projects/*/envs/*"
-                  }
-                ],
-                "query_params": [],
-                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect"
-              },
-              "id": "money.merchant_accounts.connect",
-              "kind": "custom",
-              "lro": null,
-              "mcp": "default",
-              "page": null,
-              "permission": "billing:write",
-              "proto": "sylphx.money.v1.MoneyService.ConnectMerchantAccount",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.money.v1.ConnectMerchantAccountRequest",
-              "resource_field": null,
-              "response": "sylphx.money.v1.ConnectMerchantAccountResponse",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "connect"
-            },
-            {
-              "cancellable": false,
-              "cli_verb": "",
-              "doc": "Reads the connected account back from the processor.",
-              "effect": "write",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "RESOURCE_NOT_FOUND",
-                "UNAVAILABLE"
-              ],
-              "http": {
-                "body": "*",
-                "method": "POST",
-                "path_params": [
-                  {
-                    "field": "name",
-                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
-                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
-                  }
-                ],
-                "query_params": [],
-                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh"
-              },
-              "id": "money.merchant_accounts.refresh",
-              "kind": "custom",
-              "lro": null,
-              "mcp": "default",
-              "page": null,
-              "permission": "billing:write",
-              "proto": "sylphx.money.v1.MoneyService.RefreshMerchantAccount",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.money.v1.RefreshMerchantAccountRequest",
-              "resource_field": null,
-              "response": "sylphx.money.v1.MerchantAccount",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "refresh"
-            },
-            {
-              "cancellable": false,
-              "cli_verb": "",
-              "doc": "Disconnects the account: Sylphx loses access; checkout is refused.",
-              "effect": "destructive",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "RESOURCE_NOT_FOUND",
-                "UNAVAILABLE"
-              ],
-              "http": {
-                "body": "*",
-                "method": "POST",
-                "path_params": [
-                  {
-                    "field": "name",
-                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
-                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
-                  }
-                ],
-                "query_params": [],
-                "template": "/v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect"
-              },
-              "id": "money.merchant_accounts.disconnect",
-              "kind": "custom",
-              "lro": null,
-              "mcp": "default",
-              "page": null,
-              "permission": "billing:write",
-              "proto": "sylphx.money.v1.MoneyService.DisconnectMerchantAccount",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.money.v1.DisconnectMerchantAccountRequest",
-              "resource_field": null,
-              "response": "sylphx.money.v1.MerchantAccount",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "disconnect"
-            },
-            {
-              "cancellable": false,
-              "cli_verb": "",
-              "doc": "Updates the merchant account's own settings: the fields named in `update_mask`.",
-              "effect": "write",
-              "errors": [
-                "UNAUTHENTICATED",
-                "PERMISSION_DENIED",
-                "RESOURCE_NOT_FOUND",
-                "UNKNOWN_FIELD",
-                "INVALID_FIELD",
-                "INVALID_STATE",
-                "ETAG_MISMATCH",
-                "IDEMPOTENCY_KEY_REUSED",
-                "IDEMPOTENCY_IN_PROGRESS"
-              ],
-              "http": {
-                "body": "merchant_account",
-                "method": "PATCH",
-                "path_params": [
-                  {
-                    "field": "merchant_account.name",
-                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}",
-                    "pattern": "orgs/*/projects/*/envs/*/merchant_accounts/*"
-                  }
-                ],
-                "query_params": [
-                  "update_mask"
-                ],
-                "template": "/v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}"
-              },
-              "id": "money.merchant_accounts.update",
-              "kind": "update",
-              "lro": null,
-              "mcp": "default",
-              "page": null,
-              "permission": "billing:write",
-              "proto": "sylphx.money.v1.MoneyService.UpdateMerchantAccount",
-              "publishable_ok": false,
-              "rate_class": "default",
-              "request": "sylphx.money.v1.UpdateMerchantAccountRequest",
-              "resource_field": "merchant_account",
-              "response": "sylphx.money.v1.MerchantAccount",
-              "supports_validate_only": false,
-              "validate_only_unsupported": false,
-              "verb": "update"
-            }
-          ],
-          "name": "merchant_accounts",
-          "resource_type": "money.sylphx.com/MerchantAccount"
         },
         {
           "methods": [

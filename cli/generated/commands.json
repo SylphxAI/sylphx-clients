@@ -18548,6 +18548,305 @@
     {
       "collections": [
         {
+          "collection": "processor_events",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}",
+              "method": "money.processor_events.get",
+              "permission": "billing:processor_events:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}"
+              },
+              "summary": "Gets one stored processor hint, with its safe hold reason.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Default 50, at most 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Token from the preceding page, bound to environment and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "Only `state = \"held\"` (the default), `pending`, `applied`, or `dismissed`.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/processor_events",
+              "method": "money.processor_events.list",
+              "paginates": true,
+              "permission": "billing:processor_events:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists stored processor hints; defaults to held events.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "etag",
+                  "flag": "--etag",
+                  "required": true,
+                  "summary": "The event's current meta.etag, required to avoid racing another decision.",
+                  "type": "string"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "required": true,
+                  "summary": "`operator_retry` or `permissions_restored`.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:retry",
+              "method": "money.processor_events.retry",
+              "permission": "billing:processor_events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}"
+              },
+              "summary": "Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.",
+              "verb": "retry"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "etag",
+                  "flag": "--etag",
+                  "required": true,
+                  "summary": "The event's current meta.etag.",
+                  "type": "string"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "required": true,
+                  "summary": "Must be `test_processor_observation`.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/processor_events/*}:dismiss",
+              "method": "money.processor_events.dismiss",
+              "permission": "billing:processor_events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}"
+              },
+              "summary": "Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.",
+              "verb": "dismiss"
+            }
+          ],
+          "noun": "processor-events",
+          "resource_type": "money.sylphx.com/ProcessorEvent"
+        },
+        {
+          "collection": "merchant_accounts",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:checkProcessorPermissions",
+              "method": "money.merchant_accounts.check_processor_permissions",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
+              },
+              "summary": "Checks Payouts and Balance read without modifying a merchant, its key or checkout.",
+              "verb": "check-processor-permissions"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
+              "method": "money.merchant_accounts.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
+              },
+              "summary": "Gets a merchant account.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts",
+              "method": "money.merchant_accounts.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists merchant accounts.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "merchant_account_id",
+                  "flag": "--merchant-account-id",
+                  "summary": "The merchant account id; default `default`.",
+                  "type": "string"
+                },
+                {
+                  "field": "return_url",
+                  "flag": "--return-url",
+                  "summary": "Where the browser returns after the processor, with `status` and, on success, `merchant_account` in the query. HTTPS only. Required for the OAuth connection; unused, and so optional, with `restricted_key`.",
+                  "type": "string"
+                },
+                {
+                  "field": "restricted_key",
+                  "flag": "--restricted-key",
+                  "sensitive": true,
+                  "summary": "A Stripe restricted key (`rk_test_…` or `rk_live_…`); when set, no OAuth happens: the account is read and connected at once. Write-only: sealed on write, never returned, never logged. A secret key (`sk_…`) is refused, because a restricted key can be limited to what payments need.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect",
+              "method": "money.merchant_accounts.connect",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Starts connecting a Stripe account: returns the processor's authorisation URL for an org owner to open, which the processor's redirect completes. With a restricted key in the request the account connects at once instead, and the connected merchant account comes back in the response.",
+              "verb": "connect"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh",
+              "method": "money.merchant_accounts.refresh",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
+              },
+              "summary": "Reads the connected account back from the processor.",
+              "verb": "refresh"
+            },
+            {
+              "confirm": {
+                "prompt": true,
+                "skip_flag": "--yes"
+              },
+              "effect": "destructive",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect",
+              "method": "money.merchant_accounts.disconnect",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
+              },
+              "summary": "Disconnects the account: Sylphx loses access; checkout is refused.",
+              "verb": "disconnect"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "merchant_account.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "merchant_account.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "merchant_account.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "merchant_account.automatic_tax",
+                  "flag": "--automatic-tax",
+                  "summary": "Whether Stripe computes tax on this merchant's checkouts and usage invoices (its own cost decision: Stripe Tax charges per transaction). Off by default. Writable through `UpdateMerchantAccount` (`update_mask = \"automatic_tax\"`). Turning it on is refused while a live `post_tax_settlement` credit grant exists.",
+                  "type": "bool"
+                }
+              ],
+              "http": "PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
+              "method": "money.merchant_accounts.update",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "merchant_account.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
+              },
+              "resource_field": "merchant_account",
+              "sends_etag": true,
+              "summary": "Updates the merchant account's own settings: the fields named in `update_mask`.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            }
+          ],
+          "noun": "merchant-accounts",
+          "resource_type": "money.sylphx.com/MerchantAccount"
+        },
+        {
           "collection": "price_catalogs",
           "commands": [
             {
@@ -19704,172 +20003,6 @@
           ],
           "noun": "entitlement-grants",
           "resource_type": "money.sylphx.com/EntitlementGrant"
-        },
-        {
-          "collection": "merchant_accounts",
-          "commands": [
-            {
-              "effect": "read",
-              "flags": [],
-              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
-              "method": "money.merchant_accounts.get",
-              "permission": "billing:read",
-              "positional": {
-                "arg": "NAME",
-                "default_from_context": false,
-                "field": "name",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
-              },
-              "summary": "Gets a merchant account.",
-              "verb": "get"
-            },
-            {
-              "effect": "read",
-              "flags": [
-                {
-                  "field": "page_size",
-                  "flag": "--page-size",
-                  "summary": "At most this many; default 50, clamped to 1000.",
-                  "type": "int"
-                },
-                {
-                  "field": "page_token",
-                  "flag": "--page-token",
-                  "summary": "`next_page_token` of the previous page.",
-                  "type": "string"
-                }
-              ],
-              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts",
-              "method": "money.merchant_accounts.list",
-              "paginates": true,
-              "permission": "billing:read",
-              "positional": {
-                "arg": "PARENT",
-                "default_from_context": true,
-                "field": "parent",
-                "optional": true,
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
-              },
-              "summary": "Lists merchant accounts.",
-              "verb": "list"
-            },
-            {
-              "effect": "write",
-              "flags": [
-                {
-                  "field": "merchant_account_id",
-                  "flag": "--merchant-account-id",
-                  "summary": "The merchant account id; default `default`.",
-                  "type": "string"
-                },
-                {
-                  "field": "return_url",
-                  "flag": "--return-url",
-                  "summary": "Where the browser returns after the processor, with `status` and, on success, `merchant_account` in the query. HTTPS only. Required for the OAuth connection; unused, and so optional, with `restricted_key`.",
-                  "type": "string"
-                },
-                {
-                  "field": "restricted_key",
-                  "flag": "--restricted-key",
-                  "sensitive": true,
-                  "summary": "A Stripe restricted key (`rk_test_…` or `rk_live_…`); when set, no OAuth happens: the account is read and connected at once. Write-only: sealed on write, never returned, never logged. A secret key (`sk_…`) is refused, because a restricted key can be limited to what payments need.",
-                  "type": "string"
-                }
-              ],
-              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/merchant_accounts:connect",
-              "method": "money.merchant_accounts.connect",
-              "permission": "billing:write",
-              "positional": {
-                "arg": "NAME",
-                "default_from_context": false,
-                "field": "parent",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
-              },
-              "summary": "Starts connecting a Stripe account: returns the processor's authorisation URL for an org owner to open, which the processor's redirect completes. With a restricted key in the request the account connects at once instead, and the connected merchant account comes back in the response.",
-              "verb": "connect"
-            },
-            {
-              "effect": "write",
-              "flags": [],
-              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:refresh",
-              "method": "money.merchant_accounts.refresh",
-              "permission": "billing:write",
-              "positional": {
-                "arg": "NAME",
-                "default_from_context": false,
-                "field": "name",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
-              },
-              "summary": "Reads the connected account back from the processor.",
-              "verb": "refresh"
-            },
-            {
-              "confirm": {
-                "prompt": true,
-                "skip_flag": "--yes"
-              },
-              "effect": "destructive",
-              "flags": [],
-              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/merchant_accounts/*}:disconnect",
-              "method": "money.merchant_accounts.disconnect",
-              "permission": "billing:write",
-              "positional": {
-                "arg": "NAME",
-                "default_from_context": false,
-                "field": "name",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
-              },
-              "summary": "Disconnects the account: Sylphx loses access; checkout is refused.",
-              "verb": "disconnect"
-            },
-            {
-              "effect": "write",
-              "flags": [
-                {
-                  "field": "merchant_account.meta.labels",
-                  "flag": "--meta.labels",
-                  "repeated": true,
-                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
-                  "type": "key=value"
-                },
-                {
-                  "field": "merchant_account.meta.annotations",
-                  "flag": "--meta.annotations",
-                  "repeated": true,
-                  "summary": "Caller-writable, unindexed annotations.",
-                  "type": "key=value"
-                },
-                {
-                  "field": "merchant_account.meta.display_name",
-                  "flag": "--meta.display-name",
-                  "summary": "Caller-writable human-readable name.",
-                  "type": "string"
-                },
-                {
-                  "field": "merchant_account.automatic_tax",
-                  "flag": "--automatic-tax",
-                  "summary": "Whether Stripe computes tax on this merchant's checkouts and usage invoices (its own cost decision: Stripe Tax charges per transaction). Off by default. Writable through `UpdateMerchantAccount` (`update_mask = \"automatic_tax\"`). Turning it on is refused while a live `post_tax_settlement` credit grant exists.",
-                  "type": "bool"
-                }
-              ],
-              "http": "PATCH /v1/{merchant_account.name=orgs/*/projects/*/envs/*/merchant_accounts/*}",
-              "method": "money.merchant_accounts.update",
-              "permission": "billing:write",
-              "positional": {
-                "arg": "NAME",
-                "default_from_context": false,
-                "field": "merchant_account.name",
-                "pattern": "orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}"
-              },
-              "resource_field": "merchant_account",
-              "sends_etag": true,
-              "summary": "Updates the merchant account's own settings: the fields named in `update_mask`.",
-              "update_mask": "from-flags",
-              "verb": "update"
-            }
-          ],
-          "noun": "merchant-accounts",
-          "resource_type": "money.sylphx.com/MerchantAccount"
         },
         {
           "collection": "checkout_sessions",

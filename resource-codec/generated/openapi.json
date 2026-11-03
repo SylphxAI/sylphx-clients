@@ -25558,6 +25558,53 @@
         },
         "type": "object"
       },
+      "sylphx.money.v1.CheckMerchantAccountProcessorPermissionsRequest": {
+        "description": "Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe\ncalls, with the stored credential; no refresh, key rotation or state write.",
+        "properties": {
+          "name": {
+            "description": "Merchant account resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/MerchantAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse": {
+        "description": "Response for CheckMerchantAccountProcessorPermissions.",
+        "properties": {
+          "check_time": {
+            "description": "Probe completion time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "livemode": {
+            "description": "True for a live merchant.",
+            "type": "boolean"
+          },
+          "merchant_account": {
+            "description": "Merchant account resource name.",
+            "type": "string"
+          },
+          "permissions": {
+            "description": "All probes, including unavailable results (not a false success).",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.ProcessorReadPermission"
+            },
+            "type": "array"
+          },
+          "warnings": {
+            "description": "Fixed warnings; missing access does not stop checkout.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.CheckUsageStandingRequest": {
         "description": "The request of CheckUsageStanding.",
         "properties": {
@@ -26336,6 +26383,30 @@
         ],
         "type": "object"
       },
+      "sylphx.money.v1.DismissProcessorEventRequest": {
+        "description": "Request for DismissProcessorEvent. Only an owned test-mode payout\nobservation may be dismissed. Live, unknown-mode and payment events are\nrefused. The inbox row and audit remain; no payment or grant is changed.",
+        "properties": {
+          "etag": {
+            "description": "The event's current meta.etag.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Event resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          },
+          "reason": {
+            "description": "Must be `test_processor_observation`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "etag",
+          "reason"
+        ],
+        "type": "object"
+      },
       "sylphx.money.v1.EntitlementGrant": {
         "description": "An Entitlement Grant is one feature a subject holds, from one source: a\nsubscription, an order, a store purchase, or a manual grant. Money derives\nit; a client event never writes one.",
         "properties": {
@@ -26623,6 +26694,20 @@
             "description": "The name of the portal session to get.",
             "type": "string",
             "x-sylphx-resource-reference": "money.sylphx.com/PortalSession"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.GetProcessorEventRequest": {
+        "description": "Request for GetProcessorEvent.",
+        "properties": {
+          "name": {
+            "description": "Event resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
           }
         },
         "required": [
@@ -27425,6 +27510,50 @@
         },
         "type": "object"
       },
+      "sylphx.money.v1.ListProcessorEventsRequest": {
+        "description": "Request for ListProcessorEvents.",
+        "properties": {
+          "filter": {
+            "description": "Only `state = \"held\"` (the default), `pending`, `applied`, or `dismissed`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Default 50, at most 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Token from the preceding page, bound to environment and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Environment resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.ListProcessorEventsResponse": {
+        "description": "Response for ListProcessorEvents.",
+        "properties": {
+          "next_page_token": {
+            "description": "Empty on the last page.",
+            "type": "string"
+          },
+          "processor_events": {
+            "description": "Events ordered by received time and event id.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.ProcessorEvent"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.ListRevenueFactsRequest": {
         "description": "The request of ListRevenueFacts.",
         "properties": {
@@ -27908,6 +28037,28 @@
             "readOnly": true,
             "type": "string"
           },
+          "processor_permissions_check_time": {
+            "description": "When these probes ran. Unset means not checked yet.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processor_read_permissions": {
+            "description": "Payouts and Balance read probes. Missing access only delays bookkeeping;\nit never disconnects this account or prevents checkout.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.ProcessorReadPermission"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "processor_warnings": {
+            "description": "Fixed, actionable warnings; never Stripe response bodies or credentials.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
           "refresh_time": {
             "description": "When the processor last confirmed these fields.",
             "format": "date-time",
@@ -28022,6 +28173,120 @@
           "key",
           "unit_amounts"
         ],
+        "type": "object"
+      },
+      "sylphx.money.v1.ProcessorEvent": {
+        "description": "A stored Stripe hint. No payload, customer details, credential or raw error\nis returned. Recovery never creates a grant or writes a ledger entry: retry\nschedules the existing authenticated, idempotent application path.",
+        "properties": {
+          "account_id": {
+            "description": "Stripe account id, never the customer's identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempts": {
+            "description": "Number of failed application attempts.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "event_type": {
+            "description": "Stripe event type.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "hold_reason": {
+            "description": "`processor_permission_denied`, `attempts_exhausted`, or empty.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "last_recovery": {
+            "$ref": "#/components/schemas/sylphx.money.v1.ProcessorEventRecovery",
+            "description": "Last audited recovery decision, if any. Full history is retained.",
+            "readOnly": true
+          },
+          "livemode": {
+            "description": "Whether the owning merchant is live. Read only when mode_known is true.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Metadata; meta.etag is required on recovery calls.",
+            "readOnly": true
+          },
+          "mode_known": {
+            "description": "False when the owning merchant cannot be resolved; never assumes test.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Name; the final segment is Stripe's event id.",
+            "type": "string"
+          },
+          "object_id": {
+            "description": "Stripe object id (not a payload).",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "`pending`, `held`, `applied` or `dismissed`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable, server-derived id.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.ProcessorEventRecovery": {
+        "description": "An audited operator decision. No arbitrary free text or personal data.",
+        "properties": {
+          "action": {
+            "description": "`retry` or `dismiss`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "create_time": {
+            "description": "Commit's decision time.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "principal": {
+            "description": "The verified caller's principal, never supplied by the caller.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "reason": {
+            "description": "`operator_retry`, `permissions_restored`, or `test_processor_observation`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "receipt_id": {
+            "description": "Stable receipt identity, scoped to this event and revision.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.ProcessorReadPermission": {
+        "description": "One read capability; failure never disables taking payments.",
+        "properties": {
+          "permission": {
+            "description": "`payouts` or `balance` (Stripe's Payouts and Balance read permissions).",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "`granted`, `missing` (403), or `unavailable` (no conclusion).",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.money.v1.Product": {
@@ -28241,6 +28506,30 @@
         },
         "required": [
           "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.RetryProcessorEventRequest": {
+        "description": "Request for RetryProcessorEvent. Queues a held event once; no inline replay.",
+        "properties": {
+          "etag": {
+            "description": "The event's current meta.etag, required to avoid racing another decision.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Event resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/ProcessorEvent"
+          },
+          "reason": {
+            "description": "`operator_retry` or `permissions_restored`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "etag",
+          "reason"
         ],
         "type": "object"
       },
@@ -93919,6 +94208,90 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}:checkProcessorPermissions": {
+      "get": {
+        "description": "Checks Payouts and Balance read without modifying a merchant, its key or checkout.",
+        "operationId": "money_merchant_accounts_check_processor_permissions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "merchant_account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Checks Payouts and Balance read without modifying a merchant, its key or checkout.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "money.merchant_accounts.check_processor_permissions",
+        "x-sylphx-permission": "billing:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/merchant_accounts/{merchant_account}:disconnect": {
       "post": {
         "description": "Disconnects the account: Sylphx loses access; checkout is refused.",
@@ -99868,6 +100241,435 @@
         "x-sylphx-method": "network.private_links.update",
         "x-sylphx-permission": "network:write",
         "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/processor_events": {
+      "get": {
+        "description": "Lists stored processor hints; defaults to held events.",
+        "operationId": "money_processor_events_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default 50, at most 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Token from the preceding page, bound to environment and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only `state = \"held\"` (the default), `pending`, `applied`, or `dismissed`.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.ListProcessorEventsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists stored processor hints; defaults to held events.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "money.processor_events.list",
+        "x-sylphx-permission": "billing:processor_events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}": {
+      "get": {
+        "description": "Gets one stored processor hint, with its safe hold reason.",
+        "operationId": "money_processor_events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_event",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.ProcessorEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one stored processor hint, with its safe hold reason.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "money.processor_events.get",
+        "x-sylphx-permission": "billing:processor_events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}:dismiss": {
+      "post": {
+        "description": "Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.",
+        "operationId": "money_processor_events_dismiss",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_event",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "etag": {
+                    "description": "The event's current meta.etag.",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "Must be `test_processor_observation`.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "etag",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.ProcessorEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "ETAG_MISMATCH",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-sylphx-method": "money.processor_events.dismiss",
+        "x-sylphx-permission": "billing:processor_events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}:retry": {
+      "post": {
+        "description": "Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.",
+        "operationId": "money_processor_events_retry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "processor_event",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "etag": {
+                    "description": "The event's current meta.etag, required to avoid racing another decision.",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "`operator_retry` or `permissions_restored`.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "etag",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.ProcessorEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "ETAG_MISMATCH",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-sylphx-method": "money.processor_events.retry",
+        "x-sylphx-permission": "billing:processor_events:write",
         "x-sylphx-stage": "preview"
       }
     },

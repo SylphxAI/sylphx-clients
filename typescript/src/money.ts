@@ -204,6 +204,29 @@ export interface CheckEntitlementResponse {
 	source?: string
 }
 
+/**
+ * Request for CheckMerchantAccountProcessorPermissions. Read-only Stripe
+ * calls, with the stored credential; no refresh, key rotation or state write.
+ */
+export interface CheckMerchantAccountProcessorPermissionsRequest {
+	/** Merchant account resource name. */
+	name: string
+}
+
+/** Response for CheckMerchantAccountProcessorPermissions. */
+export interface CheckMerchantAccountProcessorPermissionsResponse {
+	/** Merchant account resource name. */
+	merchantAccount?: string
+	/** True for a live merchant. */
+	livemode?: boolean
+	/** All probes, including unavailable results (not a false success). */
+	permissions?: ProcessorReadPermission[]
+	/** Probe completion time. */
+	checkTime?: string
+	/** Fixed warnings; missing access does not stop checkout. */
+	warnings?: string[]
+}
+
 /** The request of CheckUsageStanding. */
 export interface CheckUsageStandingRequest {
 	/** The environment. */
@@ -665,6 +688,20 @@ export interface DisconnectMerchantAccountRequest {
 }
 
 /**
+ * Request for DismissProcessorEvent. Only an owned test-mode payout
+ * observation may be dismissed. Live, unknown-mode and payment events are
+ * refused. The inbox row and audit remain; no payment or grant is changed.
+ */
+export interface DismissProcessorEventRequest {
+	/** Event resource name. */
+	name: string
+	/** The event's current meta.etag. */
+	etag: string
+	/** Must be `test_processor_observation`. */
+	reason: string
+}
+
+/**
  * An Entitlement Grant is one feature a subject holds, from one source: a
  * subscription, an order, a store purchase, or a manual grant. Money derives
  * it; a client event never writes one.
@@ -815,6 +852,12 @@ export interface GetMerchantAccountRequest {
 /** The request of GetPortalSession. */
 export interface GetPortalSessionRequest {
 	/** The name of the portal session to get. */
+	name: string
+}
+
+/** Request for GetProcessorEvent. */
+export interface GetProcessorEventRequest {
+	/** Event resource name. */
 	name: string
 }
 
@@ -1227,6 +1270,26 @@ export interface ListMerchantAccountsResponse {
 	nextPageToken?: string
 }
 
+/** Request for ListProcessorEvents. */
+export interface ListProcessorEventsRequest {
+	/** Environment resource name. */
+	parent: string
+	/** Default 50, at most 1000. */
+	pageSize?: number
+	/** Token from the preceding page, bound to environment and filter. */
+	pageToken?: string
+	/** Only `state = "held"` (the default), `pending`, `applied`, or `dismissed`. */
+	filter?: string
+}
+
+/** Response for ListProcessorEvents. */
+export interface ListProcessorEventsResponse {
+	/** Events ordered by received time and event id. */
+	processorEvents?: ProcessorEvent[]
+	/** Empty on the last page. */
+	nextPageToken?: string
+}
+
 /** The request of ListRevenueFacts. */
 export interface ListRevenueFactsRequest {
 	/** The org: `orgs/{org}`. */
@@ -1478,6 +1541,15 @@ export interface MerchantAccount {
 	 * `post_tax_settlement` credit grant exists.
 	 */
 	automaticTax?: boolean
+	/**
+	 * Payouts and Balance read probes. Missing access only delays bookkeeping;
+	 * it never disconnects this account or prevents checkout.
+	 */
+	readonly processorReadPermissions?: ProcessorReadPermission[]
+	/** When these probes ran. Unset means not checked yet. */
+	readonly processorPermissionsCheckTime?: string
+	/** Fixed, actionable warnings; never Stripe response bodies or credentials. */
+	readonly processorWarnings?: string[]
 }
 
 /**
@@ -1540,6 +1612,60 @@ export interface Price {
 	 * Store introductory offers are configured and enforced by the store.
 	 */
 	introductoryUnitAmounts?: Record<string, string>
+}
+
+/**
+ * A stored Stripe hint. No payload, customer details, credential or raw error
+ * is returned. Recovery never creates a grant or writes a ledger entry: retry
+ * schedules the existing authenticated, idempotent application path.
+ */
+export interface ProcessorEvent {
+	/** Name; the final segment is Stripe's event id. */
+	name?: string
+	/** Stable, server-derived id. */
+	readonly uid?: string
+	/** Metadata; meta.etag is required on recovery calls. */
+	readonly meta?: common.ResourceMeta
+	/** Stripe account id, never the customer's identity. */
+	readonly accountId?: string
+	/** Stripe event type. */
+	readonly eventType?: string
+	/** Stripe object id (not a payload). */
+	readonly objectId?: string
+	/** `pending`, `held`, `applied` or `dismissed`. */
+	readonly state?: string
+	/** `processor_permission_denied`, `attempts_exhausted`, or empty. */
+	readonly holdReason?: string
+	/** Number of failed application attempts. */
+	readonly attempts?: number
+	/** Whether the owning merchant is live. Read only when mode_known is true. */
+	readonly livemode?: boolean
+	/** False when the owning merchant cannot be resolved; never assumes test. */
+	readonly modeKnown?: boolean
+	/** Last audited recovery decision, if any. Full history is retained. */
+	readonly lastRecovery?: ProcessorEventRecovery
+}
+
+/** An audited operator decision. No arbitrary free text or personal data. */
+export interface ProcessorEventRecovery {
+	/** Stable receipt identity, scoped to this event and revision. */
+	readonly receiptId?: string
+	/** `retry` or `dismiss`. */
+	readonly action?: string
+	/** `operator_retry`, `permissions_restored`, or `test_processor_observation`. */
+	readonly reason?: string
+	/** The verified caller's principal, never supplied by the caller. */
+	readonly principal?: string
+	/** Commit's decision time. */
+	readonly createTime?: string
+}
+
+/** One read capability; failure never disables taking payments. */
+export interface ProcessorReadPermission {
+	/** `payouts` or `balance` (Stripe's Payouts and Balance read permissions). */
+	readonly permission?: string
+	/** `granted`, `missing` (403), or `unavailable` (no conclusion). */
+	readonly state?: string
 }
 
 /** A Product is one thing sold, with its prices and the features it grants. */
@@ -1644,6 +1770,16 @@ export interface ResumeCustomerSubscriptionRequest {
 export interface RetireLicenceKeyRequest {
 	/** The key to retire. */
 	name: string
+}
+
+/** Request for RetryProcessorEvent. Queues a held event once; no inline replay. */
+export interface RetryProcessorEventRequest {
+	/** Event resource name. */
+	name: string
+	/** The event's current meta.etag, required to avoid racing another decision. */
+	etag: string
+	/** `operator_retry` or `permissions_restored`. */
+	reason: string
 }
 
 /** One day or month of a RevenueSummary. */
@@ -2675,6 +2811,12 @@ runtime.registerSchemas({
 		['entitlementGrant', 'entitlement_grant'],
 		['expireTime', 'expire_time'],
 	],
+	'sylphx.money.v1.CheckMerchantAccountProcessorPermissionsRequest': [],
+	'sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse': [
+		['merchantAccount', 'merchant_account'],
+		['permissions', 'permissions', 'sylphx.money.v1.ProcessorReadPermission'],
+		['checkTime', 'check_time'],
+	],
 	'sylphx.money.v1.CheckUsageStandingRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
 		['subjectProof', 'subject_proof'],
@@ -2800,6 +2942,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.money.v1.DeleteStoreConnectionRequest': [],
 	'sylphx.money.v1.DisconnectMerchantAccountRequest': [],
+	'sylphx.money.v1.DismissProcessorEventRequest': [],
 	'sylphx.money.v1.EntitlementGrant': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -2829,6 +2972,7 @@ runtime.registerSchemas({
 	'sylphx.money.v1.GetLicenceKeyRequest': [],
 	'sylphx.money.v1.GetMerchantAccountRequest': [],
 	'sylphx.money.v1.GetPortalSessionRequest': [],
+	'sylphx.money.v1.GetProcessorEventRequest': [],
 	'sylphx.money.v1.GetRevenueSourceRequest': [],
 	'sylphx.money.v1.GetRevenueSummaryRequest': [
 		['startDay', 'start_day'],
@@ -2944,6 +3088,14 @@ runtime.registerSchemas({
 		['merchantAccounts', 'merchant_accounts', 'sylphx.money.v1.MerchantAccount'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.money.v1.ListProcessorEventsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.money.v1.ListProcessorEventsResponse': [
+		['processorEvents', 'processor_events', 'sylphx.money.v1.ProcessorEvent'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.money.v1.ListRevenueFactsRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -3034,6 +3186,9 @@ runtime.registerSchemas({
 		['defaultCurrencyCode', 'default_currency_code'],
 		['refreshTime', 'refresh_time'],
 		['automaticTax', 'automatic_tax'],
+		['processorReadPermissions', 'processor_read_permissions', 'sylphx.money.v1.ProcessorReadPermission'],
+		['processorPermissionsCheckTime', 'processor_permissions_check_time'],
+		['processorWarnings', 'processor_warnings'],
 	],
 	'sylphx.money.v1.PortalSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3049,6 +3204,20 @@ runtime.registerSchemas({
 		['defaultCurrency', 'default_currency'],
 		['introductoryUnitAmounts', 'introductory_unit_amounts', undefined, 'map'],
 	],
+	'sylphx.money.v1.ProcessorEvent': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['accountId', 'account_id'],
+		['eventType', 'event_type'],
+		['objectId', 'object_id'],
+		['holdReason', 'hold_reason'],
+		['modeKnown', 'mode_known'],
+		['lastRecovery', 'last_recovery', 'sylphx.money.v1.ProcessorEventRecovery'],
+	],
+	'sylphx.money.v1.ProcessorEventRecovery': [
+		['receiptId', 'receipt_id'],
+		['createTime', 'create_time'],
+	],
+	'sylphx.money.v1.ProcessorReadPermission': [],
 	'sylphx.money.v1.Product': [
 		['displayName', 'display_name'],
 		['features', 'features', undefined, 'map'],
@@ -3075,6 +3244,7 @@ runtime.registerSchemas({
 	'sylphx.money.v1.ReleaseUsageReservationRequest': [],
 	'sylphx.money.v1.ResumeCustomerSubscriptionRequest': [],
 	'sylphx.money.v1.RetireLicenceKeyRequest': [],
+	'sylphx.money.v1.RetryProcessorEventRequest': [],
 	'sylphx.money.v1.RevenueBucket': [
 		['startDay', 'start_day'],
 		['unconvertedCount', 'unconverted_count'],
@@ -3352,6 +3522,10 @@ runtime.registerSchemas({
  * Namespace of Sylphx Money on `Sylphx`.
  */
 export class MoneyApi {
+	/** The `processor_events` collection. */
+	readonly processorEvents: ProcessorEventsCollection
+	/** The `merchant_accounts` collection. */
+	readonly merchantAccounts: MerchantAccountsCollection
 	/** The `price_catalogs` collection. */
 	readonly priceCatalogs: PriceCatalogsCollection
 	/** The `checkout_policies` collection. */
@@ -3364,8 +3538,6 @@ export class MoneyApi {
 	readonly customerSubscriptions: CustomerSubscriptionsCollection
 	/** The `entitlement_grants` collection. */
 	readonly entitlementGrants: EntitlementGrantsCollection
-	/** The `merchant_accounts` collection. */
-	readonly merchantAccounts: MerchantAccountsCollection
 	/** The `checkout_sessions` collection. */
 	readonly checkoutSessions: CheckoutSessionsCollection
 	/** The `tax_threshold_statuses` collection. */
@@ -3402,13 +3574,14 @@ export class MoneyApi {
 	readonly exchangeRates: ExchangeRatesCollection
 
 	constructor(client: runtime.Client) {
+		this.processorEvents = new ProcessorEventsCollection(client)
+		this.merchantAccounts = new MerchantAccountsCollection(client)
 		this.priceCatalogs = new PriceCatalogsCollection(client)
 		this.checkoutPolicies = new CheckoutPoliciesCollection(client)
 		this.storeConnections = new StoreConnectionsCollection(client)
 		this.storePurchases = new StorePurchasesCollection(client)
 		this.customerSubscriptions = new CustomerSubscriptionsCollection(client)
 		this.entitlementGrants = new EntitlementGrantsCollection(client)
-		this.merchantAccounts = new MerchantAccountsCollection(client)
 		this.checkoutSessions = new CheckoutSessionsCollection(client)
 		this.taxThresholdStatuses = new TaxThresholdStatusesCollection(client)
 		this.portalSessions = new PortalSessionsCollection(client)
@@ -3426,6 +3599,240 @@ export class MoneyApi {
 		this.revenue = new RevenueCollection(client)
 		this.revenueFacts = new RevenueFactsCollection(client)
 		this.exchangeRates = new ExchangeRatesCollection(client)
+	}
+}
+
+/** `processor_events` of Sylphx Money: Resource type `money.sylphx.com/ProcessorEvent`. */
+export class ProcessorEventsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one stored processor hint, with its safe hold reason.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/processor_events/*}` · permission `billing:processor_events:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetProcessorEventRequest): Promise<ProcessorEvent> {
+		return this.client.call<ProcessorEvent>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/processor_events/*', 'name')}`,
+			responseType: 'sylphx.money.v1.ProcessorEvent',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists stored processor hints; defaults to held events.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/processor_events` · permission `billing:processor_events:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListProcessorEventsRequest): Promise<ListProcessorEventsResponse> {
+		return this.client.call<ListProcessorEventsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/processor_events`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter },
+			responseType: 'sylphx.money.v1.ListProcessorEventsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListProcessorEventsRequest): AsyncGenerator<ProcessorEvent> {
+		let next: ListProcessorEventsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.processorEvents ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Schedules a held event through the existing idempotent application path. The decision is audited; an etag is required.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/processor_events/*}:retry` · permission `billing:processor_events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`.
+	 */
+	async retry(request: RetryProcessorEventRequest): Promise<ProcessorEvent> {
+		return this.client.call<ProcessorEvent>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/processor_events/*', 'name')}:retry`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.RetryProcessorEventRequest',
+			responseType: 'sylphx.money.v1.ProcessorEvent',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Dismisses only a held test-mode payout observation, retaining the row and audit. Live, unknown-mode and payment events are refused.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/processor_events/*}:dismiss` · permission `billing:processor_events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`.
+	 */
+	async dismiss(request: DismissProcessorEventRequest): Promise<ProcessorEvent> {
+		return this.client.call<ProcessorEvent>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/processor_events/*', 'name')}:dismiss`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.DismissProcessorEventRequest',
+			responseType: 'sylphx.money.v1.ProcessorEvent',
+			mutation: true,
+		})
+	}
+}
+
+/** `merchant_accounts` of Sylphx Money: Resource type `money.sylphx.com/MerchantAccount`. */
+export class MerchantAccountsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Checks Payouts and Balance read without modifying a merchant, its key or checkout.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}:checkProcessorPermissions` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async checkProcessorPermissions(request: CheckMerchantAccountProcessorPermissionsRequest): Promise<CheckMerchantAccountProcessorPermissionsResponse> {
+		return this.client.call<CheckMerchantAccountProcessorPermissionsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}:checkProcessorPermissions`,
+			responseType: 'sylphx.money.v1.CheckMerchantAccountProcessorPermissionsResponse',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Gets a merchant account.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetMerchantAccountRequest): Promise<MerchantAccount> {
+		return this.client.call<MerchantAccount>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}`,
+			responseType: 'sylphx.money.v1.MerchantAccount',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists merchant accounts.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/merchant_accounts` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListMerchantAccountsRequest): Promise<ListMerchantAccountsResponse> {
+		return this.client.call<ListMerchantAccountsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/merchant_accounts`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.money.v1.ListMerchantAccountsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListMerchantAccountsRequest): AsyncGenerator<MerchantAccount> {
+		let next: ListMerchantAccountsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.merchantAccounts ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Starts connecting a Stripe account: returns the processor's authorisation
+	 * URL for an org owner to open, which the processor's redirect completes.
+	 * With a restricted key in the request the account connects at once
+	 * instead, and the connected merchant account comes back in the response.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/merchant_accounts:connect` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async connect(request: ConnectMerchantAccountRequest): Promise<ConnectMerchantAccountResponse> {
+		return this.client.call<ConnectMerchantAccountResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/merchant_accounts:connect`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.money.v1.ConnectMerchantAccountRequest',
+			responseType: 'sylphx.money.v1.ConnectMerchantAccountResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Reads the connected account back from the processor.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}:refresh` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async refresh(request: RefreshMerchantAccountRequest): Promise<MerchantAccount> {
+		return this.client.call<MerchantAccount>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}:refresh`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.RefreshMerchantAccountRequest',
+			responseType: 'sylphx.money.v1.MerchantAccount',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Disconnects the account: Sylphx loses access; checkout is refused.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}:disconnect` · permission `billing:write` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async disconnect(request: DisconnectMerchantAccountRequest): Promise<MerchantAccount> {
+		return this.client.call<MerchantAccount>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}:disconnect`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.DisconnectMerchantAccountRequest',
+			responseType: 'sylphx.money.v1.MerchantAccount',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Updates the merchant account's own settings: the fields named in `update_mask`.
+	 *
+	 * `PATCH /v1/{merchant_account.name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateMerchantAccountRequest): Promise<MerchantAccount> {
+		return this.client.call<MerchantAccount>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.merchantAccount?.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'merchant_account.name')}`,
+			query: { update_mask: request.updateMask },
+			body: request.merchantAccount ?? {},
+			bodyType: 'sylphx.money.v1.MerchantAccount',
+			responseType: 'sylphx.money.v1.MerchantAccount',
+			mutation: true,
+		})
 	}
 }
 
@@ -3985,135 +4392,6 @@ export class EntitlementGrantsCollection {
 			body: request.entitlementGrant ?? {},
 			bodyType: 'sylphx.money.v1.EntitlementGrant',
 			responseType: 'sylphx.money.v1.EntitlementGrant',
-			mutation: true,
-		})
-	}
-}
-
-/** `merchant_accounts` of Sylphx Money: Resource type `money.sylphx.com/MerchantAccount`. */
-export class MerchantAccountsCollection {
-	private readonly client: runtime.Client
-
-	constructor(client: runtime.Client) {
-		this.client = client
-	}
-
-	/**
-	 * Gets a merchant account.
-	 *
-	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}` · permission `billing:read` · effect `read`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
-	 */
-	async get(request: GetMerchantAccountRequest): Promise<MerchantAccount> {
-		return this.client.call<MerchantAccount>({
-			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}`,
-			responseType: 'sylphx.money.v1.MerchantAccount',
-			mutation: false,
-		})
-	}
-
-	/**
-	 * Lists merchant accounts.
-	 *
-	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/merchant_accounts` · permission `billing:read` · effect `read`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
-	 */
-	async list(request: ListMerchantAccountsRequest): Promise<ListMerchantAccountsResponse> {
-		return this.client.call<ListMerchantAccountsResponse>({
-			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/merchant_accounts`,
-			query: { page_size: request.pageSize, page_token: request.pageToken },
-			responseType: 'sylphx.money.v1.ListMerchantAccountsResponse',
-			mutation: false,
-		})
-	}
-
-	/** Every item of every page of `list`. */
-	async *listAll(request: ListMerchantAccountsRequest): AsyncGenerator<MerchantAccount> {
-		let next: ListMerchantAccountsRequest = request
-		for (;;) {
-			const page = await this.list(next)
-			yield* page.merchantAccounts ?? []
-			if (page.nextPageToken === undefined || page.nextPageToken === '') return
-			next = { ...request, pageToken: page.nextPageToken }
-		}
-	}
-
-	/**
-	 * Starts connecting a Stripe account: returns the processor's authorisation
-	 * URL for an org owner to open, which the processor's redirect completes.
-	 * With a restricted key in the request the account connects at once
-	 * instead, and the connected merchant account comes back in the response.
-	 *
-	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/merchant_accounts:connect` · permission `billing:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
-	 */
-	async connect(request: ConnectMerchantAccountRequest): Promise<ConnectMerchantAccountResponse> {
-		return this.client.call<ConnectMerchantAccountResponse>({
-			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/merchant_accounts:connect`,
-			body: runtime.omit(request, ['parent']),
-			bodyType: 'sylphx.money.v1.ConnectMerchantAccountRequest',
-			responseType: 'sylphx.money.v1.ConnectMerchantAccountResponse',
-			mutation: true,
-		})
-	}
-
-	/**
-	 * Reads the connected account back from the processor.
-	 *
-	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}:refresh` · permission `billing:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
-	 */
-	async refresh(request: RefreshMerchantAccountRequest): Promise<MerchantAccount> {
-		return this.client.call<MerchantAccount>({
-			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}:refresh`,
-			body: runtime.omit(request, ['name']),
-			bodyType: 'sylphx.money.v1.RefreshMerchantAccountRequest',
-			responseType: 'sylphx.money.v1.MerchantAccount',
-			mutation: true,
-		})
-	}
-
-	/**
-	 * Disconnects the account: Sylphx loses access; checkout is refused.
-	 *
-	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}:disconnect` · permission `billing:write` · effect `destructive`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
-	 */
-	async disconnect(request: DisconnectMerchantAccountRequest): Promise<MerchantAccount> {
-		return this.client.call<MerchantAccount>({
-			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'name')}:disconnect`,
-			body: runtime.omit(request, ['name']),
-			bodyType: 'sylphx.money.v1.DisconnectMerchantAccountRequest',
-			responseType: 'sylphx.money.v1.MerchantAccount',
-			mutation: true,
-		})
-	}
-
-	/**
-	 * Updates the merchant account's own settings: the fields named in `update_mask`.
-	 *
-	 * `PATCH /v1/{merchant_account.name=orgs/*\/projects/*\/envs/*\/merchant_accounts/*}` · permission `billing:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
-	 */
-	async update(request: UpdateMerchantAccountRequest): Promise<MerchantAccount> {
-		return this.client.call<MerchantAccount>({
-			method: 'PATCH',
-			path: `/v1/${runtime.pathParam(request.merchantAccount?.name, 'orgs/*/projects/*/envs/*/merchant_accounts/*', 'merchant_account.name')}`,
-			query: { update_mask: request.updateMask },
-			body: request.merchantAccount ?? {},
-			bodyType: 'sylphx.money.v1.MerchantAccount',
-			responseType: 'sylphx.money.v1.MerchantAccount',
 			mutation: true,
 		})
 	}

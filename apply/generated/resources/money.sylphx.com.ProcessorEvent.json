@@ -1,0 +1,22 @@
+{
+  "collection": "processor_events",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ProcessorEvent",
+  "message": "sylphx.money.v1.ProcessorEvent",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/processor_events/{processor_event}",
+  "plural": "processorEvents",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "processorEvent",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/ProcessorEvent"
+}

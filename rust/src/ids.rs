@@ -738,6 +738,8 @@ pub const UPMF: Prefix = Prefix::new(
     "hosting",
     Some("uptime_manifests"),
 );
+/// ProcessorEvent (`pev`, money).
+pub const PEV: Prefix = Prefix::new("pev", "ProcessorEvent", "money", Some("processor_events"));
 
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
@@ -752,5 +754,5 @@ pub const ALL: &[Prefix] = &[
     ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ,
     NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK,
     RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR,
-    SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF,
+    SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
 ];
