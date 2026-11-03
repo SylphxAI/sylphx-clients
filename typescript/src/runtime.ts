@@ -90,7 +90,7 @@ export interface Call {
 	/**
 	 * A protocol method's default origin: served by its service's own host,
 	 * not the Resource API (no version pin, idempotency key, or deadline
-	 * header; its mutations are not retried unless `effectIds`).
+	 * header; mutations need `effectIds` to retry an ambiguous result).
 	 */
 	origin?: string
 	/**
@@ -208,6 +208,18 @@ function protocolProblem(raw: Record<string, unknown>, status: number): ProblemD
 	return { code, title: detail || code, detail, status, retryable: RETRYABLE_STATUS.has(status) } as ProblemDetails
 }
 
+/** An explicit pre-effect Access refusal, not a text search or a generic 401. */
+function keyNotYetPropagated(status: number, raw: Record<string, unknown>): boolean {
+	if (status !== 401 || (raw.effect !== undefined && raw.effect !== 'none')) return false
+	const nested = raw.error !== null && typeof raw.error === 'object' ? (raw.error as Record<string, unknown>) : undefined
+	if (nested?.effect !== undefined && nested.effect !== 'none') return false
+	const code = (nested ?? raw).code
+	return code === 'NOT_YET_PROPAGATED' || code === 'key_not_yet_propagated' || (
+		nested === undefined && code === 'UNAUTHENTICATED' &&
+		raw.detail === 'The key was refused (key_not_yet_propagated).'
+	)
+}
+
 export class Client {
 	private readonly apiKey: string | undefined
 	private readonly baseUrl: string
@@ -302,7 +314,8 @@ export class Client {
 			if (!protocol) headers['idempotency-key'] = key
 			headers['sylphx-effect-id'] = key
 		}
-		// A protocol mutation without effect ids is never resent.
+		// A protocol mutation without effect ids is not resent after an
+		// ambiguous result. An explicit pre-effect Access rejection is safe.
 		const once = protocol && call.mutation && call.effectIds !== true
 		let body: string | undefined
 		if (call.body !== undefined) {
@@ -345,7 +358,9 @@ export class Client {
 			const problem = (
 				rfc9457 ? fromWire('sylphx.common.v1.ProblemDetails', json) : protocolProblem(raw, response.status)
 			) as ProblemDetails
-			const retryable = RETRYABLE_STATUS.has(response.status) || problem.retryable === true
+			const propagationRejection = keyNotYetPropagated(response.status, raw)
+			// Other authentication failures are terminal even if mislabeled retryable.
+			const retryable = response.status === 401 ? propagationRejection : RETRYABLE_STATUS.has(response.status) || problem.retryable === true
 			const retryAfter = Number(response.headers.get('retry-after') ?? Number.NaN)
 			// An accepted keyed mutation is still running. Observing the same
 			// effect is progress, not another failed transport attempt. Keep the
@@ -356,7 +371,7 @@ export class Client {
 			}
 			if (
 				!retryable ||
-				once ||
+				(once && !propagationRejection) ||
 				attempt >= this.maxRetries ||
 				!(await this.backoff(attempt, Number.isFinite(retryAfter) ? retryAfter * 1000 : undefined, deadline))
 			) {

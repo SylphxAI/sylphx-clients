@@ -516,6 +516,209 @@ mod http {
         )
     }
 
+    fn readiness_request(protocol: bool, mutation: bool, effect_ids: bool) -> sylphx::HttpRequest {
+        sylphx::HttpRequest {
+            method: if mutation { "POST" } else { "GET" },
+            path: "/v1/readiness".into(),
+            query: vec![("parent".into(), "orgs/test".into())],
+            body: mutation.then(|| json!({"command": ["true"]})),
+            mutation,
+            origin: protocol.then_some("https://service.example"),
+            effect_ids,
+        }
+    }
+
+    fn readiness_transport(url: &str, retries: u32) -> HttpTransport {
+        HttpTransport::builder()
+            .base_url(url)
+            .origin("https://service.example", url)
+            .api_key("sylphx_sk_same_credential")
+            .max_retries(retries)
+            .build()
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn access_propagation_retries_only_the_same_request_and_credential_on_every_origin() {
+        for body in [
+            json!({"code": "NOT_YET_PROPAGATED", "retryable": true, "effect": "none"}),
+            json!({"code": "UNAUTHENTICATED", "detail": "The key was refused (key_not_yet_propagated)."}),
+            json!({"ok": false, "code": "key_not_yet_propagated", "error": "key_not_yet_propagated"}),
+            json!({"error": {"code": "key_not_yet_propagated", "message": "not ready"}}),
+        ] {
+            for (protocol, mutation, effect_ids) in [
+                (false, false, false),
+                (false, true, false),
+                (true, true, true),
+                (true, true, false),
+            ] {
+                let (url, seen) = serve(vec![
+                    (401, "retry-after: 0\r\n", body.clone()),
+                    (401, "retry-after: 0\r\n", body.clone()),
+                    (200, "", json!({})),
+                    (200, "", json!({})),
+                ])
+                .await;
+                let transport = readiness_transport(&url, 2);
+                let request = readiness_request(protocol, mutation, effect_ids);
+                assert_eq!(
+                    transport
+                        .send_with_headers(request.clone(), &[])
+                        .await
+                        .unwrap()
+                        .status,
+                    200
+                );
+                assert_eq!(
+                    transport
+                        .send_with_headers(request, &[])
+                        .await
+                        .unwrap()
+                        .status,
+                    200
+                );
+                let seen = seen.lock().unwrap();
+                assert_eq!(seen.len(), 4);
+                for retry in &seen[1..3] {
+                    assert_eq!(retry.head, seen[0].head);
+                    assert_eq!(retry.body, seen[0].body);
+                }
+                assert_eq!(
+                    header(&seen[0].head, "authorization"),
+                    Some("Bearer sylphx_sk_same_credential")
+                );
+                if mutation || effect_ids {
+                    let key = header(&seen[0].head, "sylphx-effect-id").unwrap();
+                    assert_ne!(Some(key), header(&seen[3].head, "sylphx-effect-id"));
+                    assert_eq!(
+                        header(&seen[0].head, "idempotency-key"),
+                        (!protocol).then_some(key)
+                    );
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn access_propagation_retries_are_bounded_and_preserve_the_last_refusal() {
+        let body = json!({"code": "key_not_yet_propagated", "error": "not ready"});
+        for max_retries in [0, 2] {
+            let (url, seen) = serve(vec![
+                (401, "retry-after: 0\r\n", body.clone());
+                max_retries as usize + 1
+            ])
+            .await;
+            let response = readiness_transport(&url, max_retries)
+                .send_with_headers(readiness_request(true, true, false), &[])
+                .await
+                .unwrap();
+            assert_eq!(response.status, 401);
+            assert_eq!(
+                serde_json::from_slice::<serde_json::Value>(&response.body).unwrap(),
+                body
+            );
+            assert_eq!(response.request_id.as_deref(), Some("req_401"));
+            assert_eq!(seen.lock().unwrap().len(), max_retries as usize + 1);
+        }
+        let (url, seen) = serve(vec![(401, "retry-after: 30\r\n", body.clone())]).await;
+        let transport = readiness_transport(&url, 3)
+            .with_deadline(std::time::Instant::now() + std::time::Duration::from_millis(100));
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            transport.send_with_headers(readiness_request(true, true, false), &[]),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(response.status, 401);
+        assert_eq!(seen.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn access_propagation_never_replays_other_auth_failures_or_ambiguous_effects() {
+        for (status, body) in [
+            (
+                401,
+                json!({"code": "UNAUTHENTICATED", "retryable": true, "detail": "key_revoked"}),
+            ),
+            (
+                401,
+                json!({"code": "key_unknown", "error": "key_not_yet_propagated"}),
+            ),
+            (
+                401,
+                json!({"code": "UNAUTHENTICATED", "detail": "not key_not_yet_propagated"}),
+            ),
+            (
+                401,
+                json!({"code": "UNAUTHENTICATED", "detail": "The key was refused (key_not_yet_propagated). extra"}),
+            ),
+            (
+                401,
+                json!({"error": {"code": "key_expired", "message": "key_not_yet_propagated"}}),
+            ),
+            (
+                401,
+                json!({"code": "NOT_YET_PROPAGATED", "retryable": true, "effect": "unknown"}),
+            ),
+            (
+                401,
+                json!({"code": "NOT_YET_PROPAGATED", "retryable": true, "effect": "applied"}),
+            ),
+            (
+                401,
+                json!({"error": {"code": "key_not_yet_propagated", "effect": "unknown"}}),
+            ),
+            (
+                401,
+                json!({"error": {"code": "key_not_yet_propagated", "effect": "applied"}}),
+            ),
+            (
+                403,
+                json!({"code": "key_not_yet_propagated", "error": "denied"}),
+            ),
+            (409, json!({"code": "OUTCOME_UNKNOWN", "effect": "unknown"})),
+            (503, json!({"code": "UNAVAILABLE", "retryable": true})),
+        ] {
+            let (url, seen) = serve(vec![(status, "retry-after: 0\r\n", body)]).await;
+            let response = readiness_transport(&url, 3)
+                .send_with_headers(readiness_request(true, true, false), &[])
+                .await
+                .unwrap();
+            assert_eq!(response.status, status);
+            assert_eq!(seen.lock().unwrap().len(), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn access_whoami_success_does_not_assume_another_service_is_ready() {
+        let (access_url, access_seen) = serve(vec![(200, "", json!({"principal": "test"}))]).await;
+        let (service_url, service_seen) = serve(vec![
+            (
+                401,
+                "retry-after: 0\r\n",
+                json!({"error": {"code": "key_not_yet_propagated"}}),
+            ),
+            (200, "", json!({})),
+        ])
+        .await;
+        let client = Client::new(
+            HttpTransport::builder()
+                .base_url(access_url)
+                .origin("https://service.example", service_url)
+                .api_key("sylphx_sk_same_credential")
+                .build()
+                .unwrap(),
+        );
+        client.invoke("access.whoami", json!({})).await.unwrap();
+        client
+            .call::<serde_json::Value>(readiness_request(true, true, false))
+            .await
+            .unwrap();
+        assert_eq!(access_seen.lock().unwrap().len(), 1);
+        assert_eq!(service_seen.lock().unwrap().len(), 2);
+    }
+
     fn problem(code: &str, status: u16, retryable: bool) -> serde_json::Value {
         json!({"type": "about:blank", "title": code, "status": status, "detail": "d", "code": code,
                "grpc_status": "UNAVAILABLE", "retryable": retryable, "effect": "none"})

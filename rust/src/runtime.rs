@@ -73,7 +73,7 @@ pub struct HttpRequest {
     pub mutation: bool,
     /// A protocol method's default origin: served by its service's own host,
     /// not the Resource API (no version pin, idempotency key, or deadline
-    /// header; its mutations are not retried unless `effect_ids`).
+    /// header; mutations need `effect_ids` to retry an ambiguous result).
     pub origin: Option<&'static str>,
     /// Every attempt carries `Sylphx-Effect-Id`, one per logical call
     /// (`ServiceInfo.effect_ids`), so a mutation is retried safely.
@@ -966,7 +966,8 @@ impl HttpTransport {
             .or_else(|| {
                 (request.effect_ids || request.mutation).then(|| uuid::Uuid::now_v7().to_string())
             });
-        // A protocol mutation without effect ids is never resent.
+        // A protocol mutation without effect ids is not resent after an
+        // ambiguous result. An explicit pre-effect Access rejection is safe.
         let resend = !(request.mutation && request.origin.is_some() && !request.effect_ids);
         // The shared deadline never widens a shorter per-call timeout:
         // whichever ends first bounds the call and its retries.
@@ -996,6 +997,9 @@ impl HttpTransport {
                     }
                 }
             }
+            let propagation_rejection = result
+                .as_ref()
+                .is_ok_and(|(response, _)| key_not_yet_propagated(response));
             let retry_after = match &result {
                 Ok((r, after)) if retryable_status(r) => *after,
                 // A GET, or a mutation that carries an idempotency key, is
@@ -1003,7 +1007,7 @@ impl HttpTransport {
                 Err(Error::Transport(_)) => None,
                 _ => return result.map(|(r, _)| r),
             };
-            if !resend || attempt >= self.max_retries {
+            if (!resend && !propagation_rejection) || attempt >= self.max_retries {
                 return result.map(|(r, _)| r);
             }
             let wait = retry_after.unwrap_or_else(|| backoff(attempt));
@@ -1025,11 +1029,39 @@ fn in_progress(response: &HttpResponse) -> bool {
             .is_ok_and(|v| v["code"] == "IDEMPOTENCY_IN_PROGRESS" && v["retryable"] == true)
 }
 
-/// Whether an answer may be retried: 429, 502, 503, 504, or a problem body
-/// with `retryable: true` (§3.8).
+/// Access rejected this attempt before any effect. Match only its explicit
+/// propagation reason, never an arbitrary 401 or a mention in customer text.
+/// The legacy Resource API encoded the reason in one exact detail string.
+#[cfg(feature = "http")]
+fn key_not_yet_propagated(response: &HttpResponse) -> bool {
+    if response.status != 401 {
+        return false;
+    }
+    let Ok(raw) = serde_json::from_slice::<serde_json::Value>(&response.body) else {
+        return false;
+    };
+    // Contradictory effect evidence cannot authorize resending a mutation.
+    if raw.get("effect").is_some_and(|effect| effect != "none") {
+        return false;
+    }
+    let error = raw.get("error").filter(|error| error.is_object());
+    if error.is_some_and(|error| error.get("effect").is_some_and(|effect| effect != "none")) {
+        return false;
+    }
+    let code = error.unwrap_or(&raw).get("code").and_then(|v| v.as_str());
+    matches!(code, Some("NOT_YET_PROPAGATED" | "key_not_yet_propagated"))
+        || (error.is_none()
+            && code == Some("UNAUTHENTICATED")
+            && raw["detail"] == "The key was refused (key_not_yet_propagated).")
+}
+
+/// Whether an answer may be retried: explicit Access propagation rejection,
+/// 429, 502, 503, 504, or a problem body with `retryable: true` (§3.8).
+/// Other authentication failures are terminal even if mislabeled retryable.
 #[cfg(feature = "http")]
 fn retryable_status(r: &HttpResponse) -> bool {
     match r.status {
+        401 => key_not_yet_propagated(r),
         429 | 502 | 503 | 504 => true,
         s if s >= 400 => serde_json::from_slice::<serde_json::Value>(&r.body)
             .ok()

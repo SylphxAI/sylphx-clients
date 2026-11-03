@@ -2,7 +2,9 @@
 // the wire, problem bodies as SylphxError, retries with one idempotency key.
 
 import { describe, expect, spyOn, test } from 'bun:test'
-import { type FetchLike, METHODS, Sylphx, SylphxError } from '../src/index.js'
+import { Client, type FetchLike, METHODS, Sylphx, SylphxError } from '../src/index.js'
+
+import type { Call } from '../src/runtime.js'
 
 interface Sent {
 	method: string
@@ -33,6 +35,140 @@ function fake(replies: { status: number; body: unknown; headers?: Record<string,
 const ENV = 'orgs/org_a/projects/prj_a/envs/env_a'
 
 describe('@sylphx/sdk', () => {
+	test('Access propagation retries the same request and credential on every origin', async () => {
+		for (const body of [
+			{ code: 'NOT_YET_PROPAGATED', retryable: true, effect: 'none' },
+			{ code: 'UNAUTHENTICATED', detail: 'The key was refused (key_not_yet_propagated).' },
+			{ ok: false, code: 'key_not_yet_propagated', error: 'key_not_yet_propagated' },
+			{ error: { code: 'key_not_yet_propagated', message: 'not ready' } },
+		]) {
+			for (const [protocol, mutation, effectIds] of [
+				[false, false, false],
+				[false, true, false],
+				[true, true, true],
+				[true, true, false],
+			] as const) {
+				const f = fake([
+					{ status: 401, body, headers: { 'retry-after': '0' } },
+					{ status: 401, body, headers: { 'retry-after': '0' } },
+					{ status: 200, body: {} },
+					{ status: 200, body: {} },
+				])
+				const client = new Client({
+					apiKey: 'sylphx_sk_same_credential',
+					maxRetries: 2,
+					fetch: f.fetch,
+				})
+				const call: Call = {
+					method: mutation ? 'POST' : 'GET',
+					path: '/v1/readiness',
+					mutation,
+					effectIds,
+					...(protocol ? { origin: 'https://service.example' } : {}),
+					...(mutation ? { body: { command: ['true'] } } : {}),
+					query: { parent: 'orgs/test' },
+				}
+				await client.call(call)
+				await client.call(call)
+				expect(f.sent).toHaveLength(4)
+				for (const retry of f.sent.slice(1, 3)) expect(retry).toEqual(f.sent[0]!)
+				expect(f.sent[0]!.headers.authorization).toBe('Bearer sylphx_sk_same_credential')
+				if (mutation || effectIds) {
+					const key = f.sent[0]!.headers['sylphx-effect-id']
+					expect(key).toBeDefined()
+					expect(f.sent[3]!.headers['sylphx-effect-id']).not.toBe(key)
+					expect(f.sent[0]!.headers['idempotency-key']).toBe(protocol ? undefined : key)
+				}
+			}
+		}
+	})
+
+	test('Access propagation obeys the retry budget and original deadline and keeps the last refusal', async () => {
+		const body = { code: 'key_not_yet_propagated', error: 'not ready' }
+		const call: Call = {
+			method: 'POST',
+			path: '/v1/readiness',
+			mutation: true,
+			origin: 'https://service.example',
+		}
+		for (const maxRetries of [0, 2]) {
+			const f = fake(
+				Array.from({ length: maxRetries + 1 }, () => ({
+					status: 401,
+					body,
+					headers: { 'retry-after': '0' },
+				})),
+			)
+			const client = new Client({ apiKey: 'k', maxRetries, fetch: f.fetch })
+			await expect(client.call(call)).rejects.toMatchObject({
+				status: 401,
+				requestId: 'req_401',
+				detail: 'key_not_yet_propagated: not ready',
+			})
+			expect(f.sent).toHaveLength(maxRetries + 1)
+		}
+		const f = fake([{ status: 401, body, headers: { 'retry-after': '30' } }])
+		const client = new Client({ apiKey: 'k', timeoutMs: 100, fetch: f.fetch })
+		await expect(client.call(call)).rejects.toMatchObject({ status: 401, requestId: 'req_401' })
+		expect(f.sent).toHaveLength(1)
+	})
+
+	test('Access propagation never replays other auth failures or ambiguous effects', async () => {
+		for (const [status, body] of [
+			[401, { code: 'UNAUTHENTICATED', retryable: true, detail: 'key_revoked' }],
+			[401, { code: 'key_unknown', error: 'key_not_yet_propagated' }],
+			[401, { code: 'UNAUTHENTICATED', detail: 'not key_not_yet_propagated' }],
+			[
+				401,
+				{ code: 'UNAUTHENTICATED', detail: 'The key was refused (key_not_yet_propagated). extra' },
+			],
+			[401, { error: { code: 'key_expired', message: 'key_not_yet_propagated' } }],
+			[401, { code: 'NOT_YET_PROPAGATED', retryable: true, effect: 'unknown' }],
+			[401, { code: 'NOT_YET_PROPAGATED', retryable: true, effect: 'applied' }],
+			[401, { error: { code: 'key_not_yet_propagated', effect: 'unknown' } }],
+			[401, { error: { code: 'key_not_yet_propagated', effect: 'applied' } }],
+			[403, { code: 'key_not_yet_propagated', error: 'denied' }],
+			[409, { code: 'OUTCOME_UNKNOWN', effect: 'unknown' }],
+			[503, { code: 'UNAVAILABLE', retryable: true }],
+		] as const) {
+			const f = fake([{ status, body, headers: { 'retry-after': '0' } }])
+			const client = new Client({ apiKey: 'k', fetch: f.fetch })
+			await expect(
+				client.call({
+					method: 'POST',
+					path: '/v1/readiness',
+					mutation: true,
+					origin: 'https://service.example',
+				}),
+			).rejects.toMatchObject({ status })
+			expect(f.sent).toHaveLength(1)
+		}
+	})
+
+	test('Access whoami success does not assume another service is ready', async () => {
+		const f = fake([
+			{ status: 200, body: { principal: 'test' } },
+			{
+				status: 401,
+				body: { error: { code: 'key_not_yet_propagated' } },
+				headers: { 'retry-after': '0' },
+			},
+			{ status: 200, body: {} },
+		])
+		const sx = new Sylphx({ apiKey: 'sylphx_sk_same_credential', fetch: f.fetch })
+		await sx.invoke('access.whoami', {})
+		await sx.call({
+			method: 'POST',
+			path: '/v1/readiness',
+			mutation: true,
+			origin: 'https://service.example',
+		})
+		expect(f.sent).toHaveLength(3)
+		expect(f.sent[0]!.url.host).toBe('api.sylphx.com')
+		expect(f.sent[1]!.url.host).toBe('service.example')
+		expect(f.sent[1]).toEqual(f.sent[2]!)
+	})
+
 	test('Build body disconnect reconnects the same request and key', async () => {
 		const f = fake([
 			{ status: 200, body: {} },
