@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-apply"
-version = "0.1.1"
+version = "0.1.2"
 description = "Declared Resources in sylphx.toml: parse, check, plan and apply them through the Sylphx Resource API (docs/specs/one-platform/sylphx-apply.md)."
 keywords = ["sylphx", "declarative", "apply"]
 categories = ["api-bindings"]
@@ -11,7 +11,7 @@ homepage.workspace = true
 repository = "https://github.com/SylphxAI/sylphx-clients"
 
 [dependencies]
-sylphx = { path = "../rust", version = "0.3.5" }
+sylphx = { path = "../rust", version = "0.3.6" }
 serde = { version = "1", features = ["derive"] }
 # float_roundtrip: RFC 8785 hashes need the exact double a number text names.
 serde_json = { version = "1", features = ["float_roundtrip"] }
