@@ -20042,6 +20042,95 @@
           "resource_type": "money.sylphx.com/EntitlementGrant"
         },
         {
+          "collection": "test_clocks",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "test_clock.subject.end_user",
+                  "flag": "--subject.end-user",
+                  "summary": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                  "type": "string"
+                },
+                {
+                  "field": "test_clock.subject.customer_organization",
+                  "flag": "--subject.customer-organization",
+                  "summary": "A customer organization's id.",
+                  "type": "string"
+                },
+                {
+                  "field": "test_clock.frozen_time",
+                  "flag": "--frozen-time",
+                  "required": true,
+                  "summary": "Initial simulated time on create; current Stripe time on reads. Required on create. Only whole seconds are supported.",
+                  "type": "timestamp"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/test_clocks",
+              "method": "money.test_clocks.create",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "ID",
+                "field": "test_clock_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "test_clock",
+              "summary": "Creates a test-only Stripe simulation before the subject's first checkout. No catalogue, payment, subscription, or entitlement is changed.",
+              "verb": "create"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/test_clocks/*}",
+              "method": "money.test_clocks.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/test_clocks/{test_clock}"
+              },
+              "summary": "Reads the owned test clock back from Stripe. Live keys are refused.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "frozen_time",
+                  "flag": "--frozen-time",
+                  "required": true,
+                  "summary": "Target simulated time. Whole seconds; must not precede current time. Repeating an already reached target is idempotent.",
+                  "type": "timestamp"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/test_clocks/*}:advance",
+              "method": "money.test_clocks.advance",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/test_clocks/{test_clock}"
+              },
+              "summary": "Advances Stripe time, never entitlements. Stripe processes asynchronously; poll GetTestClock until ready, then observe the genuine webhook's effects. Time only moves forward, within Stripe's subscription-interval bound.",
+              "verb": "advance"
+            }
+          ],
+          "noun": "test-clocks",
+          "resource_type": "money.sylphx.com/TestClock"
+        },
+        {
           "collection": "checkout_sessions",
           "commands": [
             {

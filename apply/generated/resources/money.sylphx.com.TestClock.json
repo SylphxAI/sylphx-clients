@@ -1,0 +1,22 @@
+{
+  "collection": "test_clocks",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "TestClock",
+  "message": "sylphx.money.v1.TestClock",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/test_clocks/{test_clock}",
+  "plural": "testClocks",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "testClock",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/TestClock"
+}

@@ -5,6 +5,17 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/** The request of AdvanceTestClock. */
+export interface AdvanceTestClockRequest {
+	/** The clock to advance. */
+	name: string
+	/**
+	 * Target simulated time. Whole seconds; must not precede current time.
+	 * Repeating an already reached target is idempotent.
+	 */
+	frozenTime: string
+}
+
 /** AppStoreConnection is an App Store Server API key and the app's bundle ids. */
 export interface AppStoreConnection {
 	/** The apps' bundle ids. */
@@ -553,6 +564,16 @@ export interface CreateStoreConnectionRequest {
 	validateOnly?: boolean
 }
 
+/** The request of CreateTestClock. */
+export interface CreateTestClockRequest {
+	/** The environment to create in. */
+	parent: string
+	/** The subject and initial simulated time. */
+	testClock: TestClock
+	/** The final name segment; defaults to a stable id derived from the subject. */
+	testClockId?: string
+}
+
 /** The request of CreateUsageEvent. */
 export interface CreateUsageEventRequest {
 	/** The environment to create in. */
@@ -901,6 +922,12 @@ export interface GetStoreConnectionRequest {
 /** The request of GetStorePurchase. */
 export interface GetStorePurchaseRequest {
 	/** The name of the store purchase to get. */
+	name: string
+}
+
+/** The request of GetTestClock. */
+export interface GetTestClockRequest {
+	/** The test clock to read back. */
 	name: string
 }
 
@@ -2312,6 +2339,41 @@ export interface TaxThresholdStatus {
 	readonly effectiveTime?: string
 }
 
+/**
+ * A Stripe test clock for one subject's subscription lifecycle. Create it
+ * before the subject's first checkout; its Stripe customer inherits the clock.
+ * Only test-mode keys and test-mode merchants can use this resource. Advancing
+ * changes Stripe's time and emits real webhooks; it never edits entitlements.
+ */
+export interface TestClock {
+	/** The clock's resource name. */
+	name?: string
+	/** Stable identity, never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	readonly meta?: common.ResourceMeta
+	/**
+	 * The subject whose new Stripe customer will use this clock. A subject
+	 * with an existing Money Stripe customer cannot acquire a clock.
+	 */
+	subject?: Subject
+	/**
+	 * Initial simulated time on create; current Stripe time on reads. Required
+	 * on create. Only whole seconds are supported.
+	 */
+	frozenTime?: string
+	/**
+	 * Stripe's status: ready, advancing, or internal_failure. Poll GetTestClock
+	 * until ready before the next simulation step. Ready does not mean Money
+	 * has applied every webhook; observe the subscription and entitlement too.
+	 */
+	readonly state?: string
+	/** Stripe clock id, for processor receipts. */
+	readonly processorClockId?: string
+	/** Always false; a live processor object is refused. */
+	readonly livemode?: boolean
+}
+
 /** An amount a summary could not convert yet. */
 export interface UnconvertedAmount {
 	/** ISO 4217 code. */
@@ -2759,6 +2821,9 @@ export type LicenceTermUnit = 'calendar_years' | 'calendar_months' | 'days' | (s
 export type ProrationBehavior = 'create_prorations' | 'none' | 'always_invoice' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.money.v1.AdvanceTestClockRequest': [
+		['frozenTime', 'frozen_time'],
+	],
 	'sylphx.money.v1.AppStoreConnection': [
 		['bundleIds', 'bundle_ids'],
 		['issuerId', 'issuer_id'],
@@ -2908,6 +2973,10 @@ runtime.registerSchemas({
 		['storeConnection', 'store_connection', 'sylphx.money.v1.StoreConnection'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.money.v1.CreateTestClockRequest': [
+		['testClock', 'test_clock', 'sylphx.money.v1.TestClock'],
+		['testClockId', 'test_clock_id'],
+	],
 	'sylphx.money.v1.CreateUsageEventRequest': [
 		['usageEvent', 'usage_event', 'sylphx.money.v1.UsageEvent'],
 	],
@@ -2982,6 +3051,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.money.v1.GetStoreConnectionRequest': [],
 	'sylphx.money.v1.GetStorePurchaseRequest': [],
+	'sylphx.money.v1.GetTestClockRequest': [],
 	'sylphx.money.v1.GetUsageInvoiceRequest': [],
 	'sylphx.money.v1.GetUsageMeterRequest': [],
 	'sylphx.money.v1.GetUsageReservationRequest': [],
@@ -3377,6 +3447,12 @@ runtime.registerSchemas({
 		['sourceUrl', 'source_url'],
 		['effectiveTime', 'effective_time'],
 	],
+	'sylphx.money.v1.TestClock': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['subject', 'subject', 'sylphx.money.v1.Subject'],
+		['frozenTime', 'frozen_time'],
+		['processorClockId', 'processor_clock_id'],
+	],
 	'sylphx.money.v1.UnconvertedAmount': [
 		['currencyCode', 'currency_code'],
 	],
@@ -3538,6 +3614,8 @@ export class MoneyApi {
 	readonly customerSubscriptions: CustomerSubscriptionsCollection
 	/** The `entitlement_grants` collection. */
 	readonly entitlementGrants: EntitlementGrantsCollection
+	/** The `test_clocks` collection. */
+	readonly testClocks: TestClocksCollection
 	/** The `checkout_sessions` collection. */
 	readonly checkoutSessions: CheckoutSessionsCollection
 	/** The `tax_threshold_statuses` collection. */
@@ -3582,6 +3660,7 @@ export class MoneyApi {
 		this.storePurchases = new StorePurchasesCollection(client)
 		this.customerSubscriptions = new CustomerSubscriptionsCollection(client)
 		this.entitlementGrants = new EntitlementGrantsCollection(client)
+		this.testClocks = new TestClocksCollection(client)
 		this.checkoutSessions = new CheckoutSessionsCollection(client)
 		this.taxThresholdStatuses = new TaxThresholdStatusesCollection(client)
 		this.portalSessions = new PortalSessionsCollection(client)
@@ -4392,6 +4471,71 @@ export class EntitlementGrantsCollection {
 			body: request.entitlementGrant ?? {},
 			bodyType: 'sylphx.money.v1.EntitlementGrant',
 			responseType: 'sylphx.money.v1.EntitlementGrant',
+			mutation: true,
+		})
+	}
+}
+
+/** `test_clocks` of Sylphx Money: Resource type `money.sylphx.com/TestClock`. */
+export class TestClocksCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Creates a test-only Stripe simulation before the subject's first checkout.
+	 * No catalogue, payment, subscription, or entitlement is changed.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/test_clocks` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `UNAVAILABLE`.
+	 */
+	async create(request: CreateTestClockRequest): Promise<TestClock> {
+		return this.client.call<TestClock>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/test_clocks`,
+			query: { test_clock_id: request.testClockId },
+			body: request.testClock ?? {},
+			bodyType: 'sylphx.money.v1.TestClock',
+			responseType: 'sylphx.money.v1.TestClock',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Reads the owned test clock back from Stripe. Live keys are refused.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/test_clocks/*}` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async get(request: GetTestClockRequest): Promise<TestClock> {
+		return this.client.call<TestClock>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/test_clocks/*', 'name')}`,
+			responseType: 'sylphx.money.v1.TestClock',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Advances Stripe time, never entitlements. Stripe processes asynchronously;
+	 * poll GetTestClock until ready, then observe the genuine webhook's effects.
+	 * Time only moves forward, within Stripe's subscription-interval bound.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/test_clocks/*}:advance` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async advance(request: AdvanceTestClockRequest): Promise<TestClock> {
+		return this.client.call<TestClock>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/test_clocks/*', 'name')}:advance`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.AdvanceTestClockRequest',
+			responseType: 'sylphx.money.v1.TestClock',
 			mutation: true,
 		})
 	}

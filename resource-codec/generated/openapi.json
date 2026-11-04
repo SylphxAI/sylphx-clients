@@ -25306,6 +25306,26 @@
         },
         "type": "object"
       },
+      "sylphx.money.v1.AdvanceTestClockRequest": {
+        "description": "The request of AdvanceTestClock.",
+        "properties": {
+          "frozen_time": {
+            "description": "Target simulated time. Whole seconds; must not precede current time.\nRepeating an already reached target is idempotent.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "description": "The clock to advance.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TestClock"
+          }
+        },
+        "required": [
+          "name",
+          "frozen_time"
+        ],
+        "type": "object"
+      },
       "sylphx.money.v1.AppStoreConnection": {
         "description": "AppStoreConnection is an App Store Server API key and the app's bundle ids.",
         "properties": {
@@ -26207,6 +26227,29 @@
         ],
         "type": "object"
       },
+      "sylphx.money.v1.CreateTestClockRequest": {
+        "description": "The request of CreateTestClock.",
+        "properties": {
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TestClock"
+          },
+          "test_clock": {
+            "$ref": "#/components/schemas/sylphx.money.v1.TestClock",
+            "description": "The subject and initial simulated time."
+          },
+          "test_clock_id": {
+            "description": "The final name segment; defaults to a stable id derived from the subject.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "test_clock"
+        ],
+        "type": "object"
+      },
       "sylphx.money.v1.CreateUsageEventRequest": {
         "description": "The request of CreateUsageEvent.",
         "properties": {
@@ -26878,6 +26921,20 @@
             "description": "The name of the store purchase to get.",
             "type": "string",
             "x-sylphx-resource-reference": "money.sylphx.com/StorePurchase"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.money.v1.GetTestClockRequest": {
+        "description": "The request of GetTestClock.",
+        "properties": {
+          "name": {
+            "description": "The test clock to read back.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TestClock"
           }
         },
         "required": [
@@ -29521,6 +29578,55 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.money.v1.TestClock": {
+        "description": "A Stripe test clock for one subject's subscription lifecycle. Create it\nbefore the subject's first checkout; its Stripe customer inherits the clock.\nOnly test-mode keys and test-mode merchants can use this resource. Advancing\nchanges Stripe's time and emits real webhooks; it never edits entitlements.",
+        "properties": {
+          "frozen_time": {
+            "description": "Initial simulated time on create; current Stripe time on reads. Required\non create. Only whole seconds are supported.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "livemode": {
+            "description": "Always false; a live processor object is refused.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "The clock's resource name.",
+            "type": "string"
+          },
+          "processor_clock_id": {
+            "description": "Stripe clock id, for processor receipts.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "Stripe's status: ready, advancing, or internal_failure. Poll GetTestClock\nuntil ready before the next simulation step. Ready does not mean Money\nhas applied every webhook; observe the subscription and entitlement too.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/sylphx.money.v1.Subject",
+            "description": "The subject whose new Stripe customer will use this clock. A subject\nwith an existing Money Stripe customer cannot acquire a clock.",
+            "x-sylphx-immutable": true
+          },
+          "uid": {
+            "description": "Stable identity, never reused.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "frozen_time"
+        ],
         "type": "object"
       },
       "sylphx.money.v1.UnconvertedAmount": {
@@ -118459,6 +118565,309 @@
         ],
         "x-sylphx-method": "notify.templates.update",
         "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/test_clocks": {
+      "post": {
+        "description": "Creates a test-only Stripe simulation before the subject's first checkout.\nNo catalogue, payment, subscription, or entitlement is changed.",
+        "operationId": "money_test_clocks_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The final name segment; defaults to a stable id derived from the subject.",
+            "in": "query",
+            "name": "test_clock_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.money.v1.TestClock"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.TestClock"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates a test-only Stripe simulation before the subject's first checkout. No catalogue, payment, subscription, or entitlement is changed.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.test_clocks.create",
+        "x-sylphx-permission": "billing:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/test_clocks/{test_clock}": {
+      "get": {
+        "description": "Reads the owned test clock back from Stripe. Live keys are refused.",
+        "operationId": "money_test_clocks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "test_clock",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.TestClock"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads the owned test clock back from Stripe. Live keys are refused.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_STATE",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.test_clocks.get",
+        "x-sylphx-permission": "billing:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/test_clocks/{test_clock}:advance": {
+      "post": {
+        "description": "Advances Stripe time, never entitlements. Stripe processes asynchronously;\npoll GetTestClock until ready, then observe the genuine webhook's effects.\nTime only moves forward, within Stripe's subscription-interval bound.",
+        "operationId": "money_test_clocks_advance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "test_clock",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "frozen_time": {
+                    "description": "Target simulated time. Whole seconds; must not precede current time.\nRepeating an already reached target is idempotent.",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "frozen_time"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.TestClock"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Advances Stripe time, never entitlements. Stripe processes asynchronously; poll GetTestClock until ready, then observe the genuine webhook's effects. Time only moves forward, within Stripe's subscription-interval bound.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.test_clocks.advance",
+        "x-sylphx-permission": "billing:write",
         "x-sylphx-stage": "preview"
       }
     },

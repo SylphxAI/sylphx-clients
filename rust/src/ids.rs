@@ -625,6 +625,8 @@ pub const REQ: Prefix = Prefix::new("req", "Request", "platform", None);
 pub const CAT: Prefix = Prefix::new("cat", "PriceCatalog", "money", Some("price_catalogs"));
 /// CheckoutSession (`cks`, money).
 pub const CKS: Prefix = Prefix::new("cks", "CheckoutSession", "money", Some("checkout_sessions"));
+/// TestClock (`tclk`, money).
+pub const TCLK: Prefix = Prefix::new("tclk", "TestClock", "money", Some("test_clocks"));
 /// CheckoutPolicy (`cpl`, money).
 pub const CPL: Prefix = Prefix::new("cpl", "CheckoutPolicy", "money", Some("checkout_policies"));
 /// CustomerSubscription (`csub`, money).
@@ -752,7 +754,7 @@ pub const ALL: &[Prefix] = &[
     SHP, SNAP, VOL, SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK, TASK,
     CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF,
     ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ,
-    NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, CPL, CSUB, EGNT, LKEY, LTOK,
-    RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR, UMPR,
-    SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
+    NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT, LKEY,
+    LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR,
+    UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
 ];

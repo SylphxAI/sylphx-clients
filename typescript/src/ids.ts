@@ -190,6 +190,7 @@ export const PREFIXES = [
 	{ prefix: 'req', entity: 'Request', service: 'platform', collection: null },
 	{ prefix: 'cat', entity: 'PriceCatalog', service: 'money', collection: 'price_catalogs' },
 	{ prefix: 'cks', entity: 'CheckoutSession', service: 'money', collection: 'checkout_sessions' },
+	{ prefix: 'tclk', entity: 'TestClock', service: 'money', collection: 'test_clocks' },
 	{ prefix: 'cpl', entity: 'CheckoutPolicy', service: 'money', collection: 'checkout_policies' },
 	{ prefix: 'csub', entity: 'CustomerSubscription', service: 'money', collection: 'customer_subscriptions' },
 	{ prefix: 'egnt', entity: 'EntitlementGrant', service: 'money', collection: 'entitlement_grants' },

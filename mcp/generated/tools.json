@@ -27884,6 +27884,146 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Creates a test-only Stripe simulation before the subject's first checkout. No catalogue, payment, subscription, or entitlement is changed."
+      },
+      "description": "Creates a test-only Stripe simulation before the subject's first checkout.\nNo catalogue, payment, subscription, or entitlement is changed.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/test_clocks",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateTestClock.",
+        "properties": {
+          "parent": {
+            "description": "The environment to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TestClock"
+          },
+          "test_clock": {
+            "additionalProperties": false,
+            "description": "The subject and initial simulated time.",
+            "properties": {
+              "frozen_time": {
+                "description": "Initial simulated time on create; current Stripe time on reads. Required\non create. Only whole seconds are supported.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "name": {
+                "description": "The clock's resource name.",
+                "type": "string"
+              },
+              "subject": {
+                "additionalProperties": false,
+                "description": "The subject whose new Stripe customer will use this clock. A subject\nwith an existing Money Stripe customer cannot acquire a clock.",
+                "properties": {
+                  "customer_organization": {
+                    "description": "A customer organization's id.",
+                    "type": "string"
+                  },
+                  "end_user": {
+                    "description": "An end user's id (Sylphx Auth, or the app's own OIDC issuer).",
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "x-sylphx-immutable": true
+              }
+            },
+            "required": [
+              "subject",
+              "frozen_time"
+            ],
+            "type": "object"
+          },
+          "test_clock_id": {
+            "description": "The final name segment; defaults to a stable id derived from the subject.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "test_clock"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.test_clocks.create",
+      "permission": "billing:write",
+      "tool": "money_test_clocks_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads the owned test clock back from Stripe. Live keys are refused."
+      },
+      "description": "Reads the owned test clock back from Stripe. Live keys are refused.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/test_clocks/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetTestClock.",
+        "properties": {
+          "name": {
+            "description": "The test clock to read back.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TestClock"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.test_clocks.get",
+      "permission": "billing:read",
+      "tool": "money_test_clocks_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Advances Stripe time, never entitlements. Stripe processes asynchronously; poll GetTestClock until ready, then observe the genuine webhook's effects. Time only moves forward, within Stripe's subscription-interval bound."
+      },
+      "description": "Advances Stripe time, never entitlements. Stripe processes asynchronously;\npoll GetTestClock until ready, then observe the genuine webhook's effects.\nTime only moves forward, within Stripe's subscription-interval bound.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/test_clocks/*}:advance",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AdvanceTestClock.",
+        "properties": {
+          "frozen_time": {
+            "description": "Target simulated time. Whole seconds; must not precede current time.\nRepeating an already reached target is idempotent.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "description": "The clock to advance.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/TestClock"
+          }
+        },
+        "required": [
+          "name",
+          "frozen_time"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.test_clocks.advance",
+      "permission": "billing:write",
+      "tool": "money_test_clocks_advance"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Creates a hosted checkout for a subject."
       },
       "description": "Creates a hosted checkout for a subject.",

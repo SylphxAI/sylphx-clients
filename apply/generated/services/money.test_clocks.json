@@ -1,0 +1,32 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "test_clock_id"
+            ]
+          },
+          "id": "money.test_clocks.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.test_clocks.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.test_clocks.advance",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/TestClock"
+    }
+  ]
+}

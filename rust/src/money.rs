@@ -3,6 +3,27 @@
 
 #![allow(clippy::all)]
 
+/// The request of AdvanceTestClock.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AdvanceTestClockRequest {
+    /// The clock to advance.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Target simulated time. Whole seconds; must not precede current time.
+    /// Repeating an already reached target is idempotent.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "frozenTime"
+    )]
+    pub frozen_time: String,
+}
+
 /// AppStoreConnection is an App Store Server API key and the app's bundle ids.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1118,6 +1139,29 @@ pub struct CreateStoreConnectionRequest {
     pub validate_only: bool,
 }
 
+/// The request of CreateTestClock.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateTestClockRequest {
+    /// The environment to create in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The subject and initial simulated time.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "testClock")]
+    pub test_clock: Option<TestClock>,
+    /// The final name segment; defaults to a stable id derived from the subject.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "testClockId"
+    )]
+    pub test_clock_id: String,
+}
+
 /// The request of CreateUsageEvent.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1801,6 +1845,17 @@ pub struct GetStoreConnectionRequest {
 #[non_exhaustive]
 pub struct GetStorePurchaseRequest {
     /// The name of the store purchase to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// The request of GetTestClock.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetTestClockRequest {
+    /// The test clock to read back.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -4870,6 +4925,67 @@ pub struct TaxThresholdStatus {
     pub effective_time: String,
 }
 
+/// A Stripe test clock for one subject's subscription lifecycle. Create it
+/// before the subject's first checkout; its Stripe customer inherits the clock.
+/// Only test-mode keys and test-mode merchants can use this resource. Advancing
+/// changes Stripe's time and emits real webhooks; it never edits entitlements.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct TestClock {
+    /// The clock's resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identity, never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The subject whose new Stripe customer will use this clock. A subject
+    /// with an existing Money Stripe customer cannot acquire a clock.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<Subject>,
+    /// Initial simulated time on create; current Stripe time on reads. Required
+    /// on create. Only whole seconds are supported.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "frozenTime"
+    )]
+    pub frozen_time: String,
+    /// Stripe's status: ready, advancing, or internal_failure. Poll GetTestClock
+    /// until ready before the next simulation step. Ready does not mean Money
+    /// has applied every webhook; observe the subscription and entitlement too.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Stripe clock id, for processor receipts.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "processorClockId"
+    )]
+    pub processor_clock_id: String,
+    /// Always false; a live processor object is refused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub livemode: Option<bool>,
+}
+
 /// An amount a summary could not convert yet.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -6120,6 +6236,13 @@ impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
     /// The `entitlement_grants` collection.
     pub fn entitlement_grants(&self) -> EntitlementGrantsCollection<'a, T> {
         EntitlementGrantsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `test_clocks` collection.
+    pub fn test_clocks(&self) -> TestClocksCollection<'a, T> {
+        TestClocksCollection {
             client: self.client,
         }
     }
@@ -7494,6 +7617,103 @@ impl<'a, T: crate::runtime::Transport> EntitlementGrantsCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.entitlement_grant)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `test_clocks` of Sylphx Money: Resource type `money.sylphx.com/TestClock`.
+pub struct TestClocksCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> TestClocksCollection<'a, T> {
+    /// Creates a test-only Stripe simulation before the subject's first checkout.
+    /// No catalogue, payment, subscription, or entitlement is changed.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/test_clocks` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `UNAVAILABLE`.
+    pub async fn create(
+        &self,
+        request: CreateTestClockRequest,
+    ) -> Result<TestClock, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/test_clocks",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("test_clock_id", &request.test_clock_id);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.test_clock)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reads the owned test clock back from Stripe. Live keys are refused.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/test_clocks/*}` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn get(
+        &self,
+        request: GetTestClockRequest,
+    ) -> Result<TestClock, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/test_clocks/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Advances Stripe time, never entitlements. Stripe processes asynchronously;
+    /// poll GetTestClock until ready, then observe the genuine webhook's effects.
+    /// Time only moves forward, within Stripe's subscription-interval bound.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/test_clocks/*}:advance` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn advance(
+        &self,
+        request: AdvanceTestClockRequest,
+    ) -> Result<TestClock, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:advance",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/test_clocks/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,
