@@ -13839,6 +13839,45 @@
                   "type": "duration"
                 },
                 {
+                  "field": "realtime_channel.spec.chat.kind",
+                  "flag": "--spec.chat.kind",
+                  "summary": "Purpose of the conversation.",
+                  "type": "enum",
+                  "values": [
+                    "world",
+                    "room",
+                    "guild",
+                    "dm",
+                    "support",
+                    "group"
+                  ]
+                },
+                {
+                  "field": "realtime_channel.spec.chat.terms_version",
+                  "flag": "--spec.chat.terms-version",
+                  "summary": "Code of conduct version every sending member must have accepted.",
+                  "type": "string"
+                },
+                {
+                  "field": "realtime_channel.spec.chat.messages_per_minute",
+                  "flag": "--spec.chat.messages-per-minute",
+                  "summary": "Per-member sliding-minute message ceiling; default 30, maximum 600.",
+                  "type": "int"
+                },
+                {
+                  "field": "realtime_channel.spec.chat.participant_ids",
+                  "flag": "--spec.chat.participant-ids",
+                  "repeated": true,
+                  "summary": "Exact two participants for a DM or support; invited roster for groups. A player's empty group roster defaults to its creator. Backend-created groups with an empty roster admit authenticated players through join.",
+                  "type": "string"
+                },
+                {
+                  "field": "realtime_channel.spec.chat.title_id",
+                  "flag": "--spec.chat.title-id",
+                  "summary": "Optional originating title for world/room/guild/support. Empty is cross-title.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -13894,6 +13933,45 @@
                   "type": "duration"
                 },
                 {
+                  "field": "realtime_channel.spec.chat.kind",
+                  "flag": "--spec.chat.kind",
+                  "summary": "Purpose of the conversation.",
+                  "type": "enum",
+                  "values": [
+                    "world",
+                    "room",
+                    "guild",
+                    "dm",
+                    "support",
+                    "group"
+                  ]
+                },
+                {
+                  "field": "realtime_channel.spec.chat.terms_version",
+                  "flag": "--spec.chat.terms-version",
+                  "summary": "Code of conduct version every sending member must have accepted.",
+                  "type": "string"
+                },
+                {
+                  "field": "realtime_channel.spec.chat.messages_per_minute",
+                  "flag": "--spec.chat.messages-per-minute",
+                  "summary": "Per-member sliding-minute message ceiling; default 30, maximum 600.",
+                  "type": "int"
+                },
+                {
+                  "field": "realtime_channel.spec.chat.participant_ids",
+                  "flag": "--spec.chat.participant-ids",
+                  "repeated": true,
+                  "summary": "Exact two participants for a DM or support; invited roster for groups. A player's empty group roster defaults to its creator. Backend-created groups with an empty roster admit authenticated players through join.",
+                  "type": "string"
+                },
+                {
+                  "field": "realtime_channel.spec.chat.title_id",
+                  "flag": "--spec.chat.title-id",
+                  "summary": "Optional originating title for world/room/guild/support. Empty is cross-title.",
+                  "type": "string"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the realtime channel when it does not exist (declarative upsert).",
@@ -13942,6 +14020,12 @@
                   "flag": "--client-id",
                   "summary": "The publisher's client id, shown to subscribers.",
                   "type": "string"
+                },
+                {
+                  "field": "content",
+                  "flag": "--content",
+                  "summary": "Required for Chat channels; generic channels continue to use data/message_type.",
+                  "type": "json"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:publish",
@@ -14033,6 +14117,58 @@
               },
               "summary": "Deletes a realtime channel.",
               "verb": "delete"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "client_id",
+                  "flag": "--client-id",
+                  "required": true,
+                  "summary": "Authenticated member identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "role",
+                  "flag": "--role",
+                  "summary": "member or moderator; default member.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:join",
+              "method": "events.realtime_channels.join",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}"
+              },
+              "summary": "Joins a persistent Chat conversation.",
+              "verb": "join"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "client_id",
+                  "flag": "--client-id",
+                  "required": true,
+                  "summary": "Authenticated member identity.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:leave",
+              "method": "events.realtime_channels.leave",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}"
+              },
+              "summary": "Leaves Chat while retaining durable read state.",
+              "verb": "leave"
             }
           ],
           "noun": "realtime-channels",
@@ -14043,7 +14179,14 @@
           "commands": [
             {
               "effect": "read",
-              "flags": [],
+              "flags": [
+                {
+                  "field": "client_id",
+                  "flag": "--client-id",
+                  "summary": "Chat viewer; required on Chat channels.",
+                  "type": "string"
+                }
+              ],
               "http": "GET /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*}",
               "method": "events.realtime_messages.get",
               "permission": "events:read",
@@ -14076,6 +14219,24 @@
                   "flag": "--filter",
                   "summary": "Empty, or `sequence > N` to start after message N (resume).",
                   "type": "string"
+                },
+                {
+                  "field": "client_id",
+                  "flag": "--client-id",
+                  "summary": "Chat viewer; required on Chat channels. The trusted tenant backend binds identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "after_cursor",
+                  "flag": "--after-cursor",
+                  "summary": "Exclusive cursor, for forward recovery. Cannot combine with before_cursor or filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "before_cursor",
+                  "flag": "--before-cursor",
+                  "summary": "Exclusive cursor, for backwards history, newest first. Cannot combine with after_cursor or filter.",
+                  "type": "string"
                 }
               ],
               "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/realtime_channels/*}/realtime_messages",
@@ -14091,6 +14252,40 @@
               },
               "summary": "Lists a channel's retained messages, oldest first.",
               "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "client_id",
+                  "flag": "--client-id",
+                  "summary": "Authenticated reacting member.",
+                  "type": "string"
+                },
+                {
+                  "field": "emoji",
+                  "flag": "--emoji",
+                  "summary": "Emoji, at most 32 UTF-8 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "remove",
+                  "flag": "--remove",
+                  "summary": "Remove instead of add.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*}:react",
+              "method": "events.realtime_messages.react",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_messages/{realtime_message}"
+              },
+              "summary": "Adds or removes a member reaction on a visible Chat message.",
+              "verb": "react"
             }
           ],
           "noun": "realtime-messages",
@@ -14143,10 +14338,397 @@
               },
               "summary": "Lists the clients present in a channel now.",
               "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "last_read_cursor",
+                  "flag": "--last-read-cursor",
+                  "summary": "Last visible message cursor; empty leaves the read cursor unchanged.",
+                  "type": "string"
+                },
+                {
+                  "field": "muted",
+                  "flag": "--muted",
+                  "summary": "Conversation notification preference; supplied on every call.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_members/*}:read",
+              "method": "events.realtime_members.read",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_members/{realtime_member}"
+              },
+              "summary": "Advances a member read cursor monotonically and sets mute.",
+              "verb": "read"
             }
           ],
           "noun": "realtime-members",
           "resource_type": "events.sylphx.com/RealtimeMember"
+        },
+        {
+          "collection": "chat_profiles",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}",
+              "method": "events.chat_profiles.get",
+              "permission": "events:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Gets a Chat profile and fresh presence.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "terms_version",
+                  "flag": "--terms-version",
+                  "summary": "Accepted code of conduct version.",
+                  "type": "string"
+                },
+                {
+                  "field": "display_name",
+                  "flag": "--display-name",
+                  "summary": "User-visible name.",
+                  "type": "string"
+                },
+                {
+                  "field": "allow_stranger_images",
+                  "flag": "--allow-stranger-images",
+                  "summary": "Explicit opt-in; default false.",
+                  "type": "bool"
+                },
+                {
+                  "field": "quiet_hours_start_utc_minute",
+                  "flag": "--quiet-hours-start-utc-minute",
+                  "summary": "UTC quiet hours, optional as a pair; start equals end disables quiet hours.",
+                  "type": "int"
+                },
+                {
+                  "field": "quiet_hours_end_utc_minute",
+                  "flag": "--quiet-hours-end-utc-minute",
+                  "summary": "UTC exclusive end, including midnight as 1440.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:configure",
+              "method": "events.chat_profiles.configure",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Configures an authenticated Chat identity through its trusted backend.",
+              "verb": "configure"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "peer_id",
+                  "flag": "--peer-id",
+                  "required": true,
+                  "summary": "Other user's stable client id.",
+                  "type": "string"
+                },
+                {
+                  "field": "action",
+                  "flag": "--action",
+                  "required": true,
+                  "summary": "request, accept, remove, block or unblock.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:setRelationship",
+              "method": "events.chat_profiles.set_relationship",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Changes friendship or a bilateral interaction block.",
+              "verb": "set-relationship"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum results; default 50, maximum 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Previous response's next_page_token.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/chat_profiles/*}:listRelationships",
+              "method": "events.chat_profiles.list_relationships",
+              "permission": "events:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Lists friends and pending requests with presence.",
+              "verb": "list-relationships"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "target_type",
+                  "flag": "--target-type",
+                  "summary": "message, image or user.",
+                  "type": "string"
+                },
+                {
+                  "field": "target_id",
+                  "flag": "--target-id",
+                  "summary": "Full message name, image SHA-256 or user id.",
+                  "type": "string"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "summary": "Report reason.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:report",
+              "method": "events.chat_profiles.report",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Reports a message, image or user to the moderation queue.",
+              "verb": "report"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "sha256",
+                  "flag": "--sha256",
+                  "summary": "Lowercase SHA-256 digest.",
+                  "type": "string"
+                },
+                {
+                  "field": "content_uri",
+                  "flag": "--content-uri",
+                  "summary": "Exact existing storage URI.",
+                  "type": "string"
+                },
+                {
+                  "field": "status",
+                  "flag": "--status",
+                  "summary": "pending registers an upload; approved or rejected is a backend moderation receipt.",
+                  "type": "string"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "summary": "Administrator-only moderation reason; player status/reason are never trusted.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:reviewMedia",
+              "method": "events.chat_profiles.review_media",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Registers an image and its automated moderation receipt.",
+              "verb": "review-media"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "official",
+                  "flag": "--official",
+                  "summary": "Verified status; regular profile configuration never changes this flag.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:setOfficialStatus",
+              "method": "events.chat_profiles.set_official_status",
+              "permission": "events:chat:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Verifies an official account through a distinct administrator permission.",
+              "verb": "set-official-status"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "source_client_id",
+                  "flag": "--source-client-id",
+                  "summary": "Title-scoped guest identity whose Auth link has been verified.",
+                  "type": "string"
+                },
+                {
+                  "field": "link_receipt_id",
+                  "flag": "--link-receipt-id",
+                  "summary": "Immutable receipt from the verified Auth link.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:bindIdentity",
+              "method": "events.chat_profiles.bind_identity",
+              "permission": "events:chat:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Records an exact Auth-verified guest-to-platform identity link grant.",
+              "verb": "bind-identity"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "source_client_id",
+                  "flag": "--source-client-id",
+                  "summary": "Previously bound title-scoped guest identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "link_receipt_id",
+                  "flag": "--link-receipt-id",
+                  "summary": "Exact prior Auth-verified source/target receipt binding.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:mergeIdentity",
+              "method": "events.chat_profiles.merge_identity",
+              "permission": "events:chat:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Rehomes linked guest state without discarding messages or relationships.",
+              "verb": "merge-identity"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "ttl",
+                  "flag": "--ttl",
+                  "summary": "Lifetime, 60s to 3600s; default 3600s.",
+                  "type": "duration"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:issueToken",
+              "method": "events.chat_profiles.issue_token",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Issues a bounded player capability after verified Auth token exchange.",
+              "verb": "issue-token"
+            }
+          ],
+          "noun": "chat-profiles",
+          "resource_type": "events.sylphx.com/ChatProfile"
+        },
+        {
+          "collection": "chat_reports",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum results; default 50, maximum 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Previous response's next_page_token.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/chat_reports",
+              "method": "events.chat_reports.list",
+              "paginates": true,
+              "permission": "events:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists the moderation queue.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "status",
+                  "flag": "--status",
+                  "summary": "resolved or dismissed.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_reports/*}:resolve",
+              "method": "events.chat_reports.resolve",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_reports/{chat_report}"
+              },
+              "summary": "Records a moderation response.",
+              "verb": "resolve"
+            }
+          ],
+          "noun": "chat-reports",
+          "resource_type": "events.sylphx.com/ChatReport"
         }
       ],
       "commands": [],

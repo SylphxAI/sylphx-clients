@@ -28,6 +28,418 @@ pub struct AckQueueMessagesResponse {
     pub stale_leases: Vec<MessageLease>,
 }
 
+/// Record an Auth-verified link grant before merging; only the trusted backend
+/// may record the exact source/target/receipt binding. This does not link Auth accounts.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BindChatIdentityRequest {
+    /// Target platform Chat profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Title-scoped guest identity whose Auth link has been verified.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceClientId"
+    )]
+    pub source_client_id: String,
+    /// Immutable receipt from the verified Auth link.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "linkReceiptId"
+    )]
+    pub link_receipt_id: String,
+}
+
+/// Policy on the existing Realtime channel. Set at creation; Chat cannot be
+/// converted to an expiring generic channel. Only a trusted tenant backend with
+/// events:write/events:publish acts for its authenticated end users. Player
+/// sessions act only for their bound identity on the permitted Chat methods.
+/// No publishable key, supplied official badge or player verdict is trusted.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatChannelPolicy {
+    /// Purpose of the conversation.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<ChatChannelKind>,
+    /// Code of conduct version every sending member must have accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsVersion"
+    )]
+    pub terms_version: String,
+    /// Per-member sliding-minute message ceiling; default 30, maximum 600.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "messagesPerMinute"
+    )]
+    pub messages_per_minute: i32,
+    /// Exact two participants for a DM or support; invited roster for groups.
+    /// A player's empty group roster defaults to its creator. Backend-created
+    /// groups with an empty roster admit authenticated players through join.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "participantIds"
+    )]
+    pub participant_ids: Vec<String>,
+    /// Optional originating title for world/room/guild/support. Empty is cross-title.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "titleId"
+    )]
+    pub title_id: String,
+}
+
+/// A content-hashed image; delivery requires an approved moderation receipt for
+/// this exact digest, URI and uploader. Uploading does not approve content.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatImage {
+    /// Existing storage or Artifacts URI; no image bytes are carried here.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "contentUri"
+    )]
+    pub content_uri: String,
+    /// Lowercase SHA-256, 64 hexadecimal characters.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
+}
+
+/// A single static, explicit location share to an existing mutual contact.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatLocation {
+    /// Degrees north, inclusive -90 to 90.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub latitude: f64,
+    /// Degrees east, inclusive -180 to 180.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub longitude: f64,
+    /// Optional venue label; never continuous or background location.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub label: String,
+}
+
+/// Image moderation receipt; never image bytes.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatMediaReview {
+    /// SHA-256 digest.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
+    /// Exact URI.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "contentUri"
+    )]
+    pub content_uri: String,
+    /// Stable uploader identity.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "uploaderId"
+    )]
+    pub uploader_id: String,
+    /// pending, approved or rejected.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+    /// Visible pending/refusal reason, such as moderation_checking.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
+/// Structured Chat payload; exactly one of text/image/location/poll/room_invite
+/// must be set. Replies and mentions refer to the same conversation.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatMessageContent {
+    /// UTF-8 text, at most 4000 characters.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub text: String,
+    /// An image with a prior moderation approval.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<ChatImage>,
+    /// One explicit static location pin.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<ChatLocation>,
+    /// A member poll.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poll: Option<ChatPoll>,
+    /// Existing Realtime room resource name for a Join Game card.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "roomInvite"
+    )]
+    pub room_invite: String,
+    /// Optional cursor of the quoted message in this channel.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "replyToCursor"
+    )]
+    pub reply_to_cursor: String,
+    /// Member ids mentioned by this message.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "mentionedClientIds"
+    )]
+    pub mentioned_client_ids: Vec<String>,
+}
+
+/// A poll in the conversation; votes are recorded once per member.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatPoll {
+    /// Question shown to members.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub question: String,
+    /// Two to ten distinct choices.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<String>,
+}
+
+/// One platform Chat identity in a canonical shared Chat environment. Titles
+/// bind this same environment and client_id for shared friends, blocks, DMs and
+/// groups. A title_id is metadata, never a second identity or data authority.
+/// Unlinked guests use title-scoped client ids until a verified Auth account link
+/// merges their identity into the shared platform principal.
+/// Principal IDs are path-safe [A-Za-z0-9_.-], 1..128 bytes. Example
+/// guest.title.123 before linking, platform.authority.456 after verified linking.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatProfile {
+    /// Resource name; the last segment is the stable authenticated client id.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable service-derived identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Accepted code of conduct version, before first send; includes disclosure
+    /// that images go to a third-party AI model provider through Sylphx AI Gateway.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsVersion"
+    )]
+    pub terms_version: String,
+    /// User-visible name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// Trusted backend verification, never a message-supplied flag.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub official: bool,
+    /// Explicit opt-in to images from non-mutual contacts; default false.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowStrangerImages"
+    )]
+    pub allow_stranger_images: bool,
+    /// Fresh presence on any joined conversation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub online: bool,
+    /// Latest presence activity, including title and game, if the member supplied it.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub activity: String,
+    /// UTC quiet-hours start in minutes, 0..1439. Omit both fields to disable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "quietHoursStartUtcMinute"
+    )]
+    pub quiet_hours_start_utc_minute: Option<i32>,
+    /// UTC exclusive end, 0..1440; may wrap midnight.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "quietHoursEndUtcMinute"
+    )]
+    pub quiet_hours_end_utc_minute: Option<i32>,
+}
+
+/// One reaction aggregate on a message.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatReaction {
+    /// Reaction emoji.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub emoji: String,
+    /// Number of members with this reaction.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub count: i32,
+    /// Stable reacting member identities.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "clientIds")]
+    pub client_ids: Vec<String>,
+}
+
+/// Relationship state after the change.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatRelationship {
+    /// Acting member.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Other member.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "peerId"
+    )]
+    pub peer_id: String,
+    /// This user requested friendship.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub requested: bool,
+    /// Both users accepted friendship.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub mutual: bool,
+    /// Either user blocked the other; interaction is denied both ways.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub blocked: bool,
+    /// Other member's profile and fresh presence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peer: Option<ChatProfile>,
+}
+
+/// A report in the tenant's moderation queue. The response target is our own
+/// under-24-hour operating target; no claim that an external policy specifies it.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatReport {
+    /// Resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Reporting member.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "reporterId"
+    )]
+    pub reporter_id: String,
+    /// message, image or user.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetType"
+    )]
+    pub target_type: String,
+    /// Full message name, image SHA-256 or user id respectively.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetId"
+    )]
+    pub target_id: String,
+    /// Report reason.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// pending, resolved or dismissed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+    /// Latest response time for the moderation queue.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dueTime"
+    )]
+    pub due_time: String,
+}
+
+/// Verified sender snapshot written by the service when the message is accepted.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatSender {
+    /// The authenticated user's stable platform identity as bound by its backend.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Display name, from the sender's profile.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// Verified official status, assigned through a trusted backend operation.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub official: bool,
+}
+
 /// A CloudEvents 1.0 event as a producer submits it.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -77,6 +489,52 @@ pub struct CloudEvent {
     /// Extension attributes, at most 64.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub extensions: std::collections::BTreeMap<String, String>,
+}
+
+/// The trusted tenant backend configures one authenticated Chat identity.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ConfigureChatProfileRequest {
+    /// Profile resource name; creates a missing profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Accepted code of conduct version.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "termsVersion"
+    )]
+    pub terms_version: String,
+    /// User-visible name.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// Explicit opt-in; default false.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowStrangerImages"
+    )]
+    pub allow_stranger_images: bool,
+    /// UTC quiet hours, optional as a pair; start equals end disables quiet hours.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "quietHoursStartUtcMinute"
+    )]
+    pub quiet_hours_start_utc_minute: Option<i32>,
+    /// UTC exclusive end, including midnight as 1440.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "quietHoursEndUtcMinute"
+    )]
+    pub quiet_hours_end_utc_minute: Option<i32>,
 }
 
 /// A Connector is one delivery channel of the environment, as stored: an
@@ -667,6 +1125,17 @@ pub struct Event {
     pub admit_time: String,
 }
 
+/// The request for one Chat identity.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetChatProfileRequest {
+    /// Profile resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetConnector.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -742,6 +1211,13 @@ pub struct GetRealtimeMessageRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+    /// Chat viewer; required on Chat channels.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
 }
 
 /// The request of GetSubscription.
@@ -902,6 +1378,48 @@ pub struct InboundEndpointStatus {
     pub rejected_count: i64,
 }
 
+/// The verified Auth token-exchange backend issues a session to one player.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct IssueChatTokenRequest {
+    /// Profile in the canonical shared Chat environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Lifetime, 60s to 3600s; default 3600s.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub ttl: String,
+}
+
+/// Scoped player capability; contains no tenant key or administrator permission.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct IssueChatTokenResponse {
+    /// Present as Bearer on player Chat methods only.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub token: String,
+    /// Capability expiry.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+    /// Canonical verified player principal the token represents.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Profile name in the shared Chat environment.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub profile: String,
+}
+
 /// The request of IssueRealtimeChannelToken.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -954,6 +1472,30 @@ pub struct IssueRealtimeChannelTokenResponse {
         alias = "connectUri"
     )]
     pub connect_uri: String,
+}
+
+/// The request to join a Chat conversation. DM/support participants are fixed
+/// by policy; other conversations are admitted by the trusted tenant backend.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct JoinRealtimeChannelRequest {
+    /// Existing channel name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Authenticated member identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// member or moderator; default member.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub role: String,
 }
 
 /// The request of LeaseQueueMessages.
@@ -1034,6 +1576,108 @@ pub struct LeasedMessage {
         alias = "leaseExpireTime"
     )]
     pub lease_expire_time: String,
+}
+
+/// The request to leave; durable read state is retained for a later join.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct LeaveRealtimeChannelRequest {
+    /// Existing channel name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Authenticated member identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+}
+
+/// The request to list friendships and pending requests.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListChatRelationshipsRequest {
+    /// Acting user's profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum results; default 50, maximum 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Previous response's next_page_token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// One page of relationships in peer-id order.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListChatRelationshipsResponse {
+    /// Relationships and profiles.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relationships: Vec<ChatRelationship>,
+    /// Empty at the end.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// The request to list the moderation queue.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListChatReportsRequest {
+    /// Environment resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum results; default 50, maximum 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Previous response's next_page_token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// One page of reports, oldest first.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListChatReportsResponse {
+    /// Queue records.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "chatReports")]
+    pub chat_reports: Vec<ChatReport>,
+    /// Empty at the end.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListConnectors.
@@ -1370,6 +2014,27 @@ pub struct ListRealtimeMessagesRequest {
     /// Empty, or `sequence > N` to start after message N (resume).
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub filter: String,
+    /// Chat viewer; required on Chat channels. The trusted tenant backend binds identity.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Exclusive cursor, for forward recovery. Cannot combine with before_cursor or filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "afterCursor"
+    )]
+    pub after_cursor: String,
+    /// Exclusive cursor, for backwards history, newest first. Cannot combine with after_cursor or filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "beforeCursor"
+    )]
+    pub before_cursor: String,
 }
 
 /// The response of ListRealtimeMessages.
@@ -1604,6 +2269,32 @@ pub struct ListWebhookEndpointsResponse {
     pub next_page_token: String,
 }
 
+/// Merge only after the exact verified link grant has been recorded. Repeating
+/// the same merge is a no-op; another target or an absent grant is refused.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MergeChatIdentityRequest {
+    /// Target platform Chat profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Previously bound title-scoped guest identity.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceClientId"
+    )]
+    pub source_client_id: String,
+    /// Exact prior Auth-verified source/target receipt binding.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "linkReceiptId"
+    )]
+    pub link_receipt_id: String,
+}
+
 /// A fenced lease on one message.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1710,6 +2401,9 @@ pub struct PublishRealtimeMessagesRequest {
         alias = "clientId"
     )]
     pub client_id: String,
+    /// Required for Chat channels; generic channels continue to use data/message_type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<ChatMessageContent>,
 }
 
 /// The response of PublishRealtimeMessages.
@@ -1883,6 +2577,51 @@ pub struct QueueStatus {
     pub dead_letter_count: i64,
 }
 
+/// Adds or removes this member's reaction idempotently.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReactRealtimeMessageRequest {
+    /// Existing message resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Authenticated reacting member.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Emoji, at most 32 UTF-8 bytes.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub emoji: String,
+    /// Remove instead of add.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub remove: bool,
+}
+
+/// The request to acknowledge a cursor and configure conversation notifications.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReadRealtimeMemberRequest {
+    /// Existing member resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Last visible message cursor; empty leaves the read cursor unchanged.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastReadCursor"
+    )]
+    pub last_read_cursor: String,
+    /// Conversation notification preference; supplied on every call.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub muted: bool,
+}
+
 /// A Realtime Channel delivers matching events to authorized clients over
 /// WebSocket or SSE, resumable from a cursor. Subscriptions route events into
 /// it; Notify's inbox rides it.
@@ -1933,6 +2672,9 @@ pub struct RealtimeChannelSpec {
         alias = "historyRetention"
     )]
     pub history_retention: String,
+    /// Chat policy; when present, history is durable and membership is persistent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat: Option<ChatChannelPolicy>,
 }
 
 /// RealtimeChannelStatus is the observed state of a RealtimeChannel.
@@ -2036,10 +2778,50 @@ pub struct RealtimeMember {
         alias = "connectionCount"
     )]
     pub connection_count: i32,
+    /// Persistent Chat membership, independent of online connections.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub joined: bool,
+    /// Last acknowledged stream cursor; updates never move backwards.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastReadCursor"
+    )]
+    pub last_read_cursor: String,
+    /// Unread visible Chat messages from other members, excluding blocked senders.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "unreadCount"
+    )]
+    pub unread_count: i64,
+    /// Suppress this conversation's notification intents.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub muted: bool,
+    /// Member or moderator, assigned by the tenant backend.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub role: String,
+    /// This channel is an official, verified support conversation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub pinned: bool,
 }
 
 /// A Realtime Message is one message in a channel's ordered history, kept
-/// for the channel's `history_retention`.
+/// for the channel's `history_retention`. Chat history is durable; edit and unsend
+/// are reserved for a later phase.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct RealtimeMessage {
@@ -2099,6 +2881,21 @@ pub struct RealtimeMessage {
         alias = "publishTime"
     )]
     pub publish_time: String,
+    /// Structured Chat content, from the same stored event as data.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<ChatMessageContent>,
+    /// Verified sender metadata; callers cannot set the official badge on a message.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sender: Option<ChatSender>,
+    /// Member reactions, from the same conversation authority.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reactions: Vec<ChatReaction>,
 }
 
 /// The request of ReplayQueue.
@@ -2192,6 +2989,78 @@ pub struct ReplayWebhookEndpointResponse {
     pub replayed_count: i64,
 }
 
+/// The request to report a message, image or user.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReportChatContentRequest {
+    /// Reporting user's profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// message, image or user.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetType"
+    )]
+    pub target_type: String,
+    /// Full message name, image SHA-256 or user id.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetId"
+    )]
+    pub target_id: String,
+    /// Report reason.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
+/// The request to resolve a moderation report.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ResolveChatReportRequest {
+    /// Moderation report resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// resolved or dismissed.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+}
+
+/// Register or review one content-hashed image. Only the trusted backend records
+/// automated moderation outcomes; end users cannot approve their own uploads.
+/// Accepted conduct terms disclose third-party AI model review through Sylphx AI
+/// Gateway. Capacity exhaustion leaves status pending with reason moderation_checking.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReviewChatMediaRequest {
+    /// Uploader's profile resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Lowercase SHA-256 digest.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
+    /// Exact existing storage URI.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "contentUri"
+    )]
+    pub content_uri: String,
+    /// pending registers an upload; approved or rejected is a backend moderation receipt.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+    /// Administrator-only moderation reason; player status/reason are never trusted.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
 /// The request of RotateWebhookEndpointSecret.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2232,6 +3101,45 @@ pub struct SendQueueMessagesResponse {
     /// The message ids, in request order.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "messageIds")]
     pub message_ids: Vec<String>,
+}
+
+/// Trusted administrator verification of an official account.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SetChatOfficialStatusRequest {
+    /// Profile in the canonical shared Chat environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Verified status; regular profile configuration never changes this flag.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub official: bool,
+}
+
+/// The request to change a directed social relationship.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SetChatRelationshipRequest {
+    /// Acting user's profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Other user's stable client id.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "peerId"
+    )]
+    pub peer_id: String,
+    /// request, accept, remove, block or unblock.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub action: String,
 }
 
 /// A Subscription fans each matching event of a Topic out to one Queue, Webhook
@@ -2821,6 +3729,73 @@ pub struct WebhookEndpointStatus {
     pub previous_secret_expire_time: String,
 }
 
+/// A Chat channel's purpose; no product-specific server is required.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ChatChannelKind {
+    /// A public conversation across the current world.
+    World,
+    /// A conversation attached to a game room.
+    Room,
+    /// A conversation for a guild.
+    Guild,
+    /// A private conversation between two participants.
+    Dm,
+    /// A conversation between a player and support.
+    Support,
+    /// A conversation with an invited member roster.
+    Group,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl ChatChannelKind {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::World => "world",
+            Self::Room => "room",
+            Self::Guild => "guild",
+            Self::Dm => "dm",
+            Self::Support => "support",
+            Self::Group => "group",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "world" => Self::World,
+            "room" => Self::Room,
+            "guild" => Self::Guild,
+            "dm" => Self::Dm,
+            "support" => Self::Support,
+            "group" => Self::Group,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for ChatChannelKind {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ChatChannelKind {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for ChatChannelKind {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// How one delivery attempt ended.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -3146,6 +4121,20 @@ impl<'a, T: crate::runtime::Transport> EventsApi<'a, T> {
     /// The `realtime_members` collection.
     pub fn realtime_members(&self) -> RealtimeMembersCollection<'a, T> {
         RealtimeMembersCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `chat_profiles` collection.
+    pub fn chat_profiles(&self) -> ChatProfilesCollection<'a, T> {
+        ChatProfilesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `chat_reports` collection.
+    pub fn chat_reports(&self) -> ChatReportsCollection<'a, T> {
+        ChatReportsCollection {
             client: self.client,
         }
     }
@@ -4837,6 +5826,66 @@ impl<'a, T: crate::runtime::Transport> RealtimeChannelsCollection<'a, T> {
         };
         self.client.call(http).await
     }
+
+    /// Joins a persistent Chat conversation.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:join` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn join(
+        &self,
+        request: JoinRealtimeChannelRequest,
+    ) -> Result<RealtimeMember, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:join",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/realtime_channels/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Leaves Chat while retaining durable read state.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*}:leave` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn leave(
+        &self,
+        request: LeaveRealtimeChannelRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:leave",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/realtime_channels/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
 }
 
 /// `realtime_messages` of Sylphx Events: Resource type `events.sylphx.com/RealtimeMessage`.
@@ -4862,7 +5911,8 @@ impl<'a, T: crate::runtime::Transport> RealtimeMessagesCollection<'a, T> {
                 "name"
             )?
         );
-        let query = crate::runtime::Query::default();
+        let mut query = crate::runtime::Query::default();
+        query.push("client_id", &request.client_id);
         let http = crate::runtime::HttpRequest {
             method: "GET",
             path,
@@ -4896,6 +5946,9 @@ impl<'a, T: crate::runtime::Transport> RealtimeMessagesCollection<'a, T> {
         query.push("page_size", &request.page_size);
         query.push("page_token", &request.page_token);
         query.push("filter", &request.filter);
+        query.push("client_id", &request.client_id);
+        query.push("after_cursor", &request.after_cursor);
+        query.push("before_cursor", &request.before_cursor);
         let http = crate::runtime::HttpRequest {
             method: "GET",
             path,
@@ -4922,6 +5975,36 @@ impl<'a, T: crate::runtime::Transport> RealtimeMessagesCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Adds or removes a member reaction on a visible Chat message.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*}:react` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`.
+    pub async fn react(
+        &self,
+        request: ReactRealtimeMessageRequest,
+    ) -> Result<RealtimeMessage, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:react",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 
@@ -5007,5 +6090,425 @@ impl<'a, T: crate::runtime::Transport> RealtimeMembersCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Advances a member read cursor monotonically and sets mute.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/realtime_channels/*/realtime_members/*}:read` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn read(
+        &self,
+        request: ReadRealtimeMemberRequest,
+    ) -> Result<RealtimeMember, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:read",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/realtime_channels/*/realtime_members/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `chat_profiles` of Sylphx Events: Resource type `events.sylphx.com/ChatProfile`.
+pub struct ChatProfilesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ChatProfilesCollection<'a, T> {
+    /// Gets a Chat profile and fresh presence.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}` · permission `events:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn get(
+        &self,
+        request: GetChatProfileRequest,
+    ) -> Result<ChatProfile, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Configures an authenticated Chat identity through its trusted backend.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:configure` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn configure(
+        &self,
+        request: ConfigureChatProfileRequest,
+    ) -> Result<ChatProfile, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:configure",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Changes friendship or a bilateral interaction block.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:setRelationship` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn set_relationship(
+        &self,
+        request: SetChatRelationshipRequest,
+    ) -> Result<ChatRelationship, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:setRelationship",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists friends and pending requests with presence.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/chat_profiles/*}:listRelationships` · permission `events:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn list_relationships(
+        &self,
+        request: ListChatRelationshipsRequest,
+    ) -> Result<ListChatRelationshipsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:listRelationships",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reports a message, image or user to the moderation queue.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:report` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn report(
+        &self,
+        request: ReportChatContentRequest,
+    ) -> Result<ChatReport, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:report",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Registers an image and its automated moderation receipt.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:reviewMedia` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn review_media(
+        &self,
+        request: ReviewChatMediaRequest,
+    ) -> Result<ChatMediaReview, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:reviewMedia",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Verifies an official account through a distinct administrator permission.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:setOfficialStatus` · permission `events:chat:admin` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`.
+    pub async fn set_official_status(
+        &self,
+        request: SetChatOfficialStatusRequest,
+    ) -> Result<ChatProfile, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:setOfficialStatus",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Records an exact Auth-verified guest-to-platform identity link grant.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:bindIdentity` · permission `events:chat:admin` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn bind_identity(
+        &self,
+        request: BindChatIdentityRequest,
+    ) -> Result<ChatProfile, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:bindIdentity",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Rehomes linked guest state without discarding messages or relationships.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:mergeIdentity` · permission `events:chat:admin` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn merge_identity(
+        &self,
+        request: MergeChatIdentityRequest,
+    ) -> Result<ChatProfile, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:mergeIdentity",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Issues a bounded player capability after verified Auth token exchange.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:issueToken` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn issue_token(
+        &self,
+        request: IssueChatTokenRequest,
+    ) -> Result<IssueChatTokenResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:issueToken",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `chat_reports` of Sylphx Events: Resource type `events.sylphx.com/ChatReport`.
+pub struct ChatReportsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ChatReportsCollection<'a, T> {
+    /// Lists the moderation queue.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/chat_reports` · permission `events:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn list(
+        &self,
+        request: ListChatReportsRequest,
+    ) -> Result<ListChatReportsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/chat_reports",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListChatReportsRequest,
+    ) -> Result<Vec<ChatReport>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.chat_reports);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Records a moderation response.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_reports/*}:resolve` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+    pub async fn resolve(
+        &self,
+        request: ResolveChatReportRequest,
+    ) -> Result<ChatReport, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:resolve",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_reports/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }

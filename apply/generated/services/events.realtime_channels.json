@@ -67,6 +67,20 @@
           },
           "id": "events.realtime_channels.delete",
           "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_channels.join",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_channels.leave",
+          "kind": "custom"
         }
       ],
       "resource_type": "events.sylphx.com/RealtimeChannel"

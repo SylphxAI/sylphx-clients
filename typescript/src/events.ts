@@ -19,6 +19,205 @@ export interface AckQueueMessagesResponse {
 	staleLeases?: MessageLease[]
 }
 
+/**
+ * Record an Auth-verified link grant before merging; only the trusted backend
+ * may record the exact source/target/receipt binding. This does not link Auth accounts.
+ */
+export interface BindChatIdentityRequest {
+	/** Target platform Chat profile. */
+	name: string
+	/** Title-scoped guest identity whose Auth link has been verified. */
+	sourceClientId?: string
+	/** Immutable receipt from the verified Auth link. */
+	linkReceiptId?: string
+}
+
+/**
+ * Policy on the existing Realtime channel. Set at creation; Chat cannot be
+ * converted to an expiring generic channel. Only a trusted tenant backend with
+ * events:write/events:publish acts for its authenticated end users. Player
+ * sessions act only for their bound identity on the permitted Chat methods.
+ * No publishable key, supplied official badge or player verdict is trusted.
+ */
+export interface ChatChannelPolicy {
+	/** Purpose of the conversation. */
+	kind?: ChatChannelKind
+	/** Code of conduct version every sending member must have accepted. */
+	termsVersion?: string
+	/** Per-member sliding-minute message ceiling; default 30, maximum 600. */
+	messagesPerMinute?: number
+	/**
+	 * Exact two participants for a DM or support; invited roster for groups.
+	 * A player's empty group roster defaults to its creator. Backend-created
+	 * groups with an empty roster admit authenticated players through join.
+	 */
+	participantIds?: string[]
+	/** Optional originating title for world/room/guild/support. Empty is cross-title. */
+	titleId?: string
+}
+
+/**
+ * A content-hashed image; delivery requires an approved moderation receipt for
+ * this exact digest, URI and uploader. Uploading does not approve content.
+ */
+export interface ChatImage {
+	/** Existing storage or Artifacts URI; no image bytes are carried here. */
+	contentUri?: string
+	/** Lowercase SHA-256, 64 hexadecimal characters. */
+	sha256?: string
+}
+
+/** A single static, explicit location share to an existing mutual contact. */
+export interface ChatLocation {
+	/** Degrees north, inclusive -90 to 90. */
+	latitude?: number
+	/** Degrees east, inclusive -180 to 180. */
+	longitude?: number
+	/** Optional venue label; never continuous or background location. */
+	label?: string
+}
+
+/** Image moderation receipt; never image bytes. */
+export interface ChatMediaReview {
+	/** SHA-256 digest. */
+	sha256?: string
+	/** Exact URI. */
+	contentUri?: string
+	/** Stable uploader identity. */
+	uploaderId?: string
+	/** pending, approved or rejected. */
+	status?: string
+	/** Visible pending/refusal reason, such as moderation_checking. */
+	reason?: string
+}
+
+/**
+ * Structured Chat payload; exactly one of text/image/location/poll/room_invite
+ * must be set. Replies and mentions refer to the same conversation.
+ */
+export interface ChatMessageContent {
+	/** UTF-8 text, at most 4000 characters. */
+	text?: string
+	/** An image with a prior moderation approval. */
+	image?: ChatImage
+	/** One explicit static location pin. */
+	location?: ChatLocation
+	/** A member poll. */
+	poll?: ChatPoll
+	/** Existing Realtime room resource name for a Join Game card. */
+	roomInvite?: string
+	/** Optional cursor of the quoted message in this channel. */
+	replyToCursor?: string
+	/** Member ids mentioned by this message. */
+	mentionedClientIds?: string[]
+}
+
+/** A poll in the conversation; votes are recorded once per member. */
+export interface ChatPoll {
+	/** Question shown to members. */
+	question?: string
+	/** Two to ten distinct choices. */
+	options?: string[]
+}
+
+/**
+ * One platform Chat identity in a canonical shared Chat environment. Titles
+ * bind this same environment and client_id for shared friends, blocks, DMs and
+ * groups. A title_id is metadata, never a second identity or data authority.
+ * Unlinked guests use title-scoped client ids until a verified Auth account link
+ * merges their identity into the shared platform principal.
+ * Principal IDs are path-safe [A-Za-z0-9_.-], 1..128 bytes. Example
+ * guest.title.123 before linking, platform.authority.456 after verified linking.
+ */
+export interface ChatProfile {
+	/** Resource name; the last segment is the stable authenticated client id. */
+	name?: string
+	/** Stable service-derived identifier. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/**
+	 * Accepted code of conduct version, before first send; includes disclosure
+	 * that images go to a third-party AI model provider through Sylphx AI Gateway.
+	 */
+	readonly termsVersion?: string
+	/** User-visible name. */
+	readonly displayName?: string
+	/** Trusted backend verification, never a message-supplied flag. */
+	readonly official?: boolean
+	/** Explicit opt-in to images from non-mutual contacts; default false. */
+	readonly allowStrangerImages?: boolean
+	/** Fresh presence on any joined conversation. */
+	readonly online?: boolean
+	/** Latest presence activity, including title and game, if the member supplied it. */
+	readonly activity?: string
+	/** UTC quiet-hours start in minutes, 0..1439. Omit both fields to disable. */
+	readonly quietHoursStartUtcMinute?: number
+	/** UTC exclusive end, 0..1440; may wrap midnight. */
+	readonly quietHoursEndUtcMinute?: number
+}
+
+/** One reaction aggregate on a message. */
+export interface ChatReaction {
+	/** Reaction emoji. */
+	emoji?: string
+	/** Number of members with this reaction. */
+	count?: number
+	/** Stable reacting member identities. */
+	clientIds?: string[]
+}
+
+/** Relationship state after the change. */
+export interface ChatRelationship {
+	/** Acting member. */
+	clientId?: string
+	/** Other member. */
+	peerId?: string
+	/** This user requested friendship. */
+	requested?: boolean
+	/** Both users accepted friendship. */
+	mutual?: boolean
+	/** Either user blocked the other; interaction is denied both ways. */
+	blocked?: boolean
+	/** Other member's profile and fresh presence. */
+	peer?: ChatProfile
+}
+
+/**
+ * A report in the tenant's moderation queue. The response target is our own
+ * under-24-hour operating target; no claim that an external policy specifies it.
+ */
+export interface ChatReport {
+	/** Resource name. */
+	name?: string
+	/** Stable identifier. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** Reporting member. */
+	readonly reporterId?: string
+	/** message, image or user. */
+	readonly targetType?: string
+	/** Full message name, image SHA-256 or user id respectively. */
+	readonly targetId?: string
+	/** Report reason. */
+	readonly reason?: string
+	/** pending, resolved or dismissed. */
+	readonly status?: string
+	/** Latest response time for the moderation queue. */
+	readonly dueTime?: string
+}
+
+/** Verified sender snapshot written by the service when the message is accepted. */
+export interface ChatSender {
+	/** The authenticated user's stable platform identity as bound by its backend. */
+	clientId?: string
+	/** Display name, from the sender's profile. */
+	displayName?: string
+	/** Verified official status, assigned through a trusted backend operation. */
+	official?: boolean
+}
+
 /** A CloudEvents 1.0 event as a producer submits it. */
 export interface CloudEvent {
 	/** Unique per `source`; with `source` it is the dedupe key. */
@@ -39,6 +238,22 @@ export interface CloudEvent {
 	data?: unknown
 	/** Extension attributes, at most 64. */
 	extensions?: Record<string, string>
+}
+
+/** The trusted tenant backend configures one authenticated Chat identity. */
+export interface ConfigureChatProfileRequest {
+	/** Profile resource name; creates a missing profile. */
+	name: string
+	/** Accepted code of conduct version. */
+	termsVersion?: string
+	/** User-visible name. */
+	displayName?: string
+	/** Explicit opt-in; default false. */
+	allowStrangerImages?: boolean
+	/** UTC quiet hours, optional as a pair; start equals end disables quiet hours. */
+	quietHoursStartUtcMinute?: number
+	/** UTC exclusive end, including midnight as 1440. */
+	quietHoursEndUtcMinute?: number
 }
 
 /**
@@ -292,6 +507,12 @@ export interface Event {
 	readonly admitTime?: string
 }
 
+/** The request for one Chat identity. */
+export interface GetChatProfileRequest {
+	/** Profile resource name. */
+	name: string
+}
+
 /** The request of GetConnector. */
 export interface GetConnectorRequest {
 	/** The name of the connector to get. */
@@ -332,6 +553,8 @@ export interface GetRealtimeMemberRequest {
 export interface GetRealtimeMessageRequest {
 	/** The name of the message. */
 	name: string
+	/** Chat viewer; required on Chat channels. */
+	clientId?: string
 }
 
 /** The request of GetSubscription. */
@@ -404,6 +627,26 @@ export interface InboundEndpointStatus {
 	readonly rejectedCount?: string
 }
 
+/** The verified Auth token-exchange backend issues a session to one player. */
+export interface IssueChatTokenRequest {
+	/** Profile in the canonical shared Chat environment. */
+	name: string
+	/** Lifetime, 60s to 3600s; default 3600s. */
+	ttl?: string
+}
+
+/** Scoped player capability; contains no tenant key or administrator permission. */
+export interface IssueChatTokenResponse {
+	/** Present as Bearer on player Chat methods only. */
+	token?: string
+	/** Capability expiry. */
+	expireTime?: string
+	/** Canonical verified player principal the token represents. */
+	clientId?: string
+	/** Profile name in the shared Chat environment. */
+	profile?: string
+}
+
 /** The request of IssueRealtimeChannelToken. */
 export interface IssueRealtimeChannelTokenRequest {
 	/** The name of the realtime channel. */
@@ -427,6 +670,19 @@ export interface IssueRealtimeChannelTokenResponse {
 	expireTime?: string
 	/** The URI to connect to with it. */
 	connectUri?: string
+}
+
+/**
+ * The request to join a Chat conversation. DM/support participants are fixed
+ * by policy; other conversations are admitted by the trusted tenant backend.
+ */
+export interface JoinRealtimeChannelRequest {
+	/** Existing channel name. */
+	name: string
+	/** Authenticated member identity. */
+	clientId: string
+	/** member or moderator; default member. */
+	role?: string
 }
 
 /** The request of LeaseQueueMessages. */
@@ -459,6 +715,50 @@ export interface LeasedMessage {
 	readonly deliveryCount?: number
 	/** When the lease expires and the message is ready again. */
 	readonly leaseExpireTime?: string
+}
+
+/** The request to leave; durable read state is retained for a later join. */
+export interface LeaveRealtimeChannelRequest {
+	/** Existing channel name. */
+	name: string
+	/** Authenticated member identity. */
+	clientId: string
+}
+
+/** The request to list friendships and pending requests. */
+export interface ListChatRelationshipsRequest {
+	/** Acting user's profile. */
+	parent: string
+	/** Maximum results; default 50, maximum 1000. */
+	pageSize?: number
+	/** Previous response's next_page_token. */
+	pageToken?: string
+}
+
+/** One page of relationships in peer-id order. */
+export interface ListChatRelationshipsResponse {
+	/** Relationships and profiles. */
+	relationships?: ChatRelationship[]
+	/** Empty at the end. */
+	nextPageToken?: string
+}
+
+/** The request to list the moderation queue. */
+export interface ListChatReportsRequest {
+	/** Environment resource name. */
+	parent: string
+	/** Maximum results; default 50, maximum 1000. */
+	pageSize?: number
+	/** Previous response's next_page_token. */
+	pageToken?: string
+}
+
+/** One page of reports, oldest first. */
+export interface ListChatReportsResponse {
+	/** Queue records. */
+	chatReports?: ChatReport[]
+	/** Empty at the end. */
+	nextPageToken?: string
 }
 
 /** The request of ListConnectors. */
@@ -599,6 +899,12 @@ export interface ListRealtimeMessagesRequest {
 	pageToken?: string
 	/** Empty, or `sequence > N` to start after message N (resume). */
 	filter?: string
+	/** Chat viewer; required on Chat channels. The trusted tenant backend binds identity. */
+	clientId?: string
+	/** Exclusive cursor, for forward recovery. Cannot combine with before_cursor or filter. */
+	afterCursor?: string
+	/** Exclusive cursor, for backwards history, newest first. Cannot combine with after_cursor or filter. */
+	beforeCursor?: string
 }
 
 /** The response of ListRealtimeMessages. */
@@ -697,6 +1003,19 @@ export interface ListWebhookEndpointsResponse {
 	nextPageToken?: string
 }
 
+/**
+ * Merge only after the exact verified link grant has been recorded. Repeating
+ * the same merge is a no-op; another target or an absent grant is refused.
+ */
+export interface MergeChatIdentityRequest {
+	/** Target platform Chat profile. */
+	name: string
+	/** Previously bound title-scoped guest identity. */
+	sourceClientId?: string
+	/** Exact prior Auth-verified source/target receipt binding. */
+	linkReceiptId?: string
+}
+
 /** A fenced lease on one message. */
 export interface MessageLease {
 	/** The message id. */
@@ -745,6 +1064,8 @@ export interface PublishRealtimeMessagesRequest {
 	data?: unknown
 	/** The publisher's client id, shown to subscribers. */
 	clientId?: string
+	/** Required for Chat channels; generic channels continue to use data/message_type. */
+	content?: ChatMessageContent
 }
 
 /** The response of PublishRealtimeMessages. */
@@ -822,6 +1143,28 @@ export interface QueueStatus {
 	readonly deadLetterCount?: string
 }
 
+/** Adds or removes this member's reaction idempotently. */
+export interface ReactRealtimeMessageRequest {
+	/** Existing message resource name. */
+	name: string
+	/** Authenticated reacting member. */
+	clientId?: string
+	/** Emoji, at most 32 UTF-8 bytes. */
+	emoji?: string
+	/** Remove instead of add. */
+	remove?: boolean
+}
+
+/** The request to acknowledge a cursor and configure conversation notifications. */
+export interface ReadRealtimeMemberRequest {
+	/** Existing member resource name. */
+	name: string
+	/** Last visible message cursor; empty leaves the read cursor unchanged. */
+	lastReadCursor?: string
+	/** Conversation notification preference; supplied on every call. */
+	muted?: boolean
+}
+
 /**
  * A Realtime Channel delivers matching events to authorized clients over
  * WebSocket or SSE, resumable from a cursor. Subscriptions route events into
@@ -849,6 +1192,8 @@ export interface RealtimeChannelSpec {
 	publishableOk?: boolean
 	/** How far back a cursor may resume; default 24h, at most 7d. */
 	historyRetention?: string
+	/** Chat policy; when present, history is durable and membership is persistent. */
+	chat?: ChatChannelPolicy
 }
 
 /** RealtimeChannelStatus is the observed state of a RealtimeChannel. */
@@ -890,11 +1235,24 @@ export interface RealtimeMember {
 	readonly enterTime?: string
 	/** Open connections of this client in the channel. */
 	readonly connectionCount?: number
+	/** Persistent Chat membership, independent of online connections. */
+	readonly joined?: boolean
+	/** Last acknowledged stream cursor; updates never move backwards. */
+	readonly lastReadCursor?: string
+	/** Unread visible Chat messages from other members, excluding blocked senders. */
+	readonly unreadCount?: string
+	/** Suppress this conversation's notification intents. */
+	readonly muted?: boolean
+	/** Member or moderator, assigned by the tenant backend. */
+	readonly role?: string
+	/** This channel is an official, verified support conversation. */
+	readonly pinned?: boolean
 }
 
 /**
  * A Realtime Message is one message in a channel's ordered history, kept
- * for the channel's `history_retention`.
+ * for the channel's `history_retention`. Chat history is durable; edit and unsend
+ * are reserved for a later phase.
  */
 export interface RealtimeMessage {
 	/** `…/realtime_channels/{realtime_channel}/realtime_messages/{realtime_message}`. */
@@ -918,6 +1276,12 @@ export interface RealtimeMessage {
 	clientId?: string
 	/** When the channel appended it. */
 	readonly publishTime?: string
+	/** Structured Chat content, from the same stored event as data. */
+	readonly content?: ChatMessageContent
+	/** Verified sender metadata; callers cannot set the official badge on a message. */
+	readonly sender?: ChatSender
+	/** Member reactions, from the same conversation authority. */
+	readonly reactions?: ChatReaction[]
 }
 
 /** The request of ReplayQueue. */
@@ -958,6 +1322,45 @@ export interface ReplayWebhookEndpointResponse {
 	replayedCount?: string
 }
 
+/** The request to report a message, image or user. */
+export interface ReportChatContentRequest {
+	/** Reporting user's profile. */
+	name: string
+	/** message, image or user. */
+	targetType?: string
+	/** Full message name, image SHA-256 or user id. */
+	targetId?: string
+	/** Report reason. */
+	reason?: string
+}
+
+/** The request to resolve a moderation report. */
+export interface ResolveChatReportRequest {
+	/** Moderation report resource name. */
+	name: string
+	/** resolved or dismissed. */
+	status?: string
+}
+
+/**
+ * Register or review one content-hashed image. Only the trusted backend records
+ * automated moderation outcomes; end users cannot approve their own uploads.
+ * Accepted conduct terms disclose third-party AI model review through Sylphx AI
+ * Gateway. Capacity exhaustion leaves status pending with reason moderation_checking.
+ */
+export interface ReviewChatMediaRequest {
+	/** Uploader's profile resource name. */
+	name: string
+	/** Lowercase SHA-256 digest. */
+	sha256?: string
+	/** Exact existing storage URI. */
+	contentUri?: string
+	/** pending registers an upload; approved or rejected is a backend moderation receipt. */
+	status?: string
+	/** Administrator-only moderation reason; player status/reason are never trusted. */
+	reason?: string
+}
+
 /** The request of RotateWebhookEndpointSecret. */
 export interface RotateWebhookEndpointSecretRequest {
 	/** The name of the webhook endpoint. */
@@ -980,6 +1383,24 @@ export interface SendQueueMessagesRequest {
 export interface SendQueueMessagesResponse {
 	/** The message ids, in request order. */
 	messageIds?: string[]
+}
+
+/** Trusted administrator verification of an official account. */
+export interface SetChatOfficialStatusRequest {
+	/** Profile in the canonical shared Chat environment. */
+	name: string
+	/** Verified status; regular profile configuration never changes this flag. */
+	official?: boolean
+}
+
+/** The request to change a directed social relationship. */
+export interface SetChatRelationshipRequest {
+	/** Acting user's profile. */
+	name: string
+	/** Other user's stable client id. */
+	peerId: string
+	/** request, accept, remove, block or unblock. */
+	action: string
 }
 
 /**
@@ -1254,6 +1675,9 @@ export interface WebhookEndpointStatus {
 	readonly previousSecretExpireTime?: string
 }
 
+/** A Chat channel's purpose; no product-specific server is required. */
+export type ChatChannelKind = 'world' | 'room' | 'guild' | 'dm' | 'support' | 'group' | (string & {})
+
 /** How one delivery attempt ended. */
 export type DeliveryAttemptOutcome = 'delivered' | 'retryable_failure' | 'terminal_failure' | 'ambiguous' | (string & {})
 
@@ -1273,12 +1697,73 @@ runtime.registerSchemas({
 	'sylphx.events.v1.AckQueueMessagesResponse': [
 		['staleLeases', 'stale_leases', 'sylphx.events.v1.MessageLease'],
 	],
+	'sylphx.events.v1.BindChatIdentityRequest': [
+		['sourceClientId', 'source_client_id'],
+		['linkReceiptId', 'link_receipt_id'],
+	],
+	'sylphx.events.v1.ChatChannelPolicy': [
+		['termsVersion', 'terms_version'],
+		['messagesPerMinute', 'messages_per_minute'],
+		['participantIds', 'participant_ids'],
+		['titleId', 'title_id'],
+	],
+	'sylphx.events.v1.ChatImage': [
+		['contentUri', 'content_uri'],
+	],
+	'sylphx.events.v1.ChatLocation': [],
+	'sylphx.events.v1.ChatMediaReview': [
+		['contentUri', 'content_uri'],
+		['uploaderId', 'uploader_id'],
+	],
+	'sylphx.events.v1.ChatMessageContent': [
+		['image', 'image', 'sylphx.events.v1.ChatImage'],
+		['location', 'location', 'sylphx.events.v1.ChatLocation'],
+		['poll', 'poll', 'sylphx.events.v1.ChatPoll'],
+		['roomInvite', 'room_invite'],
+		['replyToCursor', 'reply_to_cursor'],
+		['mentionedClientIds', 'mentioned_client_ids'],
+	],
+	'sylphx.events.v1.ChatPoll': [],
+	'sylphx.events.v1.ChatProfile': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['termsVersion', 'terms_version'],
+		['displayName', 'display_name'],
+		['allowStrangerImages', 'allow_stranger_images'],
+		['quietHoursStartUtcMinute', 'quiet_hours_start_utc_minute'],
+		['quietHoursEndUtcMinute', 'quiet_hours_end_utc_minute'],
+	],
+	'sylphx.events.v1.ChatReaction': [
+		['clientIds', 'client_ids'],
+	],
+	'sylphx.events.v1.ChatRelationship': [
+		['clientId', 'client_id'],
+		['peerId', 'peer_id'],
+		['peer', 'peer', 'sylphx.events.v1.ChatProfile'],
+	],
+	'sylphx.events.v1.ChatReport': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['reporterId', 'reporter_id'],
+		['targetType', 'target_type'],
+		['targetId', 'target_id'],
+		['dueTime', 'due_time'],
+	],
+	'sylphx.events.v1.ChatSender': [
+		['clientId', 'client_id'],
+		['displayName', 'display_name'],
+	],
 	'sylphx.events.v1.CloudEvent': [
 		['eventTime', 'event_time'],
 		['dataContentType', 'data_content_type'],
 		['dataSchema', 'data_schema'],
 		['data', 'data', undefined, 'json'],
 		['extensions', 'extensions', undefined, 'map'],
+	],
+	'sylphx.events.v1.ConfigureChatProfileRequest': [
+		['termsVersion', 'terms_version'],
+		['displayName', 'display_name'],
+		['allowStrangerImages', 'allow_stranger_images'],
+		['quietHoursStartUtcMinute', 'quiet_hours_start_utc_minute'],
+		['quietHoursEndUtcMinute', 'quiet_hours_end_utc_minute'],
 	],
 	'sylphx.events.v1.Connector': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -1357,13 +1842,16 @@ runtime.registerSchemas({
 		['extensions', 'extensions', undefined, 'map'],
 		['admitTime', 'admit_time'],
 	],
+	'sylphx.events.v1.GetChatProfileRequest': [],
 	'sylphx.events.v1.GetConnectorRequest': [],
 	'sylphx.events.v1.GetEventRequest': [],
 	'sylphx.events.v1.GetInboundEndpointRequest': [],
 	'sylphx.events.v1.GetQueueRequest': [],
 	'sylphx.events.v1.GetRealtimeChannelRequest': [],
 	'sylphx.events.v1.GetRealtimeMemberRequest': [],
-	'sylphx.events.v1.GetRealtimeMessageRequest': [],
+	'sylphx.events.v1.GetRealtimeMessageRequest': [
+		['clientId', 'client_id'],
+	],
 	'sylphx.events.v1.GetSubscriptionRequest': [],
 	'sylphx.events.v1.GetTopicRequest': [],
 	'sylphx.events.v1.GetWebhookDeliveryRequest': [],
@@ -1384,6 +1872,11 @@ runtime.registerSchemas({
 		['lastReceiveTime', 'last_receive_time'],
 		['rejectedCount', 'rejected_count'],
 	],
+	'sylphx.events.v1.IssueChatTokenRequest': [],
+	'sylphx.events.v1.IssueChatTokenResponse': [
+		['expireTime', 'expire_time'],
+		['clientId', 'client_id'],
+	],
 	'sylphx.events.v1.IssueRealtimeChannelTokenRequest': [
 		['clientId', 'client_id'],
 		['clientData', 'client_data', undefined, 'json'],
@@ -1391,6 +1884,9 @@ runtime.registerSchemas({
 	'sylphx.events.v1.IssueRealtimeChannelTokenResponse': [
 		['expireTime', 'expire_time'],
 		['connectUri', 'connect_uri'],
+	],
+	'sylphx.events.v1.JoinRealtimeChannelRequest': [
+		['clientId', 'client_id'],
 	],
 	'sylphx.events.v1.LeaseQueueMessagesRequest': [
 		['maxMessages', 'max_messages'],
@@ -1405,6 +1901,25 @@ runtime.registerSchemas({
 		['lease', 'lease', 'sylphx.events.v1.MessageLease'],
 		['deliveryCount', 'delivery_count'],
 		['leaseExpireTime', 'lease_expire_time'],
+	],
+	'sylphx.events.v1.LeaveRealtimeChannelRequest': [
+		['clientId', 'client_id'],
+	],
+	'sylphx.events.v1.ListChatRelationshipsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.events.v1.ListChatRelationshipsResponse': [
+		['relationships', 'relationships', 'sylphx.events.v1.ChatRelationship'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.events.v1.ListChatReportsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.events.v1.ListChatReportsResponse': [
+		['chatReports', 'chat_reports', 'sylphx.events.v1.ChatReport'],
+		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.events.v1.ListConnectorsRequest': [
 		['pageSize', 'page_size'],
@@ -1462,6 +1977,9 @@ runtime.registerSchemas({
 	'sylphx.events.v1.ListRealtimeMessagesRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
+		['clientId', 'client_id'],
+		['afterCursor', 'after_cursor'],
+		['beforeCursor', 'before_cursor'],
 	],
 	'sylphx.events.v1.ListRealtimeMessagesResponse': [
 		['realtimeMessages', 'realtime_messages', 'sylphx.events.v1.RealtimeMessage'],
@@ -1503,6 +2021,10 @@ runtime.registerSchemas({
 		['webhookEndpoints', 'webhook_endpoints', 'sylphx.events.v1.WebhookEndpoint'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.events.v1.MergeChatIdentityRequest': [
+		['sourceClientId', 'source_client_id'],
+		['linkReceiptId', 'link_receipt_id'],
+	],
 	'sylphx.events.v1.MessageLease': [
 		['messageId', 'message_id'],
 		['leaseGeneration', 'lease_generation'],
@@ -1523,6 +2045,7 @@ runtime.registerSchemas({
 		['messageType', 'message_type'],
 		['data', 'data', undefined, 'json'],
 		['clientId', 'client_id'],
+		['content', 'content', 'sylphx.events.v1.ChatMessageContent'],
 	],
 	'sylphx.events.v1.PublishRealtimeMessagesResponse': [
 		['realtimeMessage', 'realtime_message', 'sylphx.events.v1.RealtimeMessage'],
@@ -1552,6 +2075,12 @@ runtime.registerSchemas({
 		['leasedCount', 'leased_count'],
 		['deadLetterCount', 'dead_letter_count'],
 	],
+	'sylphx.events.v1.ReactRealtimeMessageRequest': [
+		['clientId', 'client_id'],
+	],
+	'sylphx.events.v1.ReadRealtimeMemberRequest': [
+		['lastReadCursor', 'last_read_cursor'],
+	],
 	'sylphx.events.v1.RealtimeChannel': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.events.v1.RealtimeChannelSpec'],
@@ -1560,6 +2089,7 @@ runtime.registerSchemas({
 	'sylphx.events.v1.RealtimeChannelSpec': [
 		['publishableOk', 'publishable_ok'],
 		['historyRetention', 'history_retention'],
+		['chat', 'chat', 'sylphx.events.v1.ChatChannelPolicy'],
 	],
 	'sylphx.events.v1.RealtimeChannelStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -1574,6 +2104,8 @@ runtime.registerSchemas({
 		['data', 'data', undefined, 'json'],
 		['enterTime', 'enter_time'],
 		['connectionCount', 'connection_count'],
+		['lastReadCursor', 'last_read_cursor'],
+		['unreadCount', 'unread_count'],
 	],
 	'sylphx.events.v1.RealtimeMessage': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -1581,6 +2113,9 @@ runtime.registerSchemas({
 		['data', 'data', undefined, 'json'],
 		['clientId', 'client_id'],
 		['publishTime', 'publish_time'],
+		['content', 'content', 'sylphx.events.v1.ChatMessageContent'],
+		['sender', 'sender', 'sylphx.events.v1.ChatSender'],
+		['reactions', 'reactions', 'sylphx.events.v1.ChatReaction'],
 	],
 	'sylphx.events.v1.ReplayQueueRequest': [
 		['startTime', 'start_time'],
@@ -1597,12 +2132,24 @@ runtime.registerSchemas({
 	'sylphx.events.v1.ReplayWebhookEndpointResponse': [
 		['replayedCount', 'replayed_count'],
 	],
+	'sylphx.events.v1.ReportChatContentRequest': [
+		['targetType', 'target_type'],
+		['targetId', 'target_id'],
+	],
+	'sylphx.events.v1.ResolveChatReportRequest': [],
+	'sylphx.events.v1.ReviewChatMediaRequest': [
+		['contentUri', 'content_uri'],
+	],
 	'sylphx.events.v1.RotateWebhookEndpointSecretRequest': [],
 	'sylphx.events.v1.SendQueueMessagesRequest': [
 		['events', 'events', 'sylphx.events.v1.CloudEvent'],
 	],
 	'sylphx.events.v1.SendQueueMessagesResponse': [
 		['messageIds', 'message_ids'],
+	],
+	'sylphx.events.v1.SetChatOfficialStatusRequest': [],
+	'sylphx.events.v1.SetChatRelationshipRequest': [
+		['peerId', 'peer_id'],
 	],
 	'sylphx.events.v1.Subscription': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -1724,6 +2271,10 @@ export class EventsApi {
 	readonly realtimeMessages: RealtimeMessagesCollection
 	/** The `realtime_members` collection. */
 	readonly realtimeMembers: RealtimeMembersCollection
+	/** The `chat_profiles` collection. */
+	readonly chatProfiles: ChatProfilesCollection
+	/** The `chat_reports` collection. */
+	readonly chatReports: ChatReportsCollection
 
 	constructor(client: runtime.Client) {
 		this.topics = new TopicsCollection(client)
@@ -1737,6 +2288,8 @@ export class EventsApi {
 		this.realtimeChannels = new RealtimeChannelsCollection(client)
 		this.realtimeMessages = new RealtimeMessagesCollection(client)
 		this.realtimeMembers = new RealtimeMembersCollection(client)
+		this.chatProfiles = new ChatProfilesCollection(client)
+		this.chatReports = new ChatReportsCollection(client)
 	}
 }
 
@@ -2789,6 +3342,41 @@ export class RealtimeChannelsCollection {
 			mutation: true,
 		})
 	}
+
+	/**
+	 * Joins a persistent Chat conversation.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/realtime_channels/*}:join` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async join(request: JoinRealtimeChannelRequest): Promise<RealtimeMember> {
+		return this.client.call<RealtimeMember>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/realtime_channels/*', 'name')}:join`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.JoinRealtimeChannelRequest',
+			responseType: 'sylphx.events.v1.RealtimeMember',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Leaves Chat while retaining durable read state.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/realtime_channels/*}:leave` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async leave(request: LeaveRealtimeChannelRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/realtime_channels/*', 'name')}:leave`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.LeaveRealtimeChannelRequest',
+			mutation: true,
+		})
+	}
 }
 
 /** `realtime_messages` of Sylphx Events: Resource type `events.sylphx.com/RealtimeMessage`. */
@@ -2810,6 +3398,7 @@ export class RealtimeMessagesCollection {
 		return this.client.call<RealtimeMessage>({
 			method: 'GET',
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*', 'name')}`,
+			query: { client_id: request.clientId },
 			responseType: 'sylphx.events.v1.RealtimeMessage',
 			mutation: false,
 		})
@@ -2826,7 +3415,7 @@ export class RealtimeMessagesCollection {
 		return this.client.call<ListRealtimeMessagesResponse>({
 			method: 'GET',
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/realtime_channels/*', 'parent')}/realtime_messages`,
-			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter },
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, client_id: request.clientId, after_cursor: request.afterCursor, before_cursor: request.beforeCursor },
 			responseType: 'sylphx.events.v1.ListRealtimeMessagesResponse',
 			mutation: false,
 		})
@@ -2841,6 +3430,24 @@ export class RealtimeMessagesCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Adds or removes a member reaction on a visible Chat message.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/realtime_channels/*\/realtime_messages/*}:react` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`.
+	 */
+	async react(request: ReactRealtimeMessageRequest): Promise<RealtimeMessage> {
+		return this.client.call<RealtimeMessage>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/realtime_channels/*/realtime_messages/*', 'name')}:react`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.ReactRealtimeMessageRequest',
+			responseType: 'sylphx.events.v1.RealtimeMessage',
+			mutation: true,
+		})
 	}
 }
 
@@ -2894,5 +3501,264 @@ export class RealtimeMembersCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Advances a member read cursor monotonically and sets mute.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/realtime_channels/*\/realtime_members/*}:read` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async read(request: ReadRealtimeMemberRequest): Promise<RealtimeMember> {
+		return this.client.call<RealtimeMember>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/realtime_channels/*/realtime_members/*', 'name')}:read`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.ReadRealtimeMemberRequest',
+			responseType: 'sylphx.events.v1.RealtimeMember',
+			mutation: true,
+		})
+	}
+}
+
+/** `chat_profiles` of Sylphx Events: Resource type `events.sylphx.com/ChatProfile`. */
+export class ChatProfilesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets a Chat profile and fresh presence.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}` · permission `events:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async get(request: GetChatProfileRequest): Promise<ChatProfile> {
+		return this.client.call<ChatProfile>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}`,
+			responseType: 'sylphx.events.v1.ChatProfile',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Configures an authenticated Chat identity through its trusted backend.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:configure` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async configure(request: ConfigureChatProfileRequest): Promise<ChatProfile> {
+		return this.client.call<ChatProfile>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:configure`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.ConfigureChatProfileRequest',
+			responseType: 'sylphx.events.v1.ChatProfile',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Changes friendship or a bilateral interaction block.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:setRelationship` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async setRelationship(request: SetChatRelationshipRequest): Promise<ChatRelationship> {
+		return this.client.call<ChatRelationship>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:setRelationship`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.SetChatRelationshipRequest',
+			responseType: 'sylphx.events.v1.ChatRelationship',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Lists friends and pending requests with presence.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:listRelationships` · permission `events:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async listRelationships(request: ListChatRelationshipsRequest): Promise<ListChatRelationshipsResponse> {
+		return this.client.call<ListChatRelationshipsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'parent')}:listRelationships`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.events.v1.ListChatRelationshipsResponse',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Reports a message, image or user to the moderation queue.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:report` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async report(request: ReportChatContentRequest): Promise<ChatReport> {
+		return this.client.call<ChatReport>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:report`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.ReportChatContentRequest',
+			responseType: 'sylphx.events.v1.ChatReport',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Registers an image and its automated moderation receipt.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:reviewMedia` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async reviewMedia(request: ReviewChatMediaRequest): Promise<ChatMediaReview> {
+		return this.client.call<ChatMediaReview>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:reviewMedia`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.ReviewChatMediaRequest',
+			responseType: 'sylphx.events.v1.ChatMediaReview',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Verifies an official account through a distinct administrator permission.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:setOfficialStatus` · permission `events:chat:admin` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`.
+	 */
+	async setOfficialStatus(request: SetChatOfficialStatusRequest): Promise<ChatProfile> {
+		return this.client.call<ChatProfile>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:setOfficialStatus`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.SetChatOfficialStatusRequest',
+			responseType: 'sylphx.events.v1.ChatProfile',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Records an exact Auth-verified guest-to-platform identity link grant.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:bindIdentity` · permission `events:chat:admin` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async bindIdentity(request: BindChatIdentityRequest): Promise<ChatProfile> {
+		return this.client.call<ChatProfile>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:bindIdentity`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.BindChatIdentityRequest',
+			responseType: 'sylphx.events.v1.ChatProfile',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Rehomes linked guest state without discarding messages or relationships.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:mergeIdentity` · permission `events:chat:admin` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async mergeIdentity(request: MergeChatIdentityRequest): Promise<ChatProfile> {
+		return this.client.call<ChatProfile>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:mergeIdentity`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.MergeChatIdentityRequest',
+			responseType: 'sylphx.events.v1.ChatProfile',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Issues a bounded player capability after verified Auth token exchange.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:issueToken` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async issueToken(request: IssueChatTokenRequest): Promise<IssueChatTokenResponse> {
+		return this.client.call<IssueChatTokenResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:issueToken`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.IssueChatTokenRequest',
+			responseType: 'sylphx.events.v1.IssueChatTokenResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `chat_reports` of Sylphx Events: Resource type `events.sylphx.com/ChatReport`. */
+export class ChatReportsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Lists the moderation queue.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/chat_reports` · permission `events:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async list(request: ListChatReportsRequest): Promise<ListChatReportsResponse> {
+		return this.client.call<ListChatReportsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/chat_reports`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.events.v1.ListChatReportsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListChatReportsRequest): AsyncGenerator<ChatReport> {
+		let next: ListChatReportsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.chatReports ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Records a moderation response.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_reports/*}:resolve` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`.
+	 */
+	async resolve(request: ResolveChatReportRequest): Promise<ChatReport> {
+		return this.client.call<ChatReport>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_reports/*', 'name')}:resolve`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.ResolveChatReportRequest',
+			responseType: 'sylphx.events.v1.ChatReport',
+			mutation: true,
+		})
 	}
 }

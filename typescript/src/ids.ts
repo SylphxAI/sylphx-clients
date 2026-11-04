@@ -226,6 +226,8 @@ export const PREFIXES = [
 	{ prefix: 'upsrc', entity: 'UptimeSource', service: 'observability', collection: 'uptime_sources' },
 	{ prefix: 'upmf', entity: 'UptimeManifest', service: 'hosting', collection: 'uptime_manifests' },
 	{ prefix: 'pev', entity: 'ProcessorEvent', service: 'money', collection: 'processor_events' },
+	{ prefix: 'chp', entity: 'ChatProfile', service: 'events', collection: 'chat_profiles' },
+	{ prefix: 'chr', entity: 'ChatReport', service: 'events', collection: 'chat_reports' },
 ] as const satisfies readonly PrefixInfo[]
 
 /** A registered prefix, for example `'prj'`. */

@@ -1,0 +1,82 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.configure",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.set_relationship",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "events.chat_profiles.list_relationships",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.report",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.review_media",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.set_official_status",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.bind_identity",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.merge_identity",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.issue_token",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "events.sylphx.com/ChatProfile"
+    }
+  ]
+}

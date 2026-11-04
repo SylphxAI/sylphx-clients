@@ -4,7 +4,9 @@
       "methods": [
         {
           "http": {
-            "query_params": []
+            "query_params": [
+              "client_id"
+            ]
           },
           "id": "events.realtime_messages.get",
           "kind": "get"
@@ -14,11 +16,21 @@
             "query_params": [
               "page_size",
               "page_token",
-              "filter"
+              "filter",
+              "client_id",
+              "after_cursor",
+              "before_cursor"
             ]
           },
           "id": "events.realtime_messages.list",
           "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_messages.react",
+          "kind": "custom"
         }
       ],
       "resource_type": "events.sylphx.com/RealtimeMessage"

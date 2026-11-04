@@ -1,0 +1,22 @@
+{
+  "collection": "chat_reports",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ChatReport",
+  "message": "sylphx.events.v1.ChatReport",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_reports/{chat_report}",
+  "plural": "chatReports",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "record",
+  "singular": "chatReport",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "events.sylphx.com/ChatReport"
+}

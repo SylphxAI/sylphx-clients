@@ -18,6 +18,13 @@
           },
           "id": "events.realtime_members.list",
           "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.realtime_members.read",
+          "kind": "custom"
         }
       ],
       "resource_type": "events.sylphx.com/RealtimeMember"

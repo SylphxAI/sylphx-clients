@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.events.v1.ChatChannelKind",
+  "package": "sylphx.events.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CHAT_CHANNEL_KIND_WORLD",
+      "wire": "world"
+    },
+    {
+      "number": 2,
+      "proto_name": "CHAT_CHANNEL_KIND_ROOM",
+      "wire": "room"
+    },
+    {
+      "number": 3,
+      "proto_name": "CHAT_CHANNEL_KIND_GUILD",
+      "wire": "guild"
+    },
+    {
+      "number": 4,
+      "proto_name": "CHAT_CHANNEL_KIND_DM",
+      "wire": "dm"
+    },
+    {
+      "number": 5,
+      "proto_name": "CHAT_CHANNEL_KIND_SUPPORT",
+      "wire": "support"
+    },
+    {
+      "number": 6,
+      "proto_name": "CHAT_CHANNEL_KIND_GROUP",
+      "wire": "group"
+    }
+  ]
+}

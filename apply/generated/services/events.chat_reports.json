@@ -1,0 +1,26 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "events.chat_reports.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_reports.resolve",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "events.sylphx.com/ChatReport"
+    }
+  ]
+}

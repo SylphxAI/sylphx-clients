@@ -468,6 +468,17 @@ func dataSearchIndexStatus() []def.Field {
 	}
 }
 
+// eventsChatChannelPolicy is `sylphx.events.v1.ChatChannelPolicy`.
+func eventsChatChannelPolicy() []def.Field {
+	return []def.Field{
+		{Name: "kind", Kind: def.Enum, Values: []string{"world", "room", "guild", "dm", "support", "group"}, Flags: def.Required, Doc: "Purpose of the conversation."},
+		{Name: "terms_version", Kind: def.String, Flags: def.Required, Doc: "Code of conduct version every sending member must have accepted."},
+		{Name: "messages_per_minute", Kind: def.Int32, Doc: "Per-member sliding-minute message ceiling; default 30, maximum 600."},
+		{Name: "participant_ids", Kind: def.String, Repeated: true, Doc: "Exact two participants for a DM or support; invited roster for groups. A player's empty group roster defaults to its creator. Backend-created groups with an empty roster admit authenticated players through join."},
+		{Name: "title_id", Kind: def.String, Doc: "Optional originating title for world/room/guild/support. Empty is cross-title."},
+	}
+}
+
 // eventsInboundEndpointSpec is `sylphx.events.v1.InboundEndpointSpec`.
 func eventsInboundEndpointSpec() []def.Field {
 	return []def.Field{
@@ -515,6 +526,7 @@ func eventsRealtimeChannelSpec() []def.Field {
 	return []def.Field{
 		{Name: "publishable_ok", Kind: def.Bool, Doc: "Allow clients holding a publishable key (`events:realtime:subscribe`) to connect."},
 		{Name: "history_retention", Kind: def.Duration, Doc: "How far back a cursor may resume; default 24h, at most 7d."},
+		{Name: "chat", Kind: def.Message, Msg: eventsChatChannelPolicy, Doc: "Chat policy; when present, history is durable and membership is persistent."},
 	}
 }
 

@@ -17745,6 +17745,371 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.BindChatIdentityRequest": {
+        "description": "Record an Auth-verified link grant before merging; only the trusted backend\nmay record the exact source/target/receipt binding. This does not link Auth accounts.",
+        "properties": {
+          "link_receipt_id": {
+            "description": "Immutable receipt from the verified Auth link.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Target platform Chat profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "source_client_id": {
+            "description": "Title-scoped guest identity whose Auth link has been verified.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatChannelKind": {
+        "description": "A Chat channel's purpose; no product-specific server is required.",
+        "enum": [
+          "world",
+          "room",
+          "guild",
+          "dm",
+          "support",
+          "group"
+        ],
+        "type": "string"
+      },
+      "sylphx.events.v1.ChatChannelPolicy": {
+        "description": "Policy on the existing Realtime channel. Set at creation; Chat cannot be\nconverted to an expiring generic channel. Only a trusted tenant backend with\nevents:write/events:publish acts for its authenticated end users. Player\nsessions act only for their bound identity on the permitted Chat methods.\nNo publishable key, supplied official badge or player verdict is trusted.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatChannelKind",
+            "description": "Purpose of the conversation."
+          },
+          "messages_per_minute": {
+            "description": "Per-member sliding-minute message ceiling; default 30, maximum 600.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "participant_ids": {
+            "description": "Exact two participants for a DM or support; invited roster for groups.\nA player's empty group roster defaults to its creator. Backend-created\ngroups with an empty roster admit authenticated players through join.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "terms_version": {
+            "description": "Code of conduct version every sending member must have accepted.",
+            "type": "string"
+          },
+          "title_id": {
+            "description": "Optional originating title for world/room/guild/support. Empty is cross-title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "terms_version"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatImage": {
+        "description": "A content-hashed image; delivery requires an approved moderation receipt for\nthis exact digest, URI and uploader. Uploading does not approve content.",
+        "properties": {
+          "content_uri": {
+            "description": "Existing storage or Artifacts URI; no image bytes are carried here.",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "Lowercase SHA-256, 64 hexadecimal characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_uri",
+          "sha256"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatLocation": {
+        "description": "A single static, explicit location share to an existing mutual contact.",
+        "properties": {
+          "label": {
+            "description": "Optional venue label; never continuous or background location.",
+            "type": "string"
+          },
+          "latitude": {
+            "description": "Degrees north, inclusive -90 to 90.",
+            "type": "number"
+          },
+          "longitude": {
+            "description": "Degrees east, inclusive -180 to 180.",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatMediaReview": {
+        "description": "Image moderation receipt; never image bytes.",
+        "properties": {
+          "content_uri": {
+            "description": "Exact URI.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Visible pending/refusal reason, such as moderation_checking.",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "SHA-256 digest.",
+            "type": "string"
+          },
+          "status": {
+            "description": "pending, approved or rejected.",
+            "type": "string"
+          },
+          "uploader_id": {
+            "description": "Stable uploader identity.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatMessageContent": {
+        "description": "Structured Chat payload; exactly one of text/image/location/poll/room_invite\nmust be set. Replies and mentions refer to the same conversation.",
+        "properties": {
+          "image": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatImage",
+            "description": "An image with a prior moderation approval."
+          },
+          "location": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatLocation",
+            "description": "One explicit static location pin."
+          },
+          "mentioned_client_ids": {
+            "description": "Member ids mentioned by this message.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "poll": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatPoll",
+            "description": "A member poll."
+          },
+          "reply_to_cursor": {
+            "description": "Optional cursor of the quoted message in this channel.",
+            "type": "string"
+          },
+          "room_invite": {
+            "description": "Existing Realtime room resource name for a Join Game card.",
+            "type": "string"
+          },
+          "text": {
+            "description": "UTF-8 text, at most 4000 characters.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatPoll": {
+        "description": "A poll in the conversation; votes are recorded once per member.",
+        "properties": {
+          "options": {
+            "description": "Two to ten distinct choices.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "question": {
+            "description": "Question shown to members.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatProfile": {
+        "description": "One platform Chat identity in a canonical shared Chat environment. Titles\nbind this same environment and client_id for shared friends, blocks, DMs and\ngroups. A title_id is metadata, never a second identity or data authority.\nUnlinked guests use title-scoped client ids until a verified Auth account link\nmerges their identity into the shared platform principal.\nPrincipal IDs are path-safe [A-Za-z0-9_.-], 1..128 bytes. Example\nguest.title.123 before linking, platform.authority.456 after verified linking.",
+        "properties": {
+          "activity": {
+            "description": "Latest presence activity, including title and game, if the member supplied it.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "allow_stranger_images": {
+            "description": "Explicit opt-in to images from non-mutual contacts; default false.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "display_name": {
+            "description": "User-visible name.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "Resource name; the last segment is the stable authenticated client id.",
+            "type": "string"
+          },
+          "official": {
+            "description": "Trusted backend verification, never a message-supplied flag.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "online": {
+            "description": "Fresh presence on any joined conversation.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "quiet_hours_end_utc_minute": {
+            "description": "UTC exclusive end, 0..1440; may wrap midnight.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "quiet_hours_start_utc_minute": {
+            "description": "UTC quiet-hours start in minutes, 0..1439. Omit both fields to disable.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "terms_version": {
+            "description": "Accepted code of conduct version, before first send; includes disclosure\nthat images go to a third-party AI model provider through Sylphx AI Gateway.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable service-derived identifier.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatReaction": {
+        "description": "One reaction aggregate on a message.",
+        "properties": {
+          "client_ids": {
+            "description": "Stable reacting member identities.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "count": {
+            "description": "Number of members with this reaction.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "emoji": {
+            "description": "Reaction emoji.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatRelationship": {
+        "description": "Relationship state after the change.",
+        "properties": {
+          "blocked": {
+            "description": "Either user blocked the other; interaction is denied both ways.",
+            "type": "boolean"
+          },
+          "client_id": {
+            "description": "Acting member.",
+            "type": "string"
+          },
+          "mutual": {
+            "description": "Both users accepted friendship.",
+            "type": "boolean"
+          },
+          "peer": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatProfile",
+            "description": "Other member's profile and fresh presence."
+          },
+          "peer_id": {
+            "description": "Other member.",
+            "type": "string"
+          },
+          "requested": {
+            "description": "This user requested friendship.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatReport": {
+        "description": "A report in the tenant's moderation queue. The response target is our own\nunder-24-hour operating target; no claim that an external policy specifies it.",
+        "properties": {
+          "due_time": {
+            "description": "Latest response time for the moderation queue.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "Resource name.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Report reason.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "reporter_id": {
+            "description": "Reporting member.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "pending, resolved or dismissed.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "target_id": {
+            "description": "Full message name, image SHA-256 or user id respectively.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "target_type": {
+            "description": "message, image or user.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable identifier.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatSender": {
+        "description": "Verified sender snapshot written by the service when the message is accepted.",
+        "properties": {
+          "client_id": {
+            "description": "The authenticated user's stable platform identity as bound by its backend.",
+            "type": "string"
+          },
+          "display_name": {
+            "description": "Display name, from the sender's profile.",
+            "type": "string"
+          },
+          "official": {
+            "description": "Verified official status, assigned through a trusted backend operation.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.events.v1.CloudEvent": {
         "description": "A CloudEvents 1.0 event as a producer submits it.",
         "properties": {
@@ -17792,6 +18157,42 @@
           "id",
           "source",
           "type"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ConfigureChatProfileRequest": {
+        "description": "The trusted tenant backend configures one authenticated Chat identity.",
+        "properties": {
+          "allow_stranger_images": {
+            "description": "Explicit opt-in; default false.",
+            "type": "boolean"
+          },
+          "display_name": {
+            "description": "User-visible name.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Profile resource name; creates a missing profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "quiet_hours_end_utc_minute": {
+            "description": "UTC exclusive end, including midnight as 1440.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "quiet_hours_start_utc_minute": {
+            "description": "UTC quiet hours, optional as a pair; start equals end disables quiet hours.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "terms_version": {
+            "description": "Accepted code of conduct version.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
         ],
         "type": "object"
       },
@@ -18311,6 +18712,20 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.GetChatProfileRequest": {
+        "description": "The request for one Chat identity.",
+        "properties": {
+          "name": {
+            "description": "Profile resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.GetConnectorRequest": {
         "description": "The request of GetConnector.",
         "properties": {
@@ -18398,6 +18813,10 @@
       "sylphx.events.v1.GetRealtimeMessageRequest": {
         "description": "The request of GetRealtimeMessage.",
         "properties": {
+          "client_id": {
+            "description": "Chat viewer; required on Chat channels.",
+            "type": "string"
+          },
           "name": {
             "description": "The name of the message.",
             "type": "string",
@@ -18571,6 +18990,49 @@
         ],
         "type": "string"
       },
+      "sylphx.events.v1.IssueChatTokenRequest": {
+        "description": "The verified Auth token-exchange backend issues a session to one player.",
+        "properties": {
+          "name": {
+            "description": "Profile in the canonical shared Chat environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "ttl": {
+            "description": "Lifetime, 60s to 3600s; default 3600s.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.IssueChatTokenResponse": {
+        "description": "Scoped player capability; contains no tenant key or administrator permission.",
+        "properties": {
+          "client_id": {
+            "description": "Canonical verified player principal the token represents.",
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "Capability expiry.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "profile": {
+            "description": "Profile name in the shared Chat environment.",
+            "type": "string"
+          },
+          "token": {
+            "description": "Present as Bearer on player Chat methods only.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
       "sylphx.events.v1.IssueRealtimeChannelTokenRequest": {
         "description": "The request of IssueRealtimeChannelToken.",
         "properties": {
@@ -18615,6 +19077,29 @@
             "x-sylphx-sensitive": true
           }
         },
+        "type": "object"
+      },
+      "sylphx.events.v1.JoinRealtimeChannelRequest": {
+        "description": "The request to join a Chat conversation. DM/support participants are fixed\nby policy; other conversations are admitted by the trusted tenant backend.",
+        "properties": {
+          "client_id": {
+            "description": "Authenticated member identity.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Existing channel name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeChannel"
+          },
+          "role": {
+            "description": "member or moderator; default member.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "client_id"
+        ],
         "type": "object"
       },
       "sylphx.events.v1.LeaseQueueMessagesRequest": {
@@ -18687,6 +19172,105 @@
           "message_id": {
             "description": "The message id, stable across deliveries.",
             "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.LeaveRealtimeChannelRequest": {
+        "description": "The request to leave; durable read state is retained for a later join.",
+        "properties": {
+          "client_id": {
+            "description": "Authenticated member identity.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Existing channel name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeChannel"
+          }
+        },
+        "required": [
+          "name",
+          "client_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ListChatRelationshipsRequest": {
+        "description": "The request to list friendships and pending requests.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum results; default 50, maximum 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Previous response's next_page_token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Acting user's profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ListChatRelationshipsResponse": {
+        "description": "One page of relationships in peer-id order.",
+        "properties": {
+          "next_page_token": {
+            "description": "Empty at the end.",
+            "type": "string"
+          },
+          "relationships": {
+            "description": "Relationships and profiles.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.events.v1.ChatRelationship"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ListChatReportsRequest": {
+        "description": "The request to list the moderation queue.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum results; default 50, maximum 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Previous response's next_page_token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Environment resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatReport"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ListChatReportsResponse": {
+        "description": "One page of reports, oldest first.",
+        "properties": {
+          "chat_reports": {
+            "description": "Queue records.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.events.v1.ChatReport"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty at the end.",
             "type": "string"
           }
         },
@@ -18975,6 +19559,18 @@
       "sylphx.events.v1.ListRealtimeMessagesRequest": {
         "description": "The request of ListRealtimeMessages.",
         "properties": {
+          "after_cursor": {
+            "description": "Exclusive cursor, for forward recovery. Cannot combine with before_cursor or filter.",
+            "type": "string"
+          },
+          "before_cursor": {
+            "description": "Exclusive cursor, for backwards history, newest first. Cannot combine with after_cursor or filter.",
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Chat viewer; required on Chat channels. The trusted tenant backend binds identity.",
+            "type": "string"
+          },
           "filter": {
             "description": "Empty, or `sequence > N` to start after message N (resume).",
             "type": "string"
@@ -19208,6 +19804,28 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.MergeChatIdentityRequest": {
+        "description": "Merge only after the exact verified link grant has been recorded. Repeating\nthe same merge is a no-op; another target or an absent grant is refused.",
+        "properties": {
+          "link_receipt_id": {
+            "description": "Exact prior Auth-verified source/target receipt binding.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Target platform Chat profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "source_client_id": {
+            "description": "Previously bound title-scoped guest identity.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.MessageLease": {
         "description": "A fenced lease on one message.",
         "properties": {
@@ -19308,6 +19926,10 @@
           "client_id": {
             "description": "The publisher's client id, shown to subscribers.",
             "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatMessageContent",
+            "description": "Required for Chat channels; generic channels continue to use data/message_type."
           },
           "data": {
             "description": "The payload; at most 64 KiB as JSON."
@@ -19474,6 +20096,54 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.ReactRealtimeMessageRequest": {
+        "description": "Adds or removes this member's reaction idempotently.",
+        "properties": {
+          "client_id": {
+            "description": "Authenticated reacting member.",
+            "type": "string"
+          },
+          "emoji": {
+            "description": "Emoji, at most 32 UTF-8 bytes.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Existing message resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeMessage"
+          },
+          "remove": {
+            "description": "Remove instead of add.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ReadRealtimeMemberRequest": {
+        "description": "The request to acknowledge a cursor and configure conversation notifications.",
+        "properties": {
+          "last_read_cursor": {
+            "description": "Last visible message cursor; empty leaves the read cursor unchanged.",
+            "type": "string"
+          },
+          "muted": {
+            "description": "Conversation notification preference; supplied on every call.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Existing member resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/RealtimeMember"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.RealtimeChannel": {
         "description": "A Realtime Channel delivers matching events to authorized clients over\nWebSocket or SSE, resumable from a cursor. Subscriptions route events into\nit; Notify's inbox rides it.",
         "properties": {
@@ -19508,6 +20178,10 @@
       "sylphx.events.v1.RealtimeChannelSpec": {
         "description": "RealtimeChannelSpec is the caller-writable state of a RealtimeChannel.",
         "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatChannelPolicy",
+            "description": "Chat policy; when present, history is durable and membership is persistent."
+          },
           "history_retention": {
             "description": "How far back a cursor may resume; default 24h, at most 7d.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
@@ -19580,16 +20254,47 @@
             "readOnly": true,
             "type": "string"
           },
+          "joined": {
+            "description": "Persistent Chat membership, independent of online connections.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "last_read_cursor": {
+            "description": "Last acknowledged stream cursor; updates never move backwards.",
+            "readOnly": true,
+            "type": "string"
+          },
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
             "description": "Resource metadata."
+          },
+          "muted": {
+            "description": "Suppress this conversation's notification intents.",
+            "readOnly": true,
+            "type": "boolean"
           },
           "name": {
             "description": "`…/realtime_channels/{realtime_channel}/realtime_members/{realtime_member}`.",
             "type": "string"
           },
+          "pinned": {
+            "description": "This channel is an official, verified support conversation.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "role": {
+            "description": "Member or moderator, assigned by the tenant backend.",
+            "readOnly": true,
+            "type": "string"
+          },
           "uid": {
             "description": "`rtb_<cell><ulid>`; never reused.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "unread_count": {
+            "description": "Unread visible Chat messages from other members, excluding blocked senders.",
+            "format": "int64",
             "readOnly": true,
             "type": "string"
           }
@@ -19597,11 +20302,16 @@
         "type": "object"
       },
       "sylphx.events.v1.RealtimeMessage": {
-        "description": "A Realtime Message is one message in a channel's ordered history, kept\nfor the channel's `history_retention`.",
+        "description": "A Realtime Message is one message in a channel's ordered history, kept\nfor the channel's `history_retention`. Chat history is durable; edit and unsend\nare reserved for a later phase.",
         "properties": {
           "client_id": {
             "description": "The publisher's client id, when it named one.",
             "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatMessageContent",
+            "description": "Structured Chat content, from the same stored event as data.",
+            "readOnly": true
           },
           "cursor": {
             "description": "The message's place in the channel; send it back as `after_cursor` (or\n`Last-Event-ID`) to resume after it.",
@@ -19628,6 +20338,19 @@
             "format": "date-time",
             "readOnly": true,
             "type": "string"
+          },
+          "reactions": {
+            "description": "Member reactions, from the same conversation authority.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.events.v1.ChatReaction"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatSender",
+            "description": "Verified sender metadata; callers cannot set the official badge on a message.",
+            "readOnly": true
           },
           "sequence": {
             "description": "The position in the channel, from 1, gap-free.",
@@ -19731,6 +20454,80 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.ReportChatContentRequest": {
+        "description": "The request to report a message, image or user.",
+        "properties": {
+          "name": {
+            "description": "Reporting user's profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "reason": {
+            "description": "Report reason.",
+            "type": "string"
+          },
+          "target_id": {
+            "description": "Full message name, image SHA-256 or user id.",
+            "type": "string"
+          },
+          "target_type": {
+            "description": "message, image or user.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ResolveChatReportRequest": {
+        "description": "The request to resolve a moderation report.",
+        "properties": {
+          "name": {
+            "description": "Moderation report resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatReport"
+          },
+          "status": {
+            "description": "resolved or dismissed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ReviewChatMediaRequest": {
+        "description": "Register or review one content-hashed image. Only the trusted backend records\nautomated moderation outcomes; end users cannot approve their own uploads.\nAccepted conduct terms disclose third-party AI model review through Sylphx AI\nGateway. Capacity exhaustion leaves status pending with reason moderation_checking.",
+        "properties": {
+          "content_uri": {
+            "description": "Exact existing storage URI.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Uploader's profile resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "reason": {
+            "description": "Administrator-only moderation reason; player status/reason are never trusted.",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "Lowercase SHA-256 digest.",
+            "type": "string"
+          },
+          "status": {
+            "description": "pending registers an upload; approved or rejected is a backend moderation receipt.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.RotateWebhookEndpointSecretRequest": {
         "description": "The request of RotateWebhookEndpointSecret.",
         "properties": {
@@ -19787,6 +20584,48 @@
             "type": "array"
           }
         },
+        "type": "object"
+      },
+      "sylphx.events.v1.SetChatOfficialStatusRequest": {
+        "description": "Trusted administrator verification of an official account.",
+        "properties": {
+          "name": {
+            "description": "Profile in the canonical shared Chat environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "official": {
+            "description": "Verified status; regular profile configuration never changes this flag.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.SetChatRelationshipRequest": {
+        "description": "The request to change a directed social relationship.",
+        "properties": {
+          "action": {
+            "description": "request, accept, remove, block or unblock.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Acting user's profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "peer_id": {
+            "description": "Other user's stable client id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "peer_id",
+          "action"
+        ],
         "type": "object"
       },
       "sylphx.events.v1.Subscription": {
@@ -67669,6 +68508,1256 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}": {
+      "get": {
+        "description": "Gets a Chat profile and fresh presence.",
+        "operationId": "events_chat_profiles_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets a Chat profile and fresh presence.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.get",
+        "x-sylphx-permission": "events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:bindIdentity": {
+      "post": {
+        "description": "Records an exact Auth-verified guest-to-platform identity link grant.",
+        "operationId": "events_chat_profiles_bind_identity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "link_receipt_id": {
+                    "description": "Immutable receipt from the verified Auth link.",
+                    "type": "string"
+                  },
+                  "source_client_id": {
+                    "description": "Title-scoped guest identity whose Auth link has been verified.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Records an exact Auth-verified guest-to-platform identity link grant.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.bind_identity",
+        "x-sylphx-permission": "events:chat:admin",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:configure": {
+      "post": {
+        "description": "Configures an authenticated Chat identity through its trusted backend.",
+        "operationId": "events_chat_profiles_configure",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "allow_stranger_images": {
+                    "description": "Explicit opt-in; default false.",
+                    "type": "boolean"
+                  },
+                  "display_name": {
+                    "description": "User-visible name.",
+                    "type": "string"
+                  },
+                  "quiet_hours_end_utc_minute": {
+                    "description": "UTC exclusive end, including midnight as 1440.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "quiet_hours_start_utc_minute": {
+                    "description": "UTC quiet hours, optional as a pair; start equals end disables quiet hours.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "terms_version": {
+                    "description": "Accepted code of conduct version.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Configures an authenticated Chat identity through its trusted backend.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.configure",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:issueToken": {
+      "post": {
+        "description": "Issues a bounded player capability after verified Auth token exchange.",
+        "operationId": "events_chat_profiles_issue_token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "ttl": {
+                    "description": "Lifetime, 60s to 3600s; default 3600s.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.IssueChatTokenResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Issues a bounded player capability after verified Auth token exchange.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.issue_token",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:listRelationships": {
+      "get": {
+        "description": "Lists friends and pending requests with presence.",
+        "operationId": "events_chat_profiles_list_relationships",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum results; default 50, maximum 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Previous response's next_page_token.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ListChatRelationshipsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists friends and pending requests with presence.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.list_relationships",
+        "x-sylphx-permission": "events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:mergeIdentity": {
+      "post": {
+        "description": "Rehomes linked guest state without discarding messages or relationships.",
+        "operationId": "events_chat_profiles_merge_identity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "link_receipt_id": {
+                    "description": "Exact prior Auth-verified source/target receipt binding.",
+                    "type": "string"
+                  },
+                  "source_client_id": {
+                    "description": "Previously bound title-scoped guest identity.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Rehomes linked guest state without discarding messages or relationships.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.merge_identity",
+        "x-sylphx-permission": "events:chat:admin",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:report": {
+      "post": {
+        "description": "Reports a message, image or user to the moderation queue.",
+        "operationId": "events_chat_profiles_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "reason": {
+                    "description": "Report reason.",
+                    "type": "string"
+                  },
+                  "target_id": {
+                    "description": "Full message name, image SHA-256 or user id.",
+                    "type": "string"
+                  },
+                  "target_type": {
+                    "description": "message, image or user.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatReport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reports a message, image or user to the moderation queue.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.report",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:reviewMedia": {
+      "post": {
+        "description": "Registers an image and its automated moderation receipt.",
+        "operationId": "events_chat_profiles_review_media",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "content_uri": {
+                    "description": "Exact existing storage URI.",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "Administrator-only moderation reason; player status/reason are never trusted.",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "description": "Lowercase SHA-256 digest.",
+                    "type": "string"
+                  },
+                  "status": {
+                    "description": "pending registers an upload; approved or rejected is a backend moderation receipt.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatMediaReview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Registers an image and its automated moderation receipt.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.review_media",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:setOfficialStatus": {
+      "post": {
+        "description": "Verifies an official account through a distinct administrator permission.",
+        "operationId": "events_chat_profiles_set_official_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "official": {
+                    "description": "Verified status; regular profile configuration never changes this flag.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Verifies an official account through a distinct administrator permission.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "events.chat_profiles.set_official_status",
+        "x-sylphx-permission": "events:chat:admin",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:setRelationship": {
+      "post": {
+        "description": "Changes friendship or a bilateral interaction block.",
+        "operationId": "events_chat_profiles_set_relationship",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "action": {
+                    "description": "request, accept, remove, block or unblock.",
+                    "type": "string"
+                  },
+                  "peer_id": {
+                    "description": "Other user's stable client id.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "peer_id",
+                  "action"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatRelationship"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Changes friendship or a bilateral interaction block.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.set_relationship",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_reports": {
+      "get": {
+        "description": "Lists the moderation queue.",
+        "operationId": "events_chat_reports_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum results; default 50, maximum 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Previous response's next_page_token.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ListChatReportsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the moderation queue.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_reports.list",
+        "x-sylphx-permission": "events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_reports/{chat_report}:resolve": {
+      "post": {
+        "description": "Records a moderation response.",
+        "operationId": "events_chat_reports_resolve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_report",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "status": {
+                    "description": "resolved or dismissed.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatReport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Records a moderation response.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.chat_reports.resolve",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/checkout_policies/{checkout_policy}": {
       "get": {
         "description": "Gets the environment's checkout policy: which buyer countries consumer\ncheckout refuses. An environment that never wrote one refuses none.",
@@ -103733,6 +105822,122 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_members/{realtime_member}:read": {
+      "post": {
+        "description": "Advances a member read cursor monotonically and sets mute.",
+        "operationId": "events_realtime_members_read",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "realtime_channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "realtime_member",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "last_read_cursor": {
+                    "description": "Last visible message cursor; empty leaves the read cursor unchanged.",
+                    "type": "string"
+                  },
+                  "muted": {
+                    "description": "Conversation notification preference; supplied on every call.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.RealtimeMember"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Advances a member read cursor monotonically and sets mute.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.realtime_members.read",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_messages": {
       "get": {
         "description": "Lists a channel's retained messages, oldest first.",
@@ -103793,6 +105998,33 @@
             "description": "Empty, or `sequence > N` to start after message N (resume).",
             "in": "query",
             "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Chat viewer; required on Chat channels. The trusted tenant backend binds identity.",
+            "in": "query",
+            "name": "client_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive cursor, for forward recovery. Cannot combine with before_cursor or filter.",
+            "in": "query",
+            "name": "after_cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive cursor, for backwards history, newest first. Cannot combine with after_cursor or filter.",
+            "in": "query",
+            "name": "before_cursor",
             "required": false,
             "schema": {
               "type": "string"
@@ -103892,6 +106124,15 @@
             }
           },
           {
+            "description": "Chat viewer; required on Chat channels.",
+            "in": "query",
+            "name": "client_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/SylphxVersion"
           }
         ],
@@ -103931,6 +106172,122 @@
         ],
         "x-sylphx-method": "events.realtime_messages.get",
         "x-sylphx-permission": "events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}/realtime_messages/{realtime_message}:react": {
+      "post": {
+        "description": "Adds or removes a member reaction on a visible Chat message.",
+        "operationId": "events_realtime_messages_react",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "realtime_channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "realtime_message",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "client_id": {
+                    "description": "Authenticated reacting member.",
+                    "type": "string"
+                  },
+                  "emoji": {
+                    "description": "Emoji, at most 32 UTF-8 bytes.",
+                    "type": "string"
+                  },
+                  "remove": {
+                    "description": "Remove instead of add.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.RealtimeMessage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Adds or removes a member reaction on a visible Chat message.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "events.realtime_messages.react",
+        "x-sylphx-permission": "events:write",
         "x-sylphx-stage": "preview"
       }
     },
@@ -104049,6 +106406,224 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}:join": {
+      "post": {
+        "description": "Joins a persistent Chat conversation.",
+        "operationId": "events_realtime_channels_join",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "realtime_channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "client_id": {
+                    "description": "Authenticated member identity.",
+                    "type": "string"
+                  },
+                  "role": {
+                    "description": "member or moderator; default member.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "client_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.RealtimeMember"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Joins a persistent Chat conversation.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.realtime_channels.join",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}:leave": {
+      "post": {
+        "description": "Leaves Chat while retaining durable read state.",
+        "operationId": "events_realtime_channels_leave",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "realtime_channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "client_id": {
+                    "description": "Authenticated member identity.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "client_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Leaves Chat while retaining durable read state.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE"
+        ],
+        "x-sylphx-method": "events.realtime_channels.leave",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/realtime_channels/{realtime_channel}:publish": {
       "post": {
         "description": "Publishes one message to the channel: it is appended to the channel's\nhistory and pushed to every connected client. A retry with the same\nIdempotency-Key returns the first message.",
@@ -104101,6 +106676,10 @@
                   "client_id": {
                     "description": "The publisher's client id, shown to subscribers.",
                     "type": "string"
+                  },
+                  "content": {
+                    "$ref": "#/components/schemas/sylphx.events.v1.ChatMessageContent",
+                    "description": "Required for Chat channels; generic channels continue to use data/message_type."
                   },
                   "data": {
                     "description": "The payload; at most 64 KiB as JSON."

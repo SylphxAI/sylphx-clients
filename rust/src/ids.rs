@@ -742,6 +742,10 @@ pub const UPMF: Prefix = Prefix::new(
 );
 /// ProcessorEvent (`pev`, money).
 pub const PEV: Prefix = Prefix::new("pev", "ProcessorEvent", "money", Some("processor_events"));
+/// ChatProfile (`chp`, events).
+pub const CHP: Prefix = Prefix::new("chp", "ChatProfile", "events", Some("chat_profiles"));
+/// ChatReport (`chr`, events).
+pub const CHR: Prefix = Prefix::new("chr", "ChatReport", "events", Some("chat_reports"));
 
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
@@ -756,5 +760,5 @@ pub const ALL: &[Prefix] = &[
     ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ,
     NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT, LKEY,
     LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR,
-    UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
+    UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV, CHP, CHR,
 ];
