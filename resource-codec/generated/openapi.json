@@ -37266,6 +37266,15 @@
             "description": "True enumerates every authorized bound public Host/path and compares\nindependent public response identity with the selected serving Release.",
             "type": "boolean"
           },
+          "condition_max_age": {
+            "description": "Maximum age and validity of condition facts, 1–900 seconds; default 60.\nOnly valid with condition_source_uri. Stale facts do not fire or resolve.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "condition_source_uri": {
+            "description": "HTTPS source of typed, paginated condition facts. GET without arbitrary\nheaders or credentials; transport errors are unavailable, not breach.",
+            "type": "string"
+          },
           "execution_delegation": {
             "description": "Access delegation naming Observability's workload principal, confined to\nthis environment and the needed read/invoke permissions. Every dispatch\nexchanges it afresh; expiration or revocation prevents outbound work.",
             "type": "string"
@@ -37290,7 +37299,7 @@
             "type": "integer"
           },
           "instrument": {
-            "description": "HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.",
+            "description": "HTTP, READY, JOURNEY or CONDITION. READY requires service, JOURNEY requires\njob, and CONDITION requires condition_source_uri and observes typed facts.",
             "type": "string"
           },
           "interval": {
@@ -37304,7 +37313,7 @@
             "x-sylphx-resource-reference": "workflows.sylphx.com/Job"
           },
           "method": {
-            "description": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+            "description": "GET or HEAD; defaults to HEAD (CONDITION uses GET). No credentials/body.",
             "type": "string"
           },
           "notify": {

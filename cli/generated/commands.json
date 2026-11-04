@@ -27411,13 +27411,13 @@
                 {
                   "field": "uptime_check.spec.instrument",
                   "flag": "--spec.instrument",
-                  "summary": "HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.",
+                  "summary": "HTTP, READY, JOURNEY or CONDITION. READY requires service, JOURNEY requires job, and CONDITION requires condition_source_uri and observes typed facts.",
                   "type": "string"
                 },
                 {
                   "field": "uptime_check.spec.method",
                   "flag": "--spec.method",
-                  "summary": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+                  "summary": "GET or HEAD; defaults to HEAD (CONDITION uses GET). No credentials/body.",
                   "type": "string"
                 },
                 {
@@ -27488,6 +27488,18 @@
                   "flag": "--spec.job",
                   "summary": "Same-environment Workflows Job containing a versioned journey bundle. It runs once per slot with no retries; it is not an HTTP request body.",
                   "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.condition_source_uri",
+                  "flag": "--spec.condition-source-uri",
+                  "summary": "HTTPS source of typed, paginated condition facts. GET without arbitrary headers or credentials; transport errors are unavailable, not breach.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.condition_max_age",
+                  "flag": "--spec.condition-max-age",
+                  "summary": "Maximum age and validity of condition facts, 1–900 seconds; default 60. Only valid with condition_source_uri. Stale facts do not fire or resolve.",
+                  "type": "duration"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/uptime_checks",
@@ -27599,13 +27611,13 @@
                 {
                   "field": "uptime_check.spec.instrument",
                   "flag": "--spec.instrument",
-                  "summary": "HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.",
+                  "summary": "HTTP, READY, JOURNEY or CONDITION. READY requires service, JOURNEY requires job, and CONDITION requires condition_source_uri and observes typed facts.",
                   "type": "string"
                 },
                 {
                   "field": "uptime_check.spec.method",
                   "flag": "--spec.method",
-                  "summary": "GET or HEAD; defaults to HEAD. No headers, credentials or request body.",
+                  "summary": "GET or HEAD; defaults to HEAD (CONDITION uses GET). No credentials/body.",
                   "type": "string"
                 },
                 {
@@ -27676,6 +27688,18 @@
                   "flag": "--spec.job",
                   "summary": "Same-environment Workflows Job containing a versioned journey bundle. It runs once per slot with no retries; it is not an HTTP request body.",
                   "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.condition_source_uri",
+                  "flag": "--spec.condition-source-uri",
+                  "summary": "HTTPS source of typed, paginated condition facts. GET without arbitrary headers or credentials; transport errors are unavailable, not breach.",
+                  "type": "string"
+                },
+                {
+                  "field": "uptime_check.spec.condition_max_age",
+                  "flag": "--spec.condition-max-age",
+                  "summary": "Maximum age and validity of condition facts, 1–900 seconds; default 60. Only valid with condition_source_uri. Stale facts do not fire or resolve.",
+                  "type": "duration"
                 }
               ],
               "http": "PATCH /v1/{uptime_check.name=orgs/*/projects/*/envs/*/uptime_checks/*}",

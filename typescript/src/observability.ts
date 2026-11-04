@@ -679,9 +679,12 @@ export interface UptimeCheckSpec {
 	 * independent public response identity with the selected serving Release.
 	 */
 	boundPublicRevisions?: boolean
-	/** HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target. */
+	/**
+	 * HTTP, READY, JOURNEY or CONDITION. READY requires service, JOURNEY requires
+	 * job, and CONDITION requires condition_source_uri and observes typed facts.
+	 */
 	instrument?: string
-	/** GET or HEAD; defaults to HEAD. No headers, credentials or request body. */
+	/** GET or HEAD; defaults to HEAD (CONDITION uses GET). No credentials/body. */
 	method?: string
 	/** Private HTTP path; defaults to /healthz. Not used by READY. */
 	path?: string
@@ -721,6 +724,16 @@ export interface UptimeCheckSpec {
 	 * It runs once per slot with no retries; it is not an HTTP request body.
 	 */
 	job?: string
+	/**
+	 * HTTPS source of typed, paginated condition facts. GET without arbitrary
+	 * headers or credentials; transport errors are unavailable, not breach.
+	 */
+	conditionSourceUri?: string
+	/**
+	 * Maximum age and validity of condition facts, 1–900 seconds; default 60.
+	 * Only valid with condition_source_uri. Stale facts do not fire or resolve.
+	 */
+	conditionMaxAge?: string
 }
 
 /**
@@ -1077,6 +1090,8 @@ runtime.registerSchemas({
 		['expectBody', 'expect_body'],
 		['failuresBeforeAlert', 'failures_before_alert'],
 		['executionDelegation', 'execution_delegation'],
+		['conditionSourceUri', 'condition_source_uri'],
+		['conditionMaxAge', 'condition_max_age'],
 	],
 	'sylphx.observability.v1.UptimeCheckStatus': [
 		['observedGeneration', 'observed_generation'],

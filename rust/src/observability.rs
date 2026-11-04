@@ -1563,10 +1563,11 @@ pub struct UptimeCheckSpec {
         alias = "boundPublicRevisions"
     )]
     pub bound_public_revisions: Option<bool>,
-    /// HTTP, READY or JOURNEY. JOURNEY is valid only for a Job target.
+    /// HTTP, READY, JOURNEY or CONDITION. READY requires service, JOURNEY requires
+    /// job, and CONDITION requires condition_source_uri and observes typed facts.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub instrument: String,
-    /// GET or HEAD; defaults to HEAD. No headers, credentials or request body.
+    /// GET or HEAD; defaults to HEAD (CONDITION uses GET). No credentials/body.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub method: String,
     /// Private HTTP path; defaults to /healthz. Not used by READY.
@@ -1622,6 +1623,22 @@ pub struct UptimeCheckSpec {
     /// It runs once per slot with no retries; it is not an HTTP request body.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub job: Option<String>,
+    /// HTTPS source of typed, paginated condition facts. GET without arbitrary
+    /// headers or credentials; transport errors are unavailable, not breach.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "conditionSourceUri"
+    )]
+    pub condition_source_uri: Option<String>,
+    /// Maximum age and validity of condition facts, 1–900 seconds; default 60.
+    /// Only valid with condition_source_uri. Stale facts do not fire or resolve.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "conditionMaxAge"
+    )]
+    pub condition_max_age: String,
 }
 
 /// The durable check projection. Missing, denied and unknown evidence never
