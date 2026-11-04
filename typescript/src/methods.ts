@@ -1902,6 +1902,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'destructive',
 		permission: 'broker:admin',
 	},
+	'broker.trust_policies.exchange_read_token': {
+		id: 'broker.trust_policies.exchange_read_token',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/trust_policies/*}:exchangeReadToken',
+		pathParams: [['name', 'orgs/*/trust_policies/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'broker:exchange:read',
+	},
 	'broker.trust_policies.exchange_token': {
 		id: 'broker.trust_policies.exchange_token',
 		httpMethod: 'POST',

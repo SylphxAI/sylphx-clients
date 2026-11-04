@@ -11015,6 +11015,88 @@
         ],
         "type": "object"
       },
+      "sylphx.broker.v1.ExchangeReadTokenRequest": {
+        "description": "The request of ExchangeReadToken.",
+        "properties": {
+          "name": {
+            "description": "The trust policy to exchange under.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TrustPolicy"
+          },
+          "permissions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The permissions this call needs, at most the policy's; empty means the\npolicy's. Every resolved permission must be read-only.",
+            "type": "object"
+          },
+          "repositories": {
+            "description": "The one repository this call needs, `owner/name`, one of the policy's.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ttl": {
+            "description": "How long the credential should live, at most the policy's `max_ttl`.\nA GitHub installation token always lives one hour: unset or `3600s`.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "repositories"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.ExchangeReadTokenResponse": {
+        "description": "The response of ExchangeReadToken.",
+        "properties": {
+          "connection": {
+            "description": "The Connection the credential was issued on, the policy's.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          },
+          "credential_kind": {
+            "$ref": "#/components/schemas/sylphx.broker.v1.CredentialKind",
+            "description": "What `token` is."
+          },
+          "expire_time": {
+            "description": "When the credential stops working.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "issuer": {
+            "description": "The provider identity that signed the credential: for GitHub,\n`github-apps/{app_id}` of the installation it was minted against.",
+            "type": "string"
+          },
+          "permissions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The permissions the credential carries.",
+            "type": "object"
+          },
+          "repositories": {
+            "description": "The one repository the credential covers.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "token": {
+            "description": "The provider credential. Never logged, persisted, or cached by the\ncaller beyond `expire_time`.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "token_exchange": {
+            "description": "The record of this credential,\n`orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:\nthe name to revoke it by.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TokenExchange"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.ExchangeTokenRequest": {
         "description": "The request of ExchangeToken.",
         "properties": {
@@ -129023,6 +129105,120 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/trust_policies/{trust_policy}:exchangeReadToken": {
+      "post": {
+        "description": "Exchanges the caller's Access grant for a read-only GitHub App\ninstallation token. Requires the explicit `broker:exchange:read` scope\non this policy, with the same subject, actor, Connection and repository\nchecks as ExchangeToken. Every resolved permission must be read-only:\nomitting permissions inherits the policy and is refused if it has writes.\nThe provider's returned permissions must confirm the requested ceiling.\nWrites one TokenExchange audit record; `broker:read` cannot issue tokens.",
+        "operationId": "broker_trust_policies_exchange_read_token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trust_policy",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "permissions": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "The permissions this call needs, at most the policy's; empty means the\npolicy's. Every resolved permission must be read-only.",
+                    "type": "object"
+                  },
+                  "repositories": {
+                    "description": "The one repository this call needs, `owner/name`, one of the policy's.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "ttl": {
+                    "description": "How long the credential should live, at most the policy's `max_ttl`.\nA GitHub installation token always lives one hour: unset or `3600s`.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "repositories"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.ExchangeReadTokenResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Exchanges the caller's Access grant for a read-only GitHub App installation token. Requires the explicit `broker:exchange:read` scope on this policy, with the same subject, actor, Connection and repository checks as ExchangeToken. Every resolved permission must be read-only: omitting permissions inherits the policy and is refused if it has writes. The provider's returned permissions must confirm the requested ceiling. Writes one TokenExchange audit record; `broker:read` cannot issue tokens.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RATE_LIMITED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.trust_policies.exchange_read_token",
+        "x-sylphx-permission": "broker:exchange:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/trust_policies/{trust_policy}:exchangeToken": {
       "post": {
         "description": "Exchanges the caller's Access grant for a short-lived provider\ncredential under a trust policy (RFC 8693 token exchange): a GitHub App\ninstallation token for exactly one of the policy's repositories,\nnarrowed to the requested permissions. The grant's principal (for a\ndelegated grant, its accountable principal) must be a policy subject,\nits actor must match the policy's actors, and it must hold\n`broker:exchange` on this policy. Every call writes one TokenExchange\nrecord. A permission the Connection lacks is PERMISSION_DENIED with\nreason `CapabilityMissing`, never an outage.",
@@ -129111,6 +129307,9 @@
           "429": {
             "$ref": "#/components/responses/Problem"
           },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -129126,7 +129325,8 @@
           "RESOURCE_NOT_FOUND",
           "INVALID_FIELD",
           "INVALID_STATE",
-          "RATE_LIMITED"
+          "RATE_LIMITED",
+          "UNAVAILABLE"
         ],
         "x-sylphx-method": "broker.trust_policies.exchange_token",
         "x-sylphx-permission": "broker:exchange",

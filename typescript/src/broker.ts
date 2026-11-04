@@ -30,6 +30,54 @@ export interface DeleteTrustPolicyRequest {
 	validateOnly?: boolean
 }
 
+/** The request of ExchangeReadToken. */
+export interface ExchangeReadTokenRequest {
+	/** The trust policy to exchange under. */
+	name: string
+	/**
+	 * The permissions this call needs, at most the policy's; empty means the
+	 * policy's. Every resolved permission must be read-only.
+	 */
+	permissions?: Record<string, string>
+	/** The one repository this call needs, `owner/name`, one of the policy's. */
+	repositories: string[]
+	/**
+	 * How long the credential should live, at most the policy's `max_ttl`.
+	 * A GitHub installation token always lives one hour: unset or `3600s`.
+	 */
+	ttl?: string
+}
+
+/** The response of ExchangeReadToken. */
+export interface ExchangeReadTokenResponse {
+	/**
+	 * The provider credential. Never logged, persisted, or cached by the
+	 * caller beyond `expire_time`.
+	 */
+	token?: string
+	/** What `token` is. */
+	credentialKind?: CredentialKind
+	/** When the credential stops working. */
+	expireTime?: string
+	/** The permissions the credential carries. */
+	permissions?: Record<string, string>
+	/** The one repository the credential covers. */
+	repositories?: string[]
+	/**
+	 * The record of this credential,
+	 * `orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:
+	 * the name to revoke it by.
+	 */
+	tokenExchange?: string
+	/** The Connection the credential was issued on, the policy's. */
+	connection?: string
+	/**
+	 * The provider identity that signed the credential: for GitHub,
+	 * `github-apps/{app_id}` of the installation it was minted against.
+	 */
+	issuer?: string
+}
+
 /** The request of ExchangeToken. */
 export interface ExchangeTokenRequest {
 	/** The trust policy to exchange under. */
@@ -277,6 +325,15 @@ runtime.registerSchemas({
 	'sylphx.broker.v1.DeleteTrustPolicyRequest': [
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.broker.v1.ExchangeReadTokenRequest': [
+		['permissions', 'permissions', undefined, 'map'],
+	],
+	'sylphx.broker.v1.ExchangeReadTokenResponse': [
+		['credentialKind', 'credential_kind'],
+		['expireTime', 'expire_time'],
+		['permissions', 'permissions', undefined, 'map'],
+		['tokenExchange', 'token_exchange'],
+	],
 	'sylphx.broker.v1.ExchangeTokenRequest': [
 		['permissions', 'permissions', undefined, 'map'],
 	],
@@ -473,7 +530,7 @@ export class TrustPoliciesCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/trust_policies/*}:exchangeToken` · permission `broker:exchange` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`.
 	 */
 	async exchangeToken(request: ExchangeTokenRequest): Promise<ExchangeTokenResponse> {
 		return this.client.call<ExchangeTokenResponse>({
@@ -482,6 +539,30 @@ export class TrustPoliciesCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.ExchangeTokenRequest',
 			responseType: 'sylphx.broker.v1.ExchangeTokenResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Exchanges the caller's Access grant for a read-only GitHub App
+	 * installation token. Requires the explicit `broker:exchange:read` scope
+	 * on this policy, with the same subject, actor, Connection and repository
+	 * checks as ExchangeToken. Every resolved permission must be read-only:
+	 * omitting permissions inherits the policy and is refused if it has writes.
+	 * The provider's returned permissions must confirm the requested ceiling.
+	 * Writes one TokenExchange audit record; `broker:read` cannot issue tokens.
+	 *
+	 * `POST /v1/{name=orgs/*\/trust_policies/*}:exchangeReadToken` · permission `broker:exchange:read` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`.
+	 */
+	async exchangeReadToken(request: ExchangeReadTokenRequest): Promise<ExchangeReadTokenResponse> {
+		return this.client.call<ExchangeReadTokenResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/trust_policies/*', 'name')}:exchangeReadToken`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.ExchangeReadTokenRequest',
+			responseType: 'sylphx.broker.v1.ExchangeReadTokenResponse',
 			mutation: true,
 		})
 	}

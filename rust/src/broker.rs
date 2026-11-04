@@ -59,6 +59,78 @@ pub struct DeleteTrustPolicyRequest {
     pub validate_only: bool,
 }
 
+/// The request of ExchangeReadToken.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ExchangeReadTokenRequest {
+    /// The trust policy to exchange under.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The permissions this call needs, at most the policy's; empty means the
+    /// policy's. Every resolved permission must be read-only.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub permissions: std::collections::BTreeMap<String, String>,
+    /// The one repository this call needs, `owner/name`, one of the policy's.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repositories: Vec<String>,
+    /// How long the credential should live, at most the policy's `max_ttl`.
+    /// A GitHub installation token always lives one hour: unset or `3600s`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub ttl: String,
+}
+
+/// The response of ExchangeReadToken.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ExchangeReadTokenResponse {
+    /// The provider credential. Never logged, persisted, or cached by the
+    /// caller beyond `expire_time`.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub token: String,
+    /// What `token` is.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "credentialKind"
+    )]
+    pub credential_kind: Option<CredentialKind>,
+    /// When the credential stops working.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+    /// The permissions the credential carries.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub permissions: std::collections::BTreeMap<String, String>,
+    /// The one repository the credential covers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repositories: Vec<String>,
+    /// The record of this credential,
+    /// `orgs/{org}/trust_policies/{trust_policy}/token_exchanges/{token_exchange}`:
+    /// the name to revoke it by.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tokenExchange"
+    )]
+    pub token_exchange: String,
+    /// The Connection the credential was issued on, the policy's.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub connection: String,
+    /// The provider identity that signed the credential: for GitHub,
+    /// `github-apps/{app_id}` of the installation it was minted against.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub issuer: String,
+}
+
 /// The request of ExchangeToken.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -773,13 +845,45 @@ impl<'a, T: crate::runtime::Transport> TrustPoliciesCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/trust_policies/*}:exchangeToken` · permission `broker:exchange` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`.
     pub async fn exchange_token(
         &self,
         request: ExchangeTokenRequest,
     ) -> Result<ExchangeTokenResponse, crate::runtime::Error> {
         let path = format!(
             "/v1/{}:exchangeToken",
+            crate::runtime::path_param(&request.name, "orgs/*/trust_policies/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Exchanges the caller's Access grant for a read-only GitHub App
+    /// installation token. Requires the explicit `broker:exchange:read` scope
+    /// on this policy, with the same subject, actor, Connection and repository
+    /// checks as ExchangeToken. Every resolved permission must be read-only:
+    /// omitting permissions inherits the policy and is refused if it has writes.
+    /// The provider's returned permissions must confirm the requested ceiling.
+    /// Writes one TokenExchange audit record; `broker:read` cannot issue tokens.
+    ///
+    /// `POST /v1/{name=orgs/*/trust_policies/*}:exchangeReadToken` · permission `broker:exchange:read` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`.
+    pub async fn exchange_read_token(
+        &self,
+        request: ExchangeReadTokenRequest,
+    ) -> Result<ExchangeReadTokenResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:exchangeReadToken",
             crate::runtime::path_param(&request.name, "orgs/*/trust_policies/*", "name")?
         );
         let query = crate::runtime::Query::default();

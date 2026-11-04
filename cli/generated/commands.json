@@ -8208,6 +8208,43 @@
               },
               "summary": "Exchanges the caller's Access grant for a short-lived provider credential under a trust policy (RFC 8693 token exchange): a GitHub App installation token for exactly one of the policy's repositories, narrowed to the requested permissions. The grant's principal (for a delegated grant, its accountable principal) must be a policy subject, its actor must match the policy's actors, and it must hold `broker:exchange` on this policy. Every call writes one TokenExchange record. A permission the Connection lacks is PERMISSION_DENIED with reason `CapabilityMissing`, never an outage.",
               "verb": "exchange-token"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "permissions",
+                  "flag": "--permissions",
+                  "repeated": true,
+                  "summary": "The permissions this call needs, at most the policy's; empty means the policy's. Every resolved permission must be read-only.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "repositories",
+                  "flag": "--repositories",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "The one repository this call needs, `owner/name`, one of the policy's.",
+                  "type": "string"
+                },
+                {
+                  "field": "ttl",
+                  "flag": "--ttl",
+                  "summary": "How long the credential should live, at most the policy's `max_ttl`. A GitHub installation token always lives one hour: unset or `3600s`.",
+                  "type": "duration"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/trust_policies/*}:exchangeReadToken",
+              "method": "broker.trust_policies.exchange_read_token",
+              "permission": "broker:exchange:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/trust_policies/{trust_policy}"
+              },
+              "summary": "Exchanges the caller's Access grant for a read-only GitHub App installation token. Requires the explicit `broker:exchange:read` scope on this policy, with the same subject, actor, Connection and repository checks as ExchangeToken. Every resolved permission must be read-only: omitting permissions inherits the policy and is refused if it has writes. The provider's returned permissions must confirm the requested ceiling. Writes one TokenExchange audit record; `broker:read` cannot issue tokens.",
+              "verb": "exchange-read-token"
             }
           ],
           "noun": "trust-policies",
