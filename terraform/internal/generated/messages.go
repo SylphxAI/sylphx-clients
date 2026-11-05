@@ -169,12 +169,12 @@ func billingMoney() []def.Field {
 // brokerTrustPolicySpec is `sylphx.broker.v1.TrustPolicySpec`.
 func brokerTrustPolicySpec() []def.Field {
 	return []def.Field{
-		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection credentials are issued on: `orgs/{org}/connections/github-{installation_id}`, an active installation of the platform's GitHub App in the same org."},
+		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection credentials are issued on: An active GitHub installation or Web Push Connection in the same org."},
 		{Name: "subjects", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "The Access principals allowed to exchange, `orgs/{org}/principals/{id}` in the policy's org: the caller's own principal, or the accountable principal of a delegated grant. 1 to 64."},
-		{Name: "permissions", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Flags: def.Required, Doc: "The most a credential may carry, in GitHub repository permission names, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`."},
-		{Name: "repositories", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "The repositories a credential may cover: 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository."},
-		{Name: "credential_kind", Kind: def.Enum, Values: []string{"access_token", "runner_registration"}, Flags: def.Required, Doc: "What the credential service issues; `access_token` on the wire."},
-		{Name: "max_ttl", Kind: def.Duration, Doc: "The longest a credential lives; default and maximum 1 hour."},
+		{Name: "permissions", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`."},
+		{Name: "repositories", Kind: def.String, Repeated: true, Doc: "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository."},
+		{Name: "credential_kind", Kind: def.Enum, Values: []string{"access_token", "runner_registration", "vapid_assertion"}, Flags: def.Required, Doc: "What Broker issues: `access_token` or `vapid_assertion` on the wire."},
+		{Name: "max_ttl", Kind: def.Duration, Doc: "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID."},
 		{Name: "actors", Kind: def.String, Repeated: true, Doc: "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not."},
 	}
 }
@@ -283,8 +283,9 @@ func connectionsConnectionProviderStatus() []def.Field {
 // connectionsConnectionSpec is `sylphx.connections.v1.ConnectionSpec`.
 func connectionsConnectionSpec() []def.Field {
 	return []def.Field{
-		{Name: "provider", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "The provider this is an installation of."},
-		{Name: "external_id", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "The provider's id of the installation, for example a GitHub App installation id."},
+		{Name: "provider", Kind: def.String, Flags: def.Immutable, Doc: "The provider this is an installation of; unset for Web Push."},
+		{Name: "external_id", Kind: def.String, Flags: def.Immutable, Doc: "The provider's id of the installation, for example a GitHub App installation id. Unset for Web Push."},
+		{Name: "web_push", Kind: def.Message, Msg: connectionsWebPushConfig, Doc: "Web Push assertion configuration. Mutually exclusive with provider and external_id. The Connection kind cannot change after creation."},
 	}
 }
 
@@ -329,6 +330,14 @@ func connectionsProviderSharingGrant() []def.Field {
 	return []def.Field{
 		{Name: "organization", Kind: def.String, Flags: def.Required, Doc: "The recipient, `orgs/{org}`; wildcards are not accepted."},
 		{Name: "external_ids", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "Exact provider installation ids. For GitHub these are canonical positive decimal installation ids. An empty list grants nothing."},
+	}
+}
+
+// connectionsWebPushConfig is `sylphx.connections.v1.WebPushConfig`.
+func connectionsWebPushConfig() []def.Field {
+	return []def.Field{
+		{Name: "key", Kind: def.String, Flags: def.Required, Doc: "Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization."},
+		{Name: "contact", Kind: def.String, Flags: def.Required, Doc: "Operator contact, a mailto: or HTTPS URI; used as the JWT subject."},
 	}
 }
 

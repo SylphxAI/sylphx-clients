@@ -184,6 +184,31 @@ export interface RevokeTokenExchangeRequest {
 	name: string
 }
 
+/** The request of SignVapidAssertion. */
+export interface SignVapidAssertionRequest {
+	/** Exact same-org Web Push Connection. */
+	name: string
+	/** HTTPS origin only, without explicit path, userinfo, query or fragment. */
+	audience: string
+	/** Positive whole seconds; default 43200s, maximum 86400s and policy ceiling. */
+	ttl?: string
+}
+
+/** The response of SignVapidAssertion; served with Cache-Control: no-store. */
+export interface SignVapidAssertionResponse {
+	/** Complete RFC 8292 Authorization header, returned only on this call. */
+	authorization?: string
+	/** Compact ES256 JWT, returned only on this call. */
+	jwt?: string
+	/**
+	 * The raw 65-byte uncompressed P-256 public point. ProtoJSON uses padded
+	 * standard base64; decode it to bytes before passing it to PushManager.
+	 */
+	applicationServerKey?: string
+	/** When the push service stops honoring this assertion. */
+	expireTime?: string
+}
+
 /**
  * A TokenExchange is the record of one credential the Broker issued under a
  * TrustPolicy: who asked, for which Agent, on which repository, with which
@@ -205,7 +230,7 @@ export interface TokenExchange {
 	 * subject exchanged for itself.
 	 */
 	readonly actor?: string
-	/** The one repository the credential covers, `owner/name`. */
+	/** The repository an access token covers, `owner/name`; empty for VAPID. */
 	readonly repository?: string
 	/** The permissions the credential carries. */
 	readonly permissions?: Record<string, string>
@@ -227,8 +252,10 @@ export interface TokenExchange {
 	readonly tokenSha256?: string
 	/** The Connection the credential was issued on. */
 	readonly connection?: string
-	/** The provider identity that signed it: for GitHub, `github-apps/{app_id}`. */
+	/** Signing identity: GitHub `github-apps/{app_id}` or a VAPID KeyVersion name. */
 	readonly issuer?: string
+	/** Push-service origin for a VAPID assertion; empty for an access token. */
+	readonly audience?: string
 }
 
 /**
@@ -253,8 +280,7 @@ export interface TrustPolicy {
 export interface TrustPolicySpec {
 	/**
 	 * The Connection credentials are issued on:
-	 * `orgs/{org}/connections/github-{installation_id}`, an active
-	 * installation of the platform's GitHub App in the same org.
+	 * An active GitHub installation or Web Push Connection in the same org.
 	 */
 	connection?: string
 	/**
@@ -264,21 +290,24 @@ export interface TrustPolicySpec {
 	 */
 	subjects?: string[]
 	/**
-	 * The most a credential may carry, in GitHub repository permission names,
+	 * Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,
 	 * for example `{"contents": "write", "pull_requests": "write"}`.
 	 * `administration` is read only; organization permissions are refused.
 	 * A policy with `actors` carries at most `contents` and `pull_requests`.
 	 */
 	permissions?: Record<string, string>
 	/**
-	 * The repositories a credential may cover: 1 to 1000 exact `owner/name`
+	 * Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`
 	 * entries, no wildcard, each owned by the Connection's account.
 	 * One exchange covers exactly one repository.
 	 */
 	repositories?: string[]
-	/** What the credential service issues; `access_token` on the wire. */
+	/** What Broker issues: `access_token` or `vapid_assertion` on the wire. */
 	credentialKind?: CredentialKind
-	/** The longest a credential lives; default and maximum 1 hour. */
+	/**
+	 * The longest a credential lives: GitHub default/maximum 3600s;
+	 * VAPID default/maximum 86400s. Positive whole seconds only for VAPID.
+	 */
 	maxTtl?: string
 	/**
 	 * The Agents a delegated grant may act for: an Agent name
@@ -314,7 +343,7 @@ export interface UpdateTrustPolicyRequest {
 }
 
 /** CredentialKind is what the Broker issues under a TrustPolicy. */
-export type CredentialKind = 'access_token' | 'runner_registration' | (string & {})
+export type CredentialKind = 'access_token' | 'runner_registration' | 'vapid_assertion' | (string & {})
 
 runtime.registerSchemas({
 	'sylphx.broker.v1.CreateTrustPolicyRequest': [
@@ -363,6 +392,11 @@ runtime.registerSchemas({
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.broker.v1.RevokeTokenExchangeRequest': [],
+	'sylphx.broker.v1.SignVapidAssertionRequest': [],
+	'sylphx.broker.v1.SignVapidAssertionResponse': [
+		['applicationServerKey', 'application_server_key'],
+		['expireTime', 'expire_time'],
+	],
 	'sylphx.broker.v1.TokenExchange': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['permissions', 'permissions', undefined, 'map'],
@@ -402,11 +436,14 @@ runtime.registerSchemas({
 export class BrokerApi {
 	/** The `trust_policies` collection. */
 	readonly trustPolicies: TrustPoliciesCollection
+	/** The `connections` collection. */
+	readonly connections: ConnectionsCollection
 	/** The `token_exchanges` collection. */
 	readonly tokenExchanges: TokenExchangesCollection
 
 	constructor(client: runtime.Client) {
 		this.trustPolicies = new TrustPoliciesCollection(client)
+		this.connections = new ConnectionsCollection(client)
 		this.tokenExchanges = new TokenExchangesCollection(client)
 	}
 }
@@ -563,6 +600,35 @@ export class TrustPoliciesCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.ExchangeReadTokenRequest',
 			responseType: 'sylphx.broker.v1.ExchangeReadTokenResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `connections` of Sylphx Broker: Resource type `connections.sylphx.com/Connection`. */
+export class ConnectionsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Signs an RFC 8292 assertion using a committed same-org Web Push Connection.
+	 * The stored contact supplies the subject; an ordinary caller must hold
+	 * broker:exchange on this exact Connection and satisfy its TrustPolicy.
+	 *
+	 * `POST /v1/{name=orgs/*\/connections/*}:signVapidAssertion` · permission `broker:exchange` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `UNKNOWN_FIELD`, `ETAG_MISMATCH`, `UNAVAILABLE`, `RATE_LIMITED`.
+	 */
+	async signVapidAssertion(request: SignVapidAssertionRequest): Promise<SignVapidAssertionResponse> {
+		return this.client.call<SignVapidAssertionResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connections/*', 'name')}:signVapidAssertion`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.SignVapidAssertionRequest',
+			responseType: 'sylphx.broker.v1.SignVapidAssertionResponse',
 			mutation: true,
 		})
 	}

@@ -145,10 +145,9 @@ pub struct BeginConnectionProviderRegistrationResponse {
     pub expire_time: String,
 }
 
-/// A Connection is one installation of a ConnectionProvider on a
-/// third-party account, for example the *Sylphx* App installed on a GitHub
-/// organization. The Connections controller confirms it with the provider
-/// through the credential service before it is Ready.
+/// A Connection is a third-party relationship: a provider installation, or
+/// Web Push assertion configuration backed by a generated Sylphx Keys key.
+/// The Connections controller validates its configuration before it is Ready.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct Connection {
@@ -267,21 +266,25 @@ pub struct ConnectionProviderStatus {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ConnectionSpec {
-    /// The provider this is an installation of.
+    /// The provider this is an installation of; unset for Web Push.
     ///
-    /// Field behavior: `required`, `immutable`.
+    /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub provider: String,
     /// The provider's id of the installation, for example a GitHub App
-    /// installation id.
+    /// installation id. Unset for Web Push.
     ///
-    /// Field behavior: `required`, `immutable`.
+    /// Field behavior: `immutable`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "externalId"
     )]
     pub external_id: String,
+    /// Web Push assertion configuration. Mutually exclusive with provider and
+    /// external_id. The Connection kind cannot change after creation.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "webPush")]
+    pub web_push: Option<WebPushConfig>,
 }
 
 /// ConnectionStatus is the observed state of a Connection, as last read back
@@ -773,6 +776,22 @@ pub struct UpdateConnectionRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// WebPushConfig delegates assertion signing to Broker, without exporting a key.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct WebPushConfig {
+    /// Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub key: String,
+    /// Operator contact, a mailto: or HTTPS URI; used as the JWT subject.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub contact: String,
 }
 
 /// ConnectionState is the lifecycle state of a Connection.

@@ -10990,7 +10990,8 @@
         "description": "CredentialKind is what the Broker issues under a TrustPolicy.",
         "enum": [
           "access_token",
-          "runner_registration"
+          "runner_registration",
+          "vapid_assertion"
         ],
         "type": "string"
       },
@@ -11310,11 +11311,66 @@
         ],
         "type": "object"
       },
+      "sylphx.broker.v1.SignVapidAssertionRequest": {
+        "description": "The request of SignVapidAssertion.",
+        "properties": {
+          "audience": {
+            "description": "HTTPS origin only, without explicit path, userinfo, query or fragment.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Exact same-org Web Push Connection.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          },
+          "ttl": {
+            "description": "Positive whole seconds; default 43200s, maximum 86400s and policy ceiling.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "audience"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.SignVapidAssertionResponse": {
+        "description": "The response of SignVapidAssertion; served with Cache-Control: no-store.",
+        "properties": {
+          "application_server_key": {
+            "contentEncoding": "base64",
+            "description": "The raw 65-byte uncompressed P-256 public point. ProtoJSON uses padded\nstandard base64; decode it to bytes before passing it to PushManager.",
+            "type": "string"
+          },
+          "authorization": {
+            "description": "Complete RFC 8292 Authorization header, returned only on this call.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "expire_time": {
+            "description": "When the push service stops honoring this assertion.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "jwt": {
+            "description": "Compact ES256 JWT, returned only on this call.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.TokenExchange": {
         "description": "A TokenExchange is the record of one credential the Broker issued under a\nTrustPolicy: who asked, for which Agent, on which repository, with which\npermissions, until when. The credential itself is never returned again;\nthe record keeps only its SHA-256. The Broker holds the credential sealed\nuntil it is revoked or expires, so `:revoke` needs nothing from the caller.",
         "properties": {
           "actor": {
             "description": "The Agent the subject's delegated grant acted for; empty when the\nsubject exchanged for itself.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "audience": {
+            "description": "Push-service origin for a VAPID assertion; empty for an access token.",
             "readOnly": true,
             "type": "string"
           },
@@ -11342,7 +11398,7 @@
             "type": "string"
           },
           "issuer": {
-            "description": "The provider identity that signed it: for GitHub, `github-apps/{app_id}`.",
+            "description": "Signing identity: GitHub `github-apps/{app_id}` or a VAPID KeyVersion name.",
             "readOnly": true,
             "type": "string"
           },
@@ -11363,7 +11419,7 @@
             "type": "object"
           },
           "repository": {
-            "description": "The one repository the credential covers, `owner/name`.",
+            "description": "The repository an access token covers, `owner/name`; empty for VAPID.",
             "readOnly": true,
             "type": "string"
           },
@@ -11433,16 +11489,16 @@
             "type": "array"
           },
           "connection": {
-            "description": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
+            "description": "The Connection credentials are issued on:\nAn active GitHub installation or Web Push Connection in the same org.",
             "type": "string",
             "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
           },
           "credential_kind": {
             "$ref": "#/components/schemas/sylphx.broker.v1.CredentialKind",
-            "description": "What the credential service issues; `access_token` on the wire."
+            "description": "What Broker issues: `access_token` or `vapid_assertion` on the wire."
           },
           "max_ttl": {
-            "description": "The longest a credential lives; default and maximum 1 hour.",
+            "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
@@ -11450,11 +11506,11 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
+            "description": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
             "type": "object"
           },
           "repositories": {
-            "description": "The repositories a credential may cover: 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
+            "description": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
             "items": {
               "type": "string"
             },
@@ -11471,8 +11527,6 @@
         "required": [
           "connection",
           "subjects",
-          "permissions",
-          "repositories",
           "credential_kind"
         ],
         "type": "object"
@@ -13708,7 +13762,7 @@
         "type": "object"
       },
       "sylphx.connections.v1.Connection": {
-        "description": "A Connection is one installation of a ConnectionProvider on a\nthird-party account, for example the *Sylphx* App installed on a GitHub\norganization. The Connections controller confirms it with the provider\nthrough the credential service before it is Ready.",
+        "description": "A Connection is a third-party relationship: a provider installation, or\nWeb Push assertion configuration backed by a generated Sylphx Keys key.\nThe Connections controller validates its configuration before it is Ready.",
         "properties": {
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
@@ -13821,21 +13875,21 @@
         "description": "ConnectionSpec is the caller-writable state of a Connection.",
         "properties": {
           "external_id": {
-            "description": "The provider's id of the installation, for example a GitHub App\ninstallation id.",
+            "description": "The provider's id of the installation, for example a GitHub App\ninstallation id. Unset for Web Push.",
             "type": "string",
             "x-sylphx-immutable": true
           },
           "provider": {
-            "description": "The provider this is an installation of.",
+            "description": "The provider this is an installation of; unset for Web Push.",
             "type": "string",
             "x-sylphx-immutable": true,
             "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "web_push": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.WebPushConfig",
+            "description": "Web Push assertion configuration. Mutually exclusive with provider and\nexternal_id. The Connection kind cannot change after creation."
           }
         },
-        "required": [
-          "provider",
-          "external_id"
-        ],
         "type": "object"
       },
       "sylphx.connections.v1.ConnectionState": {
@@ -14310,6 +14364,25 @@
         },
         "required": [
           "connection"
+        ],
+        "type": "object"
+      },
+      "sylphx.connections.v1.WebPushConfig": {
+        "description": "WebPushConfig delegates assertion signing to Broker, without exporting a key.",
+        "properties": {
+          "contact": {
+            "description": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
+            "type": "string"
+          },
+          "key": {
+            "description": "Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization.",
+            "type": "string",
+            "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+          }
+        },
+        "required": [
+          "key",
+          "contact"
         ],
         "type": "object"
       },
@@ -54202,6 +54275,115 @@
         },
         "x-sylphx-method": "connections.connections.update",
         "x-sylphx-permission": "connections:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/connections/{connection}:signVapidAssertion": {
+      "post": {
+        "description": "Signs an RFC 8292 assertion using a committed same-org Web Push Connection.\nThe stored contact supplies the subject; an ordinary caller must hold\nbroker:exchange on this exact Connection and satisfy its TrustPolicy.",
+        "operationId": "broker_connections_sign_vapid_assertion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "audience": {
+                    "description": "HTTPS origin only, without explicit path, userinfo, query or fragment.",
+                    "type": "string"
+                  },
+                  "ttl": {
+                    "description": "Positive whole seconds; default 43200s, maximum 86400s and policy ceiling.",
+                    "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "audience"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.SignVapidAssertionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Signs an RFC 8292 assertion using a committed same-org Web Push Connection. The stored contact supplies the subject; an ordinary caller must hold broker:exchange on this exact Connection and satisfy its TrustPolicy.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "UNKNOWN_FIELD",
+          "ETAG_MISMATCH",
+          "UNAVAILABLE",
+          "RATE_LIMITED"
+        ],
+        "x-sylphx-method": "broker.connections.sign_vapid_assertion",
+        "x-sylphx-permission": "broker:exchange",
         "x-sylphx-stage": "preview"
       }
     },

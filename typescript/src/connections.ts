@@ -65,10 +65,9 @@ export interface BeginConnectionProviderRegistrationResponse {
 }
 
 /**
- * A Connection is one installation of a ConnectionProvider on a
- * third-party account, for example the *Sylphx* App installed on a GitHub
- * organization. The Connections controller confirms it with the provider
- * through the credential service before it is Ready.
+ * A Connection is a third-party relationship: a provider installation, or
+ * Web Push assertion configuration backed by a generated Sylphx Keys key.
+ * The Connections controller validates its configuration before it is Ready.
  */
 export interface Connection {
 	/** `orgs/{org}/connections/{connection}`. */
@@ -131,13 +130,18 @@ export interface ConnectionProviderStatus {
 
 /** ConnectionSpec is the caller-writable state of a Connection. */
 export interface ConnectionSpec {
-	/** The provider this is an installation of. */
+	/** The provider this is an installation of; unset for Web Push. */
 	provider?: string
 	/**
 	 * The provider's id of the installation, for example a GitHub App
-	 * installation id.
+	 * installation id. Unset for Web Push.
 	 */
 	externalId?: string
+	/**
+	 * Web Push assertion configuration. Mutually exclusive with provider and
+	 * external_id. The Connection kind cannot change after creation.
+	 */
+	webPush?: WebPushConfig
 }
 
 /**
@@ -358,6 +362,14 @@ export interface UpdateConnectionRequest {
 	validateOnly?: boolean
 }
 
+/** WebPushConfig delegates assertion signing to Broker, without exporting a key. */
+export interface WebPushConfig {
+	/** Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization. */
+	key?: string
+	/** Operator contact, a mailto: or HTTPS URI; used as the JWT subject. */
+	contact?: string
+}
+
 /** ConnectionState is the lifecycle state of a Connection. */
 export type ConnectionState = 'pending' | 'active' | 'suspended' | 'removed' | (string & {})
 
@@ -409,6 +421,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.connections.v1.ConnectionSpec': [
 		['externalId', 'external_id'],
+		['webPush', 'web_push', 'sylphx.connections.v1.WebPushConfig'],
 	],
 	'sylphx.connections.v1.ConnectionStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -479,6 +492,7 @@ runtime.registerSchemas({
 		['updateMask', 'update_mask'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.connections.v1.WebPushConfig': [],
 })
 
 /**

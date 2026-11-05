@@ -1850,6 +1850,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'billing:read',
 	},
+	'broker.connections.sign_vapid_assertion': {
+		id: 'broker.connections.sign_vapid_assertion',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/connections/*}:signVapidAssertion',
+		pathParams: [['name', 'orgs/*/connections/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'read',
+		permission: 'broker:exchange',
+	},
 	'broker.token_exchanges.get': {
 		id: 'broker.token_exchanges.get',
 		httpMethod: 'GET',

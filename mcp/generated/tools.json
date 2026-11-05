@@ -11752,20 +11752,21 @@
                     "type": "array"
                   },
                   "connection": {
-                    "description": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
+                    "description": "The Connection credentials are issued on:\nAn active GitHub installation or Web Push Connection in the same org.",
                     "type": "string",
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
                   "credential_kind": {
-                    "description": "What the credential service issues; `access_token` on the wire.",
+                    "description": "What Broker issues: `access_token` or `vapid_assertion` on the wire.",
                     "enum": [
                       "access_token",
-                      "runner_registration"
+                      "runner_registration",
+                      "vapid_assertion"
                     ],
                     "type": "string"
                   },
                   "max_ttl": {
-                    "description": "The longest a credential lives; default and maximum 1 hour.",
+                    "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
@@ -11773,11 +11774,11 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
+                    "description": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "The repositories a credential may cover: 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
+                    "description": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
                     "items": {
                       "type": "string"
                     },
@@ -11794,8 +11795,6 @@
                 "required": [
                   "connection",
                   "subjects",
-                  "permissions",
-                  "repositories",
                   "credential_kind"
                 ],
                 "type": "object"
@@ -11886,20 +11885,21 @@
                     "type": "array"
                   },
                   "connection": {
-                    "description": "The Connection credentials are issued on:\n`orgs/{org}/connections/github-{installation_id}`, an active\ninstallation of the platform's GitHub App in the same org.",
+                    "description": "The Connection credentials are issued on:\nAn active GitHub installation or Web Push Connection in the same org.",
                     "type": "string",
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
                   "credential_kind": {
-                    "description": "What the credential service issues; `access_token` on the wire.",
+                    "description": "What Broker issues: `access_token` or `vapid_assertion` on the wire.",
                     "enum": [
                       "access_token",
-                      "runner_registration"
+                      "runner_registration",
+                      "vapid_assertion"
                     ],
                     "type": "string"
                   },
                   "max_ttl": {
-                    "description": "The longest a credential lives; default and maximum 1 hour.",
+                    "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
@@ -11907,11 +11907,11 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "The most a credential may carry, in GitHub repository permission names,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
+                    "description": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "The repositories a credential may cover: 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
+                    "description": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
                     "items": {
                       "type": "string"
                     },
@@ -11928,8 +11928,6 @@
                 "required": [
                   "connection",
                   "subjects",
-                  "permissions",
-                  "repositories",
                   "credential_kind"
                 ],
                 "type": "object"
@@ -14718,21 +14716,37 @@
                 "description": "Desired state.",
                 "properties": {
                   "external_id": {
-                    "description": "The provider's id of the installation, for example a GitHub App\ninstallation id.",
+                    "description": "The provider's id of the installation, for example a GitHub App\ninstallation id. Unset for Web Push.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
                   "provider": {
-                    "description": "The provider this is an installation of.",
+                    "description": "The provider this is an installation of; unset for Web Push.",
                     "type": "string",
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+                  },
+                  "web_push": {
+                    "additionalProperties": false,
+                    "description": "Web Push assertion configuration. Mutually exclusive with provider and\nexternal_id. The Connection kind cannot change after creation.",
+                    "properties": {
+                      "contact": {
+                        "description": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
+                        "type": "string"
+                      },
+                      "key": {
+                        "description": "Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "contact"
+                    ],
+                    "type": "object"
                   }
                 },
-                "required": [
-                  "provider",
-                  "external_id"
-                ],
                 "type": "object"
               }
             },
@@ -14819,21 +14833,37 @@
                 "description": "Desired state.",
                 "properties": {
                   "external_id": {
-                    "description": "The provider's id of the installation, for example a GitHub App\ninstallation id.",
+                    "description": "The provider's id of the installation, for example a GitHub App\ninstallation id. Unset for Web Push.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
                   "provider": {
-                    "description": "The provider this is an installation of.",
+                    "description": "The provider this is an installation of; unset for Web Push.",
                     "type": "string",
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+                  },
+                  "web_push": {
+                    "additionalProperties": false,
+                    "description": "Web Push assertion configuration. Mutually exclusive with provider and\nexternal_id. The Connection kind cannot change after creation.",
+                    "properties": {
+                      "contact": {
+                        "description": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
+                        "type": "string"
+                      },
+                      "key": {
+                        "description": "Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "contact"
+                    ],
+                    "type": "object"
                   }
                 },
-                "required": [
-                  "provider",
-                  "external_id"
-                ],
                 "type": "object"
               }
             },

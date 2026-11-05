@@ -7969,7 +7969,7 @@
                   "field": "trust_policy.spec.connection",
                   "flag": "--spec.connection",
                   "required": true,
-                  "summary": "The Connection credentials are issued on: `orgs/{org}/connections/github-{installation_id}`, an active installation of the platform's GitHub App in the same org.",
+                  "summary": "The Connection credentials are issued on: An active GitHub installation or Web Push Connection in the same org.",
                   "type": "string"
                 },
                 {
@@ -7984,33 +7984,32 @@
                   "field": "trust_policy.spec.permissions",
                   "flag": "--spec.permissions",
                   "repeated": true,
-                  "required": true,
-                  "summary": "The most a credential may carry, in GitHub repository permission names, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
+                  "summary": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
                   "type": "key=value"
                 },
                 {
                   "field": "trust_policy.spec.repositories",
                   "flag": "--spec.repositories",
                   "repeated": true,
-                  "required": true,
-                  "summary": "The repositories a credential may cover: 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
+                  "summary": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
                   "type": "string"
                 },
                 {
                   "field": "trust_policy.spec.credential_kind",
                   "flag": "--spec.credential-kind",
                   "required": true,
-                  "summary": "What the credential service issues; `access_token` on the wire.",
+                  "summary": "What Broker issues: `access_token` or `vapid_assertion` on the wire.",
                   "type": "enum",
                   "values": [
                     "access_token",
-                    "runner_registration"
+                    "runner_registration",
+                    "vapid_assertion"
                   ]
                 },
                 {
                   "field": "trust_policy.spec.max_ttl",
                   "flag": "--spec.max-ttl",
-                  "summary": "The longest a credential lives; default and maximum 1 hour.",
+                  "summary": "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
                   "type": "duration"
                 },
                 {
@@ -8067,7 +8066,7 @@
                   "field": "trust_policy.spec.connection",
                   "flag": "--spec.connection",
                   "required": true,
-                  "summary": "The Connection credentials are issued on: `orgs/{org}/connections/github-{installation_id}`, an active installation of the platform's GitHub App in the same org.",
+                  "summary": "The Connection credentials are issued on: An active GitHub installation or Web Push Connection in the same org.",
                   "type": "string"
                 },
                 {
@@ -8082,33 +8081,32 @@
                   "field": "trust_policy.spec.permissions",
                   "flag": "--spec.permissions",
                   "repeated": true,
-                  "required": true,
-                  "summary": "The most a credential may carry, in GitHub repository permission names, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
+                  "summary": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
                   "type": "key=value"
                 },
                 {
                   "field": "trust_policy.spec.repositories",
                   "flag": "--spec.repositories",
                   "repeated": true,
-                  "required": true,
-                  "summary": "The repositories a credential may cover: 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
+                  "summary": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
                   "type": "string"
                 },
                 {
                   "field": "trust_policy.spec.credential_kind",
                   "flag": "--spec.credential-kind",
                   "required": true,
-                  "summary": "What the credential service issues; `access_token` on the wire.",
+                  "summary": "What Broker issues: `access_token` or `vapid_assertion` on the wire.",
                   "type": "enum",
                   "values": [
                     "access_token",
-                    "runner_registration"
+                    "runner_registration",
+                    "vapid_assertion"
                   ]
                 },
                 {
                   "field": "trust_policy.spec.max_ttl",
                   "flag": "--spec.max-ttl",
-                  "summary": "The longest a credential lives; default and maximum 1 hour.",
+                  "summary": "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
                   "type": "duration"
                 },
                 {
@@ -8249,6 +8247,42 @@
           ],
           "noun": "trust-policies",
           "resource_type": "broker.sylphx.com/TrustPolicy"
+        },
+        {
+          "collection": "connections",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "audience",
+                  "flag": "--audience",
+                  "required": true,
+                  "summary": "HTTPS origin only, without explicit path, userinfo, query or fragment.",
+                  "type": "string"
+                },
+                {
+                  "field": "ttl",
+                  "flag": "--ttl",
+                  "summary": "Positive whole seconds; default 43200s, maximum 86400s and policy ceiling.",
+                  "type": "duration"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/connections/*}:signVapidAssertion",
+              "method": "broker.connections.sign_vapid_assertion",
+              "permission": "broker:exchange",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/connections/{connection}"
+              },
+              "summary": "Signs an RFC 8292 assertion using a committed same-org Web Push Connection. The stored contact supplies the subject; an ordinary caller must hold broker:exchange on this exact Connection and satisfy its TrustPolicy.",
+              "verb": "sign-vapid-assertion"
+            }
+          ],
+          "noun": "connections",
+          "resource_type": "connections.sylphx.com/Connection"
         },
         {
           "collection": "token_exchanges",
@@ -10310,15 +10344,25 @@
                 {
                   "field": "connection.spec.provider",
                   "flag": "--spec.provider",
-                  "required": true,
-                  "summary": "The provider this is an installation of.",
+                  "summary": "The provider this is an installation of; unset for Web Push.",
                   "type": "string"
                 },
                 {
                   "field": "connection.spec.external_id",
                   "flag": "--spec.external-id",
-                  "required": true,
-                  "summary": "The provider's id of the installation, for example a GitHub App installation id.",
+                  "summary": "The provider's id of the installation, for example a GitHub App installation id. Unset for Web Push.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.web_push.key",
+                  "flag": "--spec.web-push.key",
+                  "summary": "Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.web_push.contact",
+                  "flag": "--spec.web-push.contact",
+                  "summary": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
                   "type": "string"
                 },
                 {
@@ -10366,6 +10410,18 @@
                   "field": "connection.meta.display_name",
                   "flag": "--meta.display-name",
                   "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.web_push.key",
+                  "flag": "--spec.web-push.key",
+                  "summary": "Enabled, generated SIGN/ec_p256_sha256 Key in the Connection organization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.web_push.contact",
+                  "flag": "--spec.web-push.contact",
+                  "summary": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
                   "type": "string"
                 },
                 {

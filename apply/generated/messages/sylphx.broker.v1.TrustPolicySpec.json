@@ -38,7 +38,7 @@
     },
     {
       "behaviors": [
-        "REQUIRED"
+        "OPTIONAL"
       ],
       "cli_flag": "",
       "filterable": false,
@@ -59,7 +59,7 @@
     },
     {
       "behaviors": [
-        "REQUIRED"
+        "OPTIONAL"
       ],
       "cli_flag": "",
       "filterable": false,

@@ -1,0 +1,16 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "broker.connections.sign_vapid_assertion",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "connections.sylphx.com/Connection"
+    }
+  ]
+}

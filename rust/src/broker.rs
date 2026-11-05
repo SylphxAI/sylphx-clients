@@ -336,6 +336,56 @@ pub struct RevokeTokenExchangeRequest {
     pub name: String,
 }
 
+/// The request of SignVapidAssertion.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SignVapidAssertionRequest {
+    /// Exact same-org Web Push Connection.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// HTTPS origin only, without explicit path, userinfo, query or fragment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub audience: String,
+    /// Positive whole seconds; default 43200s, maximum 86400s and policy ceiling.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub ttl: String,
+}
+
+/// The response of SignVapidAssertion; served with Cache-Control: no-store.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SignVapidAssertionResponse {
+    /// Complete RFC 8292 Authorization header, returned only on this call.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub authorization: String,
+    /// Compact ES256 JWT, returned only on this call.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub jwt: String,
+    /// The raw 65-byte uncompressed P-256 public point. ProtoJSON uses padded
+    /// standard base64; decode it to bytes before passing it to PushManager.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "applicationServerKey"
+    )]
+    pub application_server_key: String,
+    /// When the push service stops honoring this assertion.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+}
+
 /// A TokenExchange is the record of one credential the Broker issued under a
 /// TrustPolicy: who asked, for which Agent, on which repository, with which
 /// permissions, until when. The credential itself is never returned again;
@@ -368,7 +418,7 @@ pub struct TokenExchange {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub actor: String,
-    /// The one repository the credential covers, `owner/name`.
+    /// The repository an access token covers, `owner/name`; empty for VAPID.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -430,11 +480,16 @@ pub struct TokenExchange {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub connection: String,
-    /// The provider identity that signed it: for GitHub, `github-apps/{app_id}`.
+    /// Signing identity: GitHub `github-apps/{app_id}` or a VAPID KeyVersion name.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub issuer: String,
+    /// Push-service origin for a VAPID assertion; empty for an access token.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub audience: String,
 }
 
 /// A TrustPolicy grants a set of Access principals the right to exchange
@@ -473,8 +528,7 @@ pub struct TrustPolicy {
 #[non_exhaustive]
 pub struct TrustPolicySpec {
     /// The Connection credentials are issued on:
-    /// `orgs/{org}/connections/github-{installation_id}`, an active
-    /// installation of the platform's GitHub App in the same org.
+    /// An active GitHub installation or Web Push Connection in the same org.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -486,22 +540,18 @@ pub struct TrustPolicySpec {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub subjects: Vec<String>,
-    /// The most a credential may carry, in GitHub repository permission names,
+    /// Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,
     /// for example `{"contents": "write", "pull_requests": "write"}`.
     /// `administration` is read only; organization permissions are refused.
     /// A policy with `actors` carries at most `contents` and `pull_requests`.
-    ///
-    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub permissions: std::collections::BTreeMap<String, String>,
-    /// The repositories a credential may cover: 1 to 1000 exact `owner/name`
+    /// Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`
     /// entries, no wildcard, each owned by the Connection's account.
     /// One exchange covers exactly one repository.
-    ///
-    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub repositories: Vec<String>,
-    /// What the credential service issues; `access_token` on the wire.
+    /// What Broker issues: `access_token` or `vapid_assertion` on the wire.
     ///
     /// Field behavior: `required`.
     #[serde(
@@ -510,7 +560,8 @@ pub struct TrustPolicySpec {
         alias = "credentialKind"
     )]
     pub credential_kind: Option<CredentialKind>,
-    /// The longest a credential lives; default and maximum 1 hour.
+    /// The longest a credential lives: GitHub default/maximum 3600s;
+    /// VAPID default/maximum 86400s. Positive whole seconds only for VAPID.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -589,6 +640,8 @@ pub enum CredentialKind {
     /// A single-use runner registration, for example a GitHub Actions JIT
     /// runner config. Never persisted.
     RunnerRegistration,
+    /// An RFC 8292 Web Push authentication assertion.
+    VapidAssertion,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -599,6 +652,7 @@ impl CredentialKind {
         match self {
             Self::AccessToken => "access_token",
             Self::RunnerRegistration => "runner_registration",
+            Self::VapidAssertion => "vapid_assertion",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -608,6 +662,7 @@ impl CredentialKind {
         match s {
             "access_token" => Self::AccessToken,
             "runner_registration" => Self::RunnerRegistration,
+            "vapid_assertion" => Self::VapidAssertion,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -651,6 +706,13 @@ impl<'a, T: crate::runtime::Transport> BrokerApi<'a, T> {
     /// The `trust_policies` collection.
     pub fn trust_policies(&self) -> TrustPoliciesCollection<'a, T> {
         TrustPoliciesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `connections` collection.
+    pub fn connections(&self) -> ConnectionsCollection<'a, T> {
+        ConnectionsCollection {
             client: self.client,
         }
     }
@@ -885,6 +947,41 @@ impl<'a, T: crate::runtime::Transport> TrustPoliciesCollection<'a, T> {
         let path = format!(
             "/v1/{}:exchangeReadToken",
             crate::runtime::path_param(&request.name, "orgs/*/trust_policies/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `connections` of Sylphx Broker: Resource type `connections.sylphx.com/Connection`.
+pub struct ConnectionsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
+    /// Signs an RFC 8292 assertion using a committed same-org Web Push Connection.
+    /// The stored contact supplies the subject; an ordinary caller must hold
+    /// broker:exchange on this exact Connection and satisfy its TrustPolicy.
+    ///
+    /// `POST /v1/{name=orgs/*/connections/*}:signVapidAssertion` · permission `broker:exchange` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `UNKNOWN_FIELD`, `ETAG_MISMATCH`, `UNAVAILABLE`, `RATE_LIMITED`.
+    pub async fn sign_vapid_assertion(
+        &self,
+        request: SignVapidAssertionRequest,
+    ) -> Result<SignVapidAssertionResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:signVapidAssertion",
+            crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
         );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
