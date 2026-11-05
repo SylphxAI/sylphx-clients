@@ -1,0 +1,26 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.bank_transfer_accounts.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "allow_missing"
+            ]
+          },
+          "id": "money.bank_transfer_accounts.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "money.sylphx.com/BankTransferAccount"
+    }
+  ]
+}

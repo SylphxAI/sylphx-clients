@@ -1,0 +1,22 @@
+{
+  "collection": "bank_transfer_accounts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "BankTransferAccount",
+  "message": "sylphx.money.v1.BankTransferAccount",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_transfer_accounts/{bank_transfer_account}",
+  "plural": "bankTransferAccounts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "singleton",
+  "singular": "bankTransferAccount",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/BankTransferAccount"
+}

@@ -26875,6 +26875,364 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "GetBankTransferAccount through the project-scoped bank transfer API."
+      },
+      "description": "GetBankTransferAccount through the project-scoped bank transfer API.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/bank_transfer_accounts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Gets the environment bank account.",
+        "properties": {
+          "name": {
+            "description": "BankTransferAccount name, ending in default.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/BankTransferAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_transfer_accounts.get",
+      "permission": "billing:read",
+      "tool": "money_bank_transfer_accounts_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "UpdateBankTransferAccount through the project-scoped bank transfer API."
+      },
+      "description": "UpdateBankTransferAccount through the project-scoped bank transfer API.",
+      "effect": "write",
+      "http": "PATCH /v1/{bank_transfer_account.name=orgs/*/projects/*/envs/*/bank_transfer_accounts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Configures the environment bank account.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the singleton if absent.",
+            "type": "boolean"
+          },
+          "bank_transfer_account": {
+            "additionalProperties": false,
+            "description": "Account configuration.",
+            "properties": {
+              "account_holder": {
+                "description": "Verified beneficiary name.",
+                "type": "string"
+              },
+              "account_number": {
+                "description": "Receiving account number, including branch digits.",
+                "type": "string"
+              },
+              "bank_code": {
+                "description": "Receiving bank routing or clearing code.",
+                "type": "string"
+              },
+              "bank_name": {
+                "description": "Receiving bank name.",
+                "type": "string"
+              },
+              "currency_code": {
+                "description": "ISO 4217 receiving account currency.",
+                "type": "string"
+              },
+              "enabled": {
+                "description": "Whether new bank-transfer checkouts may be created.",
+                "type": "boolean"
+              },
+              "fps_id": {
+                "description": "Verified FPS identifier displayed to the payer.",
+                "type": "string"
+              },
+              "fps_qr_payload": {
+                "description": "Original bank-issued FPS Common QR payload; never an invented account template.",
+                "type": "string"
+              },
+              "name": {
+                "description": "Resource name.",
+                "type": "string"
+              },
+              "qr_profile": {
+                "description": "Optional EMV merchant-presented QR country profile: hk_fps.",
+                "type": "string"
+              },
+              "region_code": {
+                "description": "ISO 3166-1 alpha-2 country of the receiving bank.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "account_holder",
+              "bank_name",
+              "bank_code",
+              "account_number",
+              "currency_code",
+              "region_code"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "Fields to change; empty replaces all writable fields.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_transfer_account"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_transfer_accounts.update",
+      "permission": "billing:bank_accounts:write",
+      "tool": "money_bank_transfer_accounts_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "GetBankReceipt through the project-scoped bank transfer API."
+      },
+      "description": "GetBankReceipt through the project-scoped bank transfer API.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Gets one immutable bank receipt and its appended decisions.",
+        "properties": {
+          "name": {
+            "description": "Receipt name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/BankReceipt"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_receipts.get",
+      "permission": "billing:bank_receipts:read",
+      "tool": "money_bank_receipts_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists incoming bank evidence, including receipts held for review."
+      },
+      "description": "Lists incoming bank evidence, including receipts held for review.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/bank_receipts",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Lists bank receipts in an environment.",
+        "properties": {
+          "filter": {
+            "description": "Optional state equality: held, paid, rejected, refunded or reversed.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Default 50, at most 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Token from the preceding page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Environment resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/BankReceipt"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_receipts.list",
+      "permission": "billing:bank_receipts:read",
+      "tool": "money_bank_receipts_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "RecordBankReceipt through the project-scoped bank transfer API."
+      },
+      "description": "RecordBankReceipt through the project-scoped bank transfer API.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/bank_receipts:record",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Records statement evidence and confirms only an exact, timely, unambiguous payment.",
+        "properties": {
+          "ambiguous": {
+            "description": "Hold evidence with unresolved payer or bank ambiguity.",
+            "type": "boolean"
+          },
+          "amount_minor": {
+            "description": "Actual received minor units.",
+            "format": "int64",
+            "type": "string"
+          },
+          "bank_transaction_id": {
+            "description": "Bank statement transaction identity.",
+            "type": "string"
+          },
+          "checkout_session": {
+            "description": "The checkout against which bank statement evidence is recorded.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/CheckoutSession"
+          },
+          "currency_code": {
+            "description": "Actual currency.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment recording the receipt.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/BankReceipt"
+          },
+          "payer_evidence": {
+            "description": "Bank statement evidence or secure evidence locator.",
+            "type": "string"
+          },
+          "received_time": {
+            "description": "Bank receipt time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "reference": {
+            "description": "Actual statement reference; absent references are held.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "checkout_session",
+          "bank_transaction_id",
+          "amount_minor",
+          "currency_code",
+          "received_time",
+          "payer_evidence"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_receipts.record",
+      "permission": "billing:bank_receipts:write",
+      "tool": "money_bank_receipts_record"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "ResolveBankReceipt through the project-scoped bank transfer API."
+      },
+      "description": "ResolveBankReceipt through the project-scoped bank transfer API.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}:resolve",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Resolves held evidence without altering its original receipt.",
+        "properties": {
+          "decision": {
+            "description": "accept or reject; accept requires the exact amount and currency.",
+            "type": "string"
+          },
+          "evidence": {
+            "description": "Human resolution evidence.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Receipt name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/BankReceipt"
+          }
+        },
+        "required": [
+          "name",
+          "decision",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_receipts.resolve",
+      "permission": "billing:bank_receipts:write",
+      "tool": "money_bank_receipts_resolve"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "ReverseBankReceipt through the project-scoped bank transfer API."
+      },
+      "description": "ReverseBankReceipt through the project-scoped bank transfer API.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}:reverse",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Records a completed external refund or reversal; sends no money.",
+        "properties": {
+          "evidence": {
+            "description": "Verified bank evidence.",
+            "type": "string"
+          },
+          "external_reference": {
+            "description": "Unique bank refund or reversal identity.",
+            "type": "string"
+          },
+          "kind": {
+            "description": "refund or reversal, for the full receipt.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Receipt name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/BankReceipt"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "evidence",
+          "external_reference"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.bank_receipts.reverse",
+      "permission": "billing:bank_receipts:write",
+      "tool": "money_bank_receipts_reverse"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets one stored processor hint, with its safe hold reason."
       },
       "description": "Gets one stored processor hint, with its safe hold reason.",
@@ -29290,6 +29648,11 @@
               "name": {
                 "description": "`orgs/{org}/projects/{project}/envs/{env}/checkout_sessions/{checkout_session}`.",
                 "type": "string"
+              },
+              "payment_method": {
+                "description": "`stripe` (default) or `bank_transfer`. Bank transfers never contact Stripe.",
+                "type": "string",
+                "x-sylphx-immutable": true
               },
               "shipping_country_codes": {
                 "description": "Countries whose shipping address the hosted page collects, upper-case ISO\n3166-1 alpha-2. Empty means no shipping address is collected.",

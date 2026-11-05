@@ -1,0 +1,22 @@
+{
+  "collection": "bank_receipts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "BankReceipt",
+  "message": "sylphx.money.v1.BankReceipt",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_receipts/{bank_receipt}",
+  "plural": "bankReceipts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "bankReceipt",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/BankReceipt"
+}

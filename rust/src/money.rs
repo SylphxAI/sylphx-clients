@@ -91,6 +91,283 @@ pub struct AppStoreConnection {
     pub environment: String,
 }
 
+/// Immutable evidence of an incoming bank credit and its decisions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BankReceipt {
+    /// Resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable resource identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The checkout this receipt was submitted against.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "checkoutSession"
+    )]
+    pub checkout_session: String,
+    /// The bank statement transaction identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bankTransactionId"
+    )]
+    pub bank_transaction_id: String,
+    /// Amount actually received in minor units.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "amountMinor"
+    )]
+    pub amount_minor: i64,
+    /// Currency actually received.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currencyCode"
+    )]
+    pub currency_code: String,
+    /// Bank-reported receipt time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receivedTime"
+    )]
+    pub received_time: String,
+    /// Reference observed on the bank statement; empty is held.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reference: String,
+    /// Evidence locator or statement evidence; screenshots alone are not proof.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerEvidence"
+    )]
+    pub payer_evidence: String,
+    /// Authenticated principal that recorded this receipt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub confirmer: String,
+    /// paid, held, rejected, refunded or reversed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Why settlement was held.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holdReason"
+    )]
+    pub hold_reason: String,
+    /// Append-only human resolution, refund and reversal history.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entries: Vec<BankReceiptEntry>,
+}
+
+/// An immutable decision appended to the original bank receipt.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BankReceiptEntry {
+    /// accept, reject, refund or reversal.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub kind: String,
+    /// Operator evidence supporting this decision.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub evidence: String,
+    /// Authenticated decision maker.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub confirmer: String,
+    /// UTC decision time.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// Bank refund/reversal reference, when applicable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "externalReference"
+    )]
+    pub external_reference: String,
+}
+
+/// Receiving bank account configuration for one environment.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BankTransferAccount {
+    /// Resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable resource identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Verified beneficiary name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accountHolder"
+    )]
+    pub account_holder: String,
+    /// Receiving bank name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bankName"
+    )]
+    pub bank_name: String,
+    /// Receiving bank routing or clearing code.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bankCode"
+    )]
+    pub bank_code: String,
+    /// Receiving account number, including branch digits.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accountNumber"
+    )]
+    pub account_number: String,
+    /// Verified FPS identifier displayed to the payer.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "fpsId"
+    )]
+    pub fps_id: String,
+    /// Original bank-issued FPS Common QR payload; never an invented account template.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "fpsQrPayload"
+    )]
+    pub fps_qr_payload: String,
+    /// ISO 4217 receiving account currency.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currencyCode"
+    )]
+    pub currency_code: String,
+    /// Whether new bank-transfer checkouts may be created.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub enabled: bool,
+    /// ISO 3166-1 alpha-2 country of the receiving bank.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "regionCode"
+    )]
+    pub region_code: String,
+    /// Optional EMV merchant-presented QR country profile: hk_fps.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "qrProfile"
+    )]
+    pub qr_profile: String,
+}
+
+/// Frozen payment instructions for one checkout.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BankTransferInstructions {
+    /// Beneficiary snapshot, unaffected by later configuration changes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account: Option<BankTransferAccount>,
+    /// Opaque order reference, no more than 25 characters.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reference: String,
+    /// Dynamic Common QR with exact amount and reference.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "qrPayload"
+    )]
+    pub qr_payload: String,
+    /// QR image as standalone SVG.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "qrSvg"
+    )]
+    pub qr_svg: String,
+}
+
 /// The request of BatchIngestUsageEvents.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -135,7 +412,7 @@ pub struct BookedVolumeLine {
         alias = "productRef"
     )]
     pub product_ref: String,
-    /// stripe, app_store or google_play.
+    /// stripe, app_store, google_play or bank_transfer.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub channel: String,
     /// ISO 4217 currency; never sum amounts across currencies.
@@ -833,6 +1110,24 @@ pub struct CheckoutSession {
         alias = "processorPaymentId"
     )]
     pub processor_payment_id: String,
+    /// `stripe` (default) or `bank_transfer`. Bank transfers never contact Stripe.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "paymentMethod"
+    )]
+    pub payment_method: String,
+    /// Frozen beneficiary, amount, reference and bank-issued FPS QR instructions.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "bankTransfer"
+    )]
+    pub bank_transfer: Option<BankTransferInstructions>,
 }
 
 /// The request of ClientVerifyStorePurchase.
@@ -1656,6 +1951,28 @@ pub struct GenerateLicenceKeyRequest {
     pub spec: Option<LicenceKeySpec>,
 }
 
+/// Gets one immutable bank receipt and its appended decisions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetBankReceiptRequest {
+    /// Receipt name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Gets the environment bank account.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetBankTransferAccountRequest {
+    /// BankTransferAccount name, ending in default.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetCatalog.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2301,6 +2618,50 @@ pub struct LineItem {
     /// How many; default 1. Seats for a per-seat or family price.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub quantity: i32,
+}
+
+/// Lists bank receipts in an environment.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListBankReceiptsRequest {
+    /// Environment resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Default 50, at most 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Token from the preceding page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// Optional state equality: held, paid, rejected, refunded or reversed.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+}
+
+/// Response for ListBankReceipts.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListBankReceiptsResponse {
+    /// Receipts ordered by creation time and id.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "bankReceipts")]
+    pub bank_receipts: Vec<BankReceipt>,
+    /// Empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListCreditGrants.
@@ -3599,6 +3960,78 @@ pub struct Product {
     pub licence: Option<LicencePolicy>,
 }
 
+/// Records statement evidence and confirms only an exact, timely, unambiguous payment.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RecordBankReceiptRequest {
+    /// The environment recording the receipt.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The checkout against which bank statement evidence is recorded.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "checkoutSession"
+    )]
+    pub checkout_session: String,
+    /// Bank statement transaction identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bankTransactionId"
+    )]
+    pub bank_transaction_id: String,
+    /// Actual received minor units.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "amountMinor"
+    )]
+    pub amount_minor: i64,
+    /// Actual currency.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currencyCode"
+    )]
+    pub currency_code: String,
+    /// Bank receipt time.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receivedTime"
+    )]
+    pub received_time: String,
+    /// Actual statement reference; absent references are held.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reference: String,
+    /// Bank statement evidence or secure evidence locator.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerEvidence"
+    )]
+    pub payer_evidence: String,
+    /// Hold evidence with unresolved payer or bank ambiguity.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub ambiguous: bool,
+}
+
 /// The request of RefreshMerchantAccount.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3726,6 +4159,27 @@ pub struct ReleaseUsageReservationRequest {
     pub name: String,
 }
 
+/// Resolves held evidence without altering its original receipt.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ResolveBankReceiptRequest {
+    /// Receipt name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// accept or reject; accept requires the exact amount and currency.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub decision: String,
+    /// Human resolution evidence.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub evidence: String,
+}
+
 /// The request of ResumeCustomerSubscription.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3851,7 +4305,7 @@ pub struct RevenueFact {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub day: String,
-    /// `stripe`, `app_store`, `google_play`, `ad_network` or `other`.
+    /// `stripe`, `app_store`, `google_play`, `bank_transfer`, `ad_network` or `other`.
     ///
     /// Field behavior: `output_only`.
     #[serde(
@@ -4216,6 +4670,36 @@ pub struct RevenueSummary {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "bookedVolume")]
     pub booked_volume: Vec<BookedVolumeLine>,
+}
+
+/// Records a completed external refund or reversal; sends no money.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReverseBankReceiptRequest {
+    /// Receipt name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// refund or reversal, for the full receipt.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub kind: String,
+    /// Verified bank evidence.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub evidence: String,
+    /// Unique bank refund or reversal identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "externalReference"
+    )]
+    pub external_reference: String,
 }
 
 /// The request of RunRevenueSource.
@@ -5000,6 +5484,35 @@ pub struct UnconvertedAmount {
     /// In minor units of that currency.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub amount: String,
+}
+
+/// Configures the environment bank account.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateBankTransferAccountRequest {
+    /// Account configuration.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "bankTransferAccount"
+    )]
+    pub bank_transfer_account: Option<BankTransferAccount>,
+    /// Fields to change; empty replaces all writable fields.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+    /// Create the singleton if absent.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowMissing"
+    )]
+    pub allow_missing: bool,
 }
 
 /// The request of UpdateCatalog.
@@ -6184,6 +6697,20 @@ pub struct MoneyApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
+    /// The `bank_transfer_accounts` collection.
+    pub fn bank_transfer_accounts(&self) -> BankTransferAccountsCollection<'a, T> {
+        BankTransferAccountsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `bank_receipts` collection.
+    pub fn bank_receipts(&self) -> BankReceiptsCollection<'a, T> {
+        BankReceiptsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `processor_events` collection.
     pub fn processor_events(&self) -> ProcessorEventsCollection<'a, T> {
         ProcessorEventsCollection {
@@ -6364,6 +6891,247 @@ impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
         ExchangeRatesCollection {
             client: self.client,
         }
+    }
+}
+
+/// `bank_transfer_accounts` of Sylphx Money: Resource type `money.sylphx.com/BankTransferAccount`.
+pub struct BankTransferAccountsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> BankTransferAccountsCollection<'a, T> {
+    /// GetBankTransferAccount through the project-scoped bank transfer API.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/bank_transfer_accounts/*}` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+    pub async fn get(
+        &self,
+        request: GetBankTransferAccountRequest,
+    ) -> Result<BankTransferAccount, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/bank_transfer_accounts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// UpdateBankTransferAccount through the project-scoped bank transfer API.
+    ///
+    /// `PATCH /v1/{bank_transfer_account.name=orgs/*/projects/*/envs/*/bank_transfer_accounts/*}` · permission `billing:bank_accounts:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+    pub async fn update(
+        &self,
+        request: UpdateBankTransferAccountRequest,
+    ) -> Result<BankTransferAccount, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .bank_transfer_account
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/bank_transfer_accounts/*",
+                "bank_transfer_account.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("allow_missing", &request.allow_missing);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.bank_transfer_account)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `bank_receipts` of Sylphx Money: Resource type `money.sylphx.com/BankReceipt`.
+pub struct BankReceiptsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> BankReceiptsCollection<'a, T> {
+    /// GetBankReceipt through the project-scoped bank transfer API.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}` · permission `billing:bank_receipts:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+    pub async fn get(
+        &self,
+        request: GetBankReceiptRequest,
+    ) -> Result<BankReceipt, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/bank_receipts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists incoming bank evidence, including receipts held for review.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/bank_receipts` · permission `billing:bank_receipts:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListBankReceiptsRequest,
+    ) -> Result<ListBankReceiptsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/bank_receipts",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListBankReceiptsRequest,
+    ) -> Result<Vec<BankReceipt>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.bank_receipts);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// RecordBankReceipt through the project-scoped bank transfer API.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/bank_receipts:record` · permission `billing:bank_receipts:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+    pub async fn record(
+        &self,
+        request: RecordBankReceiptRequest,
+    ) -> Result<BankReceipt, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/bank_receipts:record",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ResolveBankReceipt through the project-scoped bank transfer API.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}:resolve` · permission `billing:bank_receipts:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+    pub async fn resolve(
+        &self,
+        request: ResolveBankReceiptRequest,
+    ) -> Result<BankReceipt, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:resolve",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/bank_receipts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ReverseBankReceipt through the project-scoped bank transfer API.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}:reverse` · permission `billing:bank_receipts:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+    pub async fn reverse(
+        &self,
+        request: ReverseBankReceiptRequest,
+    ) -> Result<BankReceipt, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:reverse",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/bank_receipts/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 

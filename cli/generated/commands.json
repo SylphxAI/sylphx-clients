@@ -19310,6 +19310,314 @@
     {
       "collections": [
         {
+          "collection": "bank_transfer_accounts",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/bank_transfer_accounts/*}",
+              "method": "money.bank_transfer_accounts.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_transfer_accounts/{bank_transfer_account}"
+              },
+              "summary": "GetBankTransferAccount through the project-scoped bank transfer API.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "bank_transfer_account.account_holder",
+                  "flag": "--account-holder",
+                  "required": true,
+                  "summary": "Verified beneficiary name.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.bank_name",
+                  "flag": "--bank-name",
+                  "required": true,
+                  "summary": "Receiving bank name.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.bank_code",
+                  "flag": "--bank-code",
+                  "required": true,
+                  "summary": "Receiving bank routing or clearing code.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.account_number",
+                  "flag": "--account-number",
+                  "required": true,
+                  "summary": "Receiving account number, including branch digits.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.fps_id",
+                  "flag": "--fps-id",
+                  "summary": "Verified FPS identifier displayed to the payer.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.fps_qr_payload",
+                  "flag": "--fps-qr-payload",
+                  "summary": "Original bank-issued FPS Common QR payload; never an invented account template.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.currency_code",
+                  "flag": "--currency-code",
+                  "required": true,
+                  "summary": "ISO 4217 receiving account currency.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.enabled",
+                  "flag": "--enabled",
+                  "summary": "Whether new bank-transfer checkouts may be created.",
+                  "type": "bool"
+                },
+                {
+                  "field": "bank_transfer_account.region_code",
+                  "flag": "--region-code",
+                  "required": true,
+                  "summary": "ISO 3166-1 alpha-2 country of the receiving bank.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transfer_account.qr_profile",
+                  "flag": "--qr-profile",
+                  "summary": "Optional EMV merchant-presented QR country profile: hk_fps.",
+                  "type": "string"
+                },
+                {
+                  "field": "allow_missing",
+                  "flag": "--allow-missing",
+                  "summary": "Create the singleton if absent.",
+                  "type": "bool"
+                }
+              ],
+              "http": "PATCH /v1/{bank_transfer_account.name=orgs/*/projects/*/envs/*/bank_transfer_accounts/*}",
+              "method": "money.bank_transfer_accounts.update",
+              "permission": "billing:bank_accounts:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "bank_transfer_account.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_transfer_accounts/{bank_transfer_account}"
+              },
+              "resource_field": "bank_transfer_account",
+              "sends_etag": true,
+              "summary": "UpdateBankTransferAccount through the project-scoped bank transfer API.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            }
+          ],
+          "noun": "bank-transfer-accounts",
+          "resource_type": "money.sylphx.com/BankTransferAccount"
+        },
+        {
+          "collection": "bank_receipts",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}",
+              "method": "money.bank_receipts.get",
+              "permission": "billing:bank_receipts:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_receipts/{bank_receipt}"
+              },
+              "summary": "GetBankReceipt through the project-scoped bank transfer API.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Default 50, at most 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Token from the preceding page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "Optional state equality: held, paid, rejected, refunded or reversed.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/bank_receipts",
+              "method": "money.bank_receipts.list",
+              "paginates": true,
+              "permission": "billing:bank_receipts:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists incoming bank evidence, including receipts held for review.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "checkout_session",
+                  "flag": "--checkout-session",
+                  "required": true,
+                  "summary": "The checkout against which bank statement evidence is recorded.",
+                  "type": "string"
+                },
+                {
+                  "field": "bank_transaction_id",
+                  "flag": "--bank-transaction-id",
+                  "required": true,
+                  "summary": "Bank statement transaction identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "amount_minor",
+                  "flag": "--amount-minor",
+                  "required": true,
+                  "summary": "Actual received minor units.",
+                  "type": "int"
+                },
+                {
+                  "field": "currency_code",
+                  "flag": "--currency-code",
+                  "required": true,
+                  "summary": "Actual currency.",
+                  "type": "string"
+                },
+                {
+                  "field": "received_time",
+                  "flag": "--received-time",
+                  "required": true,
+                  "summary": "Bank receipt time.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "reference",
+                  "flag": "--reference",
+                  "summary": "Actual statement reference; absent references are held.",
+                  "type": "string"
+                },
+                {
+                  "field": "payer_evidence",
+                  "flag": "--payer-evidence",
+                  "required": true,
+                  "summary": "Bank statement evidence or secure evidence locator.",
+                  "type": "string"
+                },
+                {
+                  "field": "ambiguous",
+                  "flag": "--ambiguous",
+                  "summary": "Hold evidence with unresolved payer or bank ambiguity.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/bank_receipts:record",
+              "method": "money.bank_receipts.record",
+              "permission": "billing:bank_receipts:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "RecordBankReceipt through the project-scoped bank transfer API.",
+              "verb": "record"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "decision",
+                  "flag": "--decision",
+                  "required": true,
+                  "summary": "accept or reject; accept requires the exact amount and currency.",
+                  "type": "string"
+                },
+                {
+                  "field": "evidence",
+                  "flag": "--evidence",
+                  "required": true,
+                  "summary": "Human resolution evidence.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}:resolve",
+              "method": "money.bank_receipts.resolve",
+              "permission": "billing:bank_receipts:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_receipts/{bank_receipt}"
+              },
+              "summary": "ResolveBankReceipt through the project-scoped bank transfer API.",
+              "verb": "resolve"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "kind",
+                  "flag": "--kind",
+                  "required": true,
+                  "summary": "refund or reversal, for the full receipt.",
+                  "type": "string"
+                },
+                {
+                  "field": "evidence",
+                  "flag": "--evidence",
+                  "required": true,
+                  "summary": "Verified bank evidence.",
+                  "type": "string"
+                },
+                {
+                  "field": "external_reference",
+                  "flag": "--external-reference",
+                  "required": true,
+                  "summary": "Unique bank refund or reversal identity.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/bank_receipts/*}:reverse",
+              "method": "money.bank_receipts.reverse",
+              "permission": "billing:bank_receipts:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/bank_receipts/{bank_receipt}"
+              },
+              "summary": "ReverseBankReceipt through the project-scoped bank transfer API.",
+              "verb": "reverse"
+            }
+          ],
+          "noun": "bank-receipts",
+          "resource_type": "money.sylphx.com/BankReceipt"
+        },
+        {
           "collection": "processor_events",
           "commands": [
             {
@@ -20983,6 +21291,12 @@
                   "flag": "--consent-collection.promotions",
                   "summary": "Offer the buyer an opt-in to promotional email where the processor allows it.",
                   "type": "bool"
+                },
+                {
+                  "field": "checkout_session.payment_method",
+                  "flag": "--payment-method",
+                  "summary": "`stripe` (default) or `bank_transfer`. Bank transfers never contact Stripe.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/checkout_sessions",

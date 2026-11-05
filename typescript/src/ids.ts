@@ -228,6 +228,8 @@ export const PREFIXES = [
 	{ prefix: 'pev', entity: 'ProcessorEvent', service: 'money', collection: 'processor_events' },
 	{ prefix: 'chp', entity: 'ChatProfile', service: 'events', collection: 'chat_profiles' },
 	{ prefix: 'chr', entity: 'ChatReport', service: 'events', collection: 'chat_reports' },
+	{ prefix: 'bta', entity: 'BankTransferAccount', service: 'money', collection: 'bank_transfer_accounts' },
+	{ prefix: 'brc', entity: 'BankReceipt', service: 'money', collection: 'bank_receipts' },
 ] as const satisfies readonly PrefixInfo[]
 
 /** A registered prefix, for example `'prj'`. */

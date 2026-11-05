@@ -49,6 +49,94 @@ export interface AppStoreConnection {
 	environment?: string
 }
 
+/** Immutable evidence of an incoming bank credit and its decisions. */
+export interface BankReceipt {
+	/** Resource name. */
+	name?: string
+	/** Stable resource identity. */
+	readonly uid?: string
+	/** Resource metadata. */
+	readonly meta?: common.ResourceMeta
+	/** The checkout this receipt was submitted against. */
+	readonly checkoutSession?: string
+	/** The bank statement transaction identity. */
+	readonly bankTransactionId?: string
+	/** Amount actually received in minor units. */
+	readonly amountMinor?: string
+	/** Currency actually received. */
+	readonly currencyCode?: string
+	/** Bank-reported receipt time. */
+	readonly receivedTime?: string
+	/** Reference observed on the bank statement; empty is held. */
+	readonly reference?: string
+	/** Evidence locator or statement evidence; screenshots alone are not proof. */
+	readonly payerEvidence?: string
+	/** Authenticated principal that recorded this receipt. */
+	readonly confirmer?: string
+	/** paid, held, rejected, refunded or reversed. */
+	readonly state?: string
+	/** Why settlement was held. */
+	readonly holdReason?: string
+	/** Append-only human resolution, refund and reversal history. */
+	readonly entries?: BankReceiptEntry[]
+}
+
+/** An immutable decision appended to the original bank receipt. */
+export interface BankReceiptEntry {
+	/** accept, reject, refund or reversal. */
+	readonly kind?: string
+	/** Operator evidence supporting this decision. */
+	readonly evidence?: string
+	/** Authenticated decision maker. */
+	readonly confirmer?: string
+	/** UTC decision time. */
+	readonly createTime?: string
+	/** Bank refund/reversal reference, when applicable. */
+	readonly externalReference?: string
+}
+
+/** Receiving bank account configuration for one environment. */
+export interface BankTransferAccount {
+	/** Resource name. */
+	name?: string
+	/** Stable resource identity. */
+	readonly uid?: string
+	/** Resource metadata. */
+	readonly meta?: common.ResourceMeta
+	/** Verified beneficiary name. */
+	accountHolder?: string
+	/** Receiving bank name. */
+	bankName?: string
+	/** Receiving bank routing or clearing code. */
+	bankCode?: string
+	/** Receiving account number, including branch digits. */
+	accountNumber?: string
+	/** Verified FPS identifier displayed to the payer. */
+	fpsId?: string
+	/** Original bank-issued FPS Common QR payload; never an invented account template. */
+	fpsQrPayload?: string
+	/** ISO 4217 receiving account currency. */
+	currencyCode?: string
+	/** Whether new bank-transfer checkouts may be created. */
+	enabled?: boolean
+	/** ISO 3166-1 alpha-2 country of the receiving bank. */
+	regionCode?: string
+	/** Optional EMV merchant-presented QR country profile: hk_fps. */
+	qrProfile?: string
+}
+
+/** Frozen payment instructions for one checkout. */
+export interface BankTransferInstructions {
+	/** Beneficiary snapshot, unaffected by later configuration changes. */
+	readonly account?: BankTransferAccount
+	/** Opaque order reference, no more than 25 characters. */
+	readonly reference?: string
+	/** Dynamic Common QR with exact amount and reference. */
+	readonly qrPayload?: string
+	/** QR image as standalone SVG. */
+	readonly qrSvg?: string
+}
+
 /** The request of BatchIngestUsageEvents. */
 export interface BatchIngestUsageEventsRequest {
 	/** The environment to record in. */
@@ -75,7 +163,7 @@ export interface BookedVolumeLine {
 	environment?: string
 	/** The app/package, bundle or Stripe product reference; empty stays empty. */
 	productRef?: string
-	/** stripe, app_store or google_play. */
+	/** stripe, app_store, google_play or bank_transfer. */
 	channel?: string
 	/** ISO 4217 currency; never sum amounts across currencies. */
 	currencyCode?: string
@@ -426,6 +514,10 @@ export interface CheckoutSession {
 	readonly livemode?: boolean
 	/** The processor payment this checkout produced; empty before settlement. */
 	readonly processorPaymentId?: string
+	/** `stripe` (default) or `bank_transfer`. Bank transfers never contact Stripe. */
+	paymentMethod?: string
+	/** Frozen beneficiary, amount, reference and bank-issued FPS QR instructions. */
+	readonly bankTransfer?: BankTransferInstructions
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -822,6 +914,18 @@ export interface GenerateLicenceKeyRequest {
 	spec?: LicenceKeySpec
 }
 
+/** Gets one immutable bank receipt and its appended decisions. */
+export interface GetBankReceiptRequest {
+	/** Receipt name. */
+	name: string
+}
+
+/** Gets the environment bank account. */
+export interface GetBankTransferAccountRequest {
+	/** BankTransferAccount name, ending in default. */
+	name: string
+}
+
 /** The request of GetCatalog. */
 export interface GetCatalogRequest {
 	/** The name of the catalog to get. */
@@ -1151,6 +1255,26 @@ export interface LineItem {
 	price?: string
 	/** How many; default 1. Seats for a per-seat or family price. */
 	quantity?: number
+}
+
+/** Lists bank receipts in an environment. */
+export interface ListBankReceiptsRequest {
+	/** Environment resource name. */
+	parent: string
+	/** Default 50, at most 1000. */
+	pageSize?: number
+	/** Token from the preceding page. */
+	pageToken?: string
+	/** Optional state equality: held, paid, rejected, refunded or reversed. */
+	filter?: string
+}
+
+/** Response for ListBankReceipts. */
+export interface ListBankReceiptsResponse {
+	/** Receipts ordered by creation time and id. */
+	bankReceipts?: BankReceipt[]
+	/** Empty on the last page. */
+	nextPageToken?: string
 }
 
 /** The request of ListCreditGrants. */
@@ -1733,6 +1857,28 @@ export interface Product {
 	licence?: LicencePolicy
 }
 
+/** Records statement evidence and confirms only an exact, timely, unambiguous payment. */
+export interface RecordBankReceiptRequest {
+	/** The environment recording the receipt. */
+	parent: string
+	/** The checkout against which bank statement evidence is recorded. */
+	checkoutSession: string
+	/** Bank statement transaction identity. */
+	bankTransactionId: string
+	/** Actual received minor units. */
+	amountMinor: string
+	/** Actual currency. */
+	currencyCode: string
+	/** Bank receipt time. */
+	receivedTime: string
+	/** Actual statement reference; absent references are held. */
+	reference?: string
+	/** Bank statement evidence or secure evidence locator. */
+	payerEvidence: string
+	/** Hold evidence with unresolved payer or bank ambiguity. */
+	ambiguous?: boolean
+}
+
 /** The request of RefreshMerchantAccount. */
 export interface RefreshMerchantAccountRequest {
 	/** The merchant account to read back. */
@@ -1785,6 +1931,16 @@ export interface ReleaseUsageInvoiceCollectionRequest {
 export interface ReleaseUsageReservationRequest {
 	/** The reservation to release. */
 	name: string
+}
+
+/** Resolves held evidence without altering its original receipt. */
+export interface ResolveBankReceiptRequest {
+	/** Receipt name. */
+	name: string
+	/** accept or reject; accept requires the exact amount and currency. */
+	decision: string
+	/** Human resolution evidence. */
+	evidence: string
 }
 
 /** The request of ResumeCustomerSubscription. */
@@ -1850,7 +2006,7 @@ export interface RevenueFact {
 	readonly granularity?: string
 	/** The source's reporting day; the first of the month for a month row. */
 	readonly day?: string
-	/** `stripe`, `app_store`, `google_play`, `ad_network` or `other`. */
+	/** `stripe`, `app_store`, `google_play`, `bank_transfer`, `ad_network` or `other`. */
 	readonly storeKind?: string
 	/** The account the source reports for. */
 	readonly accountRef?: string
@@ -2023,6 +2179,18 @@ export interface RevenueSummary {
 	 * estimates/final reports; independent of amount, split and group_by.
 	 */
 	readonly bookedVolume?: BookedVolumeLine[]
+}
+
+/** Records a completed external refund or reversal; sends no money. */
+export interface ReverseBankReceiptRequest {
+	/** Receipt name. */
+	name: string
+	/** refund or reversal, for the full receipt. */
+	kind: string
+	/** Verified bank evidence. */
+	evidence: string
+	/** Unique bank refund or reversal identity. */
+	externalReference: string
 }
 
 /** The request of RunRevenueSource. */
@@ -2380,6 +2548,16 @@ export interface UnconvertedAmount {
 	currencyCode?: string
 	/** In minor units of that currency. */
 	amount?: string
+}
+
+/** Configures the environment bank account. */
+export interface UpdateBankTransferAccountRequest {
+	/** Account configuration. */
+	bankTransferAccount: BankTransferAccount
+	/** Fields to change; empty replaces all writable fields. */
+	updateMask?: string
+	/** Create the singleton if absent. */
+	allowMissing?: boolean
 }
 
 /** The request of UpdateCatalog. */
@@ -2832,6 +3010,38 @@ runtime.registerSchemas({
 		['appAppleId', 'app_apple_id'],
 		['accountTokenPrefix', 'account_token_prefix'],
 	],
+	'sylphx.money.v1.BankReceipt': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['checkoutSession', 'checkout_session'],
+		['bankTransactionId', 'bank_transaction_id'],
+		['amountMinor', 'amount_minor'],
+		['currencyCode', 'currency_code'],
+		['receivedTime', 'received_time'],
+		['payerEvidence', 'payer_evidence'],
+		['holdReason', 'hold_reason'],
+		['entries', 'entries', 'sylphx.money.v1.BankReceiptEntry'],
+	],
+	'sylphx.money.v1.BankReceiptEntry': [
+		['createTime', 'create_time'],
+		['externalReference', 'external_reference'],
+	],
+	'sylphx.money.v1.BankTransferAccount': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['accountHolder', 'account_holder'],
+		['bankName', 'bank_name'],
+		['bankCode', 'bank_code'],
+		['accountNumber', 'account_number'],
+		['fpsId', 'fps_id'],
+		['fpsQrPayload', 'fps_qr_payload'],
+		['currencyCode', 'currency_code'],
+		['regionCode', 'region_code'],
+		['qrProfile', 'qr_profile'],
+	],
+	'sylphx.money.v1.BankTransferInstructions': [
+		['account', 'account', 'sylphx.money.v1.BankTransferAccount'],
+		['qrPayload', 'qr_payload'],
+		['qrSvg', 'qr_svg'],
+	],
 	'sylphx.money.v1.BatchIngestUsageEventsRequest': [
 		['usageEvents', 'usage_events', 'sylphx.money.v1.IngestedUsageEvent'],
 	],
@@ -2929,6 +3139,8 @@ runtime.registerSchemas({
 		['amountTotal', 'amount_total'],
 		['paymentStatus', 'payment_status'],
 		['processorPaymentId', 'processor_payment_id'],
+		['paymentMethod', 'payment_method'],
+		['bankTransfer', 'bank_transfer', 'sylphx.money.v1.BankTransferInstructions'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -3032,6 +3244,8 @@ runtime.registerSchemas({
 		['licenceKeyId', 'licence_key_id'],
 		['spec', 'spec', 'sylphx.money.v1.LicenceKeySpec'],
 	],
+	'sylphx.money.v1.GetBankReceiptRequest': [],
+	'sylphx.money.v1.GetBankTransferAccountRequest': [],
 	'sylphx.money.v1.GetCatalogRequest': [],
 	'sylphx.money.v1.GetCheckoutPolicyRequest': [],
 	'sylphx.money.v1.GetCheckoutSessionRequest': [],
@@ -3102,6 +3316,14 @@ runtime.registerSchemas({
 		['expireTime', 'expire_time'],
 	],
 	'sylphx.money.v1.LineItem': [],
+	'sylphx.money.v1.ListBankReceiptsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.money.v1.ListBankReceiptsResponse': [
+		['bankReceipts', 'bank_receipts', 'sylphx.money.v1.BankReceipt'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.money.v1.ListCreditGrantsRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -3296,6 +3518,14 @@ runtime.registerSchemas({
 		['grants', 'grants', undefined, 'map'],
 		['licence', 'licence', 'sylphx.money.v1.LicencePolicy'],
 	],
+	'sylphx.money.v1.RecordBankReceiptRequest': [
+		['checkoutSession', 'checkout_session'],
+		['bankTransactionId', 'bank_transaction_id'],
+		['amountMinor', 'amount_minor'],
+		['currencyCode', 'currency_code'],
+		['receivedTime', 'received_time'],
+		['payerEvidence', 'payer_evidence'],
+	],
 	'sylphx.money.v1.RefreshMerchantAccountRequest': [],
 	'sylphx.money.v1.Refund': [
 		['checkoutSession', 'checkout_session'],
@@ -3312,6 +3542,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.money.v1.ReleaseUsageInvoiceCollectionRequest': [],
 	'sylphx.money.v1.ReleaseUsageReservationRequest': [],
+	'sylphx.money.v1.ResolveBankReceiptRequest': [],
 	'sylphx.money.v1.ResumeCustomerSubscriptionRequest': [],
 	'sylphx.money.v1.RetireLicenceKeyRequest': [],
 	'sylphx.money.v1.RetryProcessorEventRequest': [],
@@ -3360,6 +3591,9 @@ runtime.registerSchemas({
 		['unconverted', 'unconverted', 'sylphx.money.v1.UnconvertedAmount'],
 		['unconvertedCount', 'unconverted_count'],
 		['bookedVolume', 'booked_volume', 'sylphx.money.v1.BookedVolumeLine'],
+	],
+	'sylphx.money.v1.ReverseBankReceiptRequest': [
+		['externalReference', 'external_reference'],
 	],
 	'sylphx.money.v1.RunRevenueSourceRequest': [
 		['startDay', 'start_day'],
@@ -3455,6 +3689,11 @@ runtime.registerSchemas({
 	],
 	'sylphx.money.v1.UnconvertedAmount': [
 		['currencyCode', 'currency_code'],
+	],
+	'sylphx.money.v1.UpdateBankTransferAccountRequest': [
+		['bankTransferAccount', 'bank_transfer_account', 'sylphx.money.v1.BankTransferAccount'],
+		['updateMask', 'update_mask'],
+		['allowMissing', 'allow_missing'],
 	],
 	'sylphx.money.v1.UpdateCatalogRequest': [
 		['catalog', 'catalog', 'sylphx.money.v1.Catalog'],
@@ -3598,6 +3837,10 @@ runtime.registerSchemas({
  * Namespace of Sylphx Money on `Sylphx`.
  */
 export class MoneyApi {
+	/** The `bank_transfer_accounts` collection. */
+	readonly bankTransferAccounts: BankTransferAccountsCollection
+	/** The `bank_receipts` collection. */
+	readonly bankReceipts: BankReceiptsCollection
 	/** The `processor_events` collection. */
 	readonly processorEvents: ProcessorEventsCollection
 	/** The `merchant_accounts` collection. */
@@ -3652,6 +3895,8 @@ export class MoneyApi {
 	readonly exchangeRates: ExchangeRatesCollection
 
 	constructor(client: runtime.Client) {
+		this.bankTransferAccounts = new BankTransferAccountsCollection(client)
+		this.bankReceipts = new BankReceiptsCollection(client)
 		this.processorEvents = new ProcessorEventsCollection(client)
 		this.merchantAccounts = new MerchantAccountsCollection(client)
 		this.priceCatalogs = new PriceCatalogsCollection(client)
@@ -3678,6 +3923,157 @@ export class MoneyApi {
 		this.revenue = new RevenueCollection(client)
 		this.revenueFacts = new RevenueFactsCollection(client)
 		this.exchangeRates = new ExchangeRatesCollection(client)
+	}
+}
+
+/** `bank_transfer_accounts` of Sylphx Money: Resource type `money.sylphx.com/BankTransferAccount`. */
+export class BankTransferAccountsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * GetBankTransferAccount through the project-scoped bank transfer API.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/bank_transfer_accounts/*}` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async get(request: GetBankTransferAccountRequest): Promise<BankTransferAccount> {
+		return this.client.call<BankTransferAccount>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/bank_transfer_accounts/*', 'name')}`,
+			responseType: 'sylphx.money.v1.BankTransferAccount',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * UpdateBankTransferAccount through the project-scoped bank transfer API.
+	 *
+	 * `PATCH /v1/{bank_transfer_account.name=orgs/*\/projects/*\/envs/*\/bank_transfer_accounts/*}` · permission `billing:bank_accounts:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async update(request: UpdateBankTransferAccountRequest): Promise<BankTransferAccount> {
+		return this.client.call<BankTransferAccount>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.bankTransferAccount?.name, 'orgs/*/projects/*/envs/*/bank_transfer_accounts/*', 'bank_transfer_account.name')}`,
+			query: { update_mask: request.updateMask, allow_missing: request.allowMissing },
+			body: request.bankTransferAccount ?? {},
+			bodyType: 'sylphx.money.v1.BankTransferAccount',
+			responseType: 'sylphx.money.v1.BankTransferAccount',
+			mutation: true,
+		})
+	}
+}
+
+/** `bank_receipts` of Sylphx Money: Resource type `money.sylphx.com/BankReceipt`. */
+export class BankReceiptsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * GetBankReceipt through the project-scoped bank transfer API.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/bank_receipts/*}` · permission `billing:bank_receipts:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async get(request: GetBankReceiptRequest): Promise<BankReceipt> {
+		return this.client.call<BankReceipt>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/bank_receipts/*', 'name')}`,
+			responseType: 'sylphx.money.v1.BankReceipt',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists incoming bank evidence, including receipts held for review.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/bank_receipts` · permission `billing:bank_receipts:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListBankReceiptsRequest): Promise<ListBankReceiptsResponse> {
+		return this.client.call<ListBankReceiptsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/bank_receipts`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter },
+			responseType: 'sylphx.money.v1.ListBankReceiptsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListBankReceiptsRequest): AsyncGenerator<BankReceipt> {
+		let next: ListBankReceiptsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.bankReceipts ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * RecordBankReceipt through the project-scoped bank transfer API.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/bank_receipts:record` · permission `billing:bank_receipts:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async record(request: RecordBankReceiptRequest): Promise<BankReceipt> {
+		return this.client.call<BankReceipt>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/bank_receipts:record`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.money.v1.RecordBankReceiptRequest',
+			responseType: 'sylphx.money.v1.BankReceipt',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * ResolveBankReceipt through the project-scoped bank transfer API.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/bank_receipts/*}:resolve` · permission `billing:bank_receipts:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async resolve(request: ResolveBankReceiptRequest): Promise<BankReceipt> {
+		return this.client.call<BankReceipt>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/bank_receipts/*', 'name')}:resolve`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.ResolveBankReceiptRequest',
+			responseType: 'sylphx.money.v1.BankReceipt',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * ReverseBankReceipt through the project-scoped bank transfer API.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/bank_receipts/*}:reverse` · permission `billing:bank_receipts:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `ETAG_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async reverse(request: ReverseBankReceiptRequest): Promise<BankReceipt> {
+		return this.client.call<BankReceipt>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/bank_receipts/*', 'name')}:reverse`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.ReverseBankReceiptRequest',
+			responseType: 'sylphx.money.v1.BankReceipt',
+			mutation: true,
+		})
 	}
 }
 
