@@ -161,6 +161,24 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "subscriptions",
+      "number": 16,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": "events.sylphx.com/Subscription",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.events.v1.WebhookDelivery",

@@ -3542,12 +3542,14 @@ pub struct WebhookDelivery {
     /// Resource metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<crate::common::ResourceMeta>,
-    /// The Event delivered.
+    /// The retained Event delivered. Unset when its admission environment is
+    /// unknown, differs from the endpoint's environment, or the Event is gone.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub event: String,
-    /// The Subscription that fanned it out.
+    /// The sole retained Subscription association. Unset when zero or multiple
+    /// Subscriptions share this delivery; use subscriptions for the complete set.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -3580,6 +3582,12 @@ pub struct WebhookDelivery {
         alias = "eventType"
     )]
     pub event_type: String,
+    /// Every retained Subscription association in the endpoint's environment,
+    /// ordered by resource name. Direct and test deliveries can have none.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subscriptions: Vec<String>,
 }
 
 /// A Webhook Endpoint is an HTTPS receiver that events of its environment

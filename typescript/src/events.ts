@@ -1584,9 +1584,15 @@ export interface WebhookDelivery {
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
-	/** The Event delivered. */
+	/**
+	 * The retained Event delivered. Unset when its admission environment is
+	 * unknown, differs from the endpoint's environment, or the Event is gone.
+	 */
 	readonly event?: string
-	/** The Subscription that fanned it out. */
+	/**
+	 * The sole retained Subscription association. Unset when zero or multiple
+	 * Subscriptions share this delivery; use subscriptions for the complete set.
+	 */
 	readonly subscription?: string
 	/** The delivery state. */
 	readonly state?: DeliveryState
@@ -1596,6 +1602,11 @@ export interface WebhookDelivery {
 	readonly nextAttemptTime?: string
 	/** The CloudEvents `type` of the event delivered. */
 	readonly eventType?: string
+	/**
+	 * Every retained Subscription association in the endpoint's environment,
+	 * ordered by resource name. Direct and test deliveries can have none.
+	 */
+	readonly subscriptions?: string[]
 }
 
 /**

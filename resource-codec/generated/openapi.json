@@ -20976,7 +20976,7 @@
             "type": "array"
           },
           "event": {
-            "description": "The Event delivered.",
+            "description": "The retained Event delivered. Unset when its admission environment is\nunknown, differs from the endpoint's environment, or the Event is gone.",
             "readOnly": true,
             "type": "string",
             "x-sylphx-resource-reference": "events.sylphx.com/Event"
@@ -21006,9 +21006,18 @@
             "readOnly": true
           },
           "subscription": {
-            "description": "The Subscription that fanned it out.",
+            "description": "The sole retained Subscription association. Unset when zero or multiple\nSubscriptions share this delivery; use subscriptions for the complete set.",
             "readOnly": true,
             "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/Subscription"
+          },
+          "subscriptions": {
+            "description": "Every retained Subscription association in the endpoint's environment,\nordered by resource name. Direct and test deliveries can have none.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
             "x-sylphx-resource-reference": "events.sylphx.com/Subscription"
           },
           "uid": {
