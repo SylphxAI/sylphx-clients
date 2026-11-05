@@ -125,6 +125,24 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sticker",
+      "number": 8,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.events.v1.ChatSticker"
+      }
     }
   ],
   "name": "sylphx.events.v1.ChatMessageContent",

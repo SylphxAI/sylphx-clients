@@ -101,6 +101,36 @@ pub struct ChatChannelPolicy {
     pub title_id: String,
 }
 
+/// Trusted-backend appearance. Money feature keys are
+/// chat.cosmetic.avatar_frame.<id>, chat.cosmetic.name_color.<id> and
+/// chat.cosmetic.title_badge.<id>; each complete key follows
+/// [a-z][a-z0-9_.]{0,63}. Empty ids clear the corresponding appearance.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatCosmetics {
+    /// Owned avatar-frame identifier, assigned by the trusted backend.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "avatarFrameId"
+    )]
+    pub avatar_frame_id: String,
+    /// Owned name-color identifier, assigned by the trusted backend.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nameColorId"
+    )]
+    pub name_color_id: String,
+    /// Owned title-badge identifier, assigned by the trusted backend.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "titleBadgeId"
+    )]
+    pub title_badge_id: String,
+}
+
 /// A content-hashed image; delivery requires an approved moderation receipt for
 /// this exact digest, URI and uploader. Uploading does not approve content.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -166,7 +196,7 @@ pub struct ChatMediaReview {
     pub reason: String,
 }
 
-/// Structured Chat payload; exactly one of text/image/location/poll/room_invite
+/// Structured Chat payload; exactly one of text/image/location/poll/room_invite/sticker
 /// must be set. Replies and mentions refer to the same conversation.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -204,6 +234,9 @@ pub struct ChatMessageContent {
         alias = "mentionedClientIds"
     )]
     pub mentioned_client_ids: Vec<String>,
+    /// A paid catalog asset; the server verifies entitlement and stamps its bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sticker: Option<ChatSticker>,
 }
 
 /// A poll in the conversation; votes are recorded once per member.
@@ -302,6 +335,68 @@ pub struct ChatProfile {
         alias = "quietHoursEndUtcMinute"
     )]
     pub quiet_hours_end_utc_minute: Option<i32>,
+    /// Appearance assigned only by a trusted tenant backend.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cosmetics: Option<ChatCosmetics>,
+}
+
+/// Actual upstream receipt, bound server-side to the canonical player and
+/// credential fingerprint. Keep generation as a string; never use a JS Number.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatPushDeviceRegistration {
+    /// Actual Notify Recipient resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientName"
+    )]
+    pub recipient_name: String,
+    /// Actual immutable Notify UID, distinct from the Chat principal.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientUid"
+    )]
+    pub recipient_uid: String,
+    /// Exact upstream endpoint registration identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registrationId"
+    )]
+    pub registration_id: String,
+    /// Positive canonical decimal string returned by Notify.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registrationGeneration"
+    )]
+    pub registration_generation: String,
+    /// Actual sender resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sender: String,
+    /// Public application-server key returned by Notify, never a private key.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "applicationServerKey"
+    )]
+    pub application_server_key: String,
 }
 
 /// One reaction aggregate on a message.
@@ -438,6 +533,111 @@ pub struct ChatSender {
     /// Verified official status, assigned through a trusted backend operation.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub official: bool,
+    /// Persisted trusted appearance when this message was accepted.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cosmetics: Option<ChatCosmetics>,
+}
+
+/// An asset from the tenant's authoritative sticker catalog. Sending requires
+/// the canonical sender's Money entitlement chat.sticker_pack.<pack_id>.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatSticker {
+    /// Catalog pack identifier; the complete Money feature key is at most 64 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "packId"
+    )]
+    pub pack_id: String,
+    /// Identifier inside the pack.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "stickerId"
+    )]
+    pub sticker_id: String,
+    /// Optional on send; if supplied must match the catalog. Output is authoritative.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "contentUri"
+    )]
+    pub content_uri: String,
+    /// Optional on send; exact lowercase SHA-256 from the catalog.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
+    /// Optional on send; exact catalog image MIME type.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "mimeType"
+    )]
+    pub mime_type: String,
+}
+
+/// Catalog presentation of an asset. A player cannot publish catalog entries.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatStickerAsset {
+    /// Immutable content identity and delivery location.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sticker: Option<ChatSticker>,
+    /// Accessible human-readable asset label, at most 200 bytes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub label: String,
+}
+
+/// One tenant's purchasable sticker pack.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ChatStickerPack {
+    /// Resource name; last segment is the pack_id in the Money feature key.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Display name, at most 200 bytes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// Catalog assets in sticker-id order.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub assets: Vec<ChatStickerAsset>,
+    /// Monotonic revision; serialized as a decimal string.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub revision: i64,
 }
 
 /// A CloudEvents 1.0 event as a producer submits it.
@@ -535,6 +735,10 @@ pub struct ConfigureChatProfileRequest {
         alias = "quietHoursEndUtcMinute"
     )]
     pub quiet_hours_end_utc_minute: Option<i32>,
+    /// Trusted-backend only, including an empty object. Omission preserves the
+    /// current appearance; player sessions cannot set or clear it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cosmetics: Option<ChatCosmetics>,
 }
 
 /// A Connector is one delivery channel of the environment, as stored: an
@@ -1136,6 +1340,17 @@ pub struct GetChatProfileRequest {
     pub name: String,
 }
 
+/// Reads a tenant's pack.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetChatStickerPackRequest {
+    /// Pack resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetConnector.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1671,6 +1886,51 @@ pub struct ListChatReportsResponse {
     /// Queue records.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "chatReports")]
     pub chat_reports: Vec<ChatReport>,
+    /// Empty at the end.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Lists the tenant's catalog.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListChatStickerPacksRequest {
+    /// Environment name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum results, default 50 and maximum 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Previous response's next_page_token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// A page ordered by pack identifier.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListChatStickerPacksResponse {
+    /// Packs and their authoritative assets.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "chatStickerPacks"
+    )]
+    pub chat_sticker_packs: Vec<ChatStickerPack>,
     /// Empty at the end.
     #[serde(
         default,
@@ -2898,6 +3158,34 @@ pub struct RealtimeMessage {
     pub reactions: Vec<ChatReaction>,
 }
 
+/// Ordinary Chat-session registration of a browser PushSubscription. Notify
+/// credentials remain on the server. Retry with the identical request after an
+/// ambiguous answer; unresolved registrations stay pending rather than adopting
+/// an unrelated generation from a redacted upstream read.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RegisterChatPushDeviceRequest {
+    /// Authenticated player's profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Existing Notify Sender in this environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sender: String,
+    /// Exact JSON string from PushSubscription.toJSON(); never returned or logged.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "deviceToken"
+    )]
+    pub device_token: String,
+}
+
 /// The request of ReplayQueue.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3319,6 +3607,23 @@ pub struct TopicStatus {
     pub conditions: Vec<crate::common::Condition>,
 }
 
+/// Removes only the captured registration epoch owned by this Chat session.
+/// Stale or mismatched receipts are no-ops, never deletion of a renewal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UnregisterChatPushDeviceRequest {
+    /// Authenticated player's profile.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Exact receipt from RegisterChatPushDevice.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub registration: Option<ChatPushDeviceRegistration>,
+}
+
 /// The request of UpdateInboundEndpoint.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3521,6 +3826,32 @@ pub struct UpdateWebhookEndpointRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// Atomically replaces a pack catalog, creating it when absent. Requires a
+/// trusted non-player secret backend with events:chat:admin.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpsertChatStickerPackRequest {
+    /// Pack resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Display name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// Complete catalog, one to 256 distinct assets. All pack_ids must match name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub assets: Vec<ChatStickerAsset>,
 }
 
 /// A Webhook Delivery is one event on its way to a Webhook Endpoint, with every
@@ -4143,6 +4474,13 @@ impl<'a, T: crate::runtime::Transport> EventsApi<'a, T> {
     /// The `chat_reports` collection.
     pub fn chat_reports(&self) -> ChatReportsCollection<'a, T> {
         ChatReportsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `chat_sticker_packs` collection.
+    pub fn chat_sticker_packs(&self) -> ChatStickerPacksCollection<'a, T> {
+        ChatStickerPacksCollection {
             client: self.client,
         }
     }
@@ -6409,6 +6747,66 @@ impl<'a, T: crate::runtime::Transport> ChatProfilesCollection<'a, T> {
         self.client.call(http).await
     }
 
+    /// Registers a browser device using only the authenticated Chat session.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:registerPushDevice` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `UNAVAILABLE`.
+    pub async fn register_push_device(
+        &self,
+        request: RegisterChatPushDeviceRequest,
+    ) -> Result<ChatPushDeviceRegistration, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:registerPushDevice",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Removes this session's exact upstream device epoch; stale logout is a no-op.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:unregisterPushDevice` · permission `events:write` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn unregister_push_device(
+        &self,
+        request: UnregisterChatPushDeviceRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:unregisterPushDevice",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_profiles/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
     /// Issues a bounded player capability after verified Auth token exchange.
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:issueToken` · permission `events:write` · effect `write`
@@ -6504,6 +6902,117 @@ impl<'a, T: crate::runtime::Transport> ChatReportsCollection<'a, T> {
             crate::runtime::path_param(
                 &request.name,
                 "orgs/*/projects/*/envs/*/chat_reports/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `chat_sticker_packs` of Sylphx Events: Resource type `events.sylphx.com/ChatStickerPack`.
+pub struct ChatStickerPacksCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ChatStickerPacksCollection<'a, T> {
+    /// Gets an authoritative tenant sticker pack.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/chat_sticker_packs/*}` · permission `events:read` · effect `read`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetChatStickerPackRequest,
+    ) -> Result<ChatStickerPack, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_sticker_packs/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists the tenant sticker catalog for player discovery.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/chat_sticker_packs` · permission `events:read` · effect `read`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`.
+    pub async fn list(
+        &self,
+        request: ListChatStickerPacksRequest,
+    ) -> Result<ListChatStickerPacksResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/chat_sticker_packs",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListChatStickerPacksRequest,
+    ) -> Result<Vec<ChatStickerPack>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.chat_sticker_packs);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Publishes the trusted backend's complete sticker pack catalog.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/chat_sticker_packs/*}:upsert` · permission `events:chat:admin` · effect `write`
+    ///
+    /// Errors: `PERMISSION_DENIED`, `INVALID_FIELD`.
+    pub async fn upsert(
+        &self,
+        request: UpsertChatStickerPackRequest,
+    ) -> Result<ChatStickerPack, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:upsert",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/chat_sticker_packs/*",
                 "name"
             )?
         );

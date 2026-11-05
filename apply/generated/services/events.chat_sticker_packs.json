@@ -1,0 +1,33 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_sticker_packs.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "events.chat_sticker_packs.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_sticker_packs.upsert",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "events.sylphx.com/ChatStickerPack"
+    }
+  ]
+}

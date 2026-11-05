@@ -1,0 +1,60 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "name",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "events.sylphx.com/ChatStickerPack",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "display_name",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "assets",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": true,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.events.v1.ChatStickerAsset"
+      }
+    }
+  ],
+  "name": "sylphx.events.v1.UpsertChatStickerPackRequest",
+  "package": "sylphx.events.v1"
+}

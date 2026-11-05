@@ -14421,6 +14421,12 @@
                   "flag": "--quiet-hours-end-utc-minute",
                   "summary": "UTC exclusive end, including midnight as 1440.",
                   "type": "int"
+                },
+                {
+                  "field": "cosmetics",
+                  "flag": "--cosmetics",
+                  "summary": "Trusted-backend only, including an empty object. Omission preserves the current appearance; player sessions cannot set or clear it.",
+                  "type": "json"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:configure",
@@ -14649,6 +14655,60 @@
               "effect": "write",
               "flags": [
                 {
+                  "field": "sender",
+                  "flag": "--sender",
+                  "required": true,
+                  "summary": "Existing Notify Sender in this environment.",
+                  "type": "string"
+                },
+                {
+                  "field": "device_token",
+                  "flag": "--device-token",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Exact JSON string from PushSubscription.toJSON(); never returned or logged.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:registerPushDevice",
+              "method": "events.chat_profiles.register_push_device",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Registers a browser device using only the authenticated Chat session.",
+              "verb": "register-push-device"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "registration",
+                  "flag": "--registration",
+                  "required": true,
+                  "summary": "Exact receipt from RegisterChatPushDevice.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_profiles/*}:unregisterPushDevice",
+              "method": "events.chat_profiles.unregister_push_device",
+              "permission": "events:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}"
+              },
+              "summary": "Removes this session's exact upstream device epoch; stale logout is a no-op.",
+              "verb": "unregister-push-device"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
                   "field": "ttl",
                   "flag": "--ttl",
                   "summary": "Lifetime, 60s to 3600s; default 3600s.",
@@ -14729,6 +14789,89 @@
           ],
           "noun": "chat-reports",
           "resource_type": "events.sylphx.com/ChatReport"
+        },
+        {
+          "collection": "chat_sticker_packs",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/chat_sticker_packs/*}",
+              "method": "events.chat_sticker_packs.get",
+              "permission": "events:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_sticker_packs/{chat_sticker_pack}"
+              },
+              "summary": "Gets an authoritative tenant sticker pack.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum results, default 50 and maximum 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Previous response's next_page_token.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/chat_sticker_packs",
+              "method": "events.chat_sticker_packs.list",
+              "paginates": true,
+              "permission": "events:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists the tenant sticker catalog for player discovery.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "display_name",
+                  "flag": "--display-name",
+                  "required": true,
+                  "summary": "Display name.",
+                  "type": "string"
+                },
+                {
+                  "field": "assets",
+                  "flag": "--assets",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Complete catalog, one to 256 distinct assets. All pack_ids must match name.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/chat_sticker_packs/*}:upsert",
+              "method": "events.chat_sticker_packs.upsert",
+              "permission": "events:chat:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_sticker_packs/{chat_sticker_pack}"
+              },
+              "summary": "Publishes the trusted backend's complete sticker pack catalog.",
+              "verb": "upsert"
+            }
+          ],
+          "noun": "chat-sticker-packs",
+          "resource_type": "events.sylphx.com/ChatStickerPack"
         }
       ],
       "commands": [],

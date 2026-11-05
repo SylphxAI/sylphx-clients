@@ -1,0 +1,61 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "name",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "events.sylphx.com/ChatProfile",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sender",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "notify.sylphx.com/Sender",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED",
+        "INPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "device_token",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    }
+  ],
+  "name": "sylphx.events.v1.RegisterChatPushDeviceRequest",
+  "package": "sylphx.events.v1"
+}

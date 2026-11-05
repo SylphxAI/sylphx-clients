@@ -17814,6 +17814,24 @@
         ],
         "type": "object"
       },
+      "sylphx.events.v1.ChatCosmetics": {
+        "description": "Trusted-backend appearance. Money feature keys are\nchat.cosmetic.avatar_frame.<id>, chat.cosmetic.name_color.<id> and\nchat.cosmetic.title_badge.<id>; each complete key follows\n[a-z][a-z0-9_.]{0,63}. Empty ids clear the corresponding appearance.",
+        "properties": {
+          "avatar_frame_id": {
+            "description": "Owned avatar-frame identifier, assigned by the trusted backend.",
+            "type": "string"
+          },
+          "name_color_id": {
+            "description": "Owned name-color identifier, assigned by the trusted backend.",
+            "type": "string"
+          },
+          "title_badge_id": {
+            "description": "Owned title-badge identifier, assigned by the trusted backend.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.events.v1.ChatImage": {
         "description": "A content-hashed image; delivery requires an approved moderation receipt for\nthis exact digest, URI and uploader. Uploading does not approve content.",
         "properties": {
@@ -17877,7 +17895,7 @@
         "type": "object"
       },
       "sylphx.events.v1.ChatMessageContent": {
-        "description": "Structured Chat payload; exactly one of text/image/location/poll/room_invite\nmust be set. Replies and mentions refer to the same conversation.",
+        "description": "Structured Chat payload; exactly one of text/image/location/poll/room_invite/sticker\nmust be set. Replies and mentions refer to the same conversation.",
         "properties": {
           "image": {
             "$ref": "#/components/schemas/sylphx.events.v1.ChatImage",
@@ -17905,6 +17923,10 @@
           "room_invite": {
             "description": "Existing Realtime room resource name for a Join Game card.",
             "type": "string"
+          },
+          "sticker": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatSticker",
+            "description": "A paid catalog asset; the server verifies entitlement and stamps its bytes."
           },
           "text": {
             "description": "UTF-8 text, at most 4000 characters.",
@@ -17942,6 +17964,11 @@
             "description": "Explicit opt-in to images from non-mutual contacts; default false.",
             "readOnly": true,
             "type": "boolean"
+          },
+          "cosmetics": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatCosmetics",
+            "description": "Appearance assigned only by a trusted tenant backend.",
+            "readOnly": true
           },
           "display_name": {
             "description": "User-visible name.",
@@ -17989,6 +18016,44 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatPushDeviceRegistration": {
+        "description": "Actual upstream receipt, bound server-side to the canonical player and\ncredential fingerprint. Keep generation as a string; never use a JS Number.",
+        "properties": {
+          "application_server_key": {
+            "description": "Public application-server key returned by Notify, never a private key.",
+            "type": "string"
+          },
+          "recipient_name": {
+            "description": "Actual Notify Recipient resource name.",
+            "type": "string"
+          },
+          "recipient_uid": {
+            "description": "Actual immutable Notify UID, distinct from the Chat principal.",
+            "type": "string"
+          },
+          "registration_generation": {
+            "description": "Positive canonical decimal string returned by Notify.",
+            "type": "string"
+          },
+          "registration_id": {
+            "description": "Exact upstream endpoint registration identity.",
+            "type": "string"
+          },
+          "sender": {
+            "description": "Actual sender resource name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipient_name",
+          "recipient_uid",
+          "registration_id",
+          "registration_generation",
+          "sender",
+          "application_server_key"
+        ],
         "type": "object"
       },
       "sylphx.events.v1.ChatReaction": {
@@ -18100,6 +18165,11 @@
             "description": "The authenticated user's stable platform identity as bound by its backend.",
             "type": "string"
           },
+          "cosmetics": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatCosmetics",
+            "description": "Persisted trusted appearance when this message was accepted.",
+            "readOnly": true
+          },
           "display_name": {
             "description": "Display name, from the sender's profile.",
             "type": "string"
@@ -18107,6 +18177,92 @@
           "official": {
             "description": "Verified official status, assigned through a trusted backend operation.",
             "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatSticker": {
+        "description": "An asset from the tenant's authoritative sticker catalog. Sending requires\nthe canonical sender's Money entitlement chat.sticker_pack.<pack_id>.",
+        "properties": {
+          "content_uri": {
+            "description": "Optional on send; if supplied must match the catalog. Output is authoritative.",
+            "type": "string"
+          },
+          "mime_type": {
+            "description": "Optional on send; exact catalog image MIME type.",
+            "type": "string"
+          },
+          "pack_id": {
+            "description": "Catalog pack identifier; the complete Money feature key is at most 64 bytes.",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "Optional on send; exact lowercase SHA-256 from the catalog.",
+            "type": "string"
+          },
+          "sticker_id": {
+            "description": "Identifier inside the pack.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pack_id",
+          "sticker_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatStickerAsset": {
+        "description": "Catalog presentation of an asset. A player cannot publish catalog entries.",
+        "properties": {
+          "label": {
+            "description": "Accessible human-readable asset label, at most 200 bytes.",
+            "type": "string"
+          },
+          "sticker": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatSticker",
+            "description": "Immutable content identity and delivery location."
+          }
+        },
+        "required": [
+          "sticker",
+          "label"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ChatStickerPack": {
+        "description": "One tenant's purchasable sticker pack.",
+        "properties": {
+          "assets": {
+            "description": "Catalog assets in sticker-id order.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.events.v1.ChatStickerAsset"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "display_name": {
+            "description": "Display name, at most 200 bytes.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "Resource name; last segment is the pack_id in the Money feature key.",
+            "type": "string"
+          },
+          "revision": {
+            "description": "Monotonic revision; serialized as a decimal string.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable identifier.",
+            "readOnly": true,
+            "type": "string"
           }
         },
         "type": "object"
@@ -18167,6 +18323,10 @@
           "allow_stranger_images": {
             "description": "Explicit opt-in; default false.",
             "type": "boolean"
+          },
+          "cosmetics": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatCosmetics",
+            "description": "Trusted-backend only, including an empty object. Omission preserves the\ncurrent appearance; player sessions cannot set or clear it."
           },
           "display_name": {
             "description": "User-visible name.",
@@ -18727,6 +18887,20 @@
         ],
         "type": "object"
       },
+      "sylphx.events.v1.GetChatStickerPackRequest": {
+        "description": "Reads a tenant's pack.",
+        "properties": {
+          "name": {
+            "description": "Pack resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatStickerPack"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.GetConnectorRequest": {
         "description": "The request of GetConnector.",
         "properties": {
@@ -19267,6 +19441,46 @@
             "description": "Queue records.",
             "items": {
               "$ref": "#/components/schemas/sylphx.events.v1.ChatReport"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty at the end.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.events.v1.ListChatStickerPacksRequest": {
+        "description": "Lists the tenant's catalog.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum results, default 50 and maximum 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Previous response's next_page_token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Environment name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatStickerPack"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.ListChatStickerPacksResponse": {
+        "description": "A page ordered by pack identifier.",
+        "properties": {
+          "chat_sticker_packs": {
+            "description": "Packs and their authoritative assets.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.events.v1.ChatStickerPack"
             },
             "type": "array"
           },
@@ -20370,6 +20584,33 @@
         ],
         "type": "object"
       },
+      "sylphx.events.v1.RegisterChatPushDeviceRequest": {
+        "description": "Ordinary Chat-session registration of a browser PushSubscription. Notify\ncredentials remain on the server. Retry with the identical request after an\nambiguous answer; unresolved registrations stay pending rather than adopting\nan unrelated generation from a redacted upstream read.",
+        "properties": {
+          "device_token": {
+            "description": "Exact JSON string from PushSubscription.toJSON(); never returned or logged.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "name": {
+            "description": "Authenticated player's profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "sender": {
+            "description": "Existing Notify Sender in this environment.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+          }
+        },
+        "required": [
+          "name",
+          "sender",
+          "device_token"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.ReplayQueueRequest": {
         "description": "The request of ReplayQueue.",
         "properties": {
@@ -20814,6 +21055,25 @@
         },
         "type": "object"
       },
+      "sylphx.events.v1.UnregisterChatPushDeviceRequest": {
+        "description": "Removes only the captured registration epoch owned by this Chat session.\nStale or mismatched receipts are no-ops, never deletion of a renewal.",
+        "properties": {
+          "name": {
+            "description": "Authenticated player's profile.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatProfile"
+          },
+          "registration": {
+            "$ref": "#/components/schemas/sylphx.events.v1.ChatPushDeviceRegistration",
+            "description": "Exact receipt from RegisterChatPushDevice."
+          }
+        },
+        "required": [
+          "name",
+          "registration"
+        ],
+        "type": "object"
+      },
       "sylphx.events.v1.UpdateInboundEndpointRequest": {
         "description": "The request of UpdateInboundEndpoint.",
         "properties": {
@@ -20961,6 +21221,33 @@
         },
         "required": [
           "webhook_endpoint"
+        ],
+        "type": "object"
+      },
+      "sylphx.events.v1.UpsertChatStickerPackRequest": {
+        "description": "Atomically replaces a pack catalog, creating it when absent. Requires a\ntrusted non-player secret backend with events:chat:admin.",
+        "properties": {
+          "assets": {
+            "description": "Complete catalog, one to 256 distinct assets. All pack_ids must match name.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.events.v1.ChatStickerAsset"
+            },
+            "type": "array"
+          },
+          "display_name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Pack resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "events.sylphx.com/ChatStickerPack"
+          }
+        },
+        "required": [
+          "name",
+          "display_name",
+          "assets"
         ],
         "type": "object"
       },
@@ -68756,6 +69043,10 @@
                     "description": "Explicit opt-in; default false.",
                     "type": "boolean"
                   },
+                  "cosmetics": {
+                    "$ref": "#/components/schemas/sylphx.events.v1.ChatCosmetics",
+                    "description": "Trusted-backend only, including an empty object. Omission preserves the\ncurrent appearance; player sessions cannot set or clear it."
+                  },
                   "display_name": {
                     "description": "User-visible name.",
                     "type": "string"
@@ -69130,6 +69421,117 @@
         ],
         "x-sylphx-method": "events.chat_profiles.merge_identity",
         "x-sylphx-permission": "events:chat:admin",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:registerPushDevice": {
+      "post": {
+        "description": "Registers a browser device using only the authenticated Chat session.",
+        "operationId": "events_chat_profiles_register_push_device",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "device_token": {
+                    "description": "Exact JSON string from PushSubscription.toJSON(); never returned or logged.",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "sender": {
+                    "description": "Existing Notify Sender in this environment.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+                  }
+                },
+                "required": [
+                  "sender",
+                  "device_token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatPushDeviceRegistration"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Registers a browser device using only the authenticated Chat session.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.register_push_device",
+        "x-sylphx-permission": "events:write",
         "x-sylphx-stage": "preview"
       }
     },
@@ -69568,6 +69970,108 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_profiles/{chat_profile}:unregisterPushDevice": {
+      "post": {
+        "description": "Removes this session's exact upstream device epoch; stale logout is a no-op.",
+        "operationId": "events_chat_profiles_unregister_push_device",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_profile",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "registration": {
+                    "$ref": "#/components/schemas/sylphx.events.v1.ChatPushDeviceRegistration",
+                    "description": "Exact receipt from RegisterChatPushDevice."
+                  }
+                },
+                "required": [
+                  "registration"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Removes this session's exact upstream device epoch; stale logout is a no-op.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "events.chat_profiles.unregister_push_device",
+        "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_reports": {
       "get": {
         "description": "Lists the moderation queue.",
@@ -69765,6 +70269,279 @@
         ],
         "x-sylphx-method": "events.chat_reports.resolve",
         "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_sticker_packs": {
+      "get": {
+        "description": "Lists the tenant sticker catalog for player discovery.",
+        "operationId": "events_chat_sticker_packs_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum results, default 50 and maximum 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Previous response's next_page_token.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ListChatStickerPacksResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the tenant sticker catalog for player discovery.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "events.chat_sticker_packs.list",
+        "x-sylphx-permission": "events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_sticker_packs/{chat_sticker_pack}": {
+      "get": {
+        "description": "Gets an authoritative tenant sticker pack.",
+        "operationId": "events_chat_sticker_packs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_sticker_pack",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatStickerPack"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets an authoritative tenant sticker pack.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "events.chat_sticker_packs.get",
+        "x-sylphx-permission": "events:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/chat_sticker_packs/{chat_sticker_pack}:upsert": {
+      "post": {
+        "description": "Publishes the trusted backend's complete sticker pack catalog.",
+        "operationId": "events_chat_sticker_packs_upsert",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_sticker_pack",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "assets": {
+                    "description": "Complete catalog, one to 256 distinct assets. All pack_ids must match name.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.events.v1.ChatStickerAsset"
+                    },
+                    "type": "array"
+                  },
+                  "display_name": {
+                    "description": "Display name.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "display_name",
+                  "assets"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.events.v1.ChatStickerPack"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Publishes the trusted backend's complete sticker pack catalog.",
+        "tags": [
+          "events"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "PERMISSION_DENIED",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "events.chat_sticker_packs.upsert",
+        "x-sylphx-permission": "events:chat:admin",
         "x-sylphx-stage": "preview"
       }
     },

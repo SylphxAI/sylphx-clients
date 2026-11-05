@@ -57,6 +57,21 @@ export interface ChatChannelPolicy {
 }
 
 /**
+ * Trusted-backend appearance. Money feature keys are
+ * chat.cosmetic.avatar_frame.<id>, chat.cosmetic.name_color.<id> and
+ * chat.cosmetic.title_badge.<id>; each complete key follows
+ * [a-z][a-z0-9_.]{0,63}. Empty ids clear the corresponding appearance.
+ */
+export interface ChatCosmetics {
+	/** Owned avatar-frame identifier, assigned by the trusted backend. */
+	avatarFrameId?: string
+	/** Owned name-color identifier, assigned by the trusted backend. */
+	nameColorId?: string
+	/** Owned title-badge identifier, assigned by the trusted backend. */
+	titleBadgeId?: string
+}
+
+/**
  * A content-hashed image; delivery requires an approved moderation receipt for
  * this exact digest, URI and uploader. Uploading does not approve content.
  */
@@ -92,7 +107,7 @@ export interface ChatMediaReview {
 }
 
 /**
- * Structured Chat payload; exactly one of text/image/location/poll/room_invite
+ * Structured Chat payload; exactly one of text/image/location/poll/room_invite/sticker
  * must be set. Replies and mentions refer to the same conversation.
  */
 export interface ChatMessageContent {
@@ -110,6 +125,8 @@ export interface ChatMessageContent {
 	replyToCursor?: string
 	/** Member ids mentioned by this message. */
 	mentionedClientIds?: string[]
+	/** A paid catalog asset; the server verifies entitlement and stamps its bytes. */
+	sticker?: ChatSticker
 }
 
 /** A poll in the conversation; votes are recorded once per member. */
@@ -155,6 +172,27 @@ export interface ChatProfile {
 	readonly quietHoursStartUtcMinute?: number
 	/** UTC exclusive end, 0..1440; may wrap midnight. */
 	readonly quietHoursEndUtcMinute?: number
+	/** Appearance assigned only by a trusted tenant backend. */
+	readonly cosmetics?: ChatCosmetics
+}
+
+/**
+ * Actual upstream receipt, bound server-side to the canonical player and
+ * credential fingerprint. Keep generation as a string; never use a JS Number.
+ */
+export interface ChatPushDeviceRegistration {
+	/** Actual Notify Recipient resource name. */
+	recipientName?: string
+	/** Actual immutable Notify UID, distinct from the Chat principal. */
+	recipientUid?: string
+	/** Exact upstream endpoint registration identity. */
+	registrationId?: string
+	/** Positive canonical decimal string returned by Notify. */
+	registrationGeneration?: string
+	/** Actual sender resource name. */
+	sender?: string
+	/** Public application-server key returned by Notify, never a private key. */
+	applicationServerKey?: string
 }
 
 /** One reaction aggregate on a message. */
@@ -216,6 +254,49 @@ export interface ChatSender {
 	displayName?: string
 	/** Verified official status, assigned through a trusted backend operation. */
 	official?: boolean
+	/** Persisted trusted appearance when this message was accepted. */
+	readonly cosmetics?: ChatCosmetics
+}
+
+/**
+ * An asset from the tenant's authoritative sticker catalog. Sending requires
+ * the canonical sender's Money entitlement chat.sticker_pack.<pack_id>.
+ */
+export interface ChatSticker {
+	/** Catalog pack identifier; the complete Money feature key is at most 64 bytes. */
+	packId?: string
+	/** Identifier inside the pack. */
+	stickerId?: string
+	/** Optional on send; if supplied must match the catalog. Output is authoritative. */
+	contentUri?: string
+	/** Optional on send; exact lowercase SHA-256 from the catalog. */
+	sha256?: string
+	/** Optional on send; exact catalog image MIME type. */
+	mimeType?: string
+}
+
+/** Catalog presentation of an asset. A player cannot publish catalog entries. */
+export interface ChatStickerAsset {
+	/** Immutable content identity and delivery location. */
+	sticker?: ChatSticker
+	/** Accessible human-readable asset label, at most 200 bytes. */
+	label?: string
+}
+
+/** One tenant's purchasable sticker pack. */
+export interface ChatStickerPack {
+	/** Resource name; last segment is the pack_id in the Money feature key. */
+	name?: string
+	/** Stable identifier. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** Display name, at most 200 bytes. */
+	readonly displayName?: string
+	/** Catalog assets in sticker-id order. */
+	readonly assets?: ChatStickerAsset[]
+	/** Monotonic revision; serialized as a decimal string. */
+	readonly revision?: string
 }
 
 /** A CloudEvents 1.0 event as a producer submits it. */
@@ -254,6 +335,11 @@ export interface ConfigureChatProfileRequest {
 	quietHoursStartUtcMinute?: number
 	/** UTC exclusive end, including midnight as 1440. */
 	quietHoursEndUtcMinute?: number
+	/**
+	 * Trusted-backend only, including an empty object. Omission preserves the
+	 * current appearance; player sessions cannot set or clear it.
+	 */
+	cosmetics?: ChatCosmetics
 }
 
 /**
@@ -513,6 +599,12 @@ export interface GetChatProfileRequest {
 	name: string
 }
 
+/** Reads a tenant's pack. */
+export interface GetChatStickerPackRequest {
+	/** Pack resource name. */
+	name: string
+}
+
 /** The request of GetConnector. */
 export interface GetConnectorRequest {
 	/** The name of the connector to get. */
@@ -757,6 +849,24 @@ export interface ListChatReportsRequest {
 export interface ListChatReportsResponse {
 	/** Queue records. */
 	chatReports?: ChatReport[]
+	/** Empty at the end. */
+	nextPageToken?: string
+}
+
+/** Lists the tenant's catalog. */
+export interface ListChatStickerPacksRequest {
+	/** Environment name. */
+	parent: string
+	/** Maximum results, default 50 and maximum 1000. */
+	pageSize?: number
+	/** Previous response's next_page_token. */
+	pageToken?: string
+}
+
+/** A page ordered by pack identifier. */
+export interface ListChatStickerPacksResponse {
+	/** Packs and their authoritative assets. */
+	chatStickerPacks?: ChatStickerPack[]
 	/** Empty at the end. */
 	nextPageToken?: string
 }
@@ -1284,6 +1394,21 @@ export interface RealtimeMessage {
 	readonly reactions?: ChatReaction[]
 }
 
+/**
+ * Ordinary Chat-session registration of a browser PushSubscription. Notify
+ * credentials remain on the server. Retry with the identical request after an
+ * ambiguous answer; unresolved registrations stay pending rather than adopting
+ * an unrelated generation from a redacted upstream read.
+ */
+export interface RegisterChatPushDeviceRequest {
+	/** Authenticated player's profile. */
+	name: string
+	/** Existing Notify Sender in this environment. */
+	sender: string
+	/** Exact JSON string from PushSubscription.toJSON(); never returned or logged. */
+	deviceToken: string
+}
+
 /** The request of ReplayQueue. */
 export interface ReplayQueueRequest {
 	/** The name of the queue. */
@@ -1500,6 +1625,17 @@ export interface TopicStatus {
 	readonly conditions?: common.Condition[]
 }
 
+/**
+ * Removes only the captured registration epoch owned by this Chat session.
+ * Stale or mismatched receipts are no-ops, never deletion of a renewal.
+ */
+export interface UnregisterChatPushDeviceRequest {
+	/** Authenticated player's profile. */
+	name: string
+	/** Exact receipt from RegisterChatPushDevice. */
+	registration: ChatPushDeviceRegistration
+}
+
 /** The request of UpdateInboundEndpoint. */
 export interface UpdateInboundEndpointRequest {
 	/** The inbound endpoint to update; `name` identifies it. */
@@ -1570,6 +1706,19 @@ export interface UpdateWebhookEndpointRequest {
 	allowMissing?: boolean
 	/** Validate and return the result without writing anything. */
 	validateOnly?: boolean
+}
+
+/**
+ * Atomically replaces a pack catalog, creating it when absent. Requires a
+ * trusted non-player secret backend with events:chat:admin.
+ */
+export interface UpsertChatStickerPackRequest {
+	/** Pack resource name. */
+	name: string
+	/** Display name. */
+	displayName: string
+	/** Complete catalog, one to 256 distinct assets. All pack_ids must match name. */
+	assets: ChatStickerAsset[]
 }
 
 /**
@@ -1718,6 +1867,11 @@ runtime.registerSchemas({
 		['participantIds', 'participant_ids'],
 		['titleId', 'title_id'],
 	],
+	'sylphx.events.v1.ChatCosmetics': [
+		['avatarFrameId', 'avatar_frame_id'],
+		['nameColorId', 'name_color_id'],
+		['titleBadgeId', 'title_badge_id'],
+	],
 	'sylphx.events.v1.ChatImage': [
 		['contentUri', 'content_uri'],
 	],
@@ -1733,6 +1887,7 @@ runtime.registerSchemas({
 		['roomInvite', 'room_invite'],
 		['replyToCursor', 'reply_to_cursor'],
 		['mentionedClientIds', 'mentioned_client_ids'],
+		['sticker', 'sticker', 'sylphx.events.v1.ChatSticker'],
 	],
 	'sylphx.events.v1.ChatPoll': [],
 	'sylphx.events.v1.ChatProfile': [
@@ -1742,6 +1897,14 @@ runtime.registerSchemas({
 		['allowStrangerImages', 'allow_stranger_images'],
 		['quietHoursStartUtcMinute', 'quiet_hours_start_utc_minute'],
 		['quietHoursEndUtcMinute', 'quiet_hours_end_utc_minute'],
+		['cosmetics', 'cosmetics', 'sylphx.events.v1.ChatCosmetics'],
+	],
+	'sylphx.events.v1.ChatPushDeviceRegistration': [
+		['recipientName', 'recipient_name'],
+		['recipientUid', 'recipient_uid'],
+		['registrationId', 'registration_id'],
+		['registrationGeneration', 'registration_generation'],
+		['applicationServerKey', 'application_server_key'],
 	],
 	'sylphx.events.v1.ChatReaction': [
 		['clientIds', 'client_ids'],
@@ -1761,6 +1924,21 @@ runtime.registerSchemas({
 	'sylphx.events.v1.ChatSender': [
 		['clientId', 'client_id'],
 		['displayName', 'display_name'],
+		['cosmetics', 'cosmetics', 'sylphx.events.v1.ChatCosmetics'],
+	],
+	'sylphx.events.v1.ChatSticker': [
+		['packId', 'pack_id'],
+		['stickerId', 'sticker_id'],
+		['contentUri', 'content_uri'],
+		['mimeType', 'mime_type'],
+	],
+	'sylphx.events.v1.ChatStickerAsset': [
+		['sticker', 'sticker', 'sylphx.events.v1.ChatSticker'],
+	],
+	'sylphx.events.v1.ChatStickerPack': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['displayName', 'display_name'],
+		['assets', 'assets', 'sylphx.events.v1.ChatStickerAsset'],
 	],
 	'sylphx.events.v1.CloudEvent': [
 		['eventTime', 'event_time'],
@@ -1775,6 +1953,7 @@ runtime.registerSchemas({
 		['allowStrangerImages', 'allow_stranger_images'],
 		['quietHoursStartUtcMinute', 'quiet_hours_start_utc_minute'],
 		['quietHoursEndUtcMinute', 'quiet_hours_end_utc_minute'],
+		['cosmetics', 'cosmetics', 'sylphx.events.v1.ChatCosmetics'],
 	],
 	'sylphx.events.v1.Connector': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -1854,6 +2033,7 @@ runtime.registerSchemas({
 		['admitTime', 'admit_time'],
 	],
 	'sylphx.events.v1.GetChatProfileRequest': [],
+	'sylphx.events.v1.GetChatStickerPackRequest': [],
 	'sylphx.events.v1.GetConnectorRequest': [],
 	'sylphx.events.v1.GetEventRequest': [],
 	'sylphx.events.v1.GetInboundEndpointRequest': [],
@@ -1930,6 +2110,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.events.v1.ListChatReportsResponse': [
 		['chatReports', 'chat_reports', 'sylphx.events.v1.ChatReport'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.events.v1.ListChatStickerPacksRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.events.v1.ListChatStickerPacksResponse': [
+		['chatStickerPacks', 'chat_sticker_packs', 'sylphx.events.v1.ChatStickerPack'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.events.v1.ListConnectorsRequest': [
@@ -2128,6 +2316,9 @@ runtime.registerSchemas({
 		['sender', 'sender', 'sylphx.events.v1.ChatSender'],
 		['reactions', 'reactions', 'sylphx.events.v1.ChatReaction'],
 	],
+	'sylphx.events.v1.RegisterChatPushDeviceRequest': [
+		['deviceToken', 'device_token'],
+	],
 	'sylphx.events.v1.ReplayQueueRequest': [
 		['startTime', 'start_time'],
 		['endTime', 'end_time'],
@@ -2189,6 +2380,9 @@ runtime.registerSchemas({
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 	],
+	'sylphx.events.v1.UnregisterChatPushDeviceRequest': [
+		['registration', 'registration', 'sylphx.events.v1.ChatPushDeviceRegistration'],
+	],
 	'sylphx.events.v1.UpdateInboundEndpointRequest': [
 		['inboundEndpoint', 'inbound_endpoint', 'sylphx.events.v1.InboundEndpoint'],
 		['updateMask', 'update_mask'],
@@ -2224,6 +2418,10 @@ runtime.registerSchemas({
 		['updateMask', 'update_mask'],
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
+	],
+	'sylphx.events.v1.UpsertChatStickerPackRequest': [
+		['displayName', 'display_name'],
+		['assets', 'assets', 'sylphx.events.v1.ChatStickerAsset'],
 	],
 	'sylphx.events.v1.WebhookDelivery': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2286,6 +2484,8 @@ export class EventsApi {
 	readonly chatProfiles: ChatProfilesCollection
 	/** The `chat_reports` collection. */
 	readonly chatReports: ChatReportsCollection
+	/** The `chat_sticker_packs` collection. */
+	readonly chatStickerPacks: ChatStickerPacksCollection
 
 	constructor(client: runtime.Client) {
 		this.topics = new TopicsCollection(client)
@@ -2301,6 +2501,7 @@ export class EventsApi {
 		this.realtimeMembers = new RealtimeMembersCollection(client)
 		this.chatProfiles = new ChatProfilesCollection(client)
 		this.chatReports = new ChatReportsCollection(client)
+		this.chatStickerPacks = new ChatStickerPacksCollection(client)
 	}
 }
 
@@ -3701,6 +3902,41 @@ export class ChatProfilesCollection {
 	}
 
 	/**
+	 * Registers a browser device using only the authenticated Chat session.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:registerPushDevice` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `UNAVAILABLE`.
+	 */
+	async registerPushDevice(request: RegisterChatPushDeviceRequest): Promise<ChatPushDeviceRegistration> {
+		return this.client.call<ChatPushDeviceRegistration>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:registerPushDevice`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.RegisterChatPushDeviceRequest',
+			responseType: 'sylphx.events.v1.ChatPushDeviceRegistration',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Removes this session's exact upstream device epoch; stale logout is a no-op.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:unregisterPushDevice` · permission `events:write` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async unregisterPushDevice(request: UnregisterChatPushDeviceRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_profiles/*', 'name')}:unregisterPushDevice`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.UnregisterChatPushDeviceRequest',
+			mutation: true,
+		})
+	}
+
+	/**
 	 * Issues a bounded player capability after verified Auth token exchange.
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_profiles/*}:issueToken` · permission `events:write` · effect `write`
@@ -3769,6 +4005,77 @@ export class ChatReportsCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.events.v1.ResolveChatReportRequest',
 			responseType: 'sylphx.events.v1.ChatReport',
+			mutation: true,
+		})
+	}
+}
+
+/** `chat_sticker_packs` of Sylphx Events: Resource type `events.sylphx.com/ChatStickerPack`. */
+export class ChatStickerPacksCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets an authoritative tenant sticker pack.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/chat_sticker_packs/*}` · permission `events:read` · effect `read`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetChatStickerPackRequest): Promise<ChatStickerPack> {
+		return this.client.call<ChatStickerPack>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_sticker_packs/*', 'name')}`,
+			responseType: 'sylphx.events.v1.ChatStickerPack',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists the tenant sticker catalog for player discovery.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/chat_sticker_packs` · permission `events:read` · effect `read`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`.
+	 */
+	async list(request: ListChatStickerPacksRequest): Promise<ListChatStickerPacksResponse> {
+		return this.client.call<ListChatStickerPacksResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/chat_sticker_packs`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.events.v1.ListChatStickerPacksResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListChatStickerPacksRequest): AsyncGenerator<ChatStickerPack> {
+		let next: ListChatStickerPacksRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.chatStickerPacks ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Publishes the trusted backend's complete sticker pack catalog.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/chat_sticker_packs/*}:upsert` · permission `events:chat:admin` · effect `write`
+	 *
+	 * Errors: `PERMISSION_DENIED`, `INVALID_FIELD`.
+	 */
+	async upsert(request: UpsertChatStickerPackRequest): Promise<ChatStickerPack> {
+		return this.client.call<ChatStickerPack>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/chat_sticker_packs/*', 'name')}:upsert`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.events.v1.UpsertChatStickerPackRequest',
+			responseType: 'sylphx.events.v1.ChatStickerPack',
 			mutation: true,
 		})
 	}

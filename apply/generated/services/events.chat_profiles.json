@@ -72,6 +72,20 @@
           "http": {
             "query_params": []
           },
+          "id": "events.chat_profiles.register_push_device",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "events.chat_profiles.unregister_push_device",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "events.chat_profiles.issue_token",
           "kind": "custom"
         }

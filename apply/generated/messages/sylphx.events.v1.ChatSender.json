@@ -47,6 +47,24 @@
         "kind": "scalar",
         "scalar": "bool"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "cosmetics",
+      "number": 6,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.events.v1.ChatCosmetics"
+      }
     }
   ],
   "name": "sylphx.events.v1.ChatSender",

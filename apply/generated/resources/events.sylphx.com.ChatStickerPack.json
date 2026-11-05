@@ -1,0 +1,22 @@
+{
+  "collection": "chat_sticker_packs",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ChatStickerPack",
+  "message": "sylphx.events.v1.ChatStickerPack",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/chat_sticker_packs/{chat_sticker_pack}",
+  "plural": "chatStickerPacks",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "events",
+  "shape": "record",
+  "singular": "chatStickerPack",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "events.sylphx.com/ChatStickerPack"
+}
