@@ -44,6 +44,20 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "notify.recipients.register_push_device",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.recipients.unregister_push_device",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "etag",
               "allow_missing",

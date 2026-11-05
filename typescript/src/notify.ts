@@ -1680,18 +1680,42 @@ export interface PushContent {
 	body?: string
 	/** Data delivered with the notification. */
 	data?: Record<string, unknown>
+	/**
+	 * Deliver only to this Sender's registered browsers, never other apps or
+	 * origins belonging to the same recipient.
+	 */
+	sender?: string
 }
 
 /** A push device of a recipient. */
 export interface PushDevice {
 	/** The platform. */
 	platform?: PushPlatform
-	/** The device token; write-only. */
+	/**
+	 * Write-only. For web_push, the exact JSON string returned by a browser's
+	 * PushSubscription.toJSON(): endpoint, optional expirationTime, and keys
+	 * containing base64url p256dh and auth. APNs and FCM are not yet served.
+	 */
 	deviceToken?: string
 	/** The last four characters of the token, for display. */
 	readonly tokenLast4?: string
 	/** The push Sender the token belongs to. */
 	sender?: string
+	/**
+	 * Opaque registration receipt, stable across renewal at the same endpoint.
+	 * RegisterPushDevice and UnregisterPushDevice preserve other devices.
+	 */
+	readonly registrationId?: string
+	/**
+	 * Immutable Notify Recipient UID, not an authenticated application principal.
+	 * The client binds this receipt to its independently verified active principal.
+	 */
+	readonly recipientUid?: string
+	/**
+	 * Changes on every registration, including unregister/re-register. JSON uses a
+	 * decimal string: clients must compare exactly, never convert to a JS Number.
+	 */
+	readonly registrationGeneration?: string
 }
 
 /** A push app. */
@@ -1702,6 +1726,12 @@ export interface PushSender {
 	connection?: string
 	/** The bundle id, package name, or web origin. */
 	appKey?: string
+	/**
+	 * Write-only ordinary Access key scoped to broker:exchange on this exact
+	 * Connection, in the same organization. Notify seals it for its delivery
+	 * worker; it is never the caller's Authorization or private VAPID material.
+	 */
+	brokerCredential?: string
 }
 
 /**
@@ -1747,8 +1777,11 @@ export interface Recipient {
 	emailAddresses?: string[]
 	/** E.164 phone numbers, first is preferred. */
 	phoneNumbers?: string[]
-	/** Push devices. */
-	devices?: PushDevice[]
+	/**
+	 * Redacted push-device receipts. Use registerPushDevice and
+	 * unregisterPushDevice; create/update never replace this array.
+	 */
+	readonly devices?: PushDevice[]
 	/** BCP 47 language for templates; default the environment's. */
 	languageCode?: string
 	/** IANA time zone for quiet hours and digests. */
@@ -1759,6 +1792,31 @@ export interface Recipient {
 	 * `+sylphx_test` is a test address whatever this says.
 	 */
 	test?: boolean
+}
+
+/** Registers one device without replacing the recipient's other devices. */
+export interface RegisterPushDeviceRequest {
+	/** The recipient to register for. */
+	name: string
+	/** A browser subscription, with its configured sender. */
+	device: PushDevice
+}
+
+/** A durable receipt, safe to persist in the registering browser. */
+export interface RegisterPushDeviceResponse {
+	/** Identifies this recipient's device without revealing its subscription. */
+	registrationId?: string
+	/** The sender the registration was bound to. */
+	sender?: string
+	/** Public applicationServerKey used by the browser subscription. */
+	applicationServerKey?: string
+	/**
+	 * Immutable Notify Recipient UID; the application binds it to its own active
+	 * authenticated principal before accepting notifications.
+	 */
+	readonly recipientUid?: string
+	/** Exact registration epoch, encoded as a decimal string in JSON. */
+	readonly registrationGeneration?: string
 }
 
 /**
@@ -1883,6 +1941,11 @@ export interface SenderStatus {
 	readonly verified?: boolean
 	/** Why the sender is not verified, when it is not. */
 	readonly verificationNote?: string
+	/**
+	 * The base64url uncompressed P-256 public key for Web Push subscription.
+	 * Empty for other platforms or while the sign-only Broker is unavailable.
+	 */
+	readonly applicationServerKey?: string
 }
 
 /** SMS content. */
@@ -2029,6 +2092,19 @@ export interface TemplateStatus {
 	readonly conditions?: common.Condition[]
 	/** The version the current spec is; messages pin it. */
 	readonly version?: string
+}
+
+/** Unregisters one device; does not change other subscriptions or the user. */
+export interface UnregisterPushDeviceRequest {
+	/** The recipient whose receipt is being unregistered. */
+	name: string
+	/** The receipt returned by RegisterPushDevice. */
+	registrationId: string
+	/**
+	 * Delete only this registration epoch. A stale logout is an idempotent no-op,
+	 * never removal of a newer registration. Send the receipt's exact JSON string.
+	 */
+	registrationGeneration: string
 }
 
 /** The request of UpdateBroadcast. */
@@ -2731,9 +2807,13 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.PushDevice': [
 		['deviceToken', 'device_token'],
 		['tokenLast4', 'token_last4'],
+		['registrationId', 'registration_id'],
+		['recipientUid', 'recipient_uid'],
+		['registrationGeneration', 'registration_generation'],
 	],
 	'sylphx.notify.v1.PushSender': [
 		['appKey', 'app_key'],
+		['brokerCredential', 'broker_credential'],
 	],
 	'sylphx.notify.v1.ReadPhoneNumberVoicemailRequest': [
 		['providerCallId', 'provider_call_id'],
@@ -2752,6 +2832,15 @@ runtime.registerSchemas({
 		['devices', 'devices', 'sylphx.notify.v1.PushDevice'],
 		['languageCode', 'language_code'],
 		['timeZone', 'time_zone'],
+	],
+	'sylphx.notify.v1.RegisterPushDeviceRequest': [
+		['device', 'device', 'sylphx.notify.v1.PushDevice'],
+	],
+	'sylphx.notify.v1.RegisterPushDeviceResponse': [
+		['registrationId', 'registration_id'],
+		['applicationServerKey', 'application_server_key'],
+		['recipientUid', 'recipient_uid'],
+		['registrationGeneration', 'registration_generation'],
 	],
 	'sylphx.notify.v1.Route': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2790,6 +2879,7 @@ runtime.registerSchemas({
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['verificationNote', 'verification_note'],
+		['applicationServerKey', 'application_server_key'],
 	],
 	'sylphx.notify.v1.SmsContent': [],
 	'sylphx.notify.v1.SmsNumber': [
@@ -2840,6 +2930,10 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.TemplateStatus': [
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+	],
+	'sylphx.notify.v1.UnregisterPushDeviceRequest': [
+		['registrationId', 'registration_id'],
+		['registrationGeneration', 'registration_generation'],
 	],
 	'sylphx.notify.v1.UpdateBroadcastRequest': [
 		['broadcast', 'broadcast', 'sylphx.notify.v1.Broadcast'],
@@ -3540,6 +3634,43 @@ export class RecipientsCollection {
 			body: request.recipient ?? {},
 			bodyType: 'sylphx.notify.v1.Recipient',
 			responseType: 'sylphx.notify.v1.Recipient',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Atomically registers or renews one Web Push subscription. Other devices
+	 * remain registered. The sender and recipient must share an environment.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/recipients/*}:registerPushDevice` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async registerPushDevice(request: RegisterPushDeviceRequest): Promise<RegisterPushDeviceResponse> {
+		return this.client.call<RegisterPushDeviceResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/recipients/*', 'name')}:registerPushDevice`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.RegisterPushDeviceRequest',
+			responseType: 'sylphx.notify.v1.RegisterPushDeviceResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Unregisters only the device identified by the registration receipt.
+	 * A missing registration is already unregistered and succeeds.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/recipients/*}:unregisterPushDevice` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async unregisterPushDevice(request: UnregisterPushDeviceRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/recipients/*', 'name')}:unregisterPushDevice`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.UnregisterPushDeviceRequest',
 			mutation: true,
 		})
 	}

@@ -1,9 +1,9 @@
 {
   "collection": "senders",
-  "controller": "services/notify/controller",
+  "controller": "",
   "deletion_protection": false,
-  "fail_mode": "stale",
-  "in_snapshot": true,
+  "fail_mode": "",
+  "in_snapshot": false,
   "kind": "Sender",
   "message": "sylphx.notify.v1.Sender",
   "meters": [],
@@ -15,8 +15,8 @@
   "service": "notify",
   "shape": "spec_status",
   "singular": "sender",
-  "stale_bound": "300s",
-  "storage": "kernel",
+  "stale_bound": null,
+  "storage": "service",
   "terraform": true,
   "type": "notify.sylphx.com/Sender"
 }

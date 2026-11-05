@@ -36596,13 +36596,19 @@
             "description": "Data delivered with the notification.",
             "type": "object"
           },
+          "sender": {
+            "description": "Deliver only to this Sender's registered browsers, never other apps or\norigins belonging to the same recipient.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+          },
           "title": {
             "description": "The title.",
             "type": "string"
           }
         },
         "required": [
-          "title"
+          "title",
+          "sender"
         ],
         "type": "object"
       },
@@ -36610,7 +36616,7 @@
         "description": "A push device of a recipient.",
         "properties": {
           "device_token": {
-            "description": "The device token; write-only.",
+            "description": "Write-only. For web_push, the exact JSON string returned by a browser's\nPushSubscription.toJSON(): endpoint, optional expirationTime, and keys\ncontaining base64url p256dh and auth. APNs and FCM are not yet served.",
             "type": "string",
             "writeOnly": true,
             "x-sylphx-sensitive": true
@@ -36618,6 +36624,22 @@
           "platform": {
             "$ref": "#/components/schemas/sylphx.notify.v1.PushPlatform",
             "description": "The platform."
+          },
+          "recipient_uid": {
+            "description": "Immutable Notify Recipient UID, not an authenticated application principal.\nThe client binds this receipt to its independently verified active principal.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "registration_generation": {
+            "description": "Changes on every registration, including unregister/re-register. JSON uses a\ndecimal string: clients must compare exactly, never convert to a JS Number.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "registration_id": {
+            "description": "Opaque registration receipt, stable across renewal at the same endpoint.\nRegisterPushDevice and UnregisterPushDevice preserve other devices.",
+            "readOnly": true,
+            "type": "string"
           },
           "sender": {
             "description": "The push Sender the token belongs to.",
@@ -36652,6 +36674,12 @@
           "app_key": {
             "description": "The bundle id, package name, or web origin.",
             "type": "string"
+          },
+          "broker_credential": {
+            "description": "Write-only ordinary Access key scoped to broker:exchange on this exact\nConnection, in the same organization. Notify seals it for its delivery\nworker; it is never the caller's Authorization or private VAPID material.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
           },
           "connection": {
             "description": "The Connection holding the APNs, FCM, or VAPID credentials.",
@@ -36725,10 +36753,11 @@
         "description": "A Recipient is one of a customer's users, across channels: email addresses,\nphone numbers, and device tokens. Dead device tokens are pruned from\nprovider feedback.",
         "properties": {
           "devices": {
-            "description": "Push devices.",
+            "description": "Redacted push-device receipts. Use registerPushDevice and\nunregisterPushDevice; create/update never replace this array.",
             "items": {
               "$ref": "#/components/schemas/sylphx.notify.v1.PushDevice"
             },
+            "readOnly": true,
             "type": "array"
           },
           "email_addresses": {
@@ -36773,6 +36802,55 @@
             "description": "`rcp_<cell><ulid>`; never reused.",
             "readOnly": true,
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.RegisterPushDeviceRequest": {
+        "description": "Registers one device without replacing the recipient's other devices.",
+        "properties": {
+          "device": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.PushDevice",
+            "description": "A browser subscription, with its configured sender."
+          },
+          "name": {
+            "description": "The recipient to register for.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Recipient"
+          }
+        },
+        "required": [
+          "name",
+          "device"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.RegisterPushDeviceResponse": {
+        "description": "A durable receipt, safe to persist in the registering browser.",
+        "properties": {
+          "application_server_key": {
+            "description": "Public applicationServerKey used by the browser subscription.",
+            "type": "string"
+          },
+          "recipient_uid": {
+            "description": "Immutable Notify Recipient UID; the application binds it to its own active\nauthenticated principal before accepting notifications.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "registration_generation": {
+            "description": "Exact registration epoch, encoded as a decimal string in JSON.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "registration_id": {
+            "description": "Identifies this recipient's device without revealing its subscription.",
+            "type": "string"
+          },
+          "sender": {
+            "description": "The sender the registration was bound to.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
           }
         },
         "type": "object"
@@ -36989,6 +37067,11 @@
       "sylphx.notify.v1.SenderStatus": {
         "description": "SenderStatus is the observed state of a Sender.",
         "properties": {
+          "application_server_key": {
+            "description": "The base64url uncompressed P-256 public key for Web Push subscription.\nEmpty for other platforms or while the sign-only Broker is unavailable.",
+            "readOnly": true,
+            "type": "string"
+          },
           "conditions": {
             "description": "Ready, Reconciling, Stalled.",
             "items": {
@@ -37334,6 +37417,31 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.notify.v1.UnregisterPushDeviceRequest": {
+        "description": "Unregisters one device; does not change other subscriptions or the user.",
+        "properties": {
+          "name": {
+            "description": "The recipient whose receipt is being unregistered.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Recipient"
+          },
+          "registration_generation": {
+            "description": "Delete only this registration epoch. A stale logout is an idempotent no-op,\nnever removal of a newer registration. Send the receipt's exact JSON string.",
+            "format": "int64",
+            "type": "string"
+          },
+          "registration_id": {
+            "description": "The receipt returned by RegisterPushDevice.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "registration_id",
+          "registration_generation"
+        ],
         "type": "object"
       },
       "sylphx.notify.v1.UpdateBroadcastRequest": {
@@ -110336,6 +110444,245 @@
           "IDEMPOTENCY_IN_PROGRESS"
         ],
         "x-sylphx-method": "notify.preferences.update",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}:registerPushDevice": {
+      "post": {
+        "description": "Atomically registers or renews one Web Push subscription. Other devices\nremain registered. The sender and recipient must share an environment.",
+        "operationId": "notify_recipients_register_push_device",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "recipient",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "device": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.PushDevice",
+                    "description": "A browser subscription, with its configured sender."
+                  }
+                },
+                "required": [
+                  "device"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.RegisterPushDeviceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Atomically registers or renews one Web Push subscription. Other devices remain registered. The sender and recipient must share an environment.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.recipients.register_push_device",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}:unregisterPushDevice": {
+      "post": {
+        "description": "Unregisters only the device identified by the registration receipt.\nA missing registration is already unregistered and succeeds.",
+        "operationId": "notify_recipients_unregister_push_device",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "recipient",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "registration_generation": {
+                    "description": "Delete only this registration epoch. A stale logout is an idempotent no-op,\nnever removal of a newer registration. Send the receipt's exact JSON string.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "registration_id": {
+                    "description": "The receipt returned by RegisterPushDevice.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "registration_id",
+                  "registration_generation"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Unregisters only the device identified by the registration receipt. A missing registration is already unregistered and succeeds.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.recipients.unregister_push_device",
         "x-sylphx-permission": "notify:write",
         "x-sylphx-stage": "preview"
       }

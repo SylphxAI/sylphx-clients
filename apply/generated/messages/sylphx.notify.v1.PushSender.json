@@ -53,6 +53,25 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL",
+        "INPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "broker_credential",
+      "number": 4,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.notify.v1.PushSender",

@@ -887,6 +887,7 @@ func notifyPushSender() []def.Field {
 		{Name: "platform", Kind: def.Enum, Values: []string{"apns", "fcm", "web_push"}, Flags: def.Required, Doc: "The push platform."},
 		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection holding the APNs, FCM, or VAPID credentials."},
 		{Name: "app_key", Kind: def.String, Flags: def.Required, Doc: "The bundle id, package name, or web origin."},
+		{Name: "broker_credential", Kind: def.String, Flags: def.InputOnly | def.Sensitive, Doc: "Write-only ordinary Access key scoped to broker:exchange on this exact Connection, in the same organization. Notify seals it for its delivery worker; it is never the caller's Authorization or private VAPID material."},
 	}
 }
 
@@ -905,6 +906,7 @@ func notifySenderStatus() []def.Field {
 		{Name: "conditions", Kind: def.Message, Msg: commonCondition, Flags: def.OutputOnly, Repeated: true, Doc: "Ready, Reconciling, Stalled."},
 		{Name: "verified", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether the sender is registered and usable."},
 		{Name: "verification_note", Kind: def.String, Flags: def.OutputOnly, Doc: "Why the sender is not verified, when it is not."},
+		{Name: "application_server_key", Kind: def.String, Flags: def.OutputOnly, Doc: "The base64url uncompressed P-256 public key for Web Push subscription. Empty for other platforms or while the sign-only Broker is unavailable."},
 	}
 }
 

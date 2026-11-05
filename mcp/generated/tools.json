@@ -34949,6 +34949,12 @@
                         "description": "The bundle id, package name, or web origin.",
                         "type": "string"
                       },
+                      "broker_credential": {
+                        "description": "Write-only ordinary Access key scoped to broker:exchange on this exact\nConnection, in the same organization. Notify seals it for its delivery\nworker; it is never the caller's Authorization or private VAPID material.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      },
                       "connection": {
                         "description": "The Connection holding the APNs, FCM, or VAPID credentials.",
                         "type": "string"
@@ -35084,6 +35090,12 @@
                       "app_key": {
                         "description": "The bundle id, package name, or web origin.",
                         "type": "string"
+                      },
+                      "broker_credential": {
+                        "description": "Write-only ordinary Access key scoped to broker:exchange on this exact\nConnection, in the same organization. Notify seals it for its delivery\nworker; it is never the caller's Authorization or private VAPID material.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
                       },
                       "connection": {
                         "description": "The Connection holding the APNs, FCM, or VAPID credentials.",
@@ -35339,42 +35351,6 @@
             "additionalProperties": false,
             "description": "The recipient to create; only caller-writable fields are read.",
             "properties": {
-              "devices": {
-                "description": "Push devices.",
-                "items": {
-                  "additionalProperties": false,
-                  "description": "A push device of a recipient.",
-                  "properties": {
-                    "device_token": {
-                      "description": "The device token; write-only.",
-                      "type": "string",
-                      "writeOnly": true,
-                      "x-sylphx-sensitive": true
-                    },
-                    "platform": {
-                      "description": "The platform.",
-                      "enum": [
-                        "apns",
-                        "fcm",
-                        "web_push"
-                      ],
-                      "type": "string"
-                    },
-                    "sender": {
-                      "description": "The push Sender the token belongs to.",
-                      "type": "string",
-                      "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
-                    }
-                  },
-                  "required": [
-                    "platform",
-                    "device_token",
-                    "sender"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
               "email_addresses": {
                 "description": "Email addresses, first is preferred.",
                 "items": {
@@ -35480,42 +35456,6 @@
             "additionalProperties": false,
             "description": "The recipient to update; `name` identifies it.",
             "properties": {
-              "devices": {
-                "description": "Push devices.",
-                "items": {
-                  "additionalProperties": false,
-                  "description": "A push device of a recipient.",
-                  "properties": {
-                    "device_token": {
-                      "description": "The device token; write-only.",
-                      "type": "string",
-                      "writeOnly": true,
-                      "x-sylphx-sensitive": true
-                    },
-                    "platform": {
-                      "description": "The platform.",
-                      "enum": [
-                        "apns",
-                        "fcm",
-                        "web_push"
-                      ],
-                      "type": "string"
-                    },
-                    "sender": {
-                      "description": "The push Sender the token belongs to.",
-                      "type": "string",
-                      "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
-                    }
-                  },
-                  "required": [
-                    "platform",
-                    "device_token",
-                    "sender"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
               "email_addresses": {
                 "description": "Email addresses, first is preferred.",
                 "items": {
@@ -35596,6 +35536,112 @@
       "method_id": "notify.recipients.update",
       "permission": "notify:write",
       "tool": "notify_recipients_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Atomically registers or renews one Web Push subscription. Other devices remain registered. The sender and recipient must share an environment."
+      },
+      "description": "Atomically registers or renews one Web Push subscription. Other devices\nremain registered. The sender and recipient must share an environment.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/recipients/*}:registerPushDevice",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Registers one device without replacing the recipient's other devices.",
+        "properties": {
+          "device": {
+            "additionalProperties": false,
+            "description": "A browser subscription, with its configured sender.",
+            "properties": {
+              "device_token": {
+                "description": "Write-only. For web_push, the exact JSON string returned by a browser's\nPushSubscription.toJSON(): endpoint, optional expirationTime, and keys\ncontaining base64url p256dh and auth. APNs and FCM are not yet served.",
+                "type": "string",
+                "writeOnly": true,
+                "x-sylphx-sensitive": true
+              },
+              "platform": {
+                "description": "The platform.",
+                "enum": [
+                  "apns",
+                  "fcm",
+                  "web_push"
+                ],
+                "type": "string"
+              },
+              "sender": {
+                "description": "The push Sender the token belongs to.",
+                "type": "string",
+                "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+              }
+            },
+            "required": [
+              "platform",
+              "device_token",
+              "sender"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "The recipient to register for.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Recipient"
+          }
+        },
+        "required": [
+          "name",
+          "device"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.recipients.register_push_device",
+      "permission": "notify:write",
+      "tool": "notify_recipients_register_push_device"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Unregisters only the device identified by the registration receipt. A missing registration is already unregistered and succeeds."
+      },
+      "description": "Unregisters only the device identified by the registration receipt.\nA missing registration is already unregistered and succeeds.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/recipients/*}:unregisterPushDevice",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Unregisters one device; does not change other subscriptions or the user.",
+        "properties": {
+          "name": {
+            "description": "The recipient whose receipt is being unregistered.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/Recipient"
+          },
+          "registration_generation": {
+            "description": "Delete only this registration epoch. A stale logout is an idempotent no-op,\nnever removal of a newer registration. Send the receipt's exact JSON string.",
+            "format": "int64",
+            "type": "string"
+          },
+          "registration_id": {
+            "description": "The receipt returned by RegisterPushDevice.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "registration_id",
+          "registration_generation"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.recipients.unregister_push_device",
+      "permission": "notify:write",
+      "tool": "notify_recipients_unregister_push_device"
     },
     {
       "annotations": {
@@ -36531,13 +36577,19 @@
                         "description": "Data delivered with the notification.",
                         "type": "object"
                       },
+                      "sender": {
+                        "description": "Deliver only to this Sender's registered browsers, never other apps or\norigins belonging to the same recipient.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+                      },
                       "title": {
                         "description": "The title.",
                         "type": "string"
                       }
                     },
                     "required": [
-                      "title"
+                      "title",
+                      "sender"
                     ],
                     "type": "object"
                   },
@@ -36729,13 +36781,19 @@
                         "description": "Data delivered with the notification.",
                         "type": "object"
                       },
+                      "sender": {
+                        "description": "Deliver only to this Sender's registered browsers, never other apps or\norigins belonging to the same recipient.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+                      },
                       "title": {
                         "description": "The title.",
                         "type": "string"
                       }
                     },
                     "required": [
-                      "title"
+                      "title",
+                      "sender"
                     ],
                     "type": "object"
                   },

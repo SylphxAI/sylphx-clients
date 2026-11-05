@@ -3796,6 +3796,12 @@ pub struct PushContent {
     /// Data delivered with the notification.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: Option<serde_json::Value>,
+    /// Deliver only to this Sender's registered browsers, never other apps or
+    /// origins belonging to the same recipient.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sender: String,
 }
 
 /// A push device of a recipient.
@@ -3807,7 +3813,9 @@ pub struct PushDevice {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub platform: Option<PushPlatform>,
-    /// The device token; write-only.
+    /// Write-only. For web_push, the exact JSON string returned by a browser's
+    /// PushSubscription.toJSON(): endpoint, optional expirationTime, and keys
+    /// containing base64url p256dh and auth. APNs and FCM are not yet served.
     ///
     /// Field behavior: `required`, `input_only`, `sensitive`.
     #[serde(
@@ -3830,6 +3838,37 @@ pub struct PushDevice {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub sender: String,
+    /// Opaque registration receipt, stable across renewal at the same endpoint.
+    /// RegisterPushDevice and UnregisterPushDevice preserve other devices.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registrationId"
+    )]
+    pub registration_id: String,
+    /// Immutable Notify Recipient UID, not an authenticated application principal.
+    /// The client binds this receipt to its independently verified active principal.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientUid"
+    )]
+    pub recipient_uid: String,
+    /// Changes on every registration, including unregister/re-register. JSON uses a
+    /// decimal string: clients must compare exactly, never convert to a JS Number.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "registrationGeneration"
+    )]
+    pub registration_generation: i64,
 }
 
 /// A push app.
@@ -3855,6 +3894,17 @@ pub struct PushSender {
         alias = "appKey"
     )]
     pub app_key: String,
+    /// Write-only ordinary Access key scoped to broker:exchange on this exact
+    /// Connection, in the same organization. Notify seals it for its delivery
+    /// worker; it is never the caller's Authorization or private VAPID material.
+    ///
+    /// Field behavior: `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "brokerCredential"
+    )]
+    pub broker_credential: String,
 }
 
 /// Read provider audio for an already observed line-scoped receipt. No arbitrary
@@ -3959,7 +4009,10 @@ pub struct Recipient {
     /// E.164 phone numbers, first is preferred.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "phoneNumbers")]
     pub phone_numbers: Vec<String>,
-    /// Push devices.
+    /// Redacted push-device receipts. Use registerPushDevice and
+    /// unregisterPushDevice; create/update never replace this array.
+    ///
+    /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub devices: Vec<PushDevice>,
     /// BCP 47 language for templates; default the environment's.
@@ -3981,6 +4034,65 @@ pub struct Recipient {
     /// `+sylphx_test` is a test address whatever this says.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub test: bool,
+}
+
+/// Registers one device without replacing the recipient's other devices.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RegisterPushDeviceRequest {
+    /// The recipient to register for.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// A browser subscription, with its configured sender.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device: Option<PushDevice>,
+}
+
+/// A durable receipt, safe to persist in the registering browser.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RegisterPushDeviceResponse {
+    /// Identifies this recipient's device without revealing its subscription.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registrationId"
+    )]
+    pub registration_id: String,
+    /// The sender the registration was bound to.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sender: String,
+    /// Public applicationServerKey used by the browser subscription.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "applicationServerKey"
+    )]
+    pub application_server_key: String,
+    /// Immutable Notify Recipient UID; the application binds it to its own active
+    /// authenticated principal before accepting notifications.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientUid"
+    )]
+    pub recipient_uid: String,
+    /// Exact registration epoch, encoded as a decimal string in JSON.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "registrationGeneration"
+    )]
+    pub registration_generation: i64,
 }
 
 /// A Route sends the mail a receiving Email Domain accepts for one address, a
@@ -4208,6 +4320,16 @@ pub struct SenderStatus {
         alias = "verificationNote"
     )]
     pub verification_note: String,
+    /// The base64url uncompressed P-256 public key for Web Push subscription.
+    /// Empty for other platforms or while the sign-only Broker is unavailable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "applicationServerKey"
+    )]
+    pub application_server_key: String,
 }
 
 /// SMS content.
@@ -4560,6 +4682,37 @@ pub struct TemplateStatus {
         with = "crate::runtime::int64"
     )]
     pub version: i64,
+}
+
+/// Unregisters one device; does not change other subscriptions or the user.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UnregisterPushDeviceRequest {
+    /// The recipient whose receipt is being unregistered.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The receipt returned by RegisterPushDevice.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "registrationId"
+    )]
+    pub registration_id: String,
+    /// Delete only this registration epoch. A stale logout is an idempotent no-op,
+    /// never removal of a newer registration. Send the receipt's exact JSON string.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "registrationGeneration"
+    )]
+    pub registration_generation: i64,
 }
 
 /// The request of UpdateBroadcast.
@@ -6929,6 +7082,68 @@ impl<'a, T: crate::runtime::Transport> RecipientsCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.recipient)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Atomically registers or renews one Web Push subscription. Other devices
+    /// remain registered. The sender and recipient must share an environment.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/recipients/*}:registerPushDevice` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn register_push_device(
+        &self,
+        request: RegisterPushDeviceRequest,
+    ) -> Result<RegisterPushDeviceResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:registerPushDevice",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/recipients/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Unregisters only the device identified by the registration receipt.
+    /// A missing registration is already unregistered and succeeds.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/recipients/*}:unregisterPushDevice` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn unregister_push_device(
+        &self,
+        request: UnregisterPushDeviceRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:unregisterPushDevice",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/recipients/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

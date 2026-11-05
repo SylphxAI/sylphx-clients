@@ -25202,6 +25202,13 @@
                   "type": "string"
                 },
                 {
+                  "field": "sender.spec.push.broker_credential",
+                  "flag": "--spec.push.broker-credential",
+                  "sensitive": true,
+                  "summary": "Write-only ordinary Access key scoped to broker:exchange on this exact Connection, in the same organization. Notify seals it for its delivery worker; it is never the caller's Authorization or private VAPID material.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -25284,6 +25291,13 @@
                   "field": "sender.spec.push.app_key",
                   "flag": "--spec.push.app-key",
                   "summary": "The bundle id, package name, or web origin.",
+                  "type": "string"
+                },
+                {
+                  "field": "sender.spec.push.broker_credential",
+                  "flag": "--spec.push.broker-credential",
+                  "sensitive": true,
+                  "summary": "Write-only ordinary Access key scoped to broker:exchange on this exact Connection, in the same organization. Notify seals it for its delivery worker; it is never the caller's Authorization or private VAPID material.",
                   "type": "string"
                 },
                 {
@@ -25483,13 +25497,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "recipient.devices",
-                  "flag": "--devices",
-                  "repeated": true,
-                  "summary": "Push devices.",
-                  "type": "json"
-                },
-                {
                   "field": "recipient.language_code",
                   "flag": "--language-code",
                   "summary": "BCP 47 language for templates; default the environment's.",
@@ -25571,13 +25578,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "recipient.devices",
-                  "flag": "--devices",
-                  "repeated": true,
-                  "summary": "Push devices.",
-                  "type": "json"
-                },
-                {
                   "field": "recipient.language_code",
                   "flag": "--language-code",
                   "summary": "BCP 47 language for templates; default the environment's.",
@@ -25622,6 +25622,59 @@
               "summary": "Updates a recipient.",
               "update_mask": "from-flags",
               "verb": "update"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "device",
+                  "flag": "--device",
+                  "required": true,
+                  "summary": "A browser subscription, with its configured sender.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/recipients/*}:registerPushDevice",
+              "method": "notify.recipients.register_push_device",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}"
+              },
+              "summary": "Atomically registers or renews one Web Push subscription. Other devices remain registered. The sender and recipient must share an environment.",
+              "verb": "register-push-device"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "registration_id",
+                  "flag": "--registration-id",
+                  "required": true,
+                  "summary": "The receipt returned by RegisterPushDevice.",
+                  "type": "string"
+                },
+                {
+                  "field": "registration_generation",
+                  "flag": "--registration-generation",
+                  "required": true,
+                  "summary": "Delete only this registration epoch. A stale logout is an idempotent no-op, never removal of a newer registration. Send the receipt's exact JSON string.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/recipients/*}:unregisterPushDevice",
+              "method": "notify.recipients.unregister_push_device",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/recipients/{recipient}"
+              },
+              "summary": "Unregisters only the device identified by the registration receipt. A missing registration is already unregistered and succeeds.",
+              "verb": "unregister-push-device"
             },
             {
               "confirm": {
@@ -26360,6 +26413,12 @@
                   "type": "json"
                 },
                 {
+                  "field": "template.spec.push.sender",
+                  "flag": "--spec.push.sender",
+                  "summary": "Deliver only to this Sender's registered browsers, never other apps or origins belonging to the same recipient.",
+                  "type": "string"
+                },
+                {
                   "field": "template.spec.inbox.title",
                   "flag": "--spec.inbox.title",
                   "summary": "The title.",
@@ -26491,6 +26550,12 @@
                   "flag": "--spec.push.data",
                   "summary": "Data delivered with the notification.",
                   "type": "json"
+                },
+                {
+                  "field": "template.spec.push.sender",
+                  "flag": "--spec.push.sender",
+                  "summary": "Deliver only to this Sender's registered browsers, never other apps or origins belonging to the same recipient.",
+                  "type": "string"
                 },
                 {
                   "field": "template.spec.inbox.title",

@@ -110,7 +110,7 @@
     },
     {
       "behaviors": [
-        "OPTIONAL"
+        "OUTPUT_ONLY"
       ],
       "cli_flag": "",
       "filterable": false,
