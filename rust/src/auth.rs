@@ -2878,6 +2878,8 @@ pub enum IdentityType {
     Device,
     /// A passkey.
     Passkey,
+    /// A verified phone number (SMS code sign-in).
+    Phone,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -2891,6 +2893,7 @@ impl IdentityType {
             Self::Oidc => "oidc",
             Self::Device => "device",
             Self::Passkey => "passkey",
+            Self::Phone => "phone",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -2903,6 +2906,7 @@ impl IdentityType {
             "oidc" => Self::Oidc,
             "device" => Self::Device,
             "passkey" => Self::Passkey,
+            "phone" => Self::Phone,
             other => Self::Unknown(other.to_string()),
         }
     }

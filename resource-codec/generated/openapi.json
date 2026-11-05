@@ -7962,7 +7962,8 @@
           "email",
           "oidc",
           "device",
-          "passkey"
+          "passkey",
+          "phone"
         ],
         "type": "string"
       },

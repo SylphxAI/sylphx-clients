@@ -26,6 +26,11 @@
       "number": 5,
       "proto_name": "IDENTITY_TYPE_PASSKEY",
       "wire": "passkey"
+    },
+    {
+      "number": 6,
+      "proto_name": "IDENTITY_TYPE_PHONE",
+      "wire": "phone"
     }
   ]
 }

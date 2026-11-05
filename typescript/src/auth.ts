@@ -1230,7 +1230,7 @@ export type EndUserState = 'active' | 'suspended' | (string & {})
 export type GrantType = 'authorization_code' | 'refresh_token' | 'device_code' | 'client_credentials' | (string & {})
 
 /** The kind of an Identity. */
-export type IdentityType = 'password' | 'email' | 'oidc' | 'device' | 'passkey' | (string & {})
+export type IdentityType = 'password' | 'email' | 'oidc' | 'device' | 'passkey' | 'phone' | (string & {})
 
 /** The lifecycle of an Invitation. */
 export type InvitationState = 'pending' | 'accepted' | 'revoked' | 'expired' | (string & {})
