@@ -519,6 +519,27 @@ mod tests {
     }
 
     #[test]
+    fn an_explicit_publisher_never_falls_back_to_another_registration() {
+        let publisher = "spiffe://sylphx.local/cell/fsn1-c1/role/api";
+        let registry = "spiffe://sylphx.local/cell/fsn1-c1/role/platform-registry-consumer";
+        for entries in [
+            [(registry, "registry-token"), (publisher, "publisher-token")],
+            [(publisher, "publisher-token"), (registry, "registry-token")],
+        ] {
+            assert_eq!(
+                decode_jwt_svid_response(&fetch_response(&entries), publisher).unwrap(),
+                "publisher-token"
+            );
+        }
+        let only_registry = fetch_response(&[(registry, "registry-token")]);
+        assert_eq!(
+            decode_jwt_svid_response(&only_registry, ANY).unwrap(),
+            "registry-token"
+        );
+        assert!(decode_jwt_svid_response(&only_registry, publisher).is_err());
+    }
+
+    #[test]
     fn an_entry_without_a_token_does_not_become_an_empty_token() {
         // Only spiffe_id present: no svid. Returning "" here would present an
         // empty bearer token.
