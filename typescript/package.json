@@ -27,7 +27,12 @@
 		"./*": {
 			"types": "./dist/*.d.ts",
 			"default": "./dist/*.js"
-		}
+		},
+		"./sign-in": {
+			"types": "./dist/sign-in.d.ts",
+			"default": "./dist/sign-in.js"
+		},
+		"./sign-in.css": "./dist/sign-in.css"
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -37,7 +42,7 @@
 		"LICENSE"
 	],
 	"scripts": {
-		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/sign-in/sign-in.css dist/sign-in.css",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check test",
 		"test": "bun test",
@@ -45,11 +50,24 @@
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.0",
-		"typescript": "npm:@typescript/typescript6@6.0.2"
+		"typescript": "npm:@typescript/typescript6@6.0.2",
+		"@types/react": "^19",
+		"react": "^19"
 	},
 	"publishConfig": {
 		"access": "public",
 		"tag": "next",
 		"provenance": true
+	},
+	"sideEffects": [
+		"**/*.css"
+	],
+	"peerDependencies": {
+		"react": ">=18"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
 	}
 }

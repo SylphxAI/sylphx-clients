@@ -2,7 +2,7 @@
 
 The Sylphx SDK for TypeScript and JavaScript: one API
 (`https://api.sylphx.com`), one key, one namespace per service. Zero runtime
-dependencies (`fetch` only); runs on Node 20+, Bun, Deno, workers, and
+dependencies for the API client (`fetch` only); runs on Node 20+, Bun, Deno, workers, and
 browsers (browsers with publishable keys only).
 
 ```sh
@@ -85,9 +85,56 @@ calls to Data's object API, not only changing its package pin. The old
 `@sylphx/sdk/react`, `/server`, and `/nextjs` integrations are not equivalent
 exports of this package either.
 
-This package is generated from the Sylphx schema registry by `sylphx-gen`; do
-not edit it by hand. Source: `clients/typescript` in the Sylphx monorepo,
+API modules are generated from the Sylphx schema registry by `sylphx-gen`;
+handwritten runtime and sign-in modules are emitted from its templates. Do not
+edit generated `src/` files by hand. Source: `clients/typescript` in the Sylphx monorepo,
 published from its MIT mirror.
+
+## The shared sign-in form (React)
+
+```tsx
+'use client'
+import { ContinueSignInForm } from '@sylphx/sdk/sign-in'
+import '@sylphx/sdk/sign-in.css'
+
+export function SignIn() {
+  return <ContinueSignInForm
+    productName="Example"
+    next="/app"
+    termsUrl="/terms"
+    privacyUrl="/privacy"
+    endpoints={{ begin: '/auth/begin', verify: '/auth/verify' }}
+  />
+}
+```
+
+This optional entry needs React 18 or later; the API client does not import React.
+Use the shared form rather than copying its markup. The same source renders the
+hosted Account Portal: one email field, a six-digit code with paste/autofill and
+automatic submission, a 30-second resend pause, and server-requested MFA. New and
+returning accounts follow the same code path. Existing-password sign-in remains
+a secondary action when the server reports it. No new password is requested.
+
+Endpoints are **same-origin backend adapters**, not direct Auth URLs. `begin`
+accepts `{email,next,method?}` and returns `{step:"email_otp",flow?,expires_in?}`
+or `{step:"password"}`; the latter selects the email fallback before displaying
+the code screen. `verify` (and optional `password`) accepts
+`{email,flow,code,password,method,next,factor_proofs}` and returns `{next}` only
+after the backend has established the session in an HttpOnly cookie. A 401
+`{"error":"mfa_required"}` requests a TOTP/recovery proof without consuming the
+primary code. Other upstream error details are never displayed. A 429 honors
+`Retry-After`. Bind the pending flow and return path on the server, validate
+Origin and expiry, and keep credentials, tickets and session tokens out of
+browser storage and URLs. The final return path must be local.
+
+Optional provider links (`providers: [{id,name,href}]`) come from the instance's
+configuration. The form shows three, orders Apple first on iOS/Google elsewhere,
+hides Google in known embedded browsers, and remembers only the last-used method.
+Optional `passkeyBegin`/`passkeyFinish` enable conditional autofill and an explicit
+passkey button. `registerBegin`/`registerFinish` enable the post-authentication
+passkey offer, suppressed for 30 days after decline. The adapter owns the stable
+RP ID, allowed origin, challenge and session. **Keep an existing product's RP ID
+when adopting the component**; changing it strands existing credentials.
 
 ## Typed flags with offline defaults
 
