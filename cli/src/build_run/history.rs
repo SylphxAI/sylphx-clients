@@ -52,19 +52,45 @@ async fn run(root: &Path, args: &[&str]) -> Result<Vec<u8>, String> {
 }
 
 pub async fn prepare(root: &Path, base: &str) -> Result<(String, Vec<u8>), String> {
-    let reference = String::from_utf8(
+    let commit = String::from_utf8(
         run(
             root,
-            &["rev-parse", "--symbolic-full-name", "--verify", base],
+            &[
+                "rev-parse",
+                "--verify",
+                "--end-of-options",
+                &format!("{base}^{{commit}}"),
+            ],
+        )
+        .await
+        .map_err(|error| {
+            format!("--source-history {base} does not resolve to a local commit: {error}")
+        })?,
+    )
+    .map_err(|e| e.to_string())?
+    .trim()
+    .to_string();
+    let symbolic = String::from_utf8(
+        run(
+            root,
+            &[
+                "rev-parse",
+                "--symbolic-full-name",
+                "--verify",
+                "--end-of-options",
+                base,
+            ],
         )
         .await?,
     )
     .map_err(|e| e.to_string())?
     .trim()
     .to_string();
-    if !reference.starts_with("refs/") {
-        return Err("--source-history needs a named local ref, such as origin/main".into());
-    }
+    let reference = if symbolic.starts_with("refs/") {
+        symbolic
+    } else {
+        commit
+    };
     let bundle = run(root, &["bundle", "create", "-", "HEAD", &reference]).await?;
     Ok((reference, bundle))
 }
@@ -74,7 +100,15 @@ pub const APPLY: &str = r#"set -e
 W=$1 B=$2
 cd "$W/tree"
 git init -q
-git fetch --no-tags --update-head-ok "$W/.sylphx/source.bundle" "+HEAD:refs/sylphx/source-head" "+$B:$B"
+case "$B" in
+  refs/*) git fetch --no-tags --update-head-ok "$W/.sylphx/source.bundle" "+HEAD:refs/sylphx/source-head" "+$B:$B" ;;
+  *)
+    # Bundle packs include the raw commit's graph even though its header only
+    # advertises named refs. Fetch imports the whole pack; retain the base too.
+    git fetch --no-tags --update-head-ok "$W/.sylphx/source.bundle" "+HEAD:refs/sylphx/source-head"
+    git update-ref refs/sylphx/source-base "$B"
+    ;;
+esac
 git update-ref --no-deref HEAD refs/sylphx/source-head
 git reset --mixed -q HEAD
 rm "$W/.sylphx/source.bundle"
@@ -173,6 +207,63 @@ mod tests {
                 "local\n"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn raw_sha_ships_a_divergent_base_without_changing_local_refs() {
+        let s = Scratch::new();
+        let src = s.0.join("src");
+        let ws = s.0.join("ws");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(ws.join("tree")).unwrap();
+        fs::create_dir_all(ws.join(".sylphx")).unwrap();
+        git(&src, &["init", "-q"]);
+        fs::write(src.join("file"), "common\n").unwrap();
+        git(&src, &["add", "file"]);
+        git(&src, &["commit", "-qm", "common"]);
+        let common = git(&src, &["rev-parse", "HEAD"]);
+        fs::write(src.join("file"), "base\n").unwrap();
+        git(&src, &["commit", "-qam", "base"]);
+        let base = git(&src, &["rev-parse", "HEAD"]);
+        git(&src, &["checkout", "-q", "--detach", &common]);
+        fs::write(src.join("file"), "head\n").unwrap();
+        git(&src, &["commit", "-qam", "head"]);
+        let head = git(&src, &["rev-parse", "HEAD"]);
+        let refs = git(&src, &["show-ref"]);
+        let (reference, bundle) = prepare(&src, &base).await.unwrap();
+        assert_eq!(reference, base);
+        assert_eq!(git(&src, &["show-ref"]), refs);
+        fs::write(ws.join(".sylphx/source.bundle"), bundle).unwrap();
+        fs::write(ws.join("tree/file"), "dirty\n").unwrap();
+        let output = Command::new("sh")
+            .args(["-c", APPLY, "history"])
+            .arg(&ws)
+            .arg(&reference)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let tree = ws.join("tree");
+        assert_eq!(git(&tree, &["rev-parse", "HEAD"]), head);
+        assert_eq!(git(&tree, &["merge-base", &base, "HEAD"]), common);
+        assert_eq!(git(&tree, &["rev-parse", "refs/sylphx/source-base"]), base);
+        assert_eq!(fs::read_to_string(tree.join("file")).unwrap(), "dirty\n");
+    }
+
+    #[tokio::test]
+    async fn missing_sha_reports_the_missing_local_commit() {
+        let s = Scratch::new();
+        git(&s.0, &["init", "-q"]);
+        let missing = "ffffffffffffffffffffffffffffffffffffffff";
+        let error = prepare(&s.0, missing).await.unwrap_err();
+        assert!(error.contains(missing), "{error}");
+        assert!(
+            error.contains("does not resolve to a local commit"),
+            "{error}"
+        );
     }
 
     #[cfg(unix)]

@@ -140,7 +140,7 @@ pub fn command() -> Command {
         .arg(Arg::new("allow-host").long("allow-host").value_name("HOST").action(ArgAction::Append)
             .help("Internet host the run may reach (repeatable); without it only the in-cell build cache and its crates and npm mirrors"))
         .arg(Arg::new("source-history").long("source-history").value_name("REF")
-            .help("Send HEAD and REF's full Git history offline (e.g. origin/main); keep synced local changes"))
+            .help("Send HEAD and a local ref or commit SHA's full Git history offline; required for commands such as git merge-base. Keeps synced local changes"))
         .arg(Arg::new("fresh").long("fresh").action(ArgAction::SetTrue)
             .help("Start from an empty workspace: no synced tree, no target/ or sccache"))
         .arg(Arg::new("dry-run").long("dry-run").action(ArgAction::SetTrue)
