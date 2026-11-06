@@ -1501,7 +1501,20 @@ impl Run<'_> {
             .leases()
             .create(req)
             .await
-            .map_err(|e| api("creating the build machine", &e))?;
+            .map_err(|e| match &e {
+                // The SDK observes this accepted request with the same key
+                // until its result is available. A pending answer escapes
+                // only when another poll would exceed the queue budget.
+                sylphx::Error::Api { code, status: 409, retryable: true, .. }
+                    if code.as_str() == "IDEMPOTENCY_IN_PROGRESS" => Outcome::platform(
+                        format!(
+                            "no build machine{} within --queue-timeout {}s (the accepted request is still running)",
+                            self.where_(), self.o.queue_timeout.as_secs()
+                        ),
+                        true,
+                    ),
+                _ => api("creating the build machine", &e),
+            })?;
         if self.accepted_region.is_none() {
             self.accepted_region = lease.spec.as_ref().map(|s| s.region.clone());
         }

@@ -2908,6 +2908,139 @@ async fn queued_build_timeout(subcommand: &str) {
     );
 }
 
+fn pending_build_machine() -> Value {
+    json!({"code": "IDEMPOTENCY_IN_PROGRESS", "status": 409,
+        "detail": "The first request with this Idempotency-Key is still running.",
+        "retryable": true})
+}
+
+fn assert_same_machine_request(log: &Log, expected: usize) {
+    let seen = log.lock();
+    let creates: Vec<_> = seen
+        .iter()
+        .filter(|s| s.line.starts_with(&format!("POST /v1/{ENV}/leases ")))
+        .collect();
+    assert_eq!(creates.len(), expected);
+    let key = |s: &Seen| {
+        s.head
+            .lines()
+            .find_map(|line| {
+                line.to_ascii_lowercase()
+                    .strip_prefix("idempotency-key:")
+                    .map(|value| value.trim().to_owned())
+            })
+            .unwrap()
+    };
+    assert!(!key(creates[0]).is_empty());
+    for request in &creates {
+        assert_eq!(key(request), key(creates[0]));
+        assert_eq!(request.body, creates[0].body);
+    }
+}
+
+/// Pending observations exceed the SDK's three transient retries and still
+/// return the one accepted lease, then execute the command exactly once.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_pending_machine_attaches_and_succeeds() {
+    let sb = Sandbox::new("build-pending-success");
+    git_init(&sb.dir);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut replies = vec![
+        (
+            409,
+            "application/json",
+            pending_build_machine().to_string().into_bytes()
+        );
+        4
+    ];
+    replies.extend(attempt_replies(&url));
+    replies.extend([envd_process("attached\n", 0), ended()]);
+    let (_, log) = serve_bytes_on(listener, replies).await;
+    let out = run(&sb, &url, &["build", "run", "--no-cache", "--", "true"]).await;
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "attached\n");
+    assert_same_machine_request(&log, 5);
+    assert_eq!(
+        log.lock()
+            .iter()
+            .filter(|s| s.line.contains(":release"))
+            .count(),
+        1
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_pending_machine_surfaces_its_terminal_failure() {
+    let sb = Sandbox::new("build-pending-failure");
+    git_init(&sb.dir);
+    let (url, log) = serve(vec![
+        (409, pending_build_machine()),
+        (
+            422,
+            json!({"code": "SHAPE_NOT_OFFERED", "status": 422,
+            "detail": "build-large is unavailable in this region", "retryable": false}),
+        ),
+    ])
+    .await;
+    let out = run(&sb, &url, &["build", "run", "--no-cache", "--", "true"]).await;
+    assert_eq!(out.status.code(), Some(125));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("build-large is unavailable in this region"),
+        "{err}"
+    );
+    assert!(!err.contains("IDEMPOTENCY_IN_PROGRESS"), "{err}");
+    assert_same_machine_request(&log, 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_run_pending_machine_queue_timeout_is_retryable() {
+    let sb = Sandbox::new("build-pending-timeout");
+    git_init(&sb.dir);
+    let (url, log) = serve(vec![(409, pending_build_machine()); 8]).await;
+    let start = std::time::Instant::now();
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "build",
+            "run",
+            "-o",
+            "json",
+            "--queue-timeout",
+            "2s",
+            "--no-cache",
+            "--",
+            "true",
+        ],
+    )
+    .await;
+    assert!(start.elapsed() < std::time::Duration::from_secs(10));
+    assert_eq!(out.status.code(), Some(125));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let result: Value = serde_json::from_str(stdout.lines().last().unwrap()).unwrap();
+    assert_eq!(result["retryable"], true, "{result}");
+    let error = result["error"].as_str().unwrap();
+    assert!(error.contains("--queue-timeout 2s"), "{result}");
+    assert!(
+        error.contains("accepted request is still running"),
+        "{result}"
+    );
+    assert!(!error.contains("IDEMPOTENCY_IN_PROGRESS"), "{result}");
+    let count = log.lock().len();
+    assert_same_machine_request(&log, count);
+    assert!(log
+        .lock()
+        .iter()
+        .all(|s| s.line.starts_with(&format!("POST /v1/{ENV}/leases "))));
+}
+
 /// A retryable 503 while the machine is being obtained (a stale access
 /// snapshot): the SDK's retries of the one create call are bounded by
 /// --queue-timeout, and the run then exits 125 with the server's own

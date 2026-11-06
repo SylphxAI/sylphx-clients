@@ -200,13 +200,16 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `CARGO_PROFILE_DEV_DEBUG=0`; `--env` overrides these defaults and an explicit
   compiler wrapper is preserved. `--region REGION` pins placement, not a
   persistent workspace. Automatic placement remains the Sandboxes API's
-  responsibility. `--queue-timeout DURATION` (default 30m) is the longest wait
+  responsibility. A retry that meets an in-flight machine request waits for
+  its result with the same idempotency key; it never creates a second machine.
+  `--queue-timeout DURATION` (default 30m) is the longest wait
   for a machine. Keep the default budget for admission and cold boot; override
   it only when the caller needs a different wait limit. The budget covers
   creating the lease (or, with `--no-tree`, the Build) and the SDK's
   retries of retryable API answers while doing so, not just the wait for
   READY. Past it the run releases its lease and exits 125, retryable, with
-  the server's own message when the API answered, so a caller can try
+  the server's own message when the API answered (or a queue-timeout
+  diagnostic if the accepted request is still running), so a caller can try
   another region. `-o json` writes NDJSON events (`queued`,
   `running`, `sync`, `stdout`, `stderr`, `artifact`, `result`); `--dry-run`
   prints what a cold run would send. Git sources include `git ls-files`
