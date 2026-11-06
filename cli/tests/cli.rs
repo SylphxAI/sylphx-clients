@@ -102,6 +102,17 @@ async fn serve_bytes_on(
     listener: TcpListener,
     replies: Vec<(u16, &'static str, Vec<u8>)>,
 ) -> (String, Log) {
+    serve_bytes_headers_on(
+        listener,
+        replies.into_iter().map(|(s, t, b)| (s, t, b, "")).collect(),
+    )
+    .await
+}
+
+async fn serve_bytes_headers_on(
+    listener: TcpListener,
+    replies: Vec<(u16, &'static str, Vec<u8>, &'static str)>,
+) -> (String, Log) {
     let url = format!("http://{}", listener.local_addr().unwrap());
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let seen = log.clone();
@@ -138,9 +149,9 @@ async fn serve_bytes_on(
             let line = head.lines().next().unwrap_or_default().to_string();
             // A recovered expired deadline may signal the guest before release.
             // That guest call must not consume the next platform API response.
-            let (status, content_type, body) =
+            let (status, content_type, body, headers) =
                 if line.starts_with("POST /process.Process/SendSignal ") {
-                    (200, "application/json", b"{}".to_vec())
+                    (200, "application/json", b"{}".to_vec(), "")
                 } else {
                     replies.next().unwrap()
                 };
@@ -150,7 +161,7 @@ async fn serve_bytes_on(
                 body: body_in,
             });
             let head = format!(
-                "HTTP/1.1 {status} X\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                "HTTP/1.1 {status} X\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\n{headers}connection: close\r\n\r\n",
                 body.len()
             );
             sock.write_all(head.as_bytes()).await.unwrap();
@@ -3907,7 +3918,7 @@ async fn build_source_env_missing_or_denied_authority_never_switches_identity() 
         let sb = Sandbox::new(&format!("source-denied-{status}"));
         let (cache, log) = serve(vec![(
             status,
-            json!({"error": {"code": "PERMISSION_DENIED", "message": "sylphx_sk_test"}}),
+            json!({"error": {"code": "PERMISSION_DENIED", "message": "missing build:read sylphx_sk_test\n", "request_id": "req_body_sylphx_sk_test"}}),
         )])
         .await;
         let out = run_with(
@@ -3921,7 +3932,13 @@ async fn build_source_env_missing_or_denied_authority_never_switches_identity() 
         .await;
         assert_eq!(out.status.code(), Some(125));
         assert!(out.stdout.is_empty());
-        assert!(!String::from_utf8_lossy(&out.stderr).contains("sylphx_sk_test"));
+        let error = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            error.contains("PERMISSION_DENIED: missing build:read [redacted]"),
+            "{error}"
+        );
+        assert!(error.contains("request_id=req_body_[redacted]"), "{error}");
+        assert!(!error.contains("sylphx_sk_test"));
         assert_eq!(log.lock().len(), 1);
     }
     let sb = Sandbox::new("source-signed-out");
@@ -4050,6 +4067,81 @@ source = "git+ssh://git@github.com/acme/dependency?rev=main#01234567890123456789
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn build_run_source_grant_missing_preserves_other_repository_sessions() {
+    // Exercise the denied result both before and after a granted dependency.
+    for origin in ["acme/a-origin", "acme/z-origin"] {
+        let sb = Sandbox::new(&format!("source-mixed-{}", origin.replace('/', "-")));
+        project(&sb.dir);
+        assert!(Command::new("git")
+            .arg("-C")
+            .arg(&sb.dir)
+            .args([
+                "config",
+                "remote.origin.url",
+                &format!("https://github.com/{origin}")
+            ])
+            .status()
+            .unwrap()
+            .success());
+        std::fs::write(
+            sb.dir.join("Cargo.lock"),
+            r#"version = 4
+[[package]]
+name = "dependency"
+version = "1.0.0"
+source = "git+https://github.com/acme/private?rev=main#0123456789012345678901234567890123456789"
+"#,
+        )
+        .unwrap();
+        let granted = (200, source_reply("acme/private"));
+        let denied = (403, json!({"error": {"code": "SOURCE_GRANT_MISSING"}}));
+        let results = if origin < "acme/private" {
+            [denied, granted]
+        } else {
+            [granted, denied]
+        };
+        let (cache, requests) = serve(
+            std::iter::once((200, cache_reply()))
+                .chain(results)
+                .collect(),
+        )
+        .await;
+        let (api, log) = build_stub_at(
+            "fsn1",
+            vec![
+                envd_process("", 0),
+                (200, "application/json", b"{}".to_vec()),
+                envd_process("", 0),
+                envd_process("built\n", 0),
+                envd_process("", 0),
+                ended(),
+            ],
+        )
+        .await;
+        let out = run_with(&sb, &api, &["build", "run", "--", "true"], |command| {
+            command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+            // No local Git access to the private dependency: an accidental
+            // fallback must fail immediately without making a network request.
+            command.env("GIT_ALLOW_PROTOCOL", "file");
+        })
+        .await;
+        let error = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(0), "{origin}: {error}");
+        assert!(String::from_utf8_lossy(&out.stdout).contains("built"));
+        assert!(!error.contains("source cache unavailable"), "{error}");
+        assert_eq!(requests.lock().len(), 3);
+        let env = started_env(&log);
+        assert_eq!(env["CARGO_NET_GIT_FETCH_WITH_CLI"], "true");
+        assert_eq!(env["GIT_CONFIG_COUNT"], "8");
+        assert!(log
+            .lock()
+            .iter()
+            .any(|request| request.body.contains("source-auth-cleanup")));
+        assert!(!error.contains("source-session-test-token"));
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn build_run_source_endpoint_absence_uses_existing_inputs_without_claiming_source_cache() {
     let sb = Sandbox::new("source-rollout");
     project(&sb.dir);
@@ -4091,42 +4183,69 @@ async fn build_run_source_endpoint_absence_uses_existing_inputs_without_claiming
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn build_run_source_authorization_denial_does_not_use_another_credential() {
-    let sb = Sandbox::new("source-run-denied");
-    project(&sb.dir);
-    assert!(Command::new("git")
-        .arg("-C")
-        .arg(&sb.dir)
-        .args([
-            "config",
-            "remote.origin.url",
-            "https://github.com/acme/repo"
-        ])
-        .status()
-        .unwrap()
-        .success());
-    let (cache, requests) = serve(vec![
-        (200, cache_reply()),
-        (403, json!({"error": {"code": "PERMISSION_DENIED"}})),
-    ])
-    .await;
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = format!("http://{}", listener.local_addr().unwrap());
-    let mut replies = attempt_replies(&address);
-    replies.truncate(2);
-    replies.push(ended());
-    let (api, log) = serve_bytes_on(listener, replies).await;
-    let out = run_with(&sb, &api, &["build", "run", "--", "true"], |command| {
-        command.env("SYLPHX_BUILD_CACHE_URL", &cache);
-    })
-    .await;
-    assert_eq!(out.status.code(), Some(125));
-    assert!(String::from_utf8_lossy(&out.stderr).contains("PERMISSION_DENIED"));
-    assert_eq!(requests.lock().len(), 2);
-    assert!(!log
-        .lock()
-        .iter()
-        .any(|request| request.line.starts_with("POST /process.Process/Start")));
+async fn build_run_source_authorization_denial_warns_and_uses_existing_sources() {
+    for status in [401, 403] {
+        let sb = Sandbox::new(&format!("source-run-denied-{status}"));
+        project(&sb.dir);
+        assert!(Command::new("git")
+            .arg("-C")
+            .arg(&sb.dir)
+            .args([
+                "config",
+                "remote.origin.url",
+                "https://github.com/acme/repo"
+            ])
+            .status()
+            .unwrap()
+            .success());
+        let denial = json!({"error": {
+            "code": "PERMISSION_DENIED",
+            "message": "The key lacks build:read: sylphx_sk_test\n",
+            "request_id": "req_body"
+        }});
+        let (cache, requests) = serve_bytes_headers_on(
+            TcpListener::bind("127.0.0.1:0").await.unwrap(),
+            vec![
+                (
+                    200,
+                    "application/json",
+                    cache_reply().to_string().into_bytes(),
+                    "",
+                ),
+                (
+                    status,
+                    "application/json",
+                    denial.to_string().into_bytes(),
+                    "x-request-id: req_header_sylphx_sk_test\r\n",
+                ),
+            ],
+        )
+        .await;
+        let (api, log) = build_stub(vec![envd_process("", 0), ended()]).await;
+        let out = run_with(&sb, &api, &["build", "run", "--", "true"], |command| {
+            command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        })
+        .await;
+        let error = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(0), "{error}");
+        assert!(error.contains(&format!("HTTP {status} PERMISSION_DENIED: The key lacks build:read: [redacted]; request_id=req_header_[redacted]")), "{error}");
+        assert_eq!(
+            error.matches("warning: source cache unavailable").count(),
+            1
+        );
+        assert!(!error.contains("sylphx_sk_test"), "{error}");
+        assert!(!error.contains("req_body"), "{error}");
+        assert_eq!(requests.lock().len(), 2);
+        assert!(log
+            .lock()
+            .iter()
+            .any(|request| request.line.starts_with("POST /process.Process/Start")));
+        assert!(started_env(&log).get("GIT_CONFIG_COUNT").is_none());
+        assert!(!log
+            .lock()
+            .iter()
+            .any(|request| request.body.contains("source-auth")));
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -840,6 +840,7 @@ async fn execute(
         key,
         cache_url: build_cache::base_url(),
         cache_warned: AtomicBool::new(false),
+        source_warned: AtomicBool::new(false),
         accepted_region: None,
     };
     let mut retries = Retries::default();
@@ -935,6 +936,8 @@ struct Run<'a> {
     /// One warning per run: the build cache unavailable, or the build store
     /// not taking the sync.
     cache_warned: AtomicBool,
+    /// Source authorization diagnostics must survive a compiler-cache warning.
+    source_warned: AtomicBool,
     /// The first accepted lease's canonical region, even before READY.
     /// `None` is unselected; `Some("")` is the legacy home-Cell spelling.
     accepted_region: Option<String>,
@@ -1012,7 +1015,8 @@ impl Run<'_> {
     }
 
     async fn attempt(&mut self) -> Attempt {
-        let warned_before = self.cache_warned.load(Ordering::Relaxed);
+        let warned_before =
+            self.cache_warned.load(Ordering::Relaxed) || self.source_warned.load(Ordering::Relaxed);
         let mut m = match self.acquire().await {
             Ok(m) => m,
             Err(a) => return a,
@@ -1050,7 +1054,9 @@ impl Run<'_> {
             Err(e) => return self.lost_or(&name, e).await,
         }
         let shape = format!("build-{}", self.o.size);
-        let warned = !warned_before && self.cache_warned.load(Ordering::Relaxed);
+        let warned = !warned_before
+            && (self.cache_warned.load(Ordering::Relaxed)
+                || self.source_warned.load(Ordering::Relaxed));
         // A warning takes the place of this progress line.
         if !warned {
             self.out.progress(&format!(
@@ -1177,6 +1183,8 @@ impl Run<'_> {
                     build_source::merge_env(&mut sources.env, minted.env);
                     sources.repositories.insert(repository);
                 }
+                // A missing grant applies only to this repository, not to
+                // sessions already granted for the build's other sources.
                 Err(build_cache::MintError::Status {
                     status: 403,
                     code: Some(code),
@@ -1188,20 +1196,20 @@ impl Run<'_> {
                         build_cache::MintError::TimedOut
                             | build_cache::MintError::Unreachable
                             | build_cache::MintError::Status {
-                                status: 404 | 500..=599,
+                                status: 401 | 403 | 404 | 500..=599,
                                 ..
                             }
                     ) =>
                 {
-                    if !self.cache_warned.swap(true, Ordering::Relaxed) {
-                        eprintln!("sylphx: warning: source cache unavailable ({}); using the caller’s existing source inputs", error.short());
+                    if !self.source_warned.swap(true, Ordering::Relaxed) {
+                        eprintln!("sylphx: warning: source cache unavailable ({}); using the caller’s existing source inputs", error.diagnostic());
                     }
                     sources.env.clear();
                     sources.repositories.clear();
                     sources.expires_at = u64::MAX;
                     return Ok(sources);
                 }
-                Err(e) => return Err(format!("source session unavailable ({})", e.short())),
+                Err(e) => return Err(format!("source session unavailable ({})", e.diagnostic())),
             }
         }
         Ok(sources)
@@ -1266,7 +1274,10 @@ impl Run<'_> {
             )
             .await
             .map_err(|error| {
-                Fault::Other(format!("source session renewal failed ({})", error.short()))
+                Fault::Other(format!(
+                    "source session renewal failed ({})",
+                    error.diagnostic()
+                ))
             })?;
             self.remember_source(&minted);
             expires_at = expires_at.min(
@@ -2895,6 +2906,7 @@ mod tests {
                     key: None,
                     cache_url: String::new(),
                     cache_warned: AtomicBool::new(false),
+                    source_warned: AtomicBool::new(false),
                     accepted_region: None,
                 };
                 for _ in 0..2 {
@@ -4031,6 +4043,7 @@ esac
             key: None,
             cache_url: String::new(),
             cache_warned: AtomicBool::new(false),
+            source_warned: AtomicBool::new(false),
             accepted_region: None,
         }
     }

@@ -173,6 +173,7 @@ pub enum MintError {
         status: u16,
         code: Option<String>,
         message: String,
+        request_id: Option<String>,
     },
     BadReply,
 }
@@ -202,6 +203,27 @@ impl MintError {
             }
             other => format!("the build cache is unavailable ({})", other.short()),
         }
+    }
+
+    /// The safe gateway denial, including its correlation id when supplied.
+    pub fn diagnostic(&self) -> String {
+        let mut detail = self.short();
+        if let Self::Status {
+            message,
+            request_id,
+            ..
+        } = self
+        {
+            if !message.is_empty() {
+                detail.push_str(": ");
+                detail.push_str(message);
+            }
+            if let Some(id) = request_id {
+                detail.push_str("; request_id=");
+                detail.push_str(id);
+            }
+        }
+        detail
     }
 
     /// A refused argument is the caller's to fix; the rest is the platform's.
@@ -285,6 +307,11 @@ pub(crate) async fn mint_at(
             }
         })?;
     let status = resp.status();
+    let request_id = ["sylphx-request-id", "x-request-id"]
+        .into_iter()
+        .filter_map(|name| resp.headers().get(name)?.to_str().ok())
+        .map(|id| clean(id, key))
+        .find(|id| !id.is_empty());
     let bytes = resp.bytes().await.map_err(|e| {
         if e.is_timeout() {
             MintError::TimedOut
@@ -307,6 +334,7 @@ pub(crate) async fn mint_at(
             status: status.as_u16(),
             code: text("code").filter(|c| c.chars().all(|c| c.is_ascii_uppercase() || c == '_')),
             message: text("message").unwrap_or_default(),
+            request_id: request_id.or_else(|| text("request_id")),
         });
     }
     parse_env(v.as_ref().ok_or(MintError::BadReply)?)

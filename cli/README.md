@@ -295,6 +295,10 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   Git invocation rereads the file; no caller Access key goes to the lease. Source
   credentials are removed before releasing the lease, and output redacts tokens
   even when a process splits them across output events.
+  If a build run's initial optional source-cache mint is denied (401/403), it
+  warns once with the code, safe message and request id, then uses the caller's
+  existing source inputs. Build admission and explicit `build source env`
+  authorization failures still fail the command.
   In CI, `scripts/ci/setup-source.py` configures the same Git environment before
   checkout using the job’s own `GITHUB_TOKEN` and `id-token: write` OIDC identity
   (audience `sylphx-build-source`), with tokens masked and runner env files private.

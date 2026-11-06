@@ -235,7 +235,7 @@ pub async fn run(creds: Option<Resolved>, m: &ArgMatches, format: Format) -> Res
     )
     .await
     .map_err(|e| {
-        eprintln!("error: source session unavailable ({})", e.short());
+        eprintln!("error: source session unavailable ({})", e.diagnostic());
         Failure::Exit(125)
     })?;
     match format {
