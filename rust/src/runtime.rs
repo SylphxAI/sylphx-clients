@@ -1049,6 +1049,8 @@ fn key_not_yet_propagated(response: &HttpResponse) -> bool {
         return false;
     }
     let code = error.unwrap_or(&raw).get("code").and_then(|v| v.as_str());
+    // Keep legacy replies for one release after every platform emitter serves
+    // NOT_YET_PROPAGATED; remove the lowercase and exact-detail fallback then.
     matches!(code, Some("NOT_YET_PROPAGATED" | "key_not_yet_propagated"))
         || (error.is_none()
             && code == Some("UNAUTHENTICATED")

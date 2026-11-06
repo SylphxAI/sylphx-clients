@@ -214,6 +214,8 @@ function keyNotYetPropagated(status: number, raw: Record<string, unknown>): bool
 	const nested = raw.error !== null && typeof raw.error === 'object' ? (raw.error as Record<string, unknown>) : undefined
 	if (nested?.effect !== undefined && nested.effect !== 'none') return false
 	const code = (nested ?? raw).code
+	// Keep legacy replies for one release after every platform emitter serves
+	// NOT_YET_PROPAGATED; remove the lowercase and exact-detail fallback then.
 	return code === 'NOT_YET_PROPAGATED' || code === 'key_not_yet_propagated' || (
 		nested === undefined && code === 'UNAUTHENTICATED' &&
 		raw.detail === 'The key was refused (key_not_yet_propagated).'
