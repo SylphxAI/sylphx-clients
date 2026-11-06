@@ -1092,8 +1092,13 @@ impl Run<'_> {
         let ran = self
             .exec(&mut guest, &mut minted, &name, m.cache, sources, &setup)
             .await;
-        // The credentials are gone before anything else is asked of the
-        // machine, whatever the build's end.
+        // Read the registry with this build's credential before removing it.
+        // Keep the result until cleanup finishes, including on a refusal.
+        let image_result = if self.o.image.is_some() && matches!(&ran, Ok(Some(0))) {
+            self.collect_image(&guest, &name).await
+        } else {
+            Ok(())
+        };
         self.drop_auth(&guest).await;
         if has_sources {
             let none = BTreeMap::new();
@@ -1120,10 +1125,8 @@ impl Run<'_> {
             }
             Err(ExecFault::Launched(fault)) => return self.lost_after_start(&name, fault).await,
         };
-        if self.o.image.is_some() && code == 0 {
-            if let Err(o) = self.collect_image(&guest, &name).await {
-                return Attempt::Done(o);
-            }
+        if let Err(o) = image_result {
+            return Attempt::Done(o);
         }
         if !self.o.artifacts.is_empty() {
             if let Err(e) = self.collect(&guest, &name).await {
@@ -2210,7 +2213,7 @@ impl Run<'_> {
         // A managed publication is registered in Sylphx Artifacts, so a
         // Release can name it; the deployable reference is what a caller
         // deploys with.
-        if let Some(publish) = self.held.with(|h| h.publish.take()).filter(|p| p.managed) {
+        if let Some(publish) = self.held.with(|h| h.publish.clone()).filter(|p| p.managed) {
             let (artifact, source_ref) = self.register_image(g, &meta, &publish).await?;
             if !self.o.json {
                 println!("source_ref: {source_ref}");
@@ -2237,11 +2240,22 @@ impl Run<'_> {
     ) -> Result<(String, String), Outcome> {
         let digest = image::image_digest(meta)
             .ok_or_else(|| Outcome::platform("the build metadata names no image digest", false))?;
-        let descriptor = self.index_descriptor(g, digest).await?;
         let reference = publish.reference.as_deref().unwrap_or_default();
         let source_ref = image::source_ref(reference, digest).ok_or_else(|| {
             Outcome::platform(format!("{reference}: not a published digest"), false)
         })?;
+        let auth = g
+            .download(&image::auth_path(), USER)
+            .await
+            .map_err(|f| {
+                Outcome::platform(format!("reading registry credentials: {}", f.text()), true)
+            })?
+            .ok_or_else(|| {
+                Outcome::platform("the build's registry credentials are missing", false)
+            })?;
+        let descriptor = image::registry_descriptor(&source_ref, &auth)
+            .await
+            .map_err(|e| Outcome::platform(e, false))?;
         let parent = image::project_parent(&self.parent).ok_or_else(|| {
             Outcome::platform(
                 format!("{}: no project to register the image in", self.parent),
@@ -2261,7 +2275,7 @@ impl Run<'_> {
         &self,
         parent: &str,
         digest: &str,
-        descriptor: image::IndexDescriptor,
+        descriptor: image::ImageDescriptor,
         expected_reference: &str,
     ) -> Result<String, Outcome> {
         let mut artifact = sylphx::artifacts::Artifact::default();
@@ -2322,57 +2336,6 @@ impl Run<'_> {
             ));
         }
         Ok(artifact)
-    }
-
-    /// The pushed image index's descriptor, read from the build's OCI archive
-    /// on the machine: Kernel Artifacts needs the media type and byte size
-    /// the registry stored under the pushed digest, which the build metadata
-    /// does not carry.
-    async fn index_descriptor(
-        &self,
-        g: &Guest,
-        digest: &str,
-    ) -> Result<image::IndexDescriptor, Outcome> {
-        let args = argv(&[
-            "/bin/sh",
-            "-c",
-            image::INDEX_DESCRIPTOR,
-            "image-descriptor",
-            &image::oci_path(),
-            digest,
-        ]);
-        let (code, out, err) = g.run(USER, &args, &BTreeMap::new()).await.map_err(|f| {
-            Outcome::platform(format!("reading the image descriptor: {}", f.text()), true)
-        })?;
-        if code != 0 {
-            return Err(Outcome::platform(
-                format!(
-                    "reading the image descriptor: {}",
-                    String::from_utf8_lossy(&err).trim()
-                ),
-                false,
-            ));
-        }
-        let value: Value =
-            serde_json::from_str(String::from_utf8_lossy(&out).trim()).map_err(|e| {
-                Outcome::platform(format!("the image descriptor is not JSON: {e}"), false)
-            })?;
-        let descriptor = image::index_descriptor(&value).ok_or_else(|| {
-            Outcome::platform(
-                format!("the image archive holds no descriptor for {digest}"),
-                false,
-            )
-        })?;
-        if descriptor.digest != digest {
-            return Err(Outcome::platform(
-                format!(
-                    "the image archive's descriptor names {} and the metadata {digest}",
-                    descriptor.digest
-                ),
-                false,
-            ));
-        }
-        Ok(descriptor)
     }
 
     /// Copies the `--artifact` matches back, checking each digest.
@@ -4130,7 +4093,7 @@ esac
                 .register(
                     "orgs/org_a/projects/prj_a",
                     &digest,
-                    image::IndexDescriptor {
+                    image::ImageDescriptor {
                         media_type: "application/vnd.oci.image.index.v1+json".into(),
                         digest: digest.clone(),
                         size_bytes: 4096,

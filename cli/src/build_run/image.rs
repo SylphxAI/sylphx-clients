@@ -27,6 +27,9 @@ use serde_json::Value;
 
 use super::{BUILD_CACHE_HOST, SIZES, WS};
 
+mod registry;
+pub use registry::registry_descriptor;
+
 /// The guest command.
 pub const GUEST_BIN: &str = "/usr/local/bin/sylphx-image-build";
 /// The registry the managed publication pushes to: the deployed data-plane
@@ -141,10 +144,9 @@ pub struct Source {
     pub commit: String,
 }
 
-/// The pushed image index's descriptor, as the OCI archive records it: what
-/// Kernel Artifacts needs besides the digest.
+/// The published manifest descriptor confirmed by the registry.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IndexDescriptor {
+pub struct ImageDescriptor {
     pub media_type: String,
     pub digest: String,
     pub size_bytes: i64,
@@ -278,10 +280,8 @@ impl Image {
         if publish.auth {
             a.extend(["--registry-auth".into(), auth_path()]);
         }
-        // A managed build always keeps the archive at a known path: the
-        // pushed index's descriptor (media type, size) is read from it after
-        // the build, to register the image in Artifacts.
-        if self.oci_out.is_some() || self.managed {
+        // Retain an archive only when the caller asks to download it.
+        if self.oci_out.is_some() {
             a.extend(["--oci-out".into(), oci_path()]);
         }
         a
@@ -386,36 +386,6 @@ pub fn image_digest(meta: &Value) -> Option<&str> {
     is_digest(digest).then_some(digest)
 }
 
-/// The pushed image index's descriptor, as
-/// [`INDEX_DESCRIPTOR`] prints it: the media type and byte size the registry
-/// stored under the pushed digest.
-pub fn index_descriptor(v: &Value) -> Option<IndexDescriptor> {
-    let media_type = v.get("mediaType")?.as_str()?;
-    let digest = v.get("digest")?.as_str()?;
-    let size_bytes = v.get("size")?.as_i64()?;
-    if size_bytes <= 0 || media_type.is_empty() || !is_digest(digest) {
-        return None;
-    }
-    Some(IndexDescriptor {
-        media_type: media_type.to_string(),
-        digest: digest.to_string(),
-        size_bytes,
-    })
-}
-
-/// Reads the pushed image index's descriptor from the build's OCI archive:
-/// the archive always holds the index the build pushed, and its descriptor
-/// carries the media type and byte size the registry stored. The descriptor
-/// must be the pushed digest's own — an archive that does not hold it is
-/// reported, never substituted. Args: the archive, then the pushed digest.
-pub const INDEX_DESCRIPTOR: &str = r#"d=$1
-want=$2
-[ -f "$d" ] || exit 3
-tar -xOf "$d" index.json | jq -c --arg want "$want" '
-  ((.manifests // []) | map(select(.digest == $want)) | .[0]) // empty
-'
-"#;
-
 /// Commit time and id of the local HEAD, when the work tree is clean at HEAD
 /// (nothing modified, staged or untracked). `None` otherwise.
 pub fn source_of(root: &Path) -> Option<Source> {
@@ -501,8 +471,7 @@ mod tests {
 
     /// No `--push` and no `--registry-auth`: the build is a managed one. Its
     /// upload reference and credentials do not exist yet, so the command as
-    /// parsed carries neither — and it keeps the archive where the pushed
-    /// index's descriptor is read from after the build.
+    /// parsed carries neither. No archive is retained without --oci-out.
     #[test]
     fn defaults_render_the_managed_command() {
         let i = parse(&["sylphx", "image"]).unwrap();
@@ -516,9 +485,7 @@ mod tests {
                 "--state",
                 "/workspace/buildkit",
                 "--metadata",
-                "/workspace/.sylphx/image.json",
-                "--oci-out",
-                "/workspace/.sylphx/image.oci.tar"
+                "/workspace/.sylphx/image.json"
             ]
         );
         let sub = i.guest_argv("services/api", &i.explicit_publish());
@@ -776,36 +743,6 @@ mod tests {
         ] {
             assert!(!is_digest(invalid), "{invalid}");
         }
-    }
-
-    /// The pushed index's descriptor the guest prints from the archive: what
-    /// Kernel Artifacts needs beyond the digest.
-    #[test]
-    fn the_index_descriptor_carries_the_media_type_and_size() {
-        let digest = format!("sha256:{}", "c".repeat(64));
-        let v = serde_json::json!({
-            "mediaType": "application/vnd.oci.image.index.v1+json",
-            "digest": digest.clone(),
-            "size": 4096
-        });
-        let d = index_descriptor(&v).expect("descriptor");
-        assert_eq!(d.media_type, "application/vnd.oci.image.index.v1+json");
-        assert_eq!(d.digest, digest);
-        assert_eq!(d.size_bytes, 4096);
-        // A descriptor without a size, a digest, or a media type is refused:
-        // a registration must carry the real ones.
-        assert_eq!(
-            index_descriptor(&serde_json::json!({"digest": digest.clone()})),
-            None
-        );
-        assert_eq!(
-            index_descriptor(&serde_json::json!({"digest": digest.clone(), "mediaType": "x"})),
-            None
-        );
-        assert_eq!(
-            index_descriptor(&serde_json::json!({"digest": digest, "mediaType": "x", "size": 0})),
-            None
-        );
     }
 
     #[test]
