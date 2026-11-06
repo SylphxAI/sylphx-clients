@@ -7125,6 +7125,191 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a holder's retention reference, or creates it with allow_missing. Existing expiry is only extended, never shortened. The exact repository and digest must have an owned Artifact receipt. Success means the registry protection tag has been written and read back; a failed pin attempt commits no reference. Concurrent updates never shorten retention."
+      },
+      "description": "Updates a holder's retention reference, or creates it with allow_missing.\nExisting expiry is only extended, never shortened. The exact\nrepository and digest must have an owned Artifact receipt. Success means\nthe registry protection tag has been written and read back; a failed pin\nattempt commits no reference. Concurrent updates never shorten retention.",
+      "effect": "write",
+      "http": "PATCH /v1/{artifact_reference.name=orgs/*/projects/*/envs/*/artifact_references/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateArtifactReference.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create this reference when absent, after verifying ownership and pinning.",
+            "type": "boolean"
+          },
+          "artifact_reference": {
+            "additionalProperties": false,
+            "description": "The reference to update; name identifies its immutable image and holder.",
+            "properties": {
+              "digest": {
+                "description": "The exact algorithm-qualified SHA-256 image digest.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "expires_at": {
+                "description": "Keep this image until this instant. Repeating Update only extends it.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "holder_id": {
+                "description": "The holding resource's stable identity within this environment.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "holder_kind": {
+                "description": "The kind of holding resource, for example `device_state`.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              },
+              "name": {
+                "description": "The canonical reference name; derived from the image and holder identity.",
+                "type": "string"
+              },
+              "repository": {
+                "description": "The exact managed registry repository, without host, tag or digest.",
+                "type": "string",
+                "x-sylphx-immutable": true
+              }
+            },
+            "required": [
+              "expires_at"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "Only expires_at is mutable. Unset or * writes populated fields.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_reference"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "artifacts.artifact_references.update",
+      "permission": "artifacts:retain",
+      "tool": "artifacts_artifact_references_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists this environment's holder references, including expired references."
+      },
+      "description": "Lists this environment's holder references, including expired references.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/artifact_references",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListArtifactReferences.",
+        "properties": {
+          "filter": {
+            "description": "A filter on repository, digest or holder_kind, using the List filter grammar.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum results; defaults to 50 and is capped at 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The next_page_token of the preceding page with the same parameters.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment holding this retention declaration.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/ArtifactReference"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "artifacts.artifact_references.list",
+      "permission": "artifacts:read",
+      "tool": "artifacts_artifact_references_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an exact holder reference, including its current expiry."
+      },
+      "description": "Gets an exact holder reference, including its current expiry.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetArtifactReference.",
+        "properties": {
+          "name": {
+            "description": "The exact reference to read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/ArtifactReference"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "artifacts.artifact_references.get",
+      "permission": "artifacts:read",
+      "tool": "artifacts_artifact_references_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Releases this holder's reference. Other holders keep their protection; registry reconciliation removes a stale tag only after every root expires. Releasing an already absent reference succeeds."
+      },
+      "description": "Releases this holder's reference. Other holders keep their protection;\nregistry reconciliation removes a stale tag only after every root expires.\nReleasing an already absent reference succeeds.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of DeleteArtifactReference.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The exact reference to release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/ArtifactReference"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "artifacts.artifact_references.delete",
+      "permission": "artifacts:retain",
+      "tool": "artifacts_artifact_references_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
         "readOnlyHint": true,
         "title": "Gets an asset."
       },

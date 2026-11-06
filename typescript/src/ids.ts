@@ -51,6 +51,7 @@ export const PREFIXES = [
 	{ prefix: 'ai', entity: 'AiUsage', service: 'ai', collection: null },
 	{ prefix: 'llm', entity: 'LlmLog', service: 'ai', collection: null },
 	{ prefix: 'art', entity: 'Artifact', service: 'artifacts', collection: 'artifacts' },
+	{ prefix: 'arf', entity: 'ArtifactReference', service: 'artifacts', collection: 'artifact_references' },
 	{ prefix: 'bac', entity: 'BillingAccount', service: 'billing', collection: 'billing_accounts' },
 	{ prefix: 'bls', entity: 'BudgetLease', service: 'billing', collection: 'budget_leases' },
 	{ prefix: 'inv', entity: 'Invoice', service: 'billing', collection: 'invoices' },

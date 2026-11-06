@@ -1,0 +1,22 @@
+{
+  "collection": "artifact_references",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ArtifactReference",
+  "message": "sylphx.artifacts.v1.ArtifactReference",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}",
+  "plural": "artifactReferences",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "artifacts",
+  "shape": "record",
+  "singular": "artifactReference",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "artifacts.sylphx.com/ArtifactReference"
+}

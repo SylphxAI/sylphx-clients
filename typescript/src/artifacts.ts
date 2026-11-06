@@ -66,6 +66,30 @@ export interface Artifact {
 	readonly reference?: string
 }
 
+/**
+ * A holder's retention declaration for an exact repository and digest. The
+ * server verifies an owned Artifact receipt and a pullable protection tag
+ * before admitting it. Its lifetime is independent of the producing service.
+ */
+export interface ArtifactReference {
+	/** The canonical reference name; derived from the image and holder identity. */
+	name?: string
+	/** The immutable reference identity. */
+	readonly uid?: string
+	/** Creation metadata. */
+	readonly meta?: common.ResourceMeta
+	/** The exact managed registry repository, without host, tag or digest. */
+	repository?: string
+	/** The exact algorithm-qualified SHA-256 image digest. */
+	digest?: string
+	/** The kind of holding resource, for example `device_state`. */
+	holderKind?: string
+	/** The holding resource's stable identity within this environment. */
+	holderId?: string
+	/** Keep this image until this instant. Repeating Update only extends it. */
+	expiresAt?: string
+}
+
 /** The request of CreateArtifact. */
 export interface CreateArtifactRequest {
 	/** The project to create in. */
@@ -90,6 +114,12 @@ export interface CreateArtifactRequest {
 	managedUpload?: boolean
 }
 
+/** The request of DeleteArtifactReference. */
+export interface DeleteArtifactReferenceRequest {
+	/** The exact reference to release. */
+	name: string
+}
+
 /** The request of DeleteArtifact. */
 export interface DeleteArtifactRequest {
 	/** The name of the artifact to delete. */
@@ -100,10 +130,36 @@ export interface DeleteArtifactRequest {
 	validateOnly?: boolean
 }
 
+/** The request of GetArtifactReference. */
+export interface GetArtifactReferenceRequest {
+	/** The exact reference to read. */
+	name: string
+}
+
 /** The request of GetArtifact. */
 export interface GetArtifactRequest {
 	/** The name of the artifact to get. */
 	name: string
+}
+
+/** The request of ListArtifactReferences. */
+export interface ListArtifactReferencesRequest {
+	/** The environment holding this retention declaration. */
+	parent: string
+	/** Maximum results; defaults to 50 and is capped at 1000. */
+	pageSize?: number
+	/** The next_page_token of the preceding page with the same parameters. */
+	pageToken?: string
+	/** A filter on repository, digest or holder_kind, using the List filter grammar. */
+	filter?: string
+}
+
+/** The response of ListArtifactReferences. */
+export interface ListArtifactReferencesResponse {
+	/** The matching holder references, ordered by name. */
+	artifactReferences?: ArtifactReference[]
+	/** Empty when this is the final page. */
+	nextPageToken?: string
 }
 
 /** The request of ListArtifacts. */
@@ -153,6 +209,16 @@ export interface PrepareUploadResponse {
 	readonly expiresAt?: string
 }
 
+/** The request of UpdateArtifactReference. */
+export interface UpdateArtifactReferenceRequest {
+	/** The reference to update; name identifies its immutable image and holder. */
+	artifactReference: ArtifactReference
+	/** Only expires_at is mutable. Unset or * writes populated fields. */
+	updateMask?: string
+	/** Create this reference when absent, after verifying ownership and pinning. */
+	allowMissing?: boolean
+}
+
 /** ArtifactKind is what an Artifact is. */
 export type ArtifactKind = 'image' | 'sbom' | 'provenance' | 'signature' | 'bundle' | (string & {})
 
@@ -172,16 +238,32 @@ runtime.registerSchemas({
 		['verifyTime', 'verify_time'],
 		['legalHold', 'legal_hold'],
 	],
+	'sylphx.artifacts.v1.ArtifactReference': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['holderKind', 'holder_kind'],
+		['holderId', 'holder_id'],
+		['expiresAt', 'expires_at'],
+	],
 	'sylphx.artifacts.v1.CreateArtifactRequest': [
 		['artifact', 'artifact', 'sylphx.artifacts.v1.Artifact'],
 		['artifactId', 'artifact_id'],
 		['validateOnly', 'validate_only'],
 		['managedUpload', 'managed_upload'],
 	],
+	'sylphx.artifacts.v1.DeleteArtifactReferenceRequest': [],
 	'sylphx.artifacts.v1.DeleteArtifactRequest': [
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.artifacts.v1.GetArtifactReferenceRequest': [],
 	'sylphx.artifacts.v1.GetArtifactRequest': [],
+	'sylphx.artifacts.v1.ListArtifactReferencesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.artifacts.v1.ListArtifactReferencesResponse': [
+		['artifactReferences', 'artifact_references', 'sylphx.artifacts.v1.ArtifactReference'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.artifacts.v1.ListArtifactsRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -197,6 +279,11 @@ runtime.registerSchemas({
 		['registryAuth', 'registry_auth'],
 		['expiresAt', 'expires_at'],
 	],
+	'sylphx.artifacts.v1.UpdateArtifactReferenceRequest': [
+		['artifactReference', 'artifact_reference', 'sylphx.artifacts.v1.ArtifactReference'],
+		['updateMask', 'update_mask'],
+		['allowMissing', 'allow_missing'],
+	],
 })
 
 /**
@@ -208,9 +295,12 @@ runtime.registerSchemas({
 export class ArtifactsApi {
 	/** The `artifacts` collection. */
 	readonly artifacts: ArtifactsCollection
+	/** The `artifact_references` collection. */
+	readonly artifactReferences: ArtifactReferencesCollection
 
 	constructor(client: runtime.Client) {
 		this.artifacts = new ArtifactsCollection(client)
+		this.artifactReferences = new ArtifactReferencesCollection(client)
 	}
 }
 
@@ -319,6 +409,99 @@ export class ArtifactsCollection {
 			method: 'DELETE',
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/artifacts/*', 'name')}`,
 			query: { etag: request.etag, validate_only: request.validateOnly },
+			mutation: true,
+		})
+	}
+}
+
+/** `artifact_references` of Sylphx Artifacts: Resource type `artifacts.sylphx.com/ArtifactReference`. */
+export class ArtifactReferencesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Updates a holder's retention reference, or creates it with allow_missing.
+	 * Existing expiry is only extended, never shortened. The exact
+	 * repository and digest must have an owned Artifact receipt. Success means
+	 * the registry protection tag has been written and read back; a failed pin
+	 * attempt commits no reference. Concurrent updates never shorten retention.
+	 *
+	 * `PATCH /v1/{artifact_reference.name=orgs/*\/projects/*\/envs/*\/artifact_references/*}` · permission `artifacts:retain` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async update(request: UpdateArtifactReferenceRequest): Promise<ArtifactReference> {
+		return this.client.call<ArtifactReference>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.artifactReference?.name, 'orgs/*/projects/*/envs/*/artifact_references/*', 'artifact_reference.name')}`,
+			query: { update_mask: request.updateMask, allow_missing: request.allowMissing },
+			body: request.artifactReference ?? {},
+			bodyType: 'sylphx.artifacts.v1.ArtifactReference',
+			responseType: 'sylphx.artifacts.v1.ArtifactReference',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Lists this environment's holder references, including expired references.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/artifact_references` · permission `artifacts:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async list(request: ListArtifactReferencesRequest): Promise<ListArtifactReferencesResponse> {
+		return this.client.call<ListArtifactReferencesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/artifact_references`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter },
+			responseType: 'sylphx.artifacts.v1.ListArtifactReferencesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListArtifactReferencesRequest): AsyncGenerator<ArtifactReference> {
+		let next: ListArtifactReferencesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.artifactReferences ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Gets an exact holder reference, including its current expiry.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/artifact_references/*}` · permission `artifacts:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async get(request: GetArtifactReferenceRequest): Promise<ArtifactReference> {
+		return this.client.call<ArtifactReference>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/artifact_references/*', 'name')}`,
+			responseType: 'sylphx.artifacts.v1.ArtifactReference',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Releases this holder's reference. Other holders keep their protection;
+	 * registry reconciliation removes a stale tag only after every root expires.
+	 * Releasing an already absent reference succeeds.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/artifact_references/*}` · permission `artifacts:retain` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async delete(request: DeleteArtifactReferenceRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/artifact_references/*', 'name')}`,
 			mutation: true,
 		})
 	}

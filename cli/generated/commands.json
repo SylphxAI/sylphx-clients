@@ -4516,6 +4516,115 @@
           ],
           "noun": "artifacts",
           "resource_type": "artifacts.sylphx.com/Artifact"
+        },
+        {
+          "collection": "artifact_references",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "artifact_reference.expires_at",
+                  "flag": "--expires-at",
+                  "required": true,
+                  "summary": "Keep this image until this instant. Repeating Update only extends it.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "allow_missing",
+                  "flag": "--allow-missing",
+                  "summary": "Create this reference when absent, after verifying ownership and pinning.",
+                  "type": "bool"
+                }
+              ],
+              "http": "PATCH /v1/{artifact_reference.name=orgs/*/projects/*/envs/*/artifact_references/*}",
+              "method": "artifacts.artifact_references.update",
+              "permission": "artifacts:retain",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "artifact_reference.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}"
+              },
+              "resource_field": "artifact_reference",
+              "sends_etag": true,
+              "summary": "Updates a holder's retention reference, or creates it with allow_missing. Existing expiry is only extended, never shortened. The exact repository and digest must have an owned Artifact receipt. Success means the registry protection tag has been written and read back; a failed pin attempt commits no reference. Concurrent updates never shorten retention.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum results; defaults to 50 and is capped at 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "The next_page_token of the preceding page with the same parameters.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "A filter on repository, digest or holder_kind, using the List filter grammar.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/artifact_references",
+              "method": "artifacts.artifact_references.list",
+              "paginates": true,
+              "permission": "artifacts:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists this environment's holder references, including expired references.",
+              "verb": "list"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}",
+              "method": "artifacts.artifact_references.get",
+              "permission": "artifacts:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}"
+              },
+              "summary": "Gets an exact holder reference, including its current expiry.",
+              "verb": "get"
+            },
+            {
+              "confirm": {
+                "prompt": true,
+                "skip_flag": "--yes"
+              },
+              "effect": "destructive",
+              "flags": [],
+              "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}",
+              "method": "artifacts.artifact_references.delete",
+              "permission": "artifacts:retain",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}"
+              },
+              "summary": "Releases this holder's reference. Other holders keep their protection; registry reconciliation removes a stale tag only after every root expires. Releasing an already absent reference succeeds.",
+              "verb": "delete"
+            }
+          ],
+          "noun": "artifact-references",
+          "resource_type": "artifacts.sylphx.com/ArtifactReference"
         }
       ],
       "commands": [],

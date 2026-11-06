@@ -22757,6 +22757,165 @@
       "package": "sylphx.artifacts.v1"
     },
     {
+      "doc": "A holder's retention declaration for an exact repository and digest. The\nserver verifies an owned Artifact receipt and a pullable protection tag\nbefore admitting it. Its lifetime is independent of the producing service.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "The canonical reference name; derived from the image and holder identity.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The immutable reference identity.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Creation metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The exact managed registry repository, without host, tag or digest.",
+          "filterable": true,
+          "name": "repository",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The exact algorithm-qualified SHA-256 image digest.",
+          "filterable": true,
+          "name": "digest",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The kind of holding resource, for example `device_state`.",
+          "filterable": true,
+          "name": "holder_kind",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The holding resource's stable identity within this environment.",
+          "filterable": false,
+          "name": "holder_id",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Keep this image until this instant. Repeating Update only extends it.",
+          "filterable": false,
+          "name": "expires_at",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.ArtifactReference",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
       "doc": "The request of CreateArtifact.",
       "fields": [
         {
@@ -22859,6 +23018,32 @@
       "package": "sylphx.artifacts.v1"
     },
     {
+      "doc": "The request of DeleteArtifactReference.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The exact reference to release.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "artifacts.sylphx.com/ArtifactReference",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.DeleteArtifactReferenceRequest",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
       "doc": "The request of DeleteArtifact.",
       "fields": [
         {
@@ -22923,6 +23108,32 @@
       "package": "sylphx.artifacts.v1"
     },
     {
+      "doc": "The request of GetArtifactReference.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The exact reference to read.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "artifacts.sylphx.com/ArtifactReference",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.GetArtifactReferenceRequest",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
       "doc": "The request of GetArtifact.",
       "fields": [
         {
@@ -22946,6 +23157,130 @@
         }
       ],
       "name": "sylphx.artifacts.v1.GetArtifactRequest",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
+      "doc": "The request of ListArtifactReferences.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The environment holding this retention declaration.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "artifacts.sylphx.com/ArtifactReference",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum results; defaults to 50 and is capped at 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The next_page_token of the preceding page with the same parameters.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A filter on repository, digest or holder_kind, using the List filter grammar.",
+          "filterable": false,
+          "name": "filter",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.ListArtifactReferencesRequest",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
+      "doc": "The response of ListArtifactReferences.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The matching holder references, ordered by name.",
+          "filterable": false,
+          "name": "artifact_references",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.artifacts.v1.ArtifactReference"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Empty when this is the final page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.ListArtifactReferencesResponse",
       "package": "sylphx.artifacts.v1"
     },
     {
@@ -23179,6 +23514,70 @@
         }
       ],
       "name": "sylphx.artifacts.v1.PrepareUploadResponse",
+      "package": "sylphx.artifacts.v1"
+    },
+    {
+      "doc": "The request of UpdateArtifactReference.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The reference to update; name identifies its immutable image and holder.",
+          "filterable": false,
+          "name": "artifact_reference",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.artifacts.v1.ArtifactReference"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Only expires_at is mutable. Unset or * writes populated fields.",
+          "filterable": false,
+          "name": "update_mask",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "field_mask"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Create this reference when absent, after verifying ownership and pinning.",
+          "filterable": false,
+          "name": "allow_missing",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.artifacts.v1.UpdateArtifactReferenceRequest",
       "package": "sylphx.artifacts.v1"
     },
     {
@@ -143514,6 +143913,28 @@
       "type": "artifacts.sylphx.com/Artifact"
     },
     {
+      "collection": "artifact_references",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "ArtifactReference",
+      "message": "sylphx.artifacts.v1.ArtifactReference",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}",
+      "plural": "artifactReferences",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "artifacts",
+      "shape": "record",
+      "singular": "artifactReference",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "artifacts.sylphx.com/ArtifactReference"
+    },
+    {
       "collection": "assets",
       "controller": "",
       "deletion_protection": false,
@@ -151229,6 +151650,184 @@
           ],
           "name": "artifacts",
           "resource_type": "artifacts.sylphx.com/Artifact"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Updates a holder's retention reference, or creates it with allow_missing.\nExisting expiry is only extended, never shortened. The exact\nrepository and digest must have an owned Artifact receipt. Success means\nthe registry protection tag has been written and read back; a failed pin\nattempt commits no reference. Concurrent updates never shorten retention.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "artifact_reference",
+                "method": "PATCH",
+                "path_params": [
+                  {
+                    "field": "artifact_reference.name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}",
+                    "pattern": "orgs/*/projects/*/envs/*/artifact_references/*"
+                  }
+                ],
+                "query_params": [
+                  "update_mask",
+                  "allow_missing"
+                ],
+                "template": "/v1/{artifact_reference.name=orgs/*/projects/*/envs/*/artifact_references/*}"
+              },
+              "id": "artifacts.artifact_references.update",
+              "kind": "update",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "artifacts:retain",
+              "proto": "sylphx.artifacts.v1.ArtifactsService.UpdateArtifactReference",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.artifacts.v1.UpdateArtifactReferenceRequest",
+              "resource_field": "artifact_reference",
+              "response": "sylphx.artifacts.v1.ArtifactReference",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "update"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists this environment's holder references, including expired references.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "filter"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/artifact_references"
+              },
+              "id": "artifacts.artifact_references.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.artifacts.v1.ArtifactReference",
+                "items_field": "artifact_references"
+              },
+              "permission": "artifacts:read",
+              "proto": "sylphx.artifacts.v1.ArtifactsService.ListArtifactReferences",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.artifacts.v1.ListArtifactReferencesRequest",
+              "resource_field": null,
+              "response": "sylphx.artifacts.v1.ListArtifactReferencesResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Gets an exact holder reference, including its current expiry.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}",
+                    "pattern": "orgs/*/projects/*/envs/*/artifact_references/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}"
+              },
+              "id": "artifacts.artifact_references.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "artifacts:read",
+              "proto": "sylphx.artifacts.v1.ArtifactsService.GetArtifactReference",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.artifacts.v1.GetArtifactReferenceRequest",
+              "resource_field": null,
+              "response": "sylphx.artifacts.v1.ArtifactReference",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Releases this holder's reference. Other holders keep their protection;\nregistry reconciliation removes a stale tag only after every root expires.\nReleasing an already absent reference succeeds.",
+              "effect": "destructive",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "DELETE",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}",
+                    "pattern": "orgs/*/projects/*/envs/*/artifact_references/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}"
+              },
+              "id": "artifacts.artifact_references.delete",
+              "kind": "delete",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "artifacts:retain",
+              "proto": "sylphx.artifacts.v1.ArtifactsService.DeleteArtifactReference",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.artifacts.v1.DeleteArtifactReferenceRequest",
+              "resource_field": null,
+              "response": "google.protobuf.Empty",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "delete"
+            }
+          ],
+          "name": "artifact_references",
+          "resource_type": "artifacts.sylphx.com/ArtifactReference"
         }
       ],
       "display_name": "Sylphx Artifacts",

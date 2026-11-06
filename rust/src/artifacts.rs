@@ -129,6 +129,66 @@ pub struct Artifact {
     pub reference: String,
 }
 
+/// A holder's retention declaration for an exact repository and digest. The
+/// server verifies an owned Artifact receipt and a pullable protection tag
+/// before admitting it. Its lifetime is independent of the producing service.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ArtifactReference {
+    /// The canonical reference name; derived from the image and holder identity.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The immutable reference identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Creation metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The exact managed registry repository, without host, tag or digest.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub repository: String,
+    /// The exact algorithm-qualified SHA-256 image digest.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub digest: String,
+    /// The kind of holding resource, for example `device_state`.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holderKind"
+    )]
+    pub holder_kind: String,
+    /// The holding resource's stable identity within this environment.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holderId"
+    )]
+    pub holder_id: String,
+    /// Keep this image until this instant. Repeating Update only extends it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expiresAt"
+    )]
+    pub expires_at: String,
+}
+
 /// The request of CreateArtifact.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -172,6 +232,17 @@ pub struct CreateArtifactRequest {
     pub managed_upload: bool,
 }
 
+/// The request of DeleteArtifactReference.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteArtifactReferenceRequest {
+    /// The exact reference to release.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of DeleteArtifact.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -193,6 +264,17 @@ pub struct DeleteArtifactRequest {
     pub validate_only: bool,
 }
 
+/// The request of GetArtifactReference.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetArtifactReferenceRequest {
+    /// The exact reference to read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetArtifact.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -202,6 +284,54 @@ pub struct GetArtifactRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// The request of ListArtifactReferences.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListArtifactReferencesRequest {
+    /// The environment holding this retention declaration.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum results; defaults to 50 and is capped at 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// The next_page_token of the preceding page with the same parameters.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// A filter on repository, digest or holder_kind, using the List filter grammar.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+}
+
+/// The response of ListArtifactReferences.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListArtifactReferencesResponse {
+    /// The matching holder references, ordered by name.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "artifactReferences"
+    )]
+    pub artifact_references: Vec<ArtifactReference>,
+    /// Empty when this is the final page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListArtifacts.
@@ -300,6 +430,35 @@ pub struct PrepareUploadResponse {
         alias = "expiresAt"
     )]
     pub expires_at: String,
+}
+
+/// The request of UpdateArtifactReference.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateArtifactReferenceRequest {
+    /// The reference to update; name identifies its immutable image and holder.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "artifactReference"
+    )]
+    pub artifact_reference: Option<ArtifactReference>,
+    /// Only expires_at is mutable. Unset or * writes populated fields.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+    /// Create this reference when absent, after verifying ownership and pinning.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowMissing"
+    )]
+    pub allow_missing: bool,
 }
 
 /// ArtifactKind is what an Artifact is.
@@ -497,6 +656,13 @@ impl<'a, T: crate::runtime::Transport> ArtifactsApi<'a, T> {
             client: self.client,
         }
     }
+
+    /// The `artifact_references` collection.
+    pub fn artifact_references(&self) -> ArtifactReferencesCollection<'a, T> {
+        ArtifactReferencesCollection {
+            client: self.client,
+        }
+    }
 }
 
 /// `artifacts` of Sylphx Artifacts: Resource type `artifacts.sylphx.com/Artifact`.
@@ -652,6 +818,160 @@ impl<'a, T: crate::runtime::Transport> ArtifactsCollection<'a, T> {
         let mut query = crate::runtime::Query::default();
         query.push("etag", &request.etag);
         query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `artifact_references` of Sylphx Artifacts: Resource type `artifacts.sylphx.com/ArtifactReference`.
+pub struct ArtifactReferencesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ArtifactReferencesCollection<'a, T> {
+    /// Updates a holder's retention reference, or creates it with allow_missing.
+    /// Existing expiry is only extended, never shortened. The exact
+    /// repository and digest must have an owned Artifact receipt. Success means
+    /// the registry protection tag has been written and read back; a failed pin
+    /// attempt commits no reference. Concurrent updates never shorten retention.
+    ///
+    /// `PATCH /v1/{artifact_reference.name=orgs/*/projects/*/envs/*/artifact_references/*}` · permission `artifacts:retain` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn update(
+        &self,
+        request: UpdateArtifactReferenceRequest,
+    ) -> Result<ArtifactReference, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .artifact_reference
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/artifact_references/*",
+                "artifact_reference.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("allow_missing", &request.allow_missing);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.artifact_reference)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists this environment's holder references, including expired references.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/artifact_references` · permission `artifacts:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `UNAVAILABLE`.
+    pub async fn list(
+        &self,
+        request: ListArtifactReferencesRequest,
+    ) -> Result<ListArtifactReferencesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/artifact_references",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListArtifactReferencesRequest,
+    ) -> Result<Vec<ArtifactReference>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.artifact_references);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Gets an exact holder reference, including its current expiry.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}` · permission `artifacts:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn get(
+        &self,
+        request: GetArtifactReferenceRequest,
+    ) -> Result<ArtifactReference, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/artifact_references/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Releases this holder's reference. Other holders keep their protection;
+    /// registry reconciliation removes a stale tag only after every root expires.
+    /// Releasing an already absent reference succeeds.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/artifact_references/*}` · permission `artifacts:retain` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn delete(
+        &self,
+        request: DeleteArtifactReferenceRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/artifact_references/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "DELETE",
             path,

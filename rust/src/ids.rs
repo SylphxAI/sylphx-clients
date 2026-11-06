@@ -287,6 +287,13 @@ pub const AI: Prefix = Prefix::new("ai", "AiUsage", "ai", None);
 pub const LLM: Prefix = Prefix::new("llm", "LlmLog", "ai", None);
 /// Artifact (`art`, artifacts).
 pub const ART: Prefix = Prefix::new("art", "Artifact", "artifacts", Some("artifacts"));
+/// ArtifactReference (`arf`, artifacts).
+pub const ARF: Prefix = Prefix::new(
+    "arf",
+    "ArtifactReference",
+    "artifacts",
+    Some("artifact_references"),
+);
 /// BillingAccount (`bac`, billing).
 pub const BAC: Prefix = Prefix::new("bac", "BillingAccount", "billing", Some("billing_accounts"));
 /// BudgetLease (`bls`, billing).
@@ -759,16 +766,16 @@ pub const BRC: Prefix = Prefix::new("brc", "BankReceipt", "money", Some("bank_re
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
     ORG, PRJ, ENV, KEY, PRN, DVG, DLGT, OMB, MBR, USR, SESS, ACFG, AORG, COR, EDM, IVT, OAC, ORL,
-    TIS, AGT, AGV, ASES, GOAL, SEVT, MST, MEM, AOP, MDL, AI, LLM, ART, BAC, BLS, INV, MET, PLAN,
-    URP, BSUB, SITEM, AUSE, ACC, TXN, TPOL, TKX, BLD, BCC, CHG, FLAG, SEG, CONN, CPRV, BKT, DB, KV,
-    IDX, CUS, ENT, EVT, IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK, PRV, SRL, SVC, SLNK, KMS,
-    KMSV, CERT, DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, TPC, PRF, RCP, SND, SDM,
-    SUP, TMPL, AEV, EEV, EGRP, LOG, SCRP, SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV, POOL,
-    SHP, SNAP, VOL, SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK, TASK,
-    CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP, TDEF,
-    ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB, NSEQ,
-    NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT, LKEY,
-    LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER, UMTR,
-    UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV, CHP, CHR,
-    BTA, BRC,
+    TIS, AGT, AGV, ASES, GOAL, SEVT, MST, MEM, AOP, MDL, AI, LLM, ART, ARF, BAC, BLS, INV, MET,
+    PLAN, URP, BSUB, SITEM, AUSE, ACC, TXN, TPOL, TKX, BLD, BCC, CHG, FLAG, SEG, CONN, CPRV, BKT,
+    DB, KV, IDX, CUS, ENT, EVT, IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK, PRV, SRL, SVC, SLNK,
+    KMS, KMSV, CERT, DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, TPC, PRF, RCP, SND,
+    SDM, SUP, TMPL, AEV, EEV, EGRP, LOG, SCRP, SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV,
+    POOL, SHP, SNAP, VOL, SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK,
+    TASK, CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP,
+    TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB,
+    NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT,
+    LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER,
+    UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
+    CHP, CHR, BTA, BRC,
 ];

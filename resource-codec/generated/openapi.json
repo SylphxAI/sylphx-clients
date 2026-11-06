@@ -5981,6 +5981,54 @@
         ],
         "type": "string"
       },
+      "sylphx.artifacts.v1.ArtifactReference": {
+        "description": "A holder's retention declaration for an exact repository and digest. The\nserver verifies an owned Artifact receipt and a pullable protection tag\nbefore admitting it. Its lifetime is independent of the producing service.",
+        "properties": {
+          "digest": {
+            "description": "The exact algorithm-qualified SHA-256 image digest.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "expires_at": {
+            "description": "Keep this image until this instant. Repeating Update only extends it.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "holder_id": {
+            "description": "The holding resource's stable identity within this environment.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "holder_kind": {
+            "description": "The kind of holding resource, for example `device_state`.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Creation metadata.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "The canonical reference name; derived from the image and holder identity.",
+            "type": "string"
+          },
+          "repository": {
+            "description": "The exact managed registry repository, without host, tag or digest.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "uid": {
+            "description": "The immutable reference identity.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "sylphx.artifacts.v1.CreateArtifactRequest": {
         "description": "The request of CreateArtifact.",
         "properties": {
@@ -6012,6 +6060,20 @@
         ],
         "type": "object"
       },
+      "sylphx.artifacts.v1.DeleteArtifactReferenceRequest": {
+        "description": "The request of DeleteArtifactReference.",
+        "properties": {
+          "name": {
+            "description": "The exact reference to release.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/ArtifactReference"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.artifacts.v1.DeleteArtifactRequest": {
         "description": "The request of DeleteArtifact.",
         "properties": {
@@ -6034,6 +6096,20 @@
         ],
         "type": "object"
       },
+      "sylphx.artifacts.v1.GetArtifactReferenceRequest": {
+        "description": "The request of GetArtifactReference.",
+        "properties": {
+          "name": {
+            "description": "The exact reference to read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/ArtifactReference"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.artifacts.v1.GetArtifactRequest": {
         "description": "The request of GetArtifact.",
         "properties": {
@@ -6046,6 +6122,50 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.artifacts.v1.ListArtifactReferencesRequest": {
+        "description": "The request of ListArtifactReferences.",
+        "properties": {
+          "filter": {
+            "description": "A filter on repository, digest or holder_kind, using the List filter grammar.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum results; defaults to 50 and is capped at 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The next_page_token of the preceding page with the same parameters.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment holding this retention declaration.",
+            "type": "string",
+            "x-sylphx-resource-reference": "artifacts.sylphx.com/ArtifactReference"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.artifacts.v1.ListArtifactReferencesResponse": {
+        "description": "The response of ListArtifactReferences.",
+        "properties": {
+          "artifact_references": {
+            "description": "The matching holder references, ordered by name.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.artifacts.v1.ArtifactReference"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty when this is the final page.",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.artifacts.v1.ListArtifactsRequest": {
@@ -6140,6 +6260,27 @@
           "referenced"
         ],
         "type": "string"
+      },
+      "sylphx.artifacts.v1.UpdateArtifactReferenceRequest": {
+        "description": "The request of UpdateArtifactReference.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create this reference when absent, after verifying ownership and pinning.",
+            "type": "boolean"
+          },
+          "artifact_reference": {
+            "$ref": "#/components/schemas/sylphx.artifacts.v1.ArtifactReference",
+            "description": "The reference to update; name identifies its immutable image and holder."
+          },
+          "update_mask": {
+            "description": "Only expires_at is mutable. Unset or * writes populated fields.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_reference"
+        ],
+        "type": "object"
       },
       "sylphx.artifacts.v1.VerificationState": {
         "description": "VerificationState is the result of verifying an Artifact.",
@@ -65595,6 +65736,398 @@
         ],
         "x-sylphx-method": "access.api_keys.roll",
         "x-sylphx-permission": "access:keys:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/artifact_references": {
+      "get": {
+        "description": "Lists this environment's holder references, including expired references.",
+        "operationId": "artifacts_artifact_references_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum results; defaults to 50 and is capped at 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The next_page_token of the preceding page with the same parameters.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A filter on repository, digest or holder_kind, using the List filter grammar.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.artifacts.v1.ListArtifactReferencesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists this environment's holder references, including expired references.",
+        "tags": [
+          "artifacts"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "artifacts.artifact_references.list",
+        "x-sylphx-permission": "artifacts:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/artifact_references/{artifact_reference}": {
+      "delete": {
+        "description": "Releases this holder's reference. Other holders keep their protection;\nregistry reconciliation removes a stale tag only after every root expires.\nReleasing an already absent reference succeeds.",
+        "operationId": "artifacts_artifact_references_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_reference",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Releases this holder's reference. Other holders keep their protection; registry reconciliation removes a stale tag only after every root expires. Releasing an already absent reference succeeds.",
+        "tags": [
+          "artifacts"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "artifacts.artifact_references.delete",
+        "x-sylphx-permission": "artifacts:retain",
+        "x-sylphx-stage": "preview"
+      },
+      "get": {
+        "description": "Gets an exact holder reference, including its current expiry.",
+        "operationId": "artifacts_artifact_references_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_reference",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.artifacts.v1.ArtifactReference"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets an exact holder reference, including its current expiry.",
+        "tags": [
+          "artifacts"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "artifacts.artifact_references.get",
+        "x-sylphx-permission": "artifacts:read",
+        "x-sylphx-stage": "preview"
+      },
+      "patch": {
+        "description": "Updates a holder's retention reference, or creates it with allow_missing.\nExisting expiry is only extended, never shortened. The exact\nrepository and digest must have an owned Artifact receipt. Success means\nthe registry protection tag has been written and read back; a failed pin\nattempt commits no reference. Concurrent updates never shorten retention.",
+        "operationId": "artifacts_artifact_references_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_reference",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only expires_at is mutable. Unset or * writes populated fields.",
+            "in": "query",
+            "name": "update_mask",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated field paths.",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Create this reference when absent, after verifying ownership and pinning.",
+            "in": "query",
+            "name": "allow_missing",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.artifacts.v1.ArtifactReference"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.artifacts.v1.ArtifactReference"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Updates a holder's retention reference, or creates it with allow_missing. Existing expiry is only extended, never shortened. The exact repository and digest must have an owned Artifact receipt. Success means the registry protection tag has been written and read back; a failed pin attempt commits no reference. Concurrent updates never shorten retention.",
+        "tags": [
+          "artifacts"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "artifacts.artifact_references.update",
+        "x-sylphx-permission": "artifacts:retain",
         "x-sylphx-stage": "preview"
       }
     },
