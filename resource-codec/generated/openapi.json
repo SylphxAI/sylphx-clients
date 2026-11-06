@@ -41796,7 +41796,8 @@
           "org_deleted",
           "machine_lost",
           "boot_failed",
-          "preempted"
+          "preempted",
+          "storage_limit_exceeded"
         ],
         "type": "string"
       },

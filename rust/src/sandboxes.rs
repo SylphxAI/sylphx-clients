@@ -3172,6 +3172,8 @@ pub enum EndReason {
     /// Other work reclaimed the machine's room: a build shape runs only on idle
     /// capacity, so the run can simply start again.
     Preempted,
+    /// The machine was evicted after exceeding its local ephemeral-storage limit.
+    StorageLimitExceeded,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3191,6 +3193,7 @@ impl EndReason {
             Self::MachineLost => "machine_lost",
             Self::BootFailed => "boot_failed",
             Self::Preempted => "preempted",
+            Self::StorageLimitExceeded => "storage_limit_exceeded",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3209,6 +3212,7 @@ impl EndReason {
             "machine_lost" => Self::MachineLost,
             "boot_failed" => Self::BootFailed,
             "preempted" => Self::Preempted,
+            "storage_limit_exceeded" => Self::StorageLimitExceeded,
             other => Self::Unknown(other.to_string()),
         }
     }

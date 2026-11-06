@@ -4662,6 +4662,12 @@
           "number": 11,
           "proto_name": "END_REASON_PREEMPTED",
           "wire": "preempted"
+        },
+        {
+          "doc": "The machine was evicted after exceeding its local ephemeral-storage limit.",
+          "number": 12,
+          "proto_name": "END_REASON_STORAGE_LIMIT_EXCEEDED",
+          "wire": "storage_limit_exceeded"
         }
       ]
     },

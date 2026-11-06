@@ -1540,7 +1540,7 @@ export type ControlHolder = 'agent' | 'human' | (string & {})
 export type EgressPolicy = 'allow' | 'deny' | 'allowlist' | (string & {})
 
 /** EndReason is why a lease ended. */
-export type EndReason = 'released' | 'expired' | 'idle' | 'cpu_budget' | 'cost_budget' | 'abuse' | 'quota' | 'org_deleted' | 'machine_lost' | 'boot_failed' | 'preempted' | (string & {})
+export type EndReason = 'released' | 'expired' | 'idle' | 'cpu_budget' | 'cost_budget' | 'abuse' | 'quota' | 'org_deleted' | 'machine_lost' | 'boot_failed' | 'preempted' | 'storage_limit_exceeded' | (string & {})
 
 /** ImageFormat is a screenshot encoding. */
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | (string & {})
