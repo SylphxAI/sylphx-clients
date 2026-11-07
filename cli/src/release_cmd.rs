@@ -46,6 +46,7 @@ pub fn commands() -> [Command; 3] {
         follow_args(
             Command::new("deploy")
                 .about("Deploy the linked environment: a Release of this checkout's HEAD (or --commit), followed until selected controller-live or failed")
+                .after_help("Managed resources in sylphx.toml: [resources.database], [resources.kv] and [resources.search] may omit tier and storage_gb for platform-managed sizing. Explicit sizing stays repository-owned intent. An explicit database tier uses the resource API's resize planner; omitting it never resizes an existing binding. Other resource kinds keep their own contracts.")
                 .arg(env_arg())
                 .arg(
                     Arg::new("commit")
@@ -403,6 +404,25 @@ mod tests {
             "orgs/o/projects/p/envs/e/releases/rel_2"
         );
         assert!(written(&json!({"done": true})).is_err());
+    }
+
+    #[test]
+    fn deploy_help_explains_optional_sizing_without_replacing_explicit_intent() {
+        for width in [40, 80, 100, 120] {
+            let help = commands()[0]
+                .clone()
+                .term_width(width)
+                .render_long_help()
+                .to_string();
+            let help = help.split_whitespace().collect::<Vec<_>>().join(" ");
+            for expected in [
+                "may omit tier and storage_gb",
+                "Explicit sizing stays repository-owned intent",
+                "omitting it never resizes an existing binding",
+            ] {
+                assert!(help.contains(expected), "width {width}: {help}");
+            }
+        }
     }
 
     #[test]
