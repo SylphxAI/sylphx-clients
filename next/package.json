@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/next",
-	"version": "0.2.10",
+	"version": "0.2.11",
 	"description": "Customer-branded App Router sign-in and shared Next.js ISR/use-cache handlers.",
 	"license": "MIT",
 	"type": "module",
@@ -82,7 +82,7 @@
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"next": "^15.5.28",
-		"@sylphx/sdk": "0.32.12"
+		"@sylphx/sdk": "0.32.13"
 	},
 	"publishConfig": {
 		"access": "public",

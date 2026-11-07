@@ -2472,7 +2472,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "sylphx"
-version = "0.3.13"
+version = "0.3.14"
 dependencies = [
  "base64",
  "ed25519-dalek",
@@ -2489,7 +2489,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-apply"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "serde",
  "serde_json",
@@ -2567,7 +2567,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-resource-codec"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "chrono",
  "serde",
