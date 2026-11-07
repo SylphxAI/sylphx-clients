@@ -9438,7 +9438,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "One turn's wall-clock deadline, 10s to 24h; default 30m.",
+          "doc": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original\nturn start, including retries. Observed model and tool progress renews\nthe turn and sandbox inactivity leases only up to this maximum.",
           "filterable": false,
           "name": "turn_timeout",
           "number": 2,

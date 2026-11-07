@@ -87,7 +87,9 @@ pub struct AgentBudget {
         alias = "maxStepsPerTurn"
     )]
     pub max_steps_per_turn: i32,
-    /// One turn's wall-clock deadline, 10s to 24h; default 30m.
+    /// Absolute maximum turn lifetime, 10s to 24h; default 4h from the original
+    /// turn start, including retries. Observed model and tool progress renews
+    /// the turn and sandbox inactivity leases only up to this maximum.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",

@@ -47,7 +47,11 @@ export interface Agent {
 export interface AgentBudget {
 	/** Model and tool steps per turn, 1 to 1000; default 100. */
 	maxStepsPerTurn?: number
-	/** One turn's wall-clock deadline, 10s to 24h; default 30m. */
+	/**
+	 * Absolute maximum turn lifetime, 10s to 24h; default 4h from the original
+	 * turn start, including retries. Observed model and tool progress renews
+	 * the turn and sandbox inactivity leases only up to this maximum.
+	 */
 	turnTimeout?: string
 	/**
 	 * Spend per session in micro-USD, models and tools together; 0 is the

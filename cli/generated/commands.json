@@ -1610,7 +1610,7 @@
                 {
                   "field": "agent.spec.budget.turn_timeout",
                   "flag": "--spec.budget.turn-timeout",
-                  "summary": "One turn's wall-clock deadline, 10s to 24h; default 30m.",
+                  "summary": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original turn start, including retries. Observed model and tool progress renews the turn and sandbox inactivity leases only up to this maximum.",
                   "type": "duration"
                 },
                 {
@@ -1835,7 +1835,7 @@
                 {
                   "field": "agent.spec.budget.turn_timeout",
                   "flag": "--spec.budget.turn-timeout",
-                  "summary": "One turn's wall-clock deadline, 10s to 24h; default 30m.",
+                  "summary": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original turn start, including retries. Observed model and tool progress renews the turn and sandbox inactivity leases only up to this maximum.",
                   "type": "duration"
                 },
                 {
