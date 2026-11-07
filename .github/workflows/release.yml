@@ -251,6 +251,7 @@ jobs:
   # because npm generates provenance only there.
   npm:
     needs: [check, build-linux, build-macos]
+    if: github.repository == 'SylphxAI/sylphx-clients' && github.event.repository.visibility == 'public'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -282,6 +283,11 @@ jobs:
         id: pack
         run: |
           set -euo pipefail
+          # Historical package trees need not contain the current smoke helpers.
+          # Controls and their sibling dependencies come from the workflow revision;
+          # packages and candidate binaries always come from the tagged workspace.
+          scripts="$PWD/scripts"
+          [ ! -d .release-control ] || scripts="$PWD/.release-control/scripts"
           out="$RUNNER_TEMP/npm"; mkdir -p "$out"; : > "$out/list"
           pack() {
             local dir="$1" name version tag tgz
@@ -297,14 +303,16 @@ jobs:
             install -Dm755 "dist/sylphx-cli-$a" "cli/npm/cli-$a/bin/sylphx"
             pack "cli/npm/cli-$a"
           done
+          bash "$scripts/check-cli-npm.sh" "dist/sylphx-cli-$(node -p '`${process.platform}-${process.arch}`')" "$PWD"
           pack cli/npm/cli
           pack mcp/npm
           (cd typescript && bun install --no-save && bun run build)
-          scripts/smoke-npm.sh typescript
+          python3 -I "$scripts/test-smoke-npm.py"
+          bash "$scripts/smoke-npm.sh" typescript
           pack typescript
           next_version="$(jq -r .version next/package.json)"
           if [ "$(npm view "@sylphx/next@$next_version" version 2>/dev/null || true)" != "$next_version" ]; then
-            next_tgz="$(python3 -I .release-control/scripts/check-next-package.py --root "$GITHUB_WORKSPACE" --pack-destination "$out")"
+            next_tgz="$(python3 -I "$scripts/check-next-package.py" --root "$GITHUB_WORKSPACE" --pack-destination "$out")"
             next_tag="$(jq -r '.publishConfig.tag // "latest"' next/package.json)"
             echo "$next_tgz $next_tag @sylphx/next $next_version" >> "$out/list"
           fi

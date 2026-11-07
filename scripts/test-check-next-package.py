@@ -4,7 +4,6 @@
 import importlib.util
 import json
 from pathlib import Path
-import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -23,8 +22,6 @@ class NextPackageTests(unittest.TestCase):
         sdk, nxt = self.root / "typescript", self.root / "next"
         (sdk / "dist").mkdir(parents=True)
         (nxt / "src").mkdir(parents=True)
-        (self.root / "scripts").mkdir()
-        shutil.copyfile(Path(__file__).with_name("smoke-npm.sh"), self.root / "scripts/smoke-npm.sh")
         (sdk / "package.json").write_text(json.dumps({
             "name": "@sylphx/sdk", "version": "1.0.0", "type": "module",
             "exports": {".": "./dist/index.js"}, "files": ["dist"],

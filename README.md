@@ -42,6 +42,16 @@ manifest version in the shipping PR; SDK versions are independent of the CLI.
 Published tags remain immutable. A publication repair ships with the next
 release; the frozen workflow does not offer a per-crate publishing mode.
 
+Every source PR touching `clients/` runs the root CI `clients-npm` lane before
+merge; `ci-ok` requires its result. The same `scripts/smoke-npm.sh` runs during
+source release verification and public publication. It installs every declared
+peer at its manifest range, tests the SDK root and peer-free subpaths in a
+separate consumer without optional peers, and checks non-JavaScript exports as
+non-empty archive files without executing them. `scripts/check-cli-npm.sh`
+installs the candidate native platform, CLI and MCP archives together and runs
+the installed MCP protocol smoke, so a not-yet-published CLI dependency cannot
+be hidden by a source checkout or an older registry version.
+
 Next verification installs the complete candidate SDK archive into an isolated
 consumer before typechecking, tests, build and package import checks. Its SDK
 peer minimum and development version advance with required SDK APIs; a local

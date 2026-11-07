@@ -77,11 +77,10 @@ def verify(root, destination=None):
         (nxt / "package.json").write_bytes(original)
         # Runtime smoke installs the archives plus the consumer's declared
         # framework peers; it never substitutes SDK source paths.
-        peers = [
-            f"{peer}@{spec}" for peer, spec in manifest["devDependencies"].items()
-            if peer != name and peer in manifest.get("peerDependencies", {})
-        ]
-        run(["bash", str(root / "scripts/smoke-npm.sh"), str(nxt), str(sdk_archive), *peers], work, env)
+        # smoke-npm.sh derives every declared peer from the package manifest;
+        # the SDK archive remains an explicit dependency because Next verifies
+        # against that exact candidate rather than a registry version.
+        run(["bash", str(Path(__file__).with_name("smoke-npm.sh")), str(nxt), str(sdk_archive)], work, env)
         packed = pack(nxt, work, env)
         with tarfile.open(packed) as archive:
             if archive.extractfile("package/package.json").read() != original:
