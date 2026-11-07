@@ -3361,7 +3361,7 @@ esac
     fn a_machine_without_git_warns_and_runs_the_command() {
         let w = Ws::new("git-none");
         w.file("tree/a.txt", "a\n");
-        let path = w.bin("nogit", &["mkdir", "rm", "tail"]);
+        let path = w.bin("nogit", &["mkdir", "rm", "tail", "python3"]);
         let (code, out, err) = w.run(".", &path, &[], "echo ran");
         assert_eq!((code, out.as_str()), (0, "ran\n"), "{err}");
         assert_eq!(err.matches("sylphx: warning:").count(), 1, "{err}");

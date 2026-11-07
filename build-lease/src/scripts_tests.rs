@@ -21,7 +21,7 @@ impl Workspace {
         workspace.file(".cargo/config.toml", "stale\n");
         workspace.executable("rustup", "echo which >> \"$TEST_WORKSPACE/rustup-calls\"\n[ \"$RUSTUP_HOME\" = \"${TEST_RUSTUP_HOME:-/opt/rustup}\" ]\n");
         workspace.executable("curl", "echo probe >> \"$TEST_WORKSPACE/mirror-calls\"\n[ \"${TEST_BLOCK_CACHE:-0}\" = 1 ] && sleep 30\nexit \"${TEST_MIRROR_STATUS:-0}\"\n");
-        workspace.executable("cargo", "if [ -f \"$TEST_WORKSPACE/.cargo/config.toml\" ]; then cat \"$TEST_WORKSPACE/.cargo/config.toml\"; else echo direct; fi\n");
+        workspace.executable("cargo", "if [ -f \"$CARGO_HOME/config.toml\" ]; then cat \"$CARGO_HOME/config.toml\"; else echo direct; fi\n");
         workspace.executable("sccache", "if [ \"$1\" = --start-server ]; then\n  echo start >> \"$TEST_WORKSPACE/cache-calls\"\n  [ \"${TEST_BLOCK_CACHE:-0}\" = 1 ] && sleep 30\n  if [ \"${TEST_CACHE_STATUS:-0}\" != 0 ]; then echo 'cache storage failed to read' >&2; exit \"$TEST_CACHE_STATUS\"; fi\n  exit 0\nfi\necho cached >> \"$TEST_WORKSPACE/cache-calls\"\nexec \"$@\"\n");
         workspace.executable("compiler", "echo compile >> \"$TEST_WORKSPACE/compiler-calls\"\nprintf 'compiled\\n'\nexit \"${TEST_COMPILE_STATUS:-0}\"\n");
         workspace

@@ -273,43 +273,20 @@ I=1
 if [ "$E" = 1 ]; then I=0; fi
 export CARGO_INCREMENTAL="${CARGO_INCREMENTAL-$I}" CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG-0}"
 mkdir -p "$W/.cargo" "$W/.sylphx"
-M=${SYLPHX_CRATES_MIRROR:-}
-if [ "${CARGO_REGISTRIES_CRATES_IO_INDEX+x}" = x ]; then M=; fi
-# The nearer workspace config must not shadow a caller's source definition.
-# Any exact source.crates-io definition counts, including registry without
-# replace-with; unrelated registries.crates-io protocol does not.
-# Cargo prefers legacy config over config.toml.
-defines_crates_io() {
-  [ -e "$1" ] || return 3
-  # template:build carries Python 3.12; parse TOML rather than guessing
-  # source precedence from section names or substrings.
-  python3 -c '
-import sys
-import tomllib
-with open(sys.argv[1], "rb") as config:
-    parsed = tomllib.load(config)
-sys.exit(0 if "crates-io" in parsed.get("source", {}) else 3)
-' "$1"
-}
-CARGO_HOME_CONFIG="$CARGO_HOME/config.toml"
-if [ -e "$CARGO_HOME/config" ]; then CARGO_HOME_CONFIG="$CARGO_HOME/config"; fi
-SOURCE_OVERRIDE=0
-if [ -n "$M" ]; then
-  if defines_crates_io "$CARGO_HOME_CONFIG"; then
-    SOURCE_OVERRIDE=1
-  else
-    case "$?" in
-      3) ;;
-      *) echo "sylphx: cannot read Cargo source configuration" >&2; exit 125 ;;
-    esac
-  fi
-fi
-if [ -n "$M" ] && [ "$SOURCE_OVERRIDE" = 0 ]; then
-  printf '[source.crates-io]\nreplace-with = "sylphx-mirror"\n\n[source.sylphx-mirror]\nregistry = "%s"\n' "$M" > "$W/.cargo/config.toml"
-else
-  rm -f "$W/.cargo/config.toml"
-fi
+# Cargo discovers workspace config by cwd; temp-dir subprocesses need the
+# same source in CARGO_HOME. Remove the old, narrower managed config.
+rm -f "$W/.cargo/config.toml"
 cd "$W/tree/$R" || exit 125
+# Resolve a caller's relative home where Cargo runs, then keep it stable for
+# subprocesses that change directory (for example, temporary test packages).
+case "$CARGO_HOME" in /*) ;; *) export CARGO_HOME="$PWD/$CARGO_HOME" ;; esac
+python3 - "$CARGO_HOME" <<'SYLPHX_CARGO_SOURCE'
+"#,
+    include_str!("cargo-source.py"),
+    r#"SYLPHX_CARGO_SOURCE
+if [ "$?" != 0 ]; then
+  echo "sylphx: cannot configure Cargo source" >&2; exit 125
+fi
 "#,
     include_str!("registry-defaults.sh"),
     guest_toolchain!(),
