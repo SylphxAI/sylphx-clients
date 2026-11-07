@@ -174,6 +174,8 @@ pub enum MintError {
         code: Option<String>,
         message: String,
         request_id: Option<String>,
+        reason: Option<String>,
+        details: BTreeMap<String, String>,
     },
     BadReply,
 }
@@ -211,12 +213,21 @@ impl MintError {
         if let Self::Status {
             message,
             request_id,
+            reason,
+            details,
             ..
         } = self
         {
             if !message.is_empty() {
                 detail.push_str(": ");
                 detail.push_str(message);
+            }
+            if let Some(reason) = reason {
+                detail.push_str("; reason=");
+                detail.push_str(reason);
+            }
+            for (name, value) in details {
+                detail.push_str(&format!("; {name}={value}"));
             }
             if let Some(id) = request_id {
                 detail.push_str("; request_id=");
@@ -312,15 +323,36 @@ pub(crate) async fn mint_at(
         .filter_map(|name| resp.headers().get(name)?.to_str().ok())
         .map(|id| clean(id, key))
         .find(|id| !id.is_empty());
-    let bytes = resp.bytes().await.map_err(|e| {
-        if e.is_timeout() {
-            MintError::TimedOut
-        } else {
-            MintError::BadReply
+    // Bound collection, not just parsing. A failed error body must not erase
+    // the HTTP status or correlation header already received.
+    let mut resp = resp;
+    let mut bytes = Vec::new();
+    let mut body_error = None;
+    loop {
+        match resp.chunk().await {
+            Ok(Some(chunk)) if bytes.len() + chunk.len() <= MAX_REPLY_BYTES => {
+                bytes.extend_from_slice(&chunk);
+            }
+            Ok(None) => break,
+            Ok(Some(_)) => {
+                body_error = Some(MintError::BadReply);
+                break;
+            }
+            Err(e) => {
+                body_error = Some(if e.is_timeout() {
+                    MintError::TimedOut
+                } else {
+                    MintError::BadReply
+                });
+                break;
+            }
         }
-    })?;
-    if bytes.len() > MAX_REPLY_BYTES {
-        return Err(MintError::BadReply);
+    }
+    if let Some(error) = body_error {
+        if status.is_success() {
+            return Err(error);
+        }
+        bytes.clear();
     }
     let v: Option<Value> = serde_json::from_slice(&bytes).ok();
     if !status.is_success() {
@@ -335,9 +367,70 @@ pub(crate) async fn mint_at(
             code: text("code").filter(|c| c.chars().all(|c| c.is_ascii_uppercase() || c == '_')),
             message: text("message").unwrap_or_default(),
             request_id: request_id.or_else(|| text("request_id")),
+            reason: text("reason")
+                .filter(|r| r.chars().all(|c| c.is_ascii_uppercase() || c == '_')),
+            details: denial_details(err.map(|e| &e["details"]), key),
         });
     }
     parse_env(v.as_ref().ok_or(MintError::BadReply)?)
+}
+
+/// Only the gateway's scalar diagnostic contract is printable. Never dump a
+/// provider body, environment, nested object or arbitrary added field.
+fn denial_details(value: Option<&Value>, key: &str) -> BTreeMap<String, String> {
+    let mut details = BTreeMap::new();
+    let Some(value) = value else { return details };
+    for name in ["upstream", "operation", "upstream_request_id"] {
+        if let Some(text) = value[name].as_str() {
+            let valid = match name {
+                "upstream" => matches!(text, "broker" | "github"),
+                "operation" => matches!(
+                    text,
+                    "get_trust_policy"
+                        | "list_trust_policies"
+                        | "exchange_token"
+                        | "repository_metadata"
+                        | "repository_contents"
+                ),
+                "upstream_request_id" => valid_upstream_request_id(text),
+                _ => false,
+            };
+            details.insert(
+                name.to_string(),
+                if valid {
+                    clean(text, key)
+                } else {
+                    "<redacted>".into()
+                },
+            );
+        }
+    }
+    for name in ["upstream_status", "retry_after_seconds", "rate_limit_reset"] {
+        if let Some(number) = value[name].as_u64() {
+            if name != "upstream_status" || (100..=599).contains(&number) {
+                details.insert(name.to_string(), number.to_string());
+            }
+        }
+    }
+    details
+}
+
+/// Broker's public ULID, UUID/hex IDs and GitHub's colon-delimited hex ID.
+/// Validate original bytes before cleanup: do not turn arbitrary text into an ID.
+fn valid_upstream_request_id(text: &str) -> bool {
+    if let Some(id) = text.strip_prefix("req_") {
+        return id.len() == 26
+            && matches!(id.as_bytes()[0], b'0'..=b'7')
+            && id
+                .bytes()
+                .all(|b| b"0123456789abcdefghjkmnpqrstvwxyz".contains(&b));
+    }
+    !text.is_empty()
+        && text.len() <= 128
+        && text.bytes().any(|b| b.is_ascii_hexdigit())
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() || b"-:".contains(&b))
 }
 
 /// Gateway text for a human: no control characters, no key, short.
@@ -348,7 +441,13 @@ fn clean(s: &str, key: &str) -> String {
         s.replace(key, "[redacted]")
     };
     s.chars()
-        .map(|c| if c.is_control() { ' ' } else { c })
+        .map(|c| {
+            if c.is_control() || matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}') {
+                ' '
+            } else {
+                c
+            }
+        })
         .take(200)
         .collect::<String>()
         .trim()
@@ -822,5 +921,71 @@ mod tests {
             export_lines(&env, std::ffi::OsStr::new(""), false),
             [r"export A='x'\''y'"]
         );
+    }
+}
+
+#[cfg(test)]
+mod denial_tests {
+    use super::*;
+
+    #[test]
+    fn denial_details_reject_unknown_and_wrong_shapes_and_bound_text() {
+        let value = json!({
+            "upstream": {"token": "hidden"},
+            "operation": "x".repeat(1000),
+            "upstream_request_id": "key\n\u{202e}id",
+            "upstream_status": 999,
+            "retry_after_seconds": "12",
+            "rate_limit_reset": -1,
+            "token": "hidden"
+        });
+        let details = denial_details(Some(&value), "key");
+        assert_eq!(details.len(), 2);
+        assert_eq!(details["operation"], "<redacted>");
+        assert_eq!(details["upstream_request_id"], "<redacted>");
+    }
+}
+
+#[cfg(test)]
+mod strict_denial_tests {
+    use super::*;
+
+    #[test]
+    fn each_detail_string_rejects_credentials_and_urls() {
+        for field in ["upstream", "operation", "upstream_request_id"] {
+            for malicious in [
+                "Authorization: Bearer provider-secret-sentinel",
+                "https://provider.test/?token=provider-secret-sentinel",
+            ] {
+                let mut value = json!({});
+                value[field] = json!(malicious);
+                let details = denial_details(Some(&value), "caller-key");
+                assert_eq!(details[field], "<redacted>");
+                assert!(!format!("{details:?}").contains("provider-secret-sentinel"));
+            }
+        }
+        for (field, safe) in [
+            ("upstream", "broker"),
+            ("upstream", "github"),
+            ("operation", "get_trust_policy"),
+            ("operation", "list_trust_policies"),
+            ("operation", "exchange_token"),
+            ("operation", "repository_metadata"),
+            ("operation", "repository_contents"),
+            ("upstream_request_id", "req_01aaaaaaaaaaaaaaaaaaaaaaaa"),
+            (
+                "upstream_request_id",
+                "aaa247ea-1302-4c44-a961-9a78b6b2f26d",
+            ),
+            ("upstream_request_id", "ABCD:1234:5678:90AB"),
+        ] {
+            let mut value = json!({});
+            value[field] = json!(safe);
+            assert_eq!(denial_details(Some(&value), "caller-key")[field], safe);
+        }
+        for invalid in ["", "---", "req_z1aaaaaaaaaaaaaaaaaaaaaaaa", "abcd\n1234"] {
+            assert!(!valid_upstream_request_id(invalid));
+        }
+        assert!(!valid_upstream_request_id(&"a".repeat(129)));
     }
 }

@@ -3956,6 +3956,106 @@ async fn build_source_env_missing_or_denied_authority_never_switches_identity() 
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn build_source_env_structured_denial_is_bounded_and_safe() {
+    let sb = Sandbox::new("source-diagnostic");
+    let denial = json!({"error": {
+        "code": "PERMISSION_DENIED",
+        "message": "Broker refused sylphx_sk_test\n\u{1b}[31m",
+        "reason": "BROKER_ACCESS_DENIED",
+        "request_id": "ignored_body_id",
+        "details": {
+            "upstream": "broker",
+            "operation": "list_trust_policies",
+            "upstream_status": 403,
+            "upstream_request_id": "req_01aaaaaaaaaaaaaaaaaaaaaaaa",
+            "retry_after_seconds": 12,
+            "rate_limit_reset": 1800000000u64,
+            "body": "provider-body-sentinel",
+            "token": "provider-token-sentinel"
+        }
+    }});
+    let (cache, requests) = serve_bytes_headers_on(
+        TcpListener::bind("127.0.0.1:0").await.unwrap(),
+        vec![(
+            403,
+            "application/json",
+            denial.to_string().into_bytes(),
+            "x-request-id: req_gateway\r\n",
+        )],
+    )
+    .await;
+    let out = run_with(
+        &sb,
+        "http://127.0.0.1:9",
+        &["build", "source", "env", "acme/repo", "--project", "prj_a"],
+        |command| {
+            command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+        },
+    )
+    .await;
+    assert_eq!(out.status.code(), Some(125));
+    assert!(out.stdout.is_empty());
+    let error = String::from_utf8_lossy(&out.stderr);
+    for expected in [
+        "Broker refused [redacted]",
+        "reason=BROKER_ACCESS_DENIED",
+        "upstream=broker",
+        "operation=list_trust_policies",
+        "upstream_status=403",
+        "upstream_request_id=req_01aaaaaaaaaaaaaaaaaaaaaaaa",
+        "retry_after_seconds=12",
+        "rate_limit_reset=1800000000",
+        "request_id=req_gateway",
+    ] {
+        assert!(error.contains(expected), "missing {expected}: {error}");
+    }
+    for forbidden in [
+        "sylphx_sk_test",
+        "ignored_body_id",
+        "provider-body-sentinel",
+        "provider-token-sentinel",
+        "\u{1b}",
+    ] {
+        assert!(!error.contains(forbidden), "{error}");
+    }
+    assert_eq!(requests.lock().len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn build_source_env_unreadable_denial_keeps_status_and_header() {
+    for body in [
+        Vec::new(),
+        b"not json: provider-body-sentinel".to_vec(),
+        vec![b'x'; 65537],
+    ] {
+        let sb = Sandbox::new("source-unreadable");
+        let (cache, _) = serve_bytes_headers_on(
+            TcpListener::bind("127.0.0.1:0").await.unwrap(),
+            vec![(403, "text/plain", body, "x-request-id: req_gateway\r\n")],
+        )
+        .await;
+        let out = run_with(
+            &sb,
+            "http://127.0.0.1:9",
+            &["build", "source", "env", "acme/repo", "--project", "prj_a"],
+            |command| {
+                command.env("SYLPHX_BUILD_CACHE_URL", &cache);
+            },
+        )
+        .await;
+        assert_eq!(out.status.code(), Some(125));
+        assert!(out.stdout.is_empty());
+        let error = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            error.contains("HTTP 403; request_id=req_gateway"),
+            "{error}"
+        );
+        assert!(!error.contains("provider-body-sentinel"), "{error}");
+        assert!(error.len() < 200, "{error}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn build_run_derives_origin_and_locked_sources_using_accepted_lease() {
     let sb = Sandbox::new("source-build-run");
     project(&sb.dir);
@@ -4184,7 +4284,7 @@ async fn build_run_source_endpoint_absence_uses_existing_inputs_without_claiming
 
 #[tokio::test(flavor = "multi_thread")]
 async fn build_run_source_authorization_denial_warns_and_uses_existing_sources() {
-    for status in [401, 403] {
+    for status in [401, 403, 503] {
         let sb = Sandbox::new(&format!("source-run-denied-{status}"));
         project(&sb.dir);
         assert!(Command::new("git")
@@ -4198,11 +4298,17 @@ async fn build_run_source_authorization_denial_warns_and_uses_existing_sources()
             .status()
             .unwrap()
             .success());
-        let denial = json!({"error": {
-            "code": "PERMISSION_DENIED",
-            "message": "The key lacks build:read: sylphx_sk_test\n",
-            "request_id": "req_body"
-        }});
+        let denial = if status == 503 {
+            json!({"error": {"code": "UNAVAILABLE", "message": "Source authorization is rate limited upstream.",
+                "reason": "UPSTREAM_RATE_LIMITED", "details": {"upstream": "github", "operation": "repository_metadata",
+                    "upstream_status": 403, "retry_after_seconds": 60}, "request_id": "req_body"}})
+        } else {
+            json!({"error": {
+                "code": "PERMISSION_DENIED",
+                "message": "The key lacks build:read: sylphx_sk_test\n",
+                "request_id": "req_body"
+            }})
+        };
         let (cache, requests) = serve_bytes_headers_on(
             TcpListener::bind("127.0.0.1:0").await.unwrap(),
             vec![
@@ -4228,7 +4334,20 @@ async fn build_run_source_authorization_denial_warns_and_uses_existing_sources()
         .await;
         let error = String::from_utf8_lossy(&out.stderr);
         assert_eq!(out.status.code(), Some(0), "{error}");
-        assert!(error.contains(&format!("HTTP {status} PERMISSION_DENIED: The key lacks build:read: [redacted]; request_id=req_header_[redacted]")), "{error}");
+        if status == 503 {
+            assert!(error.contains("HTTP 503 UNAVAILABLE: Source authorization is rate limited upstream.; reason=UPSTREAM_RATE_LIMITED"), "{error}");
+            for expected in [
+                "upstream=github",
+                "operation=repository_metadata",
+                "upstream_status=403",
+                "retry_after_seconds=60",
+                "request_id=req_header_[redacted]",
+            ] {
+                assert!(error.contains(expected), "{error}");
+            }
+        } else {
+            assert!(error.contains(&format!("HTTP {status} PERMISSION_DENIED: The key lacks build:read: [redacted]; request_id=req_header_[redacted]")), "{error}");
+        }
         assert_eq!(
             error.matches("warning: source cache unavailable").count(),
             1
