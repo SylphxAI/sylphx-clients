@@ -61,24 +61,12 @@ jobs:
         with:
           toolchain: 1.99.0
 
-      # `rust/tests/ids.rs` reads its golden vectors from
-      # `contracts/fixtures/ids.json` (`rust/tests/ids.rs:11`), a path outside
-      # this workspace. The fixture is present in cloud, where the test runs;
-      # the split building the mirror carries only `clients/`, so it is absent
-      # there and the test cannot pass. The step decides from the fixture's
-      # presence, not from the repository name, so each copy runs exactly what
-      # it can and says which it did.
+      # Canonical golden fixtures travel with clients/contracts/fixtures, so
+      # cloud and the standalone mirror execute the same integration targets.
       - name: Rust tests
         run: |
           set -euo pipefail
           targets=(rust/tests/*.rs)
-          # `git rev-parse --show-toplevel` is the checkout root in both
-          # layouts; cloud keeps the fixture above clients/, where it is.
-          top="$(git rev-parse --show-toplevel)"
-          if [ ! -f "$top/contracts/fixtures/ids.json" ]; then
-            echo "ids vectors are absent (mirror split): rust/tests/ids.rs is excluded"
-            targets=("${targets[@]/rust\/tests\/ids.rs}")
-          fi
           tests=()
           for t in "${targets[@]}"; do
             [ -n "$t" ] || continue
@@ -133,6 +121,10 @@ jobs:
             (cd "$d" && bun install --no-save && bun run typecheck && npm pack --dry-run)
             echo "::endgroup::"
           done
+
+      - name: SDK behavioral contract tests
+        working-directory: ${{ github.repository_id == '1117000933' && 'clients/typescript' || 'typescript' }}
+        run: bun run test
 
   # Every shell script the release runs, syntax-checked here: a broken script
   # in this directory is only found by a release otherwise.

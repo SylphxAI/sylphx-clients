@@ -65,10 +65,7 @@ interface Fixture {
 }
 
 const fx: Fixture = JSON.parse(
-	readFileSync(
-		new URL('../../../contracts/fixtures/sandboxes-stream.json', import.meta.url),
-		'utf8',
-	),
+	readFileSync(new URL('../../contracts/fixtures/sandboxes-stream.json', import.meta.url), 'utf8'),
 )
 
 /** The fixture's snake_case groups name the SDK's frame kinds. */

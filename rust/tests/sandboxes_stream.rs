@@ -15,7 +15,7 @@ use sylphx::sandboxes::stream_mock::*;
 fn fixture() -> Value {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../contracts/fixtures/sandboxes-stream.json"
+        "/../contracts/fixtures/sandboxes-stream.json"
     );
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
 }

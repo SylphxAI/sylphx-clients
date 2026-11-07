@@ -8,7 +8,7 @@ use sylphx::ids::{self, IdError, Prefix, TypeId};
 fn fixture() -> Value {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../contracts/fixtures/ids.json"
+        "/../contracts/fixtures/ids.json"
     );
     let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     serde_json::from_str(&text).expect("ids.json")

@@ -13,7 +13,7 @@ interface Fixture {
 }
 
 const fixture: Fixture = JSON.parse(
-	readFileSync(new URL('../../../contracts/fixtures/ids.json', import.meta.url), 'utf8'),
+	readFileSync(new URL('../../contracts/fixtures/ids.json', import.meta.url), 'utf8'),
 )
 
 describe('ids', () => {

@@ -1,0 +1,160 @@
+{
+	"$comment": "Golden vectors and policy cases for end-user API keys (Auth). Token grammar: <prefix>_<live|test>_<32 base62 secret><6 base62 CRC-32 of everything before it>, stored as SHA-256 of the whole token. The Rust format functions (extracted from kernel/access/verify/src/format.rs, parameterised by prefix) and the TypeScript reference must both match every row. Contract: docs/services/contracts/end-user-keys.md.",
+	"version": 1,
+	"scopes": {
+		"verify": "auth:keys.verify",
+		"write": "auth:keys.write"
+	},
+	"tokens": [
+		{
+			"prefix": "kk",
+			"mode": "live",
+			"secret": "AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+			"checksum": "4AYnNL",
+			"token": "kk_live_AbCdEfGhIjKlMnOpQrStUvWxYz0123454AYnNL",
+			"sha256": "f3aea68b05acfb8f61a6cfe0cc2d5e5b6eb39c645197d38ed62a0f7a216f40ad",
+			"start": "kk_live_AbCd",
+			"last4": "2345"
+		},
+		{
+			"prefix": "kk",
+			"mode": "test",
+			"secret": "00000000000000000000000000000000",
+			"checksum": "3LhdBU",
+			"token": "kk_test_000000000000000000000000000000003LhdBU",
+			"sha256": "3f3c2fe97d3084dda5f3d3c140655fd844cbe5a2a1662ba084ff6924d30c04ee",
+			"start": "kk_test_0000",
+			"last4": "0000"
+		},
+		{
+			"prefix": "acme",
+			"mode": "live",
+			"secret": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+			"checksum": "1AiN5A",
+			"token": "acme_live_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1AiN5A",
+			"sha256": "890587555d1aa138a26c664d2975ad50405964d2f95e29e7764d50378779e11c",
+			"start": "acme_live_zzzz",
+			"last4": "zzzz"
+		}
+	],
+	"badTokens": [
+		{
+			"name": "wrong-checksum",
+			"token": "kk_live_AbCdEfGhIjKlMnOpQrStUvWxYz0123454AYnNM",
+			"why": "checksum does not match"
+		},
+		{
+			"name": "short-secret",
+			"token": "kk_live_AbCd4AYnNL",
+			"why": "secret is not 32 characters"
+		},
+		{
+			"name": "unknown-mode",
+			"token": "kk_beta_AbCdEfGhIjKlMnOpQrStUvWxYz0123454AYnNL",
+			"why": "mode is live or test"
+		},
+		{
+			"name": "access-grammar",
+			"token": "sylphx_sk_live_abcd0000000000000000_AbCdEfGhIjKlMnOpQrStUvWxYz0123454AYnNL",
+			"why": "a Sylphx credential is never an end-user key"
+		},
+		{
+			"name": "non-base62",
+			"token": "kk_live_AbCdEfGhIjKlMnOpQrStUvWxYz01234-4AYnNL",
+			"why": "secret is base62"
+		}
+	],
+	"policy": [
+		{
+			"name": "ok-minimal",
+			"policy": {
+				"prefix": "kk"
+			},
+			"valid": true
+		},
+		{
+			"name": "ok-full",
+			"policy": {
+				"prefix": "acme",
+				"scopes": ["read", "stream", "webhooks"],
+				"default_limits": [
+					{
+						"display_name": "per_minute",
+						"limit": 60,
+						"period": "60s",
+						"scope": "key"
+					}
+				],
+				"max_lifetime": "31536000s",
+				"max_keys_per_subject": 50
+			},
+			"valid": true
+		},
+		{
+			"name": "prefix-sylphx",
+			"policy": {
+				"prefix": "sylphx"
+			},
+			"valid": false,
+			"errorField": "prefix"
+		},
+		{
+			"name": "prefix-starts-with-sylphx",
+			"policy": {
+				"prefix": "sylphxapp"
+			},
+			"valid": false,
+			"errorField": "prefix"
+		},
+		{
+			"name": "prefix-too-short",
+			"policy": {
+				"prefix": "k"
+			},
+			"valid": false,
+			"errorField": "prefix"
+		},
+		{
+			"name": "prefix-too-long",
+			"policy": {
+				"prefix": "abcdefghi"
+			},
+			"valid": false,
+			"errorField": "prefix"
+		},
+		{
+			"name": "prefix-uppercase",
+			"policy": {
+				"prefix": "KK"
+			},
+			"valid": false,
+			"errorField": "prefix"
+		},
+		{
+			"name": "prefix-underscore",
+			"policy": {
+				"prefix": "k_k"
+			},
+			"valid": false,
+			"errorField": "prefix"
+		},
+		{
+			"name": "max-keys-zero",
+			"policy": {
+				"prefix": "kk",
+				"max_keys_per_subject": 0
+			},
+			"valid": false,
+			"errorField": "max_keys_per_subject"
+		},
+		{
+			"name": "duplicate-scope",
+			"policy": {
+				"prefix": "kk",
+				"scopes": ["read", "read"]
+			},
+			"valid": false,
+			"errorField": "scopes"
+		}
+	]
+}

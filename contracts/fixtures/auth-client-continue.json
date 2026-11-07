@@ -1,0 +1,204 @@
+{
+	"contract": "sylphx.auth.client.continue/v1",
+	"schema": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"$id": "https://sylphx.com/contracts/auth-client-continue/v1",
+		"$defs": {
+			"ContinueRequest": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"minLength": 1
+					},
+					"method": {
+						"enum": ["email_otp", null]
+					},
+					"session_mode": {
+						"enum": ["server", "browser"]
+					},
+					"captcha_token": {
+						"type": "string"
+					}
+				},
+				"required": ["email"],
+				"additionalProperties": false
+			},
+			"ContinueResponse": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"step": {
+								"const": "password"
+							}
+						},
+						"required": ["step"],
+						"additionalProperties": false
+					},
+					{
+						"type": "object",
+						"properties": {
+							"step": {
+								"const": "email_otp"
+							},
+							"flow": {
+								"type": "string",
+								"minLength": 43,
+								"maxLength": 43
+							},
+							"expires_in": {
+								"const": 600
+							}
+						},
+						"required": ["step", "flow", "expires_in"],
+						"additionalProperties": false
+					}
+				]
+			},
+			"FactorProof": {
+				"type": "object",
+				"properties": {
+					"factor_type": {
+						"type": "string"
+					},
+					"factor_id": {
+						"type": "string"
+					},
+					"response": {
+						"type": "string"
+					}
+				},
+				"required": ["factor_type", "factor_id", "response"],
+				"additionalProperties": false
+			},
+			"ContinueVerifyRequest": {
+				"type": "object",
+				"properties": {
+					"flow": {
+						"type": "string"
+					},
+					"code": {
+						"type": "string"
+					},
+					"factor_proofs": {
+						"type": "array",
+						"items": {
+							"$ref": "#/$defs/FactorProof"
+						}
+					}
+				},
+				"required": ["flow", "code"],
+				"additionalProperties": false
+			},
+			"Session": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"minLength": 1
+					},
+					"token": {
+						"type": "string",
+						"minLength": 1
+					},
+					"expires_at": {
+						"type": "integer",
+						"minimum": 1
+					}
+				},
+				"required": ["id", "token", "expires_at"],
+				"additionalProperties": false
+			},
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"minLength": 1
+					},
+					"email": {
+						"type": "string",
+						"minLength": 1
+					},
+					"name": {
+						"type": "string"
+					},
+					"email_verified": {
+						"type": "boolean"
+					}
+				},
+				"required": ["id", "email", "name", "email_verified"],
+				"additionalProperties": false
+			},
+			"ContinueVerifyResponse": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"ticket": {
+								"type": "string",
+								"minLength": 1
+							},
+							"expires_in": {
+								"const": 120
+							}
+						},
+						"required": ["ticket", "expires_in"],
+						"additionalProperties": false
+					},
+					{
+						"type": "object",
+						"properties": {
+							"session": {
+								"$ref": "#/$defs/Session"
+							},
+							"user": {
+								"$ref": "#/$defs/User"
+							}
+						},
+						"required": ["session", "user"],
+						"additionalProperties": false
+					}
+				]
+			},
+			"Error": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string",
+						"minLength": 1
+					},
+					"error": {
+						"type": "string"
+					}
+				},
+				"required": ["code", "error"]
+			}
+		}
+	},
+	"doors": {
+		"continue": {
+			"method": "POST",
+			"path": "/v1/client/continue",
+			"request": "ContinueRequest",
+			"response": "ContinueResponse"
+		},
+		"verify": {
+			"method": "POST",
+			"path": "/v1/client/continue/verify",
+			"request": "ContinueVerifyRequest",
+			"response": "ContinueVerifyResponse"
+		}
+	},
+	"errors": {
+		"invalid_request": 400,
+		"unauthorized": 401,
+		"forbidden": 403,
+		"mfa_required": 401,
+		"locked_out": 429,
+		"rate_limited": 429,
+		"store_unavailable": 503,
+		"internal": 500
+	}
+}

@@ -1,0 +1,135 @@
+{
+	"$comment": "Golden names for the porcelain method option (MethodPolicy.porcelain: a short verb and a handle path). One annotation gives the TypeScript method, the Rust method, the CLI command and the MCP tool. The generator (sylphx-gen) and the reference derivation must agree on every row. Contract: docs/services/contracts/porcelain.md.",
+	"version": 1,
+	"methods": [
+		{
+			"method": "sylphx.workflows.v1.Runs.StartRun",
+			"porcelain": { "verb": "start", "handle": "workflows" },
+			"names": {
+				"typescript": "sx.workflows.start",
+				"rust": "sx.workflows().start()",
+				"cli": "sylphx workflows start",
+				"mcp": "workflows_start"
+			}
+		},
+		{
+			"method": "sylphx.workflows.v1.Runs.SignalRun",
+			"porcelain": { "verb": "signal", "handle": "workflows" },
+			"names": {
+				"typescript": "sx.workflows.signal",
+				"rust": "sx.workflows().signal()",
+				"cli": "sylphx workflows signal",
+				"mcp": "workflows_signal"
+			}
+		},
+		{
+			"method": "sylphx.data.v1.Databases.CheckUpgrade",
+			"porcelain": { "verb": "check_upgrade", "handle": "databases" },
+			"names": {
+				"typescript": "sx.databases.checkUpgrade",
+				"rust": "sx.databases().check_upgrade()",
+				"cli": "sylphx databases check-upgrade",
+				"mcp": "databases_check_upgrade"
+			}
+		},
+		{
+			"method": "sylphx.data.v1.KvNamespaces.Get",
+			"porcelain": { "verb": "get", "handle": "kv" },
+			"names": {
+				"typescript": "sx.kv.get",
+				"rust": "sx.kv().get()",
+				"cli": "sylphx kv get",
+				"mcp": "kv_get"
+			}
+		},
+		{
+			"method": "sylphx.data.v1.Buckets.CreateUploadUrl",
+			"porcelain": { "verb": "presign_put", "handle": "storage.bucket" },
+			"names": {
+				"typescript": "sx.storage.bucket.presignPut",
+				"rust": "sx.storage().bucket().presign_put()",
+				"cli": "sylphx storage bucket presign-put",
+				"mcp": "storage_bucket_presign_put"
+			}
+		},
+		{
+			"method": "sylphx.ai.v1.Responses.Create",
+			"porcelain": { "verb": "respond", "handle": "ai" },
+			"names": {
+				"typescript": "sx.ai.respond",
+				"rust": "sx.ai().respond()",
+				"cli": "sylphx ai respond",
+				"mcp": "ai_respond"
+			}
+		}
+	],
+	"lint": [
+		{
+			"name": "doubled-prefix-in-verb",
+			"porcelain": { "verb": "ai_chat", "handle": "ai" },
+			"code": "doubled_prefix",
+			"mcp": "ai_ai_chat"
+		},
+		{
+			"name": "doubled-prefix-workflows",
+			"porcelain": { "verb": "workflows_start", "handle": "workflows" },
+			"code": "doubled_prefix",
+			"mcp": "workflows_workflows_start"
+		},
+		{
+			"name": "doubled-prefix-nested-handle",
+			"porcelain": { "verb": "bucket_list", "handle": "storage.bucket" },
+			"code": "doubled_prefix",
+			"mcp": "storage_bucket_bucket_list"
+		},
+		{
+			"name": "verb-not-snake-case",
+			"porcelain": { "verb": "checkUpgrade", "handle": "databases" },
+			"code": "invalid_verb"
+		},
+		{
+			"name": "verb-empty",
+			"porcelain": { "verb": "", "handle": "databases" },
+			"code": "invalid_verb"
+		},
+		{
+			"name": "verb-too-long",
+			"porcelain": {
+				"verb": "a_very_long_verb_name_that_is_not_short_at_all",
+				"handle": "databases"
+			},
+			"code": "invalid_verb"
+		},
+		{
+			"name": "handle-empty",
+			"porcelain": { "verb": "get", "handle": "" },
+			"code": "invalid_handle"
+		},
+		{
+			"name": "handle-uppercase",
+			"porcelain": { "verb": "get", "handle": "Kv" },
+			"code": "invalid_handle"
+		},
+		{
+			"name": "handle-too-deep",
+			"porcelain": { "verb": "get", "handle": "a.b.c.d" },
+			"code": "invalid_handle"
+		}
+	],
+	"collisions": [
+		{
+			"name": "two-methods-one-name",
+			"methods": [
+				{
+					"method": "sylphx.workflows.v1.Runs.StartRun",
+					"porcelain": { "verb": "start", "handle": "workflows" }
+				},
+				{
+					"method": "sylphx.workflows.v1.Runs.StartBatch",
+					"porcelain": { "verb": "start", "handle": "workflows" }
+				}
+			],
+			"duplicate": "workflows_start"
+		}
+	]
+}

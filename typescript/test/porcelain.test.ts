@@ -30,7 +30,7 @@ interface Fixtures {
 
 const fixtures = JSON.parse(
 	readFileSync(
-		fileURLToPath(new URL('../../../contracts/fixtures/porcelain.json', import.meta.url)),
+		fileURLToPath(new URL('../../contracts/fixtures/porcelain.json', import.meta.url)),
 		'utf8',
 	),
 ) as Fixtures

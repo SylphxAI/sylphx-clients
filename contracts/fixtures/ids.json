@@ -1,0 +1,232 @@
+{
+	"about": "Golden vectors for the ids modules of the Rust and TypeScript SDKs (contracts/ids.toml). valid: parse gives the uuid and the typeid and dns text round-trip. invalid: parse must fail. wrong_prefix: parse succeeds but validate(expect, input) must fail. Both test suites read this file.",
+	"valid": [
+		{
+			"prefix": "prj",
+			"uuid": "01890a5d-ac96-774b-bcce-b302099a8057",
+			"typeid": "prj_01h455vb4pex5vsknk084sn02q",
+			"dns": "prj-01h455vb4pex5vsknk084sn02q",
+			"note": "the TypeID spec vector, a v7 value"
+		},
+		{
+			"prefix": "org",
+			"uuid": "00000000-0000-7000-8000-000000000000",
+			"typeid": "org_0000000000e008000000000000",
+			"dns": "org-0000000000e008000000000000",
+			"note": "the smallest v7 value"
+		},
+		{
+			"prefix": "env",
+			"uuid": "7fffffff-ffff-7fff-bfff-ffffffffffff",
+			"typeid": "env_3zzzzzzzzzfzzvzzzzzzzzzzzz",
+			"dns": "env-3zzzzzzzzzfzzvzzzzzzzzzzzz",
+			"note": "the largest v7 value below the top bit"
+		},
+		{
+			"prefix": "svc",
+			"uuid": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+			"typeid": "svc_7zzzzzzzzzzzzzzzzzzzzzzzzz",
+			"dns": "svc-7zzzzzzzzzzzzzzzzzzzzzzzzz",
+			"note": "all 128 bits set: first digit is 7, the maximum"
+		},
+		{
+			"prefix": "usr",
+			"uuid": "00000000-0000-0000-0000-000000000000",
+			"typeid": "usr_00000000000000000000000000",
+			"dns": "usr-00000000000000000000000000",
+			"note": "the nil value (a value minted before the cut keeps its bits)"
+		},
+		{
+			"prefix": "db",
+			"uuid": "4b0d1d0e-5a3c-4f3e-8a55-9f1c2d3e4f50",
+			"typeid": "db_2b1megwphw9wz8mncz3gpkwktg",
+			"dns": "db-2b1megwphw9wz8mncz3gpkwktg",
+			"note": "a UUIDv4 minted before a service cut keeps its value"
+		},
+		{
+			"prefix": "mbr",
+			"uuid": "a75bff12-4298-7e28-9a4a-85420b834ff6",
+			"typeid": "mbr_57bfzh4gmrfrm9mjm5885r6kzp",
+			"dns": "mbr-57bfzh4gmrfrm9mjm5885r6kzp",
+			"note": "a v7 value"
+		},
+		{
+			"prefix": "sess",
+			"uuid": "752d8055-70a9-72b6-83b9-24b0aacfdfc6",
+			"typeid": "sess_3n5p05aw59eav87e94p2nczqy6",
+			"dns": "sess-3n5p05aw59eav87e94p2nczqy6",
+			"note": "a v7 value"
+		},
+		{
+			"prefix": "bld",
+			"uuid": "de352eb9-9287-74ac-973c-eba185187709",
+			"typeid": "bld_6y6mqbk4m7ejp9ef7bm62hgxr9",
+			"dns": "bld-6y6mqbk4m7ejp9ef7bm62hgxr9",
+			"note": "a v7 value"
+		},
+		{
+			"prefix": "sched",
+			"uuid": "ddfddfb3-2d3f-7494-bbee-54cc3528a32f",
+			"typeid": "sched_6xzqfv6b9zejabqvjmsgtjh8sf",
+			"dns": "sched-6xzqfv6b9zejabqvjmsgtjh8sf",
+			"note": "a v7 value"
+		},
+		{
+			"prefix": "kms",
+			"uuid": "e73ed439-009b-727f-aec5-777fd98a5a54",
+			"typeid": "kms_777va3j04ve9ztxhbqfzcrmpjm",
+			"dns": "kms-777va3j04ve9ztxhbqfzcrmpjm",
+			"note": "a v7 value"
+		},
+		{
+			"prefix": "req",
+			"uuid": "7fee8c72-6ea7-7017-9d3f-c5d19d03b22b",
+			"typeid": "req_3zxt674vn7e0bstfy5t6eg7chb",
+			"dns": "req-3zxt674vn7e0bstfy5t6eg7chb",
+			"note": "a v7 value"
+		}
+	],
+	"invalid": [
+		{
+			"input": "PRJ_01H455VB4PEX5VSKNK084SN02Q",
+			"why": "uppercase"
+		},
+		{
+			"input": "prj_01H455VB4PEX5VSKNK084SN02Q",
+			"why": "uppercase suffix"
+		},
+		{
+			"input": "Prj_01h455vb4pex5vsknk084sn02q",
+			"why": "uppercase prefix"
+		},
+		{
+			"input": "org_fs0101arz3ndektsv4rrffq69g5fav",
+			"why": "the retired ULID form with a Cell"
+		},
+		{
+			"input": "01890a5d-ac96-774b-bcce-b302099a8057",
+			"why": "a raw UUID"
+		},
+		{
+			"input": "prj_01890a5d-ac96-774b-bcce-b302099a8057",
+			"why": "a UUID in place of the suffix"
+		},
+		{
+			"input": "01890a5dac96774bbcceb302099a8057",
+			"why": "raw hex32"
+		},
+		{
+			"input": "prj_01890a5dac96774bbcceb302099a8057",
+			"why": "hex32 in place of the suffix"
+		},
+		{
+			"input": "prj_3mJ6dZ1yRkq8VtWc5sHn2PfXbA",
+			"why": "a base58 suffix"
+		},
+		{
+			"input": "prj_01h455vb4pex5vsknk084sn02q0",
+			"why": "a 27 character suffix"
+		},
+		{
+			"input": "prj_01h455vb4pex5vsknk084sn02",
+			"why": "a 25 character suffix"
+		},
+		{
+			"input": "prj_",
+			"why": "an empty suffix"
+		},
+		{
+			"input": "prj",
+			"why": "a prefix alone"
+		},
+		{
+			"input": "_01h455vb4pex5vsknk084sn02q",
+			"why": "an empty prefix"
+		},
+		{
+			"input": "01h455vb4pex5vsknk084sn02q",
+			"why": "a suffix alone"
+		},
+		{
+			"input": "prj_81h455vb4pex5vsknk084sn02q",
+			"why": "first digit above 7 overflows 128 bits"
+		},
+		{
+			"input": "prj_z1h455vb4pex5vsknk084sn02q",
+			"why": "first digit z overflows 128 bits"
+		},
+		{
+			"input": "prj_01hi55vb4pex5vsknk084sn02q",
+			"why": "the letter i is not in the alphabet"
+		},
+		{
+			"input": "prj_l1h455vb4pex5vsknk084sn02q",
+			"why": "the letter l is not in the alphabet"
+		},
+		{
+			"input": "prj_o1h455vb4pex5vsknk084sn02q",
+			"why": "the letter o is not in the alphabet"
+		},
+		{
+			"input": "prj_u1h455vb4pex5vsknk084sn02q",
+			"why": "the letter u is not in the alphabet"
+		},
+		{
+			"input": "prj-01h455vb4pex5vsknk084sn02q",
+			"why": "the DNS form is not an id"
+		},
+		{
+			"input": "prj_01h455vb4p_x5vsknk084sn02q",
+			"why": "an underscore inside the suffix"
+		},
+		{
+			"input": " prj_01h455vb4pex5vsknk084sn02q",
+			"why": "leading space"
+		},
+		{
+			"input": "prj_01h455vb4pex5vsknk084sn02q\n",
+			"why": "trailing newline"
+		},
+		{
+			"input": "zzz_01h455vb4pex5vsknk084sn02q",
+			"why": "a prefix that is not registered"
+		},
+		{
+			"input": "project_01h455vb4pex5vsknk084sn02q",
+			"why": "a prefix longer than five letters"
+		},
+		{
+			"input": "p_01h455vb4pex5vsknk084sn02q",
+			"why": "a one letter prefix"
+		},
+		{
+			"input": "pr1_01h455vb4pex5vsknk084sn02q",
+			"why": "a digit in the prefix"
+		},
+		{
+			"input": "proj_01h455vb4pex5vsknk084sn02q",
+			"why": "the retired prefix proj"
+		},
+		{
+			"input": "",
+			"why": "empty"
+		}
+	],
+	"wrong_prefix": [
+		{
+			"expect": "prj",
+			"input": "org_01h455vb4pex5vsknk084sn02q",
+			"note": "a registered prefix, not the one the field takes"
+		},
+		{
+			"expect": "org",
+			"input": "prj_01h455vb4pex5vsknk084sn02q",
+			"note": "a registered prefix, not the one the field takes"
+		},
+		{
+			"expect": "svc",
+			"input": "sub_01h455vb4pex5vsknk084sn02q",
+			"note": "a registered prefix, not the one the field takes"
+		}
+	]
+}

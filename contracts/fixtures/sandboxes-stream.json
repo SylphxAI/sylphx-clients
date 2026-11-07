@@ -1,0 +1,2453 @@
+{
+	"about": "Golden frames of the Sylphx Sandboxes display stream protocol, version 1 (docs/services/sandboxes/stream.md). Both SDK suites read this file: every message round-trips through the Rust and TypeScript types, tolerated frames parse to their canonical form, invalid frames are refused, chunking is byte-identical, and both mock peers reproduce every session.",
+	"version": 1,
+	"messages": {
+		"signal_client": [
+			{
+				"t": "hello",
+				"v": 1,
+				"client": {
+					"dpr": 2,
+					"w": 1440,
+					"h": 900,
+					"touch": false
+				},
+				"monitors": "all"
+			},
+			{
+				"t": "hello",
+				"v": 1,
+				"client": {
+					"dpr": 1.5,
+					"w": 390,
+					"h": 844,
+					"touch": true
+				},
+				"monitors": ["m1"]
+			},
+			{
+				"t": "answer",
+				"sdp": "v=0\r\n"
+			},
+			{
+				"t": "ice",
+				"candidate": {
+					"candidate": "candidate:1 1 udp 2130706431 192.0.2.1 50000 typ host",
+					"sdpMid": "m0",
+					"sdpMLineIndex": 0
+				}
+			},
+			{
+				"t": "ice",
+				"candidate": {
+					"candidate": "",
+					"sdpMid": "m0",
+					"sdpMLineIndex": 0,
+					"usernameFragment": "abcd"
+				}
+			},
+			{
+				"t": "restart"
+			}
+		],
+		"signal_server": [
+			{
+				"t": "offer",
+				"sdp": "v=0\r\n"
+			},
+			{
+				"t": "ice",
+				"candidate": {
+					"candidate": "candidate:1 1 udp 2130706431 192.0.2.1 50000 typ host",
+					"sdpMid": "m0",
+					"sdpMLineIndex": 0
+				}
+			},
+			{
+				"t": "bye",
+				"reason": "generation_changed"
+			},
+			{
+				"t": "bye",
+				"reason": "revoked"
+			},
+			{
+				"t": "bye",
+				"reason": "lease_gone"
+			},
+			{
+				"t": "error",
+				"code": "out_of_order",
+				"message": "answer before offer"
+			},
+			{
+				"t": "error",
+				"code": "unsupported_version"
+			}
+		],
+		"control_client": [
+			{
+				"t": "upgrade",
+				"token": "tok"
+			},
+			{
+				"t": "downgrade"
+			}
+		],
+		"control_server": [
+			{
+				"t": "role",
+				"role": "controller",
+				"epoch": 42
+			},
+			{
+				"t": "role",
+				"role": "viewer",
+				"epoch": 0
+			},
+			{
+				"t": "control",
+				"holder": "human",
+				"epoch": 41,
+				"label": "Ana"
+			},
+			{
+				"t": "control",
+				"holder": "agent",
+				"epoch": 40,
+				"label": "Ops"
+			},
+			{
+				"t": "control",
+				"holder": "none",
+				"epoch": 41,
+				"label": ""
+			},
+			{
+				"t": "monitors",
+				"list": [
+					{
+						"id": "m0",
+						"name": "Display 1",
+						"x": 0,
+						"y": 0,
+						"w": 1920,
+						"h": 1080,
+						"scale": 1,
+						"primary": true
+					},
+					{
+						"id": "m1",
+						"name": "Display 2",
+						"x": 1920,
+						"y": 0,
+						"w": 1280,
+						"h": 800,
+						"scale": 1.25,
+						"primary": false
+					}
+				]
+			},
+			{
+				"t": "cursor",
+				"png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+				"hx": 4,
+				"hy": 2,
+				"visible": true
+			},
+			{
+				"t": "stats",
+				"rtt_ms": 23,
+				"fps": 30,
+				"kbps": 4200,
+				"encoder": "hw:vaapi"
+			},
+			{
+				"t": "stats",
+				"rtt_ms": 170,
+				"fps": 24,
+				"kbps": 1800,
+				"encoder": "sw:x264"
+			},
+			{
+				"t": "error",
+				"code": "control_held"
+			}
+		],
+		"input": [
+			{
+				"t": "pd",
+				"m": "m0",
+				"x": 812,
+				"y": 440,
+				"button": 0
+			},
+			{
+				"t": "pu",
+				"m": "m0",
+				"x": 812,
+				"y": 440,
+				"button": 2,
+				"ts": 1234
+			},
+			{
+				"t": "wh",
+				"dx": 0,
+				"dy": -120,
+				"unit": "pixel"
+			},
+			{
+				"t": "wh",
+				"dx": 0.5,
+				"dy": 3,
+				"unit": "line",
+				"ts": 9
+			},
+			{
+				"t": "kd",
+				"code": "KeyA",
+				"key": "a",
+				"mods": [],
+				"repeat": false
+			},
+			{
+				"t": "kd",
+				"code": "KeyW",
+				"key": "w",
+				"mods": ["ctrl", "shift"],
+				"repeat": false,
+				"ts": 77
+			},
+			{
+				"t": "ku",
+				"code": "KeyA",
+				"key": "a",
+				"mods": [],
+				"repeat": false
+			},
+			{
+				"t": "tx",
+				"text": "你好，世界 👋🏽 ngo5 dei6"
+			},
+			{
+				"t": "ime",
+				"phase": "start",
+				"text": "",
+				"caret": 0
+			},
+			{
+				"t": "ime",
+				"phase": "update",
+				"text": "ngo",
+				"caret": 3
+			},
+			{
+				"t": "ime",
+				"phase": "end",
+				"text": "我",
+				"caret": 1
+			},
+			{
+				"t": "tc",
+				"id": 1,
+				"phase": "start",
+				"m": "m0",
+				"x": 10,
+				"y": 20
+			},
+			{
+				"t": "tc",
+				"id": 1,
+				"phase": "cancel",
+				"m": "m0",
+				"x": 10,
+				"y": 20
+			},
+			{
+				"t": "combo",
+				"keys": ["ctrl", "alt", "delete"]
+			},
+			{
+				"t": "combo",
+				"keys": ["meta", "f12"]
+			},
+			{
+				"t": "release_all"
+			}
+		],
+		"pointer": [
+			{
+				"t": "pm",
+				"m": "m0",
+				"x": 812,
+				"y": 440,
+				"b": 0,
+				"ts": 16
+			},
+			{
+				"t": "pm",
+				"m": "m1",
+				"x": -4,
+				"y": 0,
+				"b": 5
+			}
+		],
+		"clipboard": [
+			{
+				"t": "clip",
+				"seq": 12,
+				"items": [
+					{
+						"mime": "text/plain",
+						"data": "粵語 Cantonese 🀄"
+					},
+					{
+						"mime": "image/png",
+						"data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+					}
+				]
+			},
+			{
+				"t": "clip",
+				"seq": 13,
+				"items": []
+			},
+			{
+				"t": "clip_chunk",
+				"seq": 14,
+				"i": 0,
+				"n": 2,
+				"data": "eyJ0Ijoi"
+			},
+			{
+				"t": "error",
+				"code": "not_controller"
+			},
+			{
+				"t": "error",
+				"code": "too_large",
+				"message": "text over 1 MiB"
+			}
+		]
+	},
+	"tolerated": [
+		{
+			"kind": "input",
+			"in": {
+				"t": "tx",
+				"text": "a",
+				"future": true
+			},
+			"canonical": {
+				"t": "tx",
+				"text": "a"
+			}
+		},
+		{
+			"kind": "signal_client",
+			"in": {
+				"t": "restart",
+				"why": "wifi"
+			},
+			"canonical": {
+				"t": "restart"
+			}
+		},
+		{
+			"kind": "control_server",
+			"in": {
+				"t": "stats",
+				"rtt_ms": 1,
+				"fps": 2,
+				"kbps": 3,
+				"encoder": "sw:x264",
+				"jitter_ms": 4
+			},
+			"canonical": {
+				"t": "stats",
+				"rtt_ms": 1,
+				"fps": 2,
+				"kbps": 3,
+				"encoder": "sw:x264"
+			}
+		},
+		{
+			"kind": "signal_client",
+			"in": {
+				"t": "hello",
+				"v": 1,
+				"client": {
+					"dpr": 1,
+					"w": 800,
+					"h": 600,
+					"touch": false
+				}
+			},
+			"canonical": {
+				"t": "hello",
+				"v": 1,
+				"client": {
+					"dpr": 1,
+					"w": 800,
+					"h": 600,
+					"touch": false
+				},
+				"monitors": "all"
+			}
+		}
+	],
+	"invalid": [
+		{
+			"kind": "signal_client",
+			"in": {
+				"t": "offer",
+				"sdp": "x"
+			},
+			"why": "offer is server to client"
+		},
+		{
+			"kind": "signal_client",
+			"in": {
+				"t": "hello",
+				"v": 1,
+				"client": {
+					"dpr": 1,
+					"w": -1,
+					"h": 600,
+					"touch": false
+				},
+				"monitors": "all"
+			},
+			"why": "negative width"
+		},
+		{
+			"kind": "signal_client",
+			"in": {
+				"t": "hello",
+				"v": 1,
+				"client": {
+					"dpr": 1,
+					"w": 800,
+					"h": 600,
+					"touch": false
+				},
+				"monitors": "some"
+			},
+			"why": "monitors is all or a list"
+		},
+		{
+			"kind": "signal_client",
+			"in": {
+				"t": "answer"
+			},
+			"why": "missing sdp"
+		},
+		{
+			"kind": "signal_client",
+			"in": {
+				"sdp": "x"
+			},
+			"why": "no t"
+		},
+		{
+			"kind": "signal_server",
+			"in": {
+				"t": "bye",
+				"reason": "tired"
+			},
+			"why": "unknown bye reason"
+		},
+		{
+			"kind": "signal_server",
+			"in": {
+				"t": "error",
+				"code": "oops"
+			},
+			"why": "unknown error code"
+		},
+		{
+			"kind": "control_client",
+			"in": {
+				"t": "upgrade"
+			},
+			"why": "missing token"
+		},
+		{
+			"kind": "control_server",
+			"in": {
+				"t": "control",
+				"holder": "robot",
+				"epoch": 1,
+				"label": ""
+			},
+			"why": "unknown holder"
+		},
+		{
+			"kind": "control_server",
+			"in": {
+				"t": "role",
+				"role": "owner",
+				"epoch": 1
+			},
+			"why": "unknown role"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "pd",
+				"m": "m0",
+				"x": 1,
+				"y": 1,
+				"button": 5
+			},
+			"why": "button 0-4"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "pd",
+				"m": "m0",
+				"x": 1.5,
+				"y": 1,
+				"button": 0
+			},
+			"why": "integer pixels"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "kd",
+				"code": "KeyA",
+				"key": "a",
+				"mods": ["hyper"],
+				"repeat": false
+			},
+			"why": "unknown modifier"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "kd",
+				"code": "KeyA",
+				"key": "a",
+				"repeat": false
+			},
+			"why": "missing mods"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "wh",
+				"dx": 0,
+				"dy": 1,
+				"unit": "page"
+			},
+			"why": "unit pixel or line"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "ime",
+				"phase": "commit",
+				"text": "x",
+				"caret": 1
+			},
+			"why": "unknown phase"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "tc",
+				"id": 1,
+				"phase": "start",
+				"m": "m0",
+				"x": 1
+			},
+			"why": "missing y"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "combo",
+				"keys": ["ctrl", "q"]
+			},
+			"why": "combo keys are a fixed set"
+		},
+		{
+			"kind": "input",
+			"in": {
+				"t": "pm",
+				"m": "m0",
+				"x": 1,
+				"y": 1,
+				"b": 0
+			},
+			"why": "pm travels on the pointer channel"
+		},
+		{
+			"kind": "input",
+			"in": "tx",
+			"why": "not an object"
+		},
+		{
+			"kind": "pointer",
+			"in": {
+				"t": "pm",
+				"m": "m0",
+				"x": 1,
+				"y": 1
+			},
+			"why": "missing b"
+		},
+		{
+			"kind": "pointer",
+			"in": {
+				"t": "pm",
+				"m": "m0",
+				"x": 1,
+				"y": 1,
+				"b": -1
+			},
+			"why": "b is a bit mask"
+		},
+		{
+			"kind": "clipboard",
+			"in": {
+				"t": "clip",
+				"seq": 1,
+				"items": [
+					{
+						"mime": "text/html",
+						"data": "<b>x</b>"
+					}
+				]
+			},
+			"why": "text/plain or image/png"
+		},
+		{
+			"kind": "clipboard",
+			"in": {
+				"t": "clip",
+				"seq": -1,
+				"items": []
+			},
+			"why": "seq counts up from 0"
+		},
+		{
+			"kind": "clipboard",
+			"in": {
+				"t": "clip_chunk",
+				"seq": 1,
+				"i": 0,
+				"n": 2
+			},
+			"why": "missing data"
+		}
+	],
+	"chunking": {
+		"clip": {
+			"t": "clip",
+			"seq": 7,
+			"items": [
+				{
+					"mime": "text/plain",
+					"data": "你好 👋"
+				}
+			]
+		},
+		"slice_bytes": 16,
+		"chunks": [
+			{
+				"t": "clip_chunk",
+				"seq": 7,
+				"i": 0,
+				"n": 5,
+				"data": "eyJ0IjoiY2xpcCIsInNlcQ=="
+			},
+			{
+				"t": "clip_chunk",
+				"seq": 7,
+				"i": 1,
+				"n": 5,
+				"data": "Ijo3LCJpdGVtcyI6W3sibQ=="
+			},
+			{
+				"t": "clip_chunk",
+				"seq": 7,
+				"i": 2,
+				"n": 5,
+				"data": "aW1lIjoidGV4dC9wbGFpbg=="
+			},
+			{
+				"t": "clip_chunk",
+				"seq": 7,
+				"i": 3,
+				"n": 5,
+				"data": "IiwiZGF0YSI6IuS9oOWlvQ=="
+			},
+			{
+				"t": "clip_chunk",
+				"seq": 7,
+				"i": 4,
+				"n": 5,
+				"data": "IPCfkYsifV19"
+			}
+		]
+	},
+	"hub": {
+		"leases": [
+			{
+				"uid": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"holder": "agent",
+				"epoch": 41,
+				"label": "Ops",
+				"monitors": [
+					{
+						"id": "m0",
+						"name": "Display 1",
+						"x": 0,
+						"y": 0,
+						"w": 1920,
+						"h": 1080,
+						"scale": 1,
+						"primary": true
+					},
+					{
+						"id": "m1",
+						"name": "Display 2",
+						"x": 1920,
+						"y": 0,
+						"w": 1280,
+						"h": 800,
+						"scale": 1,
+						"primary": false
+					}
+				]
+			},
+			{
+				"uid": "lease_b",
+				"org": "org_2",
+				"project": "proj_9",
+				"generation": 3,
+				"holder": "human",
+				"epoch": 42,
+				"label": "Bob",
+				"monitors": [
+					{
+						"id": "m0",
+						"name": "Display 1",
+						"x": 0,
+						"y": 0,
+						"w": 1920,
+						"h": 1080,
+						"scale": 1,
+						"primary": true
+					}
+				]
+			}
+		],
+		"tokens": {
+			"viewer_a": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"role": "viewer",
+				"epoch": 0
+			},
+			"viewer_a2": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"role": "viewer",
+				"epoch": 0
+			},
+			"ctl_a42": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"role": "controller",
+				"epoch": 42
+			},
+			"ctl_a43": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"role": "controller",
+				"epoch": 43
+			},
+			"ctl_a41": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"role": "controller",
+				"epoch": 41
+			},
+			"ctl_a42_gen6": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 6,
+				"role": "controller",
+				"epoch": 42
+			},
+			"viewer_a_gen6": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 6,
+				"role": "viewer",
+				"epoch": 0
+			},
+			"viewer_a_expired": {
+				"lease": "lease_a",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 7,
+				"role": "viewer",
+				"epoch": 0,
+				"expired": true
+			},
+			"viewer_a_wrong_tenant": {
+				"lease": "lease_a",
+				"org": "org_2",
+				"project": "proj_9",
+				"generation": 7,
+				"role": "viewer",
+				"epoch": 0
+			},
+			"viewer_b": {
+				"lease": "lease_b",
+				"org": "org_2",
+				"project": "proj_9",
+				"generation": 3,
+				"role": "viewer",
+				"epoch": 0
+			},
+			"ctl_b42": {
+				"lease": "lease_b",
+				"org": "org_2",
+				"project": "proj_9",
+				"generation": 3,
+				"role": "controller",
+				"epoch": 42
+			},
+			"viewer_missing": {
+				"lease": "lease_zz",
+				"org": "org_1",
+				"project": "proj_1",
+				"generation": 1,
+				"role": "viewer",
+				"epoch": 0
+			}
+		}
+	},
+	"sessions": [
+		{
+			"name": "full_session",
+			"about": "hello, offer, answer, ICE, take control, upgrade, input, clipboard both ways, restart, downgrade, bye",
+			"steps": [
+				{
+					"admit": "p1",
+					"token": "viewer_a",
+					"expect": "ok"
+				},
+				{
+					"admit": "p2",
+					"token": "viewer_a2",
+					"expect": "ok"
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "signal",
+							"msg": {
+								"t": "error",
+								"code": "out_of_order"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 2,
+							"w": 1440,
+							"h": 900,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "signal",
+							"msg": {
+								"t": "offer",
+								"sdp": {
+									"$contains": ["a=ice-ufrag:mock1", "a=mid:m0", "a=mid:m1", "m=application"]
+								}
+							}
+						},
+						{
+							"peer": "p1",
+							"ch": "signal",
+							"msg": {
+								"t": "ice",
+								"candidate": {
+									"candidate": "candidate:1 1 udp 2130706431 127.0.0.1 9 typ host",
+									"sdpMid": "m0",
+									"sdpMLineIndex": 0
+								}
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "ice",
+						"candidate": {
+							"candidate": "candidate:2 1 udp 1 198.51.100.7 40000 typ srflx",
+							"sdpMid": "m0",
+							"sdpMLineIndex": 0
+						}
+					},
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "viewer",
+								"epoch": 0
+							}
+						},
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "agent",
+								"epoch": 41,
+								"label": "Ops"
+							}
+						},
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "monitors",
+								"list": [
+									{
+										"id": "m0",
+										"name": "Display 1",
+										"x": 0,
+										"y": 0,
+										"w": 1920,
+										"h": 1080,
+										"scale": 1,
+										"primary": true
+									},
+									{
+										"id": "m1",
+										"name": "Display 2",
+										"x": 1920,
+										"y": 0,
+										"w": 1280,
+										"h": 800,
+										"scale": 1,
+										"primary": false
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"peer": "p2",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 1,
+							"w": 390,
+							"h": 844,
+							"touch": true
+						},
+						"monitors": ["m1"]
+					},
+					"expect": [
+						{
+							"peer": "p2",
+							"ch": "signal",
+							"msg": {
+								"t": "offer",
+								"sdp": {
+									"$contains": ["a=ice-ufrag:mock1", "a=mid:m1", "m=application"]
+								}
+							}
+						},
+						{
+							"peer": "p2",
+							"ch": "signal",
+							"msg": {
+								"t": "ice",
+								"candidate": {
+									"candidate": "candidate:1 1 udp 2130706431 127.0.0.1 9 typ host",
+									"sdpMid": "m1",
+									"sdpMLineIndex": 0
+								}
+							}
+						}
+					]
+				},
+				{
+					"peer": "p2",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": [
+						{
+							"peer": "p2",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "viewer",
+								"epoch": 0
+							}
+						},
+						{
+							"peer": "p2",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "agent",
+								"epoch": 41,
+								"label": "Ops"
+							}
+						},
+						{
+							"peer": "p2",
+							"ch": "control",
+							"msg": {
+								"t": "monitors",
+								"list": [
+									{
+										"id": "m0",
+										"name": "Display 1",
+										"x": 0,
+										"y": 0,
+										"w": 1920,
+										"h": 1080,
+										"scale": 1,
+										"primary": true
+									},
+									{
+										"id": "m1",
+										"name": "Display 2",
+										"x": 1920,
+										"y": 0,
+										"w": 1280,
+										"h": 800,
+										"scale": 1,
+										"primary": false
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "kd",
+						"code": "KeyX",
+						"key": "x",
+						"mods": [],
+						"repeat": false
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"probe": "black",
+						"held_keys": [],
+						"typed": "",
+						"controller": null
+					}
+				},
+				{
+					"peer": "p1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_a42"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "error",
+								"code": "control_held"
+							}
+						}
+					]
+				},
+				{
+					"hub": "acquire",
+					"lease": "lease_a",
+					"holder": "human",
+					"label": "Ana",
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "human",
+								"epoch": 42,
+								"label": "Ana"
+							}
+						},
+						{
+							"peer": "p2",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "human",
+								"epoch": 42,
+								"label": "Ana"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$viewer_a2"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "error",
+								"code": "unauthenticated"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_a42_gen6"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "error",
+								"code": "stale_generation"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_a41"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "error",
+								"code": "control_held"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_a42"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "controller",
+								"epoch": 42
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "kd",
+						"code": "KeyA",
+						"key": "a",
+						"mods": [],
+						"repeat": false,
+						"ts": 100
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"probe": "white",
+						"held_keys": ["KeyA"],
+						"typed": "a",
+						"controller": "p1"
+					}
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "ku",
+						"code": "KeyA",
+						"key": "a",
+						"mods": [],
+						"repeat": false,
+						"ts": 140
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": { "probe": "black", "held_keys": [], "typed": "a", "controller": "p1" }
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "kd",
+						"code": "KeyC",
+						"key": "c",
+						"mods": ["ctrl"],
+						"repeat": false
+					},
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": { "t": "ime", "phase": "start", "text": "", "caret": 0 },
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": { "t": "ime", "phase": "update", "text": "nei", "caret": 3 },
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": { "t": "ime", "phase": "end", "text": "你好", "caret": 2 },
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": { "typed": "a" }
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": { "t": "tx", "text": "你好" },
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "pointer",
+					"send": {
+						"t": "pm",
+						"m": "m0",
+						"x": 812,
+						"y": 440,
+						"b": 0,
+						"ts": 150
+					},
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "pd",
+						"m": "m0",
+						"x": 812,
+						"y": 441,
+						"button": 0
+					},
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "combo",
+						"keys": ["ctrl", "alt", "delete"]
+					},
+					"expect": []
+				},
+				{
+					"peer": "p2",
+					"ch": "input",
+					"send": {
+						"t": "tx",
+						"text": "viewer text is dropped"
+					},
+					"expect": []
+				},
+				{
+					"peer": "p2",
+					"ch": "pointer",
+					"send": {
+						"t": "pm",
+						"m": "m1",
+						"x": 1,
+						"y": 1,
+						"b": 0
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"probe": "white",
+						"held_keys": ["KeyC"],
+						"held_buttons": [0],
+						"typed": "a你好",
+						"pointer": {
+							"m": "m0",
+							"x": 812,
+							"y": 441
+						},
+						"combos": ["ctrl+alt+delete"],
+						"controller": "p1"
+					}
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "pd",
+						"m": "m0",
+						"x": 1,
+						"y": 1,
+						"button": 9
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "error",
+								"code": "invalid_message"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"send": {
+						"t": "clip",
+						"seq": 1,
+						"items": [
+							{
+								"mime": "text/plain",
+								"data": "你好 👋 from the person"
+							}
+						]
+					},
+					"expect": [
+						{
+							"peer": "p2",
+							"ch": "clipboard",
+							"msg": {
+								"t": "clip",
+								"seq": 1,
+								"items": [
+									{
+										"mime": "text/plain",
+										"data": "你好 👋 from the person"
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"send": {
+						"t": "clip",
+						"seq": 1,
+						"items": [
+							{
+								"mime": "text/plain",
+								"data": "duplicate seq is ignored"
+							}
+						]
+					},
+					"expect": []
+				},
+				{
+					"peer": "p2",
+					"ch": "clipboard",
+					"send": {
+						"t": "clip",
+						"seq": 1,
+						"items": [
+							{
+								"mime": "text/plain",
+								"data": "viewer"
+							}
+						]
+					},
+					"expect": [
+						{
+							"peer": "p2",
+							"ch": "clipboard",
+							"msg": {
+								"t": "error",
+								"code": "not_controller"
+							}
+						}
+					]
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"clipboard": [
+							{
+								"mime": "text/plain",
+								"data": "你好 👋 from the person"
+							}
+						]
+					}
+				},
+				{
+					"hub": "machine_clipboard",
+					"lease": "lease_a",
+					"items": [
+						{
+							"mime": "text/plain",
+							"data": "copied on the machine"
+						}
+					],
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "clipboard",
+							"msg": {
+								"t": "clip",
+								"seq": 2,
+								"items": [
+									{
+										"mime": "text/plain",
+										"data": "copied on the machine"
+									}
+								]
+							}
+						},
+						{
+							"peer": "p2",
+							"ch": "clipboard",
+							"msg": {
+								"t": "clip",
+								"seq": 2,
+								"items": [
+									{
+										"mime": "text/plain",
+										"data": "copied on the machine"
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"chunk": 0,
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"chunk": 1,
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": { "clipboard": [{ "mime": "text/plain", "data": "copied on the machine" }] }
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"chunk": 2,
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"chunk": 3,
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "clipboard",
+					"chunk": 4,
+					"expect": [
+						{
+							"peer": "p2",
+							"ch": "clipboard",
+							"msg": {
+								"t": "clip",
+								"seq": 3,
+								"items": [{ "mime": "text/plain", "data": "你好 👋" }]
+							}
+						}
+					]
+				},
+				{
+					"state": "lease_a",
+					"expect": { "clipboard": [{ "mime": "text/plain", "data": "你好 👋" }] }
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "restart"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "signal",
+							"msg": {
+								"t": "offer",
+								"sdp": {
+									"$contains": ["a=ice-ufrag:mock2", "a=mid:m0", "a=mid:m1", "m=application"]
+								}
+							}
+						},
+						{
+							"peer": "p1",
+							"ch": "signal",
+							"msg": {
+								"t": "ice",
+								"candidate": {
+									"candidate": "candidate:1 1 udp 2130706431 127.0.0.1 9 typ host",
+									"sdpMid": "m0",
+									"sdpMLineIndex": 0
+								}
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "release_all"
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"held_keys": [],
+						"held_buttons": [],
+						"probe": "white",
+						"controller": "p1"
+					}
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "kd",
+						"code": "ShiftLeft",
+						"key": "Shift",
+						"mods": ["shift"],
+						"repeat": false
+					},
+					"expect": []
+				},
+				{
+					"peer": "p1",
+					"ch": "control",
+					"send": {
+						"t": "downgrade"
+					},
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "viewer",
+								"epoch": 0
+							}
+						}
+					]
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"held_keys": [],
+						"controller": null,
+						"typed": "a你好"
+					}
+				},
+				{
+					"peer": "p1",
+					"ch": "input",
+					"send": {
+						"t": "tx",
+						"text": "after downgrade"
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"typed": "a你好"
+					}
+				},
+				{
+					"hub": "bump_generation",
+					"lease": "lease_a",
+					"expect": [
+						{
+							"peer": "p1",
+							"ch": "signal",
+							"msg": {
+								"t": "bye",
+								"reason": "generation_changed"
+							}
+						},
+						{
+							"peer": "p2",
+							"ch": "signal",
+							"msg": {
+								"t": "bye",
+								"reason": "generation_changed"
+							}
+						}
+					]
+				},
+				{
+					"peer": "p1",
+					"ch": "signal",
+					"send": {
+						"t": "restart"
+					},
+					"expect": []
+				},
+				{
+					"admit": "p3",
+					"token": "viewer_a",
+					"expect": "STALE_GENERATION"
+				}
+			]
+		},
+		{
+			"name": "admission",
+			"about": "the route's rules: token present and valid, own tenant, generation, revocation, controller epoch",
+			"steps": [
+				{
+					"admit": "x1",
+					"token": "$unknown",
+					"expect": "UNAUTHENTICATED"
+				},
+				{
+					"admit": "x2",
+					"token": "viewer_a_expired",
+					"expect": "UNAUTHENTICATED"
+				},
+				{
+					"admit": "x3",
+					"token": "viewer_missing",
+					"expect": "NOT_FOUND"
+				},
+				{
+					"admit": "x4",
+					"token": "viewer_a_wrong_tenant",
+					"expect": "NOT_FOUND"
+				},
+				{
+					"admit": "x5",
+					"token": "viewer_a_gen6",
+					"expect": "STALE_GENERATION"
+				},
+				{
+					"admit": "x6",
+					"token": "ctl_a42",
+					"expect": "CONTROL_HELD"
+				},
+				{
+					"hub": "acquire",
+					"lease": "lease_a",
+					"holder": "human",
+					"label": "Ana",
+					"expect": []
+				},
+				{
+					"admit": "c1",
+					"token": "ctl_a42",
+					"expect": "ok"
+				},
+				{
+					"peer": "c1",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 2,
+							"w": 1440,
+							"h": 900,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "signal",
+							"msg": {
+								"t": "offer",
+								"sdp": {
+									"$contains": ["a=ice-ufrag:mock1", "a=mid:m0", "a=mid:m1", "m=application"]
+								}
+							}
+						},
+						{
+							"peer": "c1",
+							"ch": "signal",
+							"msg": {
+								"t": "ice",
+								"candidate": {
+									"candidate": "candidate:1 1 udp 2130706431 127.0.0.1 9 typ host",
+									"sdpMid": "m0",
+									"sdpMLineIndex": 0
+								}
+							}
+						}
+					]
+				},
+				{
+					"peer": "c1",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "controller",
+								"epoch": 42
+							}
+						},
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "human",
+								"epoch": 42,
+								"label": "Ana"
+							}
+						},
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "monitors",
+								"list": [
+									{
+										"id": "m0",
+										"name": "Display 1",
+										"x": 0,
+										"y": 0,
+										"w": 1920,
+										"h": 1080,
+										"scale": 1,
+										"primary": true
+									},
+									{
+										"id": "m1",
+										"name": "Display 2",
+										"x": 1920,
+										"y": 0,
+										"w": 1280,
+										"h": 800,
+										"scale": 1,
+										"primary": false
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"peer": "c1",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 2,
+							"w": 1440,
+							"h": 900,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "signal",
+							"msg": {
+								"t": "error",
+								"code": "out_of_order"
+							}
+						}
+					]
+				},
+				{
+					"admit": "v1",
+					"token": "viewer_a",
+					"expect": "ok"
+				},
+				{
+					"hub": "revoke",
+					"token": "viewer_a",
+					"expect": [
+						{
+							"peer": "v1",
+							"ch": "signal",
+							"msg": {
+								"t": "bye",
+								"reason": "revoked"
+							}
+						}
+					]
+				},
+				{
+					"admit": "v2",
+					"token": "viewer_a",
+					"expect": "UNAUTHENTICATED"
+				},
+				{
+					"hub": "acquire",
+					"lease": "lease_a",
+					"holder": "human",
+					"label": "Cy",
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "viewer",
+								"epoch": 0
+							}
+						},
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "human",
+								"epoch": 43,
+								"label": "Cy"
+							}
+						}
+					]
+				},
+				{
+					"admit": "x7",
+					"token": "ctl_a42",
+					"expect": "CONTROL_HELD"
+				},
+				{
+					"peer": "c1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_a43"
+					},
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "controller",
+								"epoch": 43
+							}
+						}
+					]
+				},
+				{
+					"hub": "revoke",
+					"token": "ctl_a43",
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "viewer",
+								"epoch": 0
+							}
+						}
+					]
+				},
+				{
+					"hub": "release",
+					"lease": "lease_a",
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "none",
+								"epoch": 43,
+								"label": ""
+							}
+						}
+					]
+				},
+				{
+					"peer": "c1",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 2,
+						"client": {
+							"dpr": 1,
+							"w": 1,
+							"h": 1,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "signal",
+							"msg": {
+								"t": "error",
+								"code": "out_of_order"
+							}
+						}
+					]
+				},
+				{
+					"admit": "v3",
+					"token": "viewer_a2",
+					"expect": "ok"
+				},
+				{
+					"peer": "v3",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 2,
+						"client": {
+							"dpr": 1,
+							"w": 1,
+							"h": 1,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "v3",
+							"ch": "signal",
+							"msg": {
+								"t": "error",
+								"code": "unsupported_version"
+							}
+						}
+					]
+				},
+				{
+					"peer": "v3",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 2,
+							"w": 1440,
+							"h": 900,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": []
+				},
+				{
+					"admit": "v4",
+					"token": "viewer_a2",
+					"expect": "ok"
+				},
+				{
+					"peer": "v4",
+					"ch": "signal",
+					"send_raw": "{not json",
+					"expect": [
+						{
+							"peer": "v4",
+							"ch": "signal",
+							"msg": {
+								"t": "error",
+								"code": "invalid_message"
+							}
+						}
+					]
+				},
+				{
+					"peer": "v4",
+					"ch": "signal",
+					"send": {
+						"t": "dance"
+					},
+					"expect": [
+						{
+							"peer": "v4",
+							"ch": "signal",
+							"msg": {
+								"t": "error",
+								"code": "invalid_message"
+							}
+						}
+					]
+				},
+				{
+					"hub": "end_lease",
+					"lease": "lease_a",
+					"expect": [
+						{
+							"peer": "c1",
+							"ch": "signal",
+							"msg": {
+								"t": "bye",
+								"reason": "lease_gone"
+							}
+						},
+						{
+							"peer": "v4",
+							"ch": "signal",
+							"msg": {
+								"t": "bye",
+								"reason": "lease_gone"
+							}
+						}
+					]
+				},
+				{
+					"admit": "x8",
+					"token": "viewer_a2",
+					"expect": "STALE_GENERATION"
+				}
+			]
+		},
+		{
+			"name": "tenant_isolation",
+			"about": "a stream token admits only its own sandbox",
+			"steps": [
+				{
+					"admit": "a1",
+					"token": "viewer_a",
+					"expect": "ok"
+				},
+				{
+					"admit": "b1",
+					"token": "ctl_b42",
+					"expect": "ok"
+				},
+				{
+					"peer": "a1",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 2,
+							"w": 1440,
+							"h": 900,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "a1",
+							"ch": "signal",
+							"msg": {
+								"t": "offer",
+								"sdp": {
+									"$contains": ["a=ice-ufrag:mock1", "a=mid:m0", "a=mid:m1", "m=application"]
+								}
+							}
+						},
+						{
+							"peer": "a1",
+							"ch": "signal",
+							"msg": {
+								"t": "ice",
+								"candidate": {
+									"candidate": "candidate:1 1 udp 2130706431 127.0.0.1 9 typ host",
+									"sdpMid": "m0",
+									"sdpMLineIndex": 0
+								}
+							}
+						}
+					]
+				},
+				{
+					"peer": "a1",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": [
+						{
+							"peer": "a1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "viewer",
+								"epoch": 0
+							}
+						},
+						{
+							"peer": "a1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "agent",
+								"epoch": 41,
+								"label": "Ops"
+							}
+						},
+						{
+							"peer": "a1",
+							"ch": "control",
+							"msg": {
+								"t": "monitors",
+								"list": [
+									{
+										"id": "m0",
+										"name": "Display 1",
+										"x": 0,
+										"y": 0,
+										"w": 1920,
+										"h": 1080,
+										"scale": 1,
+										"primary": true
+									},
+									{
+										"id": "m1",
+										"name": "Display 2",
+										"x": 1920,
+										"y": 0,
+										"w": 1280,
+										"h": 800,
+										"scale": 1,
+										"primary": false
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"peer": "b1",
+					"ch": "signal",
+					"send": {
+						"t": "hello",
+						"v": 1,
+						"client": {
+							"dpr": 2,
+							"w": 1440,
+							"h": 900,
+							"touch": false
+						},
+						"monitors": "all"
+					},
+					"expect": [
+						{
+							"peer": "b1",
+							"ch": "signal",
+							"msg": {
+								"t": "offer",
+								"sdp": {
+									"$contains": ["a=ice-ufrag:mock1", "a=mid:m0", "m=application"]
+								}
+							}
+						},
+						{
+							"peer": "b1",
+							"ch": "signal",
+							"msg": {
+								"t": "ice",
+								"candidate": {
+									"candidate": "candidate:1 1 udp 2130706431 127.0.0.1 9 typ host",
+									"sdpMid": "m0",
+									"sdpMLineIndex": 0
+								}
+							}
+						}
+					]
+				},
+				{
+					"peer": "b1",
+					"ch": "signal",
+					"send": {
+						"t": "answer",
+						"sdp": "v=0\r\n"
+					},
+					"expect": [
+						{
+							"peer": "b1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "controller",
+								"epoch": 42
+							}
+						},
+						{
+							"peer": "b1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "human",
+								"epoch": 42,
+								"label": "Bob"
+							}
+						},
+						{
+							"peer": "b1",
+							"ch": "control",
+							"msg": {
+								"t": "monitors",
+								"list": [
+									{
+										"id": "m0",
+										"name": "Display 1",
+										"x": 0,
+										"y": 0,
+										"w": 1920,
+										"h": 1080,
+										"scale": 1,
+										"primary": true
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"hub": "acquire",
+					"lease": "lease_a",
+					"holder": "human",
+					"label": "Ana",
+					"expect": [
+						{
+							"peer": "a1",
+							"ch": "control",
+							"msg": {
+								"t": "control",
+								"holder": "human",
+								"epoch": 42,
+								"label": "Ana"
+							}
+						}
+					]
+				},
+				{
+					"peer": "a1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_b42"
+					},
+					"expect": [
+						{
+							"peer": "a1",
+							"ch": "control",
+							"msg": {
+								"t": "error",
+								"code": "unauthenticated"
+							}
+						}
+					]
+				},
+				{
+					"peer": "a1",
+					"ch": "input",
+					"send": {
+						"t": "tx",
+						"text": "must not reach any lease"
+					},
+					"expect": []
+				},
+				{
+					"peer": "b1",
+					"ch": "input",
+					"send": {
+						"t": "tx",
+						"text": "only lease b"
+					},
+					"expect": []
+				},
+				{
+					"peer": "b1",
+					"ch": "clipboard",
+					"send": {
+						"t": "clip",
+						"seq": 1,
+						"items": [
+							{
+								"mime": "text/plain",
+								"data": "b secret"
+							}
+						]
+					},
+					"expect": []
+				},
+				{
+					"state": "lease_a",
+					"expect": {
+						"typed": "",
+						"clipboard": [],
+						"controller": null
+					}
+				},
+				{
+					"state": "lease_b",
+					"expect": {
+						"typed": "only lease b",
+						"clipboard": [
+							{
+								"mime": "text/plain",
+								"data": "b secret"
+							}
+						],
+						"controller": "b1"
+					}
+				},
+				{
+					"hub": "bump_generation",
+					"lease": "lease_b",
+					"expect": [
+						{
+							"peer": "b1",
+							"ch": "signal",
+							"msg": {
+								"t": "bye",
+								"reason": "generation_changed"
+							}
+						}
+					]
+				},
+				{
+					"peer": "a1",
+					"ch": "control",
+					"send": {
+						"t": "upgrade",
+						"token": "$ctl_a42"
+					},
+					"expect": [
+						{
+							"peer": "a1",
+							"ch": "control",
+							"msg": {
+								"t": "role",
+								"role": "controller",
+								"epoch": 42
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

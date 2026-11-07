@@ -41,7 +41,7 @@ interface Fixtures {
 }
 
 const fixtures = JSON.parse(
-	readFileSync(new URL('../../../contracts/fixtures/end-user-keys.json', import.meta.url), 'utf8'),
+	readFileSync(new URL('../../contracts/fixtures/end-user-keys.json', import.meta.url), 'utf8'),
 ) as Fixtures
 
 const PROD = 'orgs/o1/projects/p1/envs/production'
