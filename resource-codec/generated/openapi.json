@@ -12721,7 +12721,9 @@
           "ETAG_CONFLICT",
           "VALIDATE_ONLY_NOT_SUPPORTED",
           "ID_MOVED",
-          "EXEC_OUTCOME_UNKNOWN"
+          "EXEC_OUTCOME_UNKNOWN",
+          "DESTINATION_COUNTRY_NOT_ALLOWED",
+          "BUDGET_EXHAUSTED"
         ],
         "type": "string"
       },
@@ -100370,6 +100372,8 @@
           "IDEMPOTENCY_IN_PROGRESS",
           "PLAN_LIMIT_REACHED",
           "RATE_LIMITED",
+          "DESTINATION_COUNTRY_NOT_ALLOWED",
+          "BUDGET_EXHAUSTED",
           "INVALID_STATE"
         ],
         "x-sylphx-method": "notify.messages.create",

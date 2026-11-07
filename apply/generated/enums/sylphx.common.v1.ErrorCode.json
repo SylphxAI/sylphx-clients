@@ -171,6 +171,16 @@
       "number": 34,
       "proto_name": "ERROR_CODE_EXEC_OUTCOME_UNKNOWN",
       "wire": "EXEC_OUTCOME_UNKNOWN"
+    },
+    {
+      "number": 35,
+      "proto_name": "ERROR_CODE_DESTINATION_COUNTRY_NOT_ALLOWED",
+      "wire": "DESTINATION_COUNTRY_NOT_ALLOWED"
+    },
+    {
+      "number": 36,
+      "proto_name": "ERROR_CODE_BUDGET_EXHAUSTED",
+      "wire": "BUDGET_EXHAUSTED"
     }
   ]
 }

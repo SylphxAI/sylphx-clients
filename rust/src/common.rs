@@ -427,6 +427,10 @@ pub enum ErrorCode {
     /// the result was recorded). The key never runs again; the command may or may
     /// not have taken effect. Not retryable with the same key.
     ExecOutcomeUnknown,
+    /// PERMISSION_DENIED / 403: the organization does not allow this SMS country.
+    DestinationCountryNotAllowed,
+    /// RESOURCE_EXHAUSTED / 429: the daily SMS count or estimated USD budget is exhausted.
+    BudgetExhausted,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -469,6 +473,8 @@ impl ErrorCode {
             Self::ValidateOnlyNotSupported => "VALIDATE_ONLY_NOT_SUPPORTED",
             Self::IdMoved => "ID_MOVED",
             Self::ExecOutcomeUnknown => "EXEC_OUTCOME_UNKNOWN",
+            Self::DestinationCountryNotAllowed => "DESTINATION_COUNTRY_NOT_ALLOWED",
+            Self::BudgetExhausted => "BUDGET_EXHAUSTED",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -510,6 +516,8 @@ impl ErrorCode {
             "VALIDATE_ONLY_NOT_SUPPORTED" => Self::ValidateOnlyNotSupported,
             "ID_MOVED" => Self::IdMoved,
             "EXEC_OUTCOME_UNKNOWN" => Self::ExecOutcomeUnknown,
+            "DESTINATION_COUNTRY_NOT_ALLOWED" => Self::DestinationCountryNotAllowed,
+            "BUDGET_EXHAUSTED" => Self::BudgetExhausted,
             other => Self::Unknown(other.to_string()),
         }
     }

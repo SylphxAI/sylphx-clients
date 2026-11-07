@@ -4120,7 +4120,7 @@ export class MessagesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/messages` · permission `notify:send` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `RATE_LIMITED`, `INVALID_STATE`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `RATE_LIMITED`, `DESTINATION_COUNTRY_NOT_ALLOWED`, `BUDGET_EXHAUSTED`, `INVALID_STATE`.
 	 */
 	async create(request: CreateMessageRequest): Promise<Message> {
 		return this.client.call<Message>({
