@@ -145,12 +145,49 @@ pub enum Ready {
 /// take a fresh workspace.
 pub async fn wait_ready(
     client: &Client,
-    mut lease: sbx::Lease,
+    lease: sbx::Lease,
     pin: Option<Duration>,
     deadline: Instant,
 ) -> Ready {
+    wait_ready_with_progress(client, lease, pin, deadline, |_, _| {}).await
+}
+
+/// Waits with a periodic observation of the last public lease snapshot, even
+/// while a status request is awaiting its response. Cleanup keeps the original
+/// client: an expired GET budget must not prevent releasing the accepted lease.
+pub async fn wait_ready_with_progress(
+    client: &Client,
+    lease: sbx::Lease,
+    pin: Option<Duration>,
+    deadline: Instant,
+    progress: impl FnMut(&sbx::Lease, Duration),
+) -> Ready {
+    wait_ready_observed(
+        client,
+        lease,
+        pin,
+        deadline,
+        progress,
+        POLL,
+        Duration::from_secs(30),
+    )
+    .await
+}
+
+async fn wait_ready_observed(
+    client: &Client,
+    mut lease: sbx::Lease,
+    pin: Option<Duration>,
+    deadline: Instant,
+    mut progress: impl FnMut(&sbx::Lease, Duration),
+    poll: Duration,
+    heartbeat: Duration,
+) -> Ready {
     let t = Instant::now();
-    let leases = client.sandboxes().leases();
+    let bounded = client.with_deadline(deadline);
+    let leases = bounded.sandboxes().leases();
+    let mut ticks = tokio::time::interval_at(tokio::time::Instant::now() + heartbeat, heartbeat);
+    ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         match state(&lease) {
             sbx::LeaseState::Ready => return Ready::Ready(Box::new(lease)),
@@ -191,11 +228,25 @@ pub async fn wait_ready(
             }
             return Ready::QueueTimeout;
         }
-        tokio::time::sleep(POLL).await;
         let mut get = sbx::GetLeaseRequest::default();
         get.name = lease.name.clone();
-        lease = match leases.get(get).await {
+        let read = async {
+            tokio::time::sleep(poll.min(deadline.saturating_duration_since(Instant::now()))).await;
+            leases.get(get).await
+        };
+        tokio::pin!(read);
+        let result = loop {
+            tokio::select! {
+                result = &mut read => break result,
+                _ = ticks.tick() => progress(&lease, t.elapsed()),
+            }
+        };
+        lease = match result {
             Ok(l) => l,
+            Err(_) if Instant::now() >= deadline => {
+                release(client, &lease.name).await;
+                return Ready::QueueTimeout;
+            }
             Err(e) => return Ready::Api(e),
         };
     }
@@ -343,6 +394,83 @@ mod tests {
         assert_eq!(meta.labels["purpose"], "build-run");
         assert_eq!(meta.labels["worktree"], "w-22292");
         assert_eq!(meta.labels["source"], "sylphxai-cloud");
+    }
+
+    #[tokio::test]
+    async fn silent_readiness_poll_obeys_budget_and_releases_with_original_client() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        async fn headers(socket: &mut tokio::net::TcpStream) -> String {
+            let mut bytes = Vec::new();
+            while !bytes.ends_with(b"\r\n\r\n") {
+                let mut byte = [0];
+                assert_eq!(socket.read(&mut byte).await.unwrap(), 1);
+                bytes.push(byte[0]);
+            }
+            String::from_utf8(bytes).unwrap()
+        }
+        let server = tokio::spawn(async move {
+            let (mut silent, _) = listener.accept().await.unwrap();
+            let get = headers(&mut silent).await;
+            assert!(
+                get.starts_with("GET /v1/orgs/o/projects/p/envs/e/leases/sbx-budget "),
+                "{get}"
+            );
+            // Keep the GET unanswered; cleanup must open a distinct request
+            // after its deadline, rather than using the expired GET client.
+            let (mut cleanup, _) = listener.accept().await.unwrap();
+            let release = headers(&mut cleanup).await;
+            assert!(
+                release.starts_with("POST /v1/orgs/o/projects/p/envs/e/leases/sbx-budget:release "),
+                "{release}"
+            );
+            let body = r#"{"name":"orgs/o/projects/p/envs/e/leases/sbx-budget"}"#;
+            cleanup.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+            (get, release)
+        });
+        let client = Client::new(
+            sylphx::HttpTransport::builder()
+                .base_url(url)
+                .api_key("sylphx_sk_test")
+                .max_retries(0)
+                .build()
+                .unwrap(),
+        );
+        let mut lease = sbx::Lease::default();
+        lease.name = "orgs/o/projects/p/envs/e/leases/sbx-budget".into();
+        let mut status = sbx::LeaseStatus::default();
+        status.state = Some(sbx::LeaseState::Granted);
+        lease.status = Some(status);
+        let mut observed = Vec::new();
+        let start = Instant::now();
+        let ready = tokio::time::timeout(
+            Duration::from_secs(3),
+            wait_ready_observed(
+                &client,
+                lease,
+                None,
+                start + Duration::from_millis(250),
+                |lease, elapsed| observed.push((lease.name.clone(), elapsed)),
+                Duration::from_millis(1),
+                Duration::from_millis(40),
+            ),
+        )
+        .await
+        .expect("silent poll exceeded its queue budget");
+        assert!(matches!(ready, Ready::QueueTimeout), "{ready:?}");
+        assert!(
+            !observed.is_empty(),
+            "heartbeat must run while GET is silent"
+        );
+        assert!(observed
+            .iter()
+            .all(|(name, _)| name.ends_with("sbx-budget")));
+        tokio::time::timeout(Duration::from_secs(1), server)
+            .await
+            .unwrap()
+            .unwrap();
     }
 
     #[test]

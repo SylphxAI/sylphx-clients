@@ -58,8 +58,7 @@ use crate::{build_cache, build_source};
 use sylphx_build_lease::guest::{Event, Fault, Guest, Reattach, REATTACH_BUDGET};
 use sylphx_build_lease::scripts::{start_script, Startup, ARTIFACTS};
 use sylphx_build_lease::{
-    allowed_domains, judge, lease_request, wait_ready, LeaseParams, Ready, Verdict,
-    BUILD_CACHE_HOST, WS,
+    allowed_domains, judge, lease_request, LeaseParams, Ready, Verdict, BUILD_CACHE_HOST, WS,
 };
 
 /// `sylphx build image`'s arguments.
@@ -113,7 +112,7 @@ fn lease_domains(o: &Opts) -> Vec<String> {
 pub fn command() -> Command {
     Command::new("run")
         .about("Run a command on a remote build machine against this source directory; output, exit code and --artifact files come back")
-        .long_about("Runs <command> on a remote copy of PATH, or its enclosing Git work tree when present. No Git initialization or manifest is required. Ordinary directories honor .gitignore; optional .sylphxignore exclusions apply to both source types. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from at most four `sylphx:` lines on stderr.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree behavior.\n\nAdmission and cold boot have a default 30m wait budget. --queue-timeout optionally overrides that budget; keep the default unless you need a different wait limit.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure before the command starts; 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --size standard -- cargo test")
+        .long_about("Runs <command> on a remote copy of PATH, or its enclosing Git work tree when present. No Git initialization or manifest is required. Ordinary directories honor .gitignore; optional .sylphxignore exclusions apply to both source types. Every run gets a cold, lease-owned workspace created only after admission and reclaimed at lease end. Scoped remote caches reuse build outputs; no persistent workspace Volume is created or attached, including with --region. Output streams back unchanged apart from `sylphx:` progress lines on stderr. While admission or cold boot is pending, a line every 30s names the lease, its last public state or admission condition, and elapsed time. --quiet suppresses these lines; -o json keeps only machine events.\n\nThe run gets the project's scoped shared build cache (sccache, Turbo) through its environment; if the cache cannot be reached the run builds without it and says so on one `sylphx: warning:` line. --no-cache skips it. Cargo uses CARGO_INCREMENTAL=0 with sccache and CARGO_PROFILE_DEV_DEBUG=0. --env overrides these defaults. --fresh keeps the empty-tree behavior.\n\nAdmission and cold boot have a default 30m wait budget. --queue-timeout optionally overrides that budget; keep the default unless you need a different wait limit.\n\nExit codes: the command's own; 2 usage; 124 --timeout reached; 125 platform failure before the command starts; 130 interrupted; 137 the machine was lost after the command started (it is never run twice; a broken output stream is reattached to the running command).\n\nExample: sylphx build run --size standard -- cargo test")
         .arg(Arg::new("path").value_name("PATH").index(1)
             .help("Directory to run in (default \".\"); syncs it or its enclosing Git work tree"))
         .arg(Arg::new("command").value_name("COMMAND").index(2).num_args(1..).last(true).required(true)
@@ -461,6 +460,34 @@ impl Outcome {
     }
 }
 
+/// One bounded, control-safe line from public status; unknown admission reasons
+/// remain visible without making a new server enum a CLI compatibility break.
+fn queue_progress(lease: &sbx::Lease, elapsed: Duration) -> String {
+    fn safe(text: &str) -> String {
+        text.chars().filter(|c| !c.is_control()).take(240).collect()
+    }
+    let state = lease
+        .status
+        .as_ref()
+        .and_then(|s| s.state.as_ref())
+        .map(|s| s.as_str())
+        .unwrap_or("unknown");
+    let condition = lease
+        .status
+        .as_ref()
+        .and_then(|s| s.conditions.iter().find(|c| c.r#type == "Admitted"));
+    let status = match condition {
+        Some(c) => format!("{}: {}", safe(&c.reason), safe(&c.message)),
+        None => safe(state),
+    };
+    format!(
+        "waiting for build machine (lease {}): {}; elapsed {}s",
+        safe(&lease.name),
+        status,
+        elapsed.as_secs()
+    )
+}
+
 /// Where progress, output and events go: raw output and `sylphx:` lines, or
 /// NDJSON events on stdout with `-o json`.
 struct Out {
@@ -469,9 +496,13 @@ struct Out {
 }
 
 impl Out {
+    fn progress_line(&self, text: &str) -> Option<String> {
+        (!self.json && !self.quiet).then(|| format!("sylphx: {text}"))
+    }
+
     fn progress(&self, text: &str) {
-        if !self.json && !self.quiet {
-            eprintln!("sylphx: {text}");
+        if let Some(line) = self.progress_line(text) {
+            eprintln!("{line}");
         }
     }
 
@@ -1549,13 +1580,21 @@ impl Run<'_> {
         // The create already returned this resource. A failure before that
         // has no name; say so instead of printing an empty one.
         let label = lease_label(&lease.name);
-        match wait_ready(client, lease.clone(), None, deadline).await {
+        match sylphx_build_lease::machine::wait_ready_with_progress(
+            client,
+            lease.clone(),
+            None,
+            deadline,
+            |lease, elapsed| self.out.progress(&queue_progress(lease, elapsed)),
+        )
+        .await
+        {
             Ready::Ready(l) => Ok(*l),
             // No workspace node pin is requested by this caller.
             Ready::PinExpired => unreachable!("volume-free Build leases have no node pin"),
             Ready::QueueTimeout => {
-                // `wait_ready` polls on the unbounded client and released the
-                // lease itself; only forget it here.
+                // The GET budget expired; the original cleanup client released
+                // the lease. Only forget it here.
                 self.held.with(|h| h.lease = None);
                 Err(Attempt::Done(Outcome::platform(
                     format!(
@@ -2539,6 +2578,64 @@ mod tests {
     use super::*;
     use sylphx_build_lease::scripts::{PROVISION, RUN};
     use sylphx_build_lease::{provision_failure, BUILD_PACKAGES};
+
+    fn pending_lease(condition: Option<(&str, &str)>) -> sbx::Lease {
+        let mut lease = sbx::Lease::default();
+        lease.name = "sbx-progress".into();
+        let mut status = sbx::LeaseStatus::default();
+        status.state = Some(sbx::LeaseState::Granted);
+        if let Some((reason, message)) = condition {
+            let mut admitted = sylphx::common::Condition::default();
+            admitted.r#type = "Admitted".into();
+            admitted.reason = reason.into();
+            admitted.message = message.into();
+            status.conditions.push(admitted);
+        }
+        lease.status = Some(status);
+        lease
+    }
+
+    #[test]
+    fn queue_heartbeat_reports_present_admission_condition() {
+        assert_eq!(queue_progress(&pending_lease(Some(("WaitingForCapacity", "waiting for capacity"))), Duration::from_secs(30)),
+            "waiting for build machine (lease sbx-progress): WaitingForCapacity: waiting for capacity; elapsed 30s");
+    }
+
+    #[test]
+    fn queue_heartbeat_falls_back_when_admission_condition_absent() {
+        assert_eq!(
+            queue_progress(&pending_lease(None), Duration::from_secs(60)),
+            "waiting for build machine (lease sbx-progress): granted; elapsed 60s"
+        );
+    }
+
+    #[test]
+    fn queue_heartbeat_tolerates_unknown_admission_reason_and_controls() {
+        let text = queue_progress(
+            &pending_lease(Some(("FutureReason", "safe\nmessage\u{1b}"))),
+            Duration::from_secs(90),
+        );
+        assert_eq!(text, "waiting for build machine (lease sbx-progress): FutureReason: safemessage; elapsed 90s");
+    }
+
+    #[test]
+    fn queue_heartbeat_is_human_only_and_quiet_suppresses_it() {
+        let text = queue_progress(&pending_lease(None), Duration::from_secs(30));
+        assert_eq!(
+            Out {
+                json: false,
+                quiet: false
+            }
+            .progress_line(&text),
+            Some(
+                "sylphx: waiting for build machine (lease sbx-progress): granted; elapsed 30s"
+                    .into()
+            )
+        );
+        for (json, quiet) in [(false, true), (true, false), (true, true)] {
+            assert_eq!(Out { json, quiet }.progress_line(&text), None);
+        }
+    }
 
     #[tokio::test]
     async fn pipeline_bounds_concurrency_and_preserves_mint_upload_order() {
