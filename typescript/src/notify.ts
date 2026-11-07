@@ -112,6 +112,18 @@ export interface ChannelDelivery {
 	readonly attempts?: number
 }
 
+/** Configure the number's voicemail. No carrier-number writes occur. */
+export interface ConfigureSmsNumberVoicemailRequest {
+	/** The number resource. */
+	name: string
+	/** Plain-text greeting spoken before recording. */
+	greeting: string
+	/** Content retention, 1–30 days. */
+	retentionDays: number
+	/** Maximum recording duration, 10–180 whole seconds (for example, "120s"). */
+	maxRecordingDuration: string
+}
+
 /** Connect an existing owned line; no provider mutation occurs. */
 export interface ConnectPhoneNumberRequest {
 	/** Tenant environment. */
@@ -457,6 +469,20 @@ export interface DnsRecord {
 	readonly priority?: number
 }
 
+/** Download one retained voicemail recording. */
+export interface DownloadInboundMessageRequest {
+	/** The message resource. */
+	name: string
+}
+
+/** Bounded WAV audio, never a public carrier download URL. */
+export interface DownloadInboundMessageResponse {
+	/** audio/wav. */
+	mimeType?: string
+	/** Audio bytes, base64 in JSON. */
+	body?: string
+}
+
 /** Email content; bodies are Mustache templates. */
 export interface EmailContent {
 	/** The From address; its domain is a verified Email Domain. */
@@ -566,6 +592,12 @@ export interface GetEmailDomainRequest {
 /** The request of GetInboundEmail. */
 export interface GetInboundEmailRequest {
 	/** The name of the inbound email to get. */
+	name: string
+}
+
+/** Get a unified inbox entry. */
+export interface GetInboundMessageRequest {
+	/** The message resource. */
 	name: string
 }
 
@@ -718,6 +750,41 @@ export interface InboundEmail {
 	readonly message?: string
 }
 
+/** The unified SMS and voice inbox, ordered by its resumable sequence. */
+export interface InboundMessage {
+	/** `orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}`. */
+	name?: string
+	/** Stable identifier; existing SMS identifiers are preserved. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/**
+	 * The feed position, advancing when content changes within the environment; filter
+	 * `sequence > N` to resume after the last one handled.
+	 */
+	readonly sequence?: string
+	/** The carrier's id for this message; the dedupe key on the number binding. */
+	readonly carrierMessageId?: string
+	/** The sender, in E.164 when the carrier gave one. */
+	readonly senderNumber?: string
+	/** The number the message was sent to, in E.164. */
+	readonly recipientNumber?: string
+	/** SMS text or the completed voicemail transcript. Empty after retention. */
+	readonly text?: string
+	/** SMS segments; not applicable to voice. */
+	readonly segments?: number
+	/** When the carrier says it received the message. */
+	readonly receiveTime?: string
+	/** The text has been cleared by retention; the dedupe key stays. */
+	readonly cleared?: boolean
+	/** sms or voice. */
+	readonly channel?: string
+	/** Call and recording metadata; present only for voice. */
+	readonly voice?: VoiceMessage
+	/** Deadline for recording and transcript deletion. */
+	readonly expireTime?: string
+}
+
 /**
  * An Inbound SMS is one text a bound number received, kept as evidence. The
  * body is cleared when the environment's tier retention expires; the carrier's
@@ -848,6 +915,28 @@ export interface ListInboundEmailsResponse {
 	/** The page. */
 	inboundEmails?: InboundEmail[]
 	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** List the unified inbox. */
+export interface ListInboundMessagesRequest {
+	/** The number whose inbox to read. */
+	parent: string
+	/** Default 50; at most 1000. */
+	pageSize?: number
+	/** A previous page's continuation token. */
+	pageToken?: string
+	/** sequence > N, optionally AND sender_number = "…". */
+	filter?: string
+	/** sequence, oldest first. */
+	orderBy?: string
+}
+
+/** The unified inbox page. */
+export interface ListInboundMessagesResponse {
+	/** Messages in sequence order. */
+	inboundMessages?: InboundMessage[]
+	/** Empty on the last page. */
 	nextPageToken?: string
 }
 
@@ -2014,6 +2103,18 @@ export interface SmsNumberStatus {
 	readonly upfrontCost?: string
 	/** Accepted monthly price in USD. */
 	readonly monthlyCost?: string
+	/** Desired voicemail behavior. Configuring this does not attach the line. */
+	readonly voicemail?: VoicemailConfig
+	/**
+	 * Readback-verified standalone Call Control application. The line's owner
+	 * attaches it separately; Notify never changes a DID's voice configuration.
+	 */
+	readonly voiceApplicationId?: string
+	/**
+	 * Safe provisioning error. Definite refusals are retryable after inventory
+	 * readback; an unknown create outcome is never blindly repeated.
+	 */
+	readonly voiceApplicationError?: string
 }
 
 /** An SMS origin. */
@@ -2239,6 +2340,36 @@ export interface VerifySenderRequest {
 	name: string
 }
 
+/** One call remains visible even when recording or transcription fails. */
+export interface VoiceMessage {
+	/** Stable carrier call-session identifier. */
+	readonly callSessionId?: string
+	/** missed or recorded. A saved recording never regresses to missed. */
+	readonly state?: string
+	/** Tenant-scoped Storage key. Read bytes through DownloadInboundMessage. */
+	readonly recordingKey?: string
+	/** Duration of saved audio, preserving carrier-reported milliseconds. */
+	readonly recordingDuration?: string
+	/** pending, completed or failed. Completed transcripts do not regress. */
+	readonly transcriptionStatus?: string
+	/** Recording failed; call metadata remains available. */
+	readonly recordingError?: boolean
+	/** Carrier-reported hangup time, if received. */
+	readonly hangupTime?: string
+	/** Carrier-reported hangup cause, if received. */
+	readonly hangupCause?: string
+}
+
+/** A greeting and a bounded recording, with explicit content retention. */
+export interface VoicemailConfig {
+	/** Greeting spoken before recording. Plain text, not SSML. */
+	greeting?: string
+	/** Delete both carrier and Storage audio, and the transcript, after 1–30 days. */
+	retentionDays?: number
+	/** Maximum recording duration, 10–180 whole seconds (for example, "120s"). */
+	maxRecordingDuration?: string
+}
+
 /** The progress of a Broadcast. */
 export type BroadcastState = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled' | (string & {})
 
@@ -2319,6 +2450,10 @@ runtime.registerSchemas({
 		['receiptTime', 'receipt_time'],
 		['errorCode', 'error_code'],
 		['providerResponse', 'provider_response'],
+	],
+	'sylphx.notify.v1.ConfigureSmsNumberVoicemailRequest': [
+		['retentionDays', 'retention_days'],
+		['maxRecordingDuration', 'max_recording_duration'],
 	],
 	'sylphx.notify.v1.ConnectPhoneNumberRequest': [
 		['phoneNumberId', 'phone_number_id'],
@@ -2433,6 +2568,10 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.DnsRecord': [
 		['recordType', 'record_type'],
 	],
+	'sylphx.notify.v1.DownloadInboundMessageRequest': [],
+	'sylphx.notify.v1.DownloadInboundMessageResponse': [
+		['mimeType', 'mime_type'],
+	],
 	'sylphx.notify.v1.EmailContent': [
 		['senderAddress', 'sender_address'],
 		['htmlBody', 'html_body'],
@@ -2467,6 +2606,7 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetBroadcastRequest': [],
 	'sylphx.notify.v1.GetEmailDomainRequest': [],
 	'sylphx.notify.v1.GetInboundEmailRequest': [],
+	'sylphx.notify.v1.GetInboundMessageRequest': [],
 	'sylphx.notify.v1.GetInboundSmsRequest': [],
 	'sylphx.notify.v1.GetInboxItemRequest': [],
 	'sylphx.notify.v1.GetMailboxConnectLinkRequest': [],
@@ -2495,6 +2635,15 @@ runtime.registerSchemas({
 		['receiveTime', 'receive_time'],
 		['rawSha256', 'raw_sha256'],
 		['sizeBytes', 'size_bytes'],
+	],
+	'sylphx.notify.v1.InboundMessage': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['carrierMessageId', 'carrier_message_id'],
+		['senderNumber', 'sender_number'],
+		['recipientNumber', 'recipient_number'],
+		['receiveTime', 'receive_time'],
+		['voice', 'voice', 'sylphx.notify.v1.VoiceMessage'],
+		['expireTime', 'expire_time'],
 	],
 	'sylphx.notify.v1.InboundSms': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2535,6 +2684,15 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListInboundEmailsResponse': [
 		['inboundEmails', 'inbound_emails', 'sylphx.notify.v1.InboundEmail'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListInboundMessagesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListInboundMessagesResponse': [
+		['inboundMessages', 'inbound_messages', 'sylphx.notify.v1.InboundMessage'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListInboundSmsRequest': [
@@ -2905,6 +3063,9 @@ runtime.registerSchemas({
 		['stateReason', 'state_reason'],
 		['upfrontCost', 'upfront_cost'],
 		['monthlyCost', 'monthly_cost'],
+		['voicemail', 'voicemail', 'sylphx.notify.v1.VoicemailConfig'],
+		['voiceApplicationId', 'voice_application_id'],
+		['voiceApplicationError', 'voice_application_error'],
 	],
 	'sylphx.notify.v1.SmsSender': [
 		['phoneNumber', 'phone_number'],
@@ -2997,6 +3158,19 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.VerifyEmailDomainRequest': [],
 	'sylphx.notify.v1.VerifySenderRequest': [],
+	'sylphx.notify.v1.VoiceMessage': [
+		['callSessionId', 'call_session_id'],
+		['recordingKey', 'recording_key'],
+		['recordingDuration', 'recording_duration'],
+		['transcriptionStatus', 'transcription_status'],
+		['recordingError', 'recording_error'],
+		['hangupTime', 'hangup_time'],
+		['hangupCause', 'hangup_cause'],
+	],
+	'sylphx.notify.v1.VoicemailConfig': [
+		['retentionDays', 'retention_days'],
+		['maxRecordingDuration', 'max_recording_duration'],
+	],
 })
 
 /**
@@ -3043,6 +3217,8 @@ export class NotifyApi {
 	readonly smsNumbers: SmsNumbersCollection
 	/** The `inbound_sms` collection. */
 	readonly inboundSms: InboundSmsCollection
+	/** The `inbound_messages` collection. */
+	readonly inboundMessages: InboundMessagesCollection
 
 	constructor(client: runtime.Client) {
 		this.phoneNumbers = new PhoneNumbersCollection(client)
@@ -3063,6 +3239,7 @@ export class NotifyApi {
 		this.broadcasts = new BroadcastsCollection(client)
 		this.smsNumbers = new SmsNumbersCollection(client)
 		this.inboundSms = new InboundSmsCollection(client)
+		this.inboundMessages = new InboundMessagesCollection(client)
 	}
 }
 
@@ -4849,6 +5026,25 @@ export class SmsNumbersCollection {
 			mutation: true,
 		})
 	}
+
+	/**
+	 * Configure voicemail and create an inert standalone carrier application.
+	 * Never buys, attaches, forwards or changes the voice profile of a line.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/sms_numbers/*}:configureVoicemail` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async configureVoicemail(request: ConfigureSmsNumberVoicemailRequest): Promise<SmsNumber> {
+		return this.client.call<SmsNumber>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/sms_numbers/*', 'name')}:configureVoicemail`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.ConfigureSmsNumberVoicemailRequest',
+			responseType: 'sylphx.notify.v1.SmsNumber',
+			mutation: true,
+		})
+	}
 }
 
 /** `inbound_sms` of Sylphx Notify: Resource type `notify.sylphx.com/InboundSms`. */
@@ -4901,5 +5097,77 @@ export class InboundSmsCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+}
+
+/** `inbound_messages` of Sylphx Notify: Resource type `notify.sylphx.com/InboundMessage`. */
+export class InboundMessagesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Get one message in the unified SMS and voice inbox.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/sms_numbers/*\/inbound_messages/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetInboundMessageRequest): Promise<InboundMessage> {
+		return this.client.call<InboundMessage>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.InboundMessage',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * List SMS and voice messages in sequence order. The sequence advances when
+	 * asynchronous content changes, so polling also observes completed transcripts.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/sms_numbers/*}/inbound_messages` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListInboundMessagesRequest): Promise<ListInboundMessagesResponse> {
+		return this.client.call<ListInboundMessagesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/sms_numbers/*', 'parent')}/inbound_messages`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListInboundMessagesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListInboundMessagesRequest): AsyncGenerator<InboundMessage> {
+		let next: ListInboundMessagesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.inboundMessages ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Download retained voicemail bytes with the inbox's tenant/resource permission.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/sms_numbers/*\/inbound_messages/*}:download` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async download(request: DownloadInboundMessageRequest): Promise<DownloadInboundMessageResponse> {
+		return this.client.call<DownloadInboundMessageResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*', 'name')}:download`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.DownloadInboundMessageRequest',
+			responseType: 'sylphx.notify.v1.DownloadInboundMessageResponse',
+			mutation: true,
+		})
 	}
 }

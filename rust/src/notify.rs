@@ -266,6 +266,40 @@ pub struct ChannelDelivery {
     pub attempts: i32,
 }
 
+/// Configure the number's voicemail. No carrier-number writes occur.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ConfigureSmsNumberVoicemailRequest {
+    /// The number resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Plain-text greeting spoken before recording.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub greeting: String,
+    /// Content retention, 1–30 days.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "retentionDays"
+    )]
+    pub retention_days: i32,
+    /// Maximum recording duration, 10–180 whole seconds (for example, "120s").
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maxRecordingDuration"
+    )]
+    pub max_recording_duration: String,
+}
+
 /// Connect an existing owned line; no provider mutation occurs.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1050,6 +1084,33 @@ pub struct DnsRecord {
     pub priority: i32,
 }
 
+/// Download one retained voicemail recording.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DownloadInboundMessageRequest {
+    /// The message resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Bounded WAV audio, never a public carrier download URL.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DownloadInboundMessageResponse {
+    /// audio/wav.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "mimeType"
+    )]
+    pub mime_type: String,
+    /// Audio bytes, base64 in JSON.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub body: String,
+}
+
 /// Email content; bodies are Mustache templates.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1293,6 +1354,17 @@ pub struct GetEmailDomainRequest {
 #[non_exhaustive]
 pub struct GetInboundEmailRequest {
     /// The name of the inbound email to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Get a unified inbox entry.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetInboundMessageRequest {
+    /// The message resource.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1623,6 +1695,105 @@ pub struct InboundEmail {
     pub message: String,
 }
 
+/// The unified SMS and voice inbox, ordered by its resumable sequence.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct InboundMessage {
+    /// `orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identifier; existing SMS identifiers are preserved.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The feed position, advancing when content changes within the environment; filter
+    /// `sequence > N` to resume after the last one handled.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub sequence: i64,
+    /// The carrier's id for this message; the dedupe key on the number binding.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "carrierMessageId"
+    )]
+    pub carrier_message_id: String,
+    /// The sender, in E.164 when the carrier gave one.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "senderNumber"
+    )]
+    pub sender_number: String,
+    /// The number the message was sent to, in E.164.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientNumber"
+    )]
+    pub recipient_number: String,
+    /// SMS text or the completed voicemail transcript. Empty after retention.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub text: String,
+    /// SMS segments; not applicable to voice.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub segments: i32,
+    /// When the carrier says it received the message.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiveTime"
+    )]
+    pub receive_time: String,
+    /// The text has been cleared by retention; the dedupe key stays.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub cleared: bool,
+    /// sms or voice.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub channel: String,
+    /// Call and recording metadata; present only for voice.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice: Option<VoiceMessage>,
+    /// Deadline for recording and transcript deletion.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+}
+
 /// An Inbound SMS is one text a bound number received, kept as evidence. The
 /// body is cleared when the environment's tier retention expires; the carrier's
 /// message id stays, so a replay after that never records the message again.
@@ -1925,6 +2096,61 @@ pub struct ListInboundEmailsResponse {
     )]
     pub inbound_emails: Vec<InboundEmail>,
     /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// List the unified inbox.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListInboundMessagesRequest {
+    /// The number whose inbox to read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Default 50; at most 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// A previous page's continuation token.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// sequence > N, optionally AND sender_number = "…".
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// sequence, oldest first.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// The unified inbox page.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListInboundMessagesResponse {
+    /// Messages in sequence order.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "inboundMessages"
+    )]
+    pub inbound_messages: Vec<InboundMessage>,
+    /// Empty on the last page.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4531,6 +4757,31 @@ pub struct SmsNumberStatus {
         alias = "monthlyCost"
     )]
     pub monthly_cost: String,
+    /// Desired voicemail behavior. Configuring this does not attach the line.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voicemail: Option<VoicemailConfig>,
+    /// Readback-verified standalone Call Control application. The line's owner
+    /// attaches it separately; Notify never changes a DID's voice configuration.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "voiceApplicationId"
+    )]
+    pub voice_application_id: String,
+    /// Safe provisioning error. Definite refusals are retryable after inventory
+    /// readback; an unknown create outcome is never blindly repeated.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "voiceApplicationError"
+    )]
+    pub voice_application_error: String,
 }
 
 /// An SMS origin.
@@ -5067,6 +5318,109 @@ pub struct VerifySenderRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// One call remains visible even when recording or transcription fails.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct VoiceMessage {
+    /// Stable carrier call-session identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "callSessionId"
+    )]
+    pub call_session_id: String,
+    /// missed or recorded. A saved recording never regresses to missed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    /// Tenant-scoped Storage key. Read bytes through DownloadInboundMessage.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recordingKey"
+    )]
+    pub recording_key: String,
+    /// Duration of saved audio, preserving carrier-reported milliseconds.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recordingDuration"
+    )]
+    pub recording_duration: String,
+    /// pending, completed or failed. Completed transcripts do not regress.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "transcriptionStatus"
+    )]
+    pub transcription_status: String,
+    /// Recording failed; call metadata remains available.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recordingError"
+    )]
+    pub recording_error: bool,
+    /// Carrier-reported hangup time, if received.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "hangupTime"
+    )]
+    pub hangup_time: String,
+    /// Carrier-reported hangup cause, if received.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "hangupCause"
+    )]
+    pub hangup_cause: String,
+}
+
+/// A greeting and a bounded recording, with explicit content retention.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct VoicemailConfig {
+    /// Greeting spoken before recording. Plain text, not SSML.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub greeting: String,
+    /// Delete both carrier and Storage audio, and the transcript, after 1–30 days.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "retentionDays"
+    )]
+    pub retention_days: i32,
+    /// Maximum recording duration, 10–180 whole seconds (for example, "120s").
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maxRecordingDuration"
+    )]
+    pub max_recording_duration: String,
 }
 
 /// The progress of a Broadcast.
@@ -6134,6 +6488,13 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
     /// The `inbound_sms` collection.
     pub fn inbound_sms(&self) -> InboundSmsCollection<'a, T> {
         InboundSmsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `inbound_messages` collection.
+    pub fn inbound_messages(&self) -> InboundMessagesCollection<'a, T> {
+        InboundMessagesCollection {
             client: self.client,
         }
     }
@@ -9105,6 +9466,37 @@ impl<'a, T: crate::runtime::Transport> SmsNumbersCollection<'a, T> {
         };
         self.client.call(http).await
     }
+
+    /// Configure voicemail and create an inert standalone carrier application.
+    /// Never buys, attaches, forwards or changes the voice profile of a line.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}:configureVoicemail` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn configure_voicemail(
+        &self,
+        request: ConfigureSmsNumberVoicemailRequest,
+    ) -> Result<SmsNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:configureVoicemail",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/sms_numbers/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
 }
 
 /// `inbound_sms` of Sylphx Notify: Resource type `notify.sylphx.com/InboundSms`.
@@ -9191,5 +9583,123 @@ impl<'a, T: crate::runtime::Transport> InboundSmsCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+}
+
+/// `inbound_messages` of Sylphx Notify: Resource type `notify.sylphx.com/InboundMessage`.
+pub struct InboundMessagesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> InboundMessagesCollection<'a, T> {
+    /// Get one message in the unified SMS and voice inbox.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetInboundMessageRequest,
+    ) -> Result<InboundMessage, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// List SMS and voice messages in sequence order. The sequence advances when
+    /// asynchronous content changes, so polling also observes completed transcripts.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_messages` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListInboundMessagesRequest,
+    ) -> Result<ListInboundMessagesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/inbound_messages",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/sms_numbers/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListInboundMessagesRequest,
+    ) -> Result<Vec<InboundMessage>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.inbound_messages);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Download retained voicemail bytes with the inbox's tenant/resource permission.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}:download` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn download(
+        &self,
+        request: DownloadInboundMessageRequest,
+    ) -> Result<DownloadInboundMessageResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:download",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }

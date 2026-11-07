@@ -762,6 +762,13 @@ pub const BTA: Prefix = Prefix::new(
 );
 /// BankReceipt (`brc`, money).
 pub const BRC: Prefix = Prefix::new("brc", "BankReceipt", "money", Some("bank_receipts"));
+/// InboundMessage (`inmsg`, notify).
+pub const INMSG: Prefix = Prefix::new(
+    "inmsg",
+    "InboundMessage",
+    "notify",
+    Some("inbound_messages"),
+);
 
 /// Every registered prefix, in registry order.
 pub const ALL: &[Prefix] = &[
@@ -777,5 +784,5 @@ pub const ALL: &[Prefix] = &[
     NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT,
     LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER,
     UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
-    CHP, CHR, BTA, BRC,
+    CHP, CHR, BTA, BRC, INMSG,
 ];

@@ -1190,6 +1190,7 @@
           "requests_per_minute": {
             "description": "Requests per minute.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -1341,6 +1342,8 @@
           "max_steps_per_turn": {
             "description": "Model and tool steps per turn, 1 to 1000; default 100.",
             "format": "int32",
+            "maximum": 1000,
+            "minimum": 0,
             "type": "integer"
           },
           "turn_timeout": {
@@ -2145,6 +2148,7 @@
           "expected_version": {
             "description": "The contract version observed by the owner.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "name": {
@@ -4747,6 +4751,7 @@
           "expected_version": {
             "description": "The acceptance-contract version observed by the caller.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "name": {
@@ -9142,6 +9147,7 @@
           "max_concurrent_sessions": {
             "description": "Concurrent sessions per end user; excess sessions are revoked, oldest\nfirst. 0 is unlimited.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -14609,6 +14615,8 @@
           "days": {
             "description": "Expire an object this many days after it was written: 1 to 36500.",
             "format": "int32",
+            "maximum": 36500,
+            "minimum": 1,
             "type": "integer"
           },
           "prefix": {
@@ -14627,6 +14635,8 @@
           "abort_incomplete_multipart_days": {
             "description": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
             "format": "int32",
+            "maximum": 365,
+            "minimum": 0,
             "type": "integer"
           },
           "expiration_rules": {
@@ -17157,6 +17167,8 @@
           "vector_dimensions": {
             "description": "The vector dimension; 0 for lexical only.",
             "format": "int32",
+            "maximum": 4096,
+            "minimum": 0,
             "type": "integer",
             "x-sylphx-immutable": true
           }
@@ -19499,6 +19511,8 @@
           "max_messages": {
             "description": "At most this many; default 1, at most 100.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "name": {
@@ -20474,6 +20488,8 @@
           "max_deliveries": {
             "description": "Deliveries before a message dead-letters; default 5, 1 to 100.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "retention": {
@@ -21583,11 +21599,15 @@
           "max_concurrent_deliveries": {
             "description": "At most this many deliveries in flight; default 10.",
             "format": "int32",
+            "maximum": 1000,
+            "minimum": 0,
             "type": "integer"
           },
           "rate_limit_per_second": {
             "description": "At most this many attempts start per second; 0 is no limit. Deliveries\nover the limit wait their turn; none is dropped.",
             "format": "int32",
+            "maximum": 10000,
+            "minimum": 0,
             "type": "integer"
           },
           "uri": {
@@ -22289,6 +22309,7 @@
           "pull_request": {
             "description": "The pull request number in the Service's SourceLink repository.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer",
             "x-sylphx-immutable": true
           },
@@ -22699,11 +22720,15 @@
           "max_instances": {
             "description": "Instances at most; 0 means the plan's limit.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "min_instances": {
             "description": "Instances kept running with no traffic; 0 idles to zero and wakes on\nrequest.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -22757,6 +22782,8 @@
           "port": {
             "description": "The port the application listens on; the public edge stays 443.",
             "format": "int32",
+            "maximum": 65535,
+            "minimum": 0,
             "type": "integer"
           },
           "regions": {
@@ -25079,6 +25106,8 @@
           "max_hops": {
             "description": "How many hops to expand from the top entities, 0 to 2; default 2.",
             "format": "int32",
+            "maximum": 2,
+            "minimum": 0,
             "type": "integer"
           },
           "parent": {
@@ -28846,6 +28875,8 @@
           "count": {
             "description": "How many units; at least 1.",
             "format": "int32",
+            "maximum": 36500,
+            "minimum": 1,
             "type": "integer"
           },
           "unit": {
@@ -28937,6 +28968,8 @@
           "quantity": {
             "description": "How many; default 1. Seats for a per-seat or family price.",
             "format": "int32",
+            "maximum": 10000,
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -29929,6 +29962,8 @@
           "recurring_interval_count": {
             "description": "Intervals per period; default 1.",
             "format": "int32",
+            "maximum": 12,
+            "minimum": 0,
             "type": "integer"
           },
           "tax_behavior": {
@@ -29938,6 +29973,8 @@
           "trial_days": {
             "description": "Free trial days for a recurring price.",
             "format": "int32",
+            "maximum": 730,
+            "minimum": 0,
             "type": "integer"
           },
           "unit_amounts": {
@@ -33571,6 +33608,39 @@
         ],
         "type": "string"
       },
+      "sylphx.notify.v1.ConfigureSmsNumberVoicemailRequest": {
+        "description": "Configure the number's voicemail. No carrier-number writes occur.",
+        "properties": {
+          "greeting": {
+            "description": "Plain-text greeting spoken before recording.",
+            "type": "string"
+          },
+          "max_recording_duration": {
+            "description": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+            "pattern": "^(?:(?:1[0-9]|[2-8][0-9]|9[0-9])|1(?:0[0-9]|[1-7][0-9]|80))(?:\\.0{1,9})?s$",
+            "type": "string"
+          },
+          "name": {
+            "description": "The number resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          },
+          "retention_days": {
+            "description": "Content retention, 1–30 days.",
+            "format": "int32",
+            "maximum": 30,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "greeting",
+          "retention_days",
+          "max_recording_duration"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.ConnectPhoneNumberRequest": {
         "description": "Connect an existing owned line; no provider mutation occurs.",
         "properties": {
@@ -34270,6 +34340,35 @@
         },
         "type": "object"
       },
+      "sylphx.notify.v1.DownloadInboundMessageRequest": {
+        "description": "Download one retained voicemail recording.",
+        "properties": {
+          "name": {
+            "description": "The message resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundMessage"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.DownloadInboundMessageResponse": {
+        "description": "Bounded WAV audio, never a public carrier download URL.",
+        "properties": {
+          "body": {
+            "contentEncoding": "base64",
+            "description": "Audio bytes, base64 in JSON.",
+            "type": "string"
+          },
+          "mime_type": {
+            "description": "audio/wav.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.EmailContent": {
         "description": "Email content; bodies are Mustache templates.",
         "properties": {
@@ -34518,6 +34617,20 @@
             "description": "The name of the inbound email to get.",
             "type": "string",
             "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetInboundMessageRequest": {
+        "description": "Get a unified inbox entry.",
+        "properties": {
+          "name": {
+            "description": "The message resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundMessage"
           }
         },
         "required": [
@@ -34865,6 +34978,84 @@
         ],
         "type": "string"
       },
+      "sylphx.notify.v1.InboundMessage": {
+        "description": "The unified SMS and voice inbox, ordered by its resumable sequence.",
+        "properties": {
+          "carrier_message_id": {
+            "description": "The carrier's id for this message; the dedupe key on the number binding.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "channel": {
+            "description": "sms or voice.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cleared": {
+            "description": "The text has been cleared by retention; the dedupe key stays.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "expire_time": {
+            "description": "Deadline for recording and transcript deletion.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "`orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}`.",
+            "type": "string"
+          },
+          "receive_time": {
+            "description": "When the carrier says it received the message.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recipient_number": {
+            "description": "The number the message was sent to, in E.164.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "segments": {
+            "description": "SMS segments; not applicable to voice.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "sender_number": {
+            "description": "The sender, in E.164 when the carrier gave one.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sequence": {
+            "description": "The feed position, advancing when content changes within the environment; filter\n`sequence > N` to resume after the last one handled.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "text": {
+            "description": "SMS text or the completed voicemail transcript. Empty after retention.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Stable identifier; existing SMS identifiers are preserved.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.VoiceMessage",
+            "description": "Call and recording metadata; present only for voice.",
+            "readOnly": true
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.InboundSms": {
         "description": "An Inbound SMS is one text a bound number received, kept as evidence. The\nbody is cleared when the environment's tier retention expires; the carrier's\nmessage id stays, so a replay after that never records the message again.\nConsumers read the feed in `sequence` order.",
         "properties": {
@@ -35141,6 +35332,54 @@
           },
           "next_page_token": {
             "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListInboundMessagesRequest": {
+        "description": "List the unified inbox.",
+        "properties": {
+          "filter": {
+            "description": "sequence > N, optionally AND sender_number = \"…\".",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "sequence, oldest first.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Default 50; at most 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "A previous page's continuation token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The number whose inbox to read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundMessage"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListInboundMessagesResponse": {
+        "description": "The unified inbox page.",
+        "properties": {
+          "inbound_messages": {
+            "description": "Messages in sequence order.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.InboundMessage"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Empty on the last page.",
             "type": "string"
           }
         },
@@ -37225,6 +37464,8 @@
           "max_per_hour": {
             "description": "At most this many messages to one recipient in any hour; 0 is no limit.",
             "format": "int32",
+            "maximum": 10000,
+            "minimum": 0,
             "type": "integer"
           },
           "min_interval": {
@@ -37465,6 +37706,21 @@
             "description": "Accepted one-time price in USD.",
             "readOnly": true,
             "type": "string"
+          },
+          "voice_application_error": {
+            "description": "Safe provisioning error. Definite refusals are retryable after inventory\nreadback; an unknown create outcome is never blindly repeated.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "voice_application_id": {
+            "description": "Readback-verified standalone Call Control application. The line's owner\nattaches it separately; Notify never changes a DID's voice configuration.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "voicemail": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.VoicemailConfig",
+            "description": "Desired voicemail behavior. Configuring this does not attach the line.",
+            "readOnly": true
           }
         },
         "type": "object"
@@ -37935,6 +38191,81 @@
         },
         "required": [
           "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.VoiceMessage": {
+        "description": "One call remains visible even when recording or transcription fails.",
+        "properties": {
+          "call_session_id": {
+            "description": "Stable carrier call-session identifier.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "hangup_cause": {
+            "description": "Carrier-reported hangup cause, if received.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "hangup_time": {
+            "description": "Carrier-reported hangup time, if received.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recording_duration": {
+            "description": "Duration of saved audio, preserving carrier-reported milliseconds.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recording_error": {
+            "description": "Recording failed; call metadata remains available.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "recording_key": {
+            "description": "Tenant-scoped Storage key. Read bytes through DownloadInboundMessage.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "description": "missed or recorded. A saved recording never regresses to missed.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "transcription_status": {
+            "description": "pending, completed or failed. Completed transcripts do not regress.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.VoicemailConfig": {
+        "description": "A greeting and a bounded recording, with explicit content retention.",
+        "properties": {
+          "greeting": {
+            "description": "Greeting spoken before recording. Plain text, not SSML.",
+            "type": "string"
+          },
+          "max_recording_duration": {
+            "description": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+            "pattern": "^(?:(?:1[0-9]|[2-8][0-9]|9[0-9])|1(?:0[0-9]|[1-7][0-9]|80))(?:\\.0{1,9})?s$",
+            "type": "string"
+          },
+          "retention_days": {
+            "description": "Delete both carrier and Storage audio, and the transcript, after 1–30 days.",
+            "format": "int32",
+            "maximum": 30,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "greeting",
+          "retention_days",
+          "max_recording_duration"
         ],
         "type": "object"
       },
@@ -41166,6 +41497,8 @@
           "max_runners": {
             "description": "Concurrent runners at most; 0 means the plan's limit.",
             "format": "int32",
+            "maximum": 1000,
+            "minimum": 0,
             "type": "integer"
           },
           "runner_class": {
@@ -41482,6 +41815,8 @@
           "count": {
             "description": "1 (default), 2 (double), or 3 (triple).",
             "format": "int32",
+            "maximum": 3,
+            "minimum": 0,
             "type": "integer"
           },
           "modifiers": {
@@ -41509,6 +41844,8 @@
           "port": {
             "description": "The guest port.",
             "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
             "type": "integer"
           }
         },
@@ -41870,16 +42207,22 @@
           "dpi": {
             "description": "Dots per inch; default 96.",
             "format": "int32",
+            "maximum": 480,
+            "minimum": 0,
             "type": "integer"
           },
           "height": {
             "description": "Logical height in pixels; default 800.",
             "format": "int32",
+            "maximum": 2160,
+            "minimum": 0,
             "type": "integer"
           },
           "width": {
             "description": "Logical width in pixels; default 1280.",
             "format": "int32",
+            "maximum": 3840,
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -42280,6 +42623,8 @@
           "repeat": {
             "description": "Press it this many times; default 1.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -42493,6 +42838,8 @@
           "port": {
             "description": "The guest port.",
             "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
             "type": "integer"
           },
           "uri": {
@@ -43370,11 +43717,15 @@
           "max": {
             "description": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "min": {
             "description": "Optional floor over automatic demand sizing; defaults to zero.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -43636,6 +43987,8 @@
           "quality": {
             "description": "JPEG and WebP quality 1 to 100; default 80.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "settle": {
@@ -44143,6 +44496,8 @@
           "size_gib": {
             "description": "Size in GiB, 1 to 1024; it may grow and never shrink. A `local` volume\nnever grows.",
             "format": "int32",
+            "maximum": 1024,
+            "minimum": 1,
             "type": "integer"
           },
           "storage_class": {
@@ -46059,6 +46414,7 @@
           "scratch_gib": {
             "description": "Local scratch disk at `/scratch` per worker, GiB; 0 is none.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "shard_count": {
@@ -46069,6 +46425,7 @@
           "shard_retries": {
             "description": "Attempts a shard gets after a failure; a preemption is not one. Default 3.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "shard_timeout": {
@@ -46670,6 +47027,8 @@
           "max_retries": {
             "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
             "format": "int32",
+            "maximum": 10,
+            "minimum": 0,
             "type": "integer"
           },
           "service": {
@@ -47297,6 +47656,8 @@
           "max_attempts": {
             "description": "Attempts per step, 1 to 100; default 10.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "max_interval": {
@@ -48027,11 +48388,13 @@
           "max_workers": {
             "description": "The most workers at once; the Cell and the org quota cap it too. Default 1.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "min_workers": {
             "description": "Workers kept while shards remain; default 1.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           }
         },
@@ -48104,6 +48467,7 @@
           "max_concurrent_runs": {
             "description": "At most this many running Runs of this Workflow; 0 is unlimited within the\nplan.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "permission": {
@@ -60347,6 +60711,7 @@
                   "expected_version": {
                     "description": "The contract version observed by the owner.",
                     "format": "int32",
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "objective": {
@@ -60486,6 +60851,7 @@
                   "expected_version": {
                     "description": "The acceptance-contract version observed by the caller.",
                     "format": "int32",
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "operation_id": {
@@ -83632,6 +83998,8 @@
                   "max_hops": {
                     "description": "How many hops to expand from the top entities, 0 to 2; default 2.",
                     "format": "int32",
+                    "maximum": 2,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "query": {
@@ -91918,6 +92286,8 @@
                   "port": {
                     "description": "The guest port.",
                     "format": "int32",
+                    "maximum": 65535,
+                    "minimum": 1,
                     "type": "integer"
                   }
                 },
@@ -107478,6 +107848,8 @@
                   "max_messages": {
                     "description": "At most this many; default 1, at most 100.",
                     "format": "int32",
+                    "maximum": 100,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "visibility_timeout": {
@@ -119086,6 +119458,322 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages": {
+      "get": {
+        "description": "List SMS and voice messages in sequence order. The sequence advances when\nasynchronous content changes, so polling also observes completed transcripts.",
+        "operationId": "notify_inbound_messages_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default 50; at most 1000.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A previous page's continuation token.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "sequence > N, optionally AND sender_number = \"…\".",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "sequence, oldest first.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListInboundMessagesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "List SMS and voice messages in sequence order. The sequence advances when asynchronous content changes, so polling also observes completed transcripts.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "notify.inbound_messages.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}": {
+      "get": {
+        "description": "Get one message in the unified SMS and voice inbox.",
+        "operationId": "notify_inbound_messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "inbound_message",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.InboundMessage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Get one message in the unified SMS and voice inbox.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "notify.inbound_messages.get",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}:download": {
+      "post": {
+        "description": "Download retained voicemail bytes with the inbox's tenant/resource permission.",
+        "operationId": "notify_inbound_messages_download",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "inbound_message",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.DownloadInboundMessageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Download retained voicemail bytes with the inbox's tenant/resource permission.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.inbound_messages.download",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_sms": {
       "get": {
         "description": "Lists a number's inbound SMS in feed order, oldest first.",
@@ -119293,6 +119981,130 @@
         ],
         "x-sylphx-method": "notify.inbound_sms.get",
         "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}:configureVoicemail": {
+      "post": {
+        "description": "Configure voicemail and create an inert standalone carrier application.\nNever buys, attaches, forwards or changes the voice profile of a line.",
+        "operationId": "notify_sms_numbers_configure_voicemail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sms_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "greeting": {
+                    "description": "Plain-text greeting spoken before recording.",
+                    "type": "string"
+                  },
+                  "max_recording_duration": {
+                    "description": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+                    "pattern": "^(?:(?:1[0-9]|[2-8][0-9]|9[0-9])|1(?:0[0-9]|[1-7][0-9]|80))(?:\\.0{1,9})?s$",
+                    "type": "string"
+                  },
+                  "retention_days": {
+                    "description": "Content retention, 1–30 days.",
+                    "format": "int32",
+                    "maximum": 30,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "greeting",
+                  "retention_days",
+                  "max_recording_duration"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Configure voicemail and create an inert standalone carrier application. Never buys, attaches, forwards or changes the voice profile of a line.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.sms_numbers.configure_voicemail",
+        "x-sylphx-permission": "notify:write",
         "x-sylphx-stage": "preview"
       }
     },

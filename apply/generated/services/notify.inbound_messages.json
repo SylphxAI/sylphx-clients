@@ -1,0 +1,35 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.inbound_messages.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.inbound_messages.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.inbound_messages.download",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/InboundMessage"
+    }
+  ]
+}

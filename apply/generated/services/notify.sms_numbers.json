@@ -34,6 +34,13 @@
           },
           "id": "notify.sms_numbers.delete",
           "kind": "delete"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.sms_numbers.configure_voicemail",
+          "kind": "custom"
         }
       ],
       "resource_type": "notify.sylphx.com/SmsNumber"

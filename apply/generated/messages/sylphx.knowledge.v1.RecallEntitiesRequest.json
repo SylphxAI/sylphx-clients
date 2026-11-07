@@ -106,6 +106,12 @@
       "type": {
         "kind": "scalar",
         "scalar": "int32"
+      },
+      "validation": {
+        "int32": {
+          "maximum": 2,
+          "minimum": 0
+        }
       }
     },
     {

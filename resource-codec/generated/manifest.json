@@ -9035,6 +9035,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         },
         {
@@ -9456,6 +9462,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 1000,
+              "minimum": 0
+            }
           }
         },
         {
@@ -11898,6 +11910,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 1
+            }
           }
         },
         {
@@ -19227,6 +19245,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 1
+            }
           }
         },
         {
@@ -31723,6 +31747,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         },
         {
@@ -46914,6 +46944,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 36500,
+              "minimum": 1
+            }
           }
         }
       ],
@@ -46940,6 +46976,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 365,
+              "minimum": 0
+            }
           }
         },
         {
@@ -53984,6 +54026,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 4096,
+              "minimum": 0
+            }
           }
         },
         {
@@ -60873,6 +60921,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         },
         {
@@ -63618,6 +63672,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         },
         {
@@ -66876,6 +66936,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 1000,
+              "minimum": 0
+            }
           }
         },
         {
@@ -66914,6 +66980,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 10000,
+              "minimum": 0
+            }
           }
         },
         {
@@ -68845,6 +68917,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 1
+            }
           }
         }
       ],
@@ -69948,6 +70026,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         },
         {
@@ -69967,6 +70051,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -70114,6 +70204,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 65535,
+              "minimum": 0
+            }
           }
         },
         {
@@ -76740,6 +76836,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 2,
+              "minimum": 0
+            }
           }
         },
         {
@@ -87550,6 +87652,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 36500,
+              "minimum": 1
+            }
           }
         }
       ],
@@ -87792,6 +87900,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 10000,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -90589,6 +90703,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 12,
+              "minimum": 0
+            }
           }
         },
         {
@@ -90649,6 +90769,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 730,
+              "minimum": 0
+            }
           }
         },
         {
@@ -101745,6 +101871,101 @@
       "package": "sylphx.notify.v1"
     },
     {
+      "doc": "Configure the number's voicemail. No carrier-number writes occur.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The number resource.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "notify.sylphx.com/SmsNumber",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Plain-text greeting spoken before recording.",
+          "filterable": false,
+          "name": "greeting",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Content retention, 1–30 days.",
+          "filterable": false,
+          "name": "retention_days",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 30,
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+          "filterable": false,
+          "name": "max_recording_duration",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          },
+          "validation": {
+            "duration": {
+              "maximum_seconds": 180,
+              "minimum_seconds": 10
+            }
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.ConfigureSmsNumberVoicemailRequest",
+      "package": "sylphx.notify.v1"
+    },
+    {
       "doc": "Connect an existing owned line; no provider mutation occurs.",
       "fields": [
         {
@@ -103923,6 +104144,73 @@
       "package": "sylphx.notify.v1"
     },
     {
+      "doc": "Download one retained voicemail recording.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The message resource.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "notify.sylphx.com/InboundMessage",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.DownloadInboundMessageRequest",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "Bounded WAV audio, never a public carrier download URL.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "audio/wav.",
+          "filterable": false,
+          "name": "mime_type",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Audio bytes, base64 in JSON.",
+          "filterable": false,
+          "name": "body",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bytes"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.DownloadInboundMessageResponse",
+      "package": "sylphx.notify.v1"
+    },
+    {
       "doc": "Email content; bodies are Mustache templates.",
       "fields": [
         {
@@ -104585,6 +104873,32 @@
         }
       ],
       "name": "sylphx.notify.v1.GetInboundEmailRequest",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "Get a unified inbox entry.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The message resource.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "notify.sylphx.com/InboundMessage",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.GetInboundMessageRequest",
       "package": "sylphx.notify.v1"
     },
     {
@@ -105381,6 +105695,279 @@
         }
       ],
       "name": "sylphx.notify.v1.InboundEmail",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "The unified SMS and voice inbox, ordered by its resumable sequence.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "`orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}`.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable identifier; existing SMS identifiers are preserved.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The feed position, advancing when content changes within the environment; filter\n`sequence > N` to resume after the last one handled.",
+          "filterable": true,
+          "name": "sequence",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The carrier's id for this message; the dedupe key on the number binding.",
+          "filterable": false,
+          "name": "carrier_message_id",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The sender, in E.164 when the carrier gave one.",
+          "filterable": true,
+          "name": "sender_number",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The number the message was sent to, in E.164.",
+          "filterable": false,
+          "name": "recipient_number",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "SMS text or the completed voicemail transcript. Empty after retention.",
+          "filterable": false,
+          "name": "text",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "SMS segments; not applicable to voice.",
+          "filterable": false,
+          "name": "segments",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the carrier says it received the message.",
+          "filterable": false,
+          "name": "receive_time",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The text has been cleared by retention; the dedupe key stays.",
+          "filterable": false,
+          "name": "cleared",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "sms or voice.",
+          "filterable": false,
+          "name": "channel",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Call and recording metadata; present only for voice.",
+          "filterable": false,
+          "name": "voice",
+          "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.notify.v1.VoiceMessage"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Deadline for recording and transcript deletion.",
+          "filterable": false,
+          "name": "expire_time",
+          "number": 20,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.InboundMessage",
       "package": "sylphx.notify.v1"
     },
     {
@@ -106249,6 +106836,149 @@
         }
       ],
       "name": "sylphx.notify.v1.ListInboundEmailsResponse",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "List the unified inbox.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The number whose inbox to read.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "notify.sylphx.com/InboundMessage",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Default 50; at most 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A previous page's continuation token.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "sequence > N, optionally AND sender_number = \"…\".",
+          "filterable": false,
+          "name": "filter",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "sequence, oldest first.",
+          "filterable": false,
+          "name": "order_by",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.ListInboundMessagesRequest",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "The unified inbox page.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Messages in sequence order.",
+          "filterable": false,
+          "name": "inbound_messages",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.notify.v1.InboundMessage"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.ListInboundMessagesResponse",
       "package": "sylphx.notify.v1"
     },
     {
@@ -112374,6 +113104,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 10000,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -113095,6 +113831,63 @@
           "filterable": false,
           "name": "monthly_cost",
           "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Desired voicemail behavior. Configuring this does not attach the line.",
+          "filterable": false,
+          "name": "voicemail",
+          "number": 20,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.notify.v1.VoicemailConfig"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Readback-verified standalone Call Control application. The line's owner\nattaches it separately; Notify never changes a DID's voice configuration.",
+          "filterable": false,
+          "name": "voice_application_id",
+          "number": 21,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Safe provisioning error. Definite refusals are retryable after inventory\nreadback; an unknown create outcome is never blindly repeated.",
+          "filterable": false,
+          "name": "voice_application_error",
+          "number": 22,
           "oneof": null,
           "optional": false,
           "repeated": false,
@@ -114544,6 +115337,241 @@
         }
       ],
       "name": "sylphx.notify.v1.VerifySenderRequest",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "One call remains visible even when recording or transcription fails.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable carrier call-session identifier.",
+          "filterable": false,
+          "name": "call_session_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "missed or recorded. A saved recording never regresses to missed.",
+          "filterable": false,
+          "name": "state",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Tenant-scoped Storage key. Read bytes through DownloadInboundMessage.",
+          "filterable": false,
+          "name": "recording_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Duration of saved audio, preserving carrier-reported milliseconds.",
+          "filterable": false,
+          "name": "recording_duration",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "pending, completed or failed. Completed transcripts do not regress.",
+          "filterable": false,
+          "name": "transcription_status",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Recording failed; call metadata remains available.",
+          "filterable": false,
+          "name": "recording_error",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Carrier-reported hangup time, if received.",
+          "filterable": false,
+          "name": "hangup_time",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Carrier-reported hangup cause, if received.",
+          "filterable": false,
+          "name": "hangup_cause",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.VoiceMessage",
+      "package": "sylphx.notify.v1"
+    },
+    {
+      "doc": "A greeting and a bounded recording, with explicit content retention.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Greeting spoken before recording. Plain text, not SSML.",
+          "filterable": false,
+          "name": "greeting",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Delete both carrier and Storage audio, and the transcript, after 1–30 days.",
+          "filterable": false,
+          "name": "retention_days",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 30,
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+          "filterable": false,
+          "name": "max_recording_duration",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          },
+          "validation": {
+            "duration": {
+              "maximum_seconds": 180,
+              "minimum_seconds": 10
+            }
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.VoicemailConfig",
       "package": "sylphx.notify.v1"
     },
     {
@@ -123800,6 +124828,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 1000,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -124739,6 +125773,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 3,
+              "minimum": 0
+            }
           }
         },
         {
@@ -124803,6 +125843,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 65535,
+              "minimum": 1
+            }
           }
         }
       ],
@@ -125931,6 +126977,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 3840,
+              "minimum": 0
+            }
           }
         },
         {
@@ -125950,6 +127002,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 2160,
+              "minimum": 0
+            }
           }
         },
         {
@@ -125969,6 +127027,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 480,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -126975,6 +128039,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -127549,6 +128619,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 65535,
+              "minimum": 1
+            }
           }
         },
         {
@@ -130000,6 +131076,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         },
         {
@@ -130019,6 +131101,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -130692,6 +131780,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         },
         {
@@ -132131,6 +133225,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 1024,
+              "minimum": 1
+            }
           }
         },
         {
@@ -137524,6 +138624,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         },
         {
@@ -137581,6 +138687,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         },
         {
@@ -139232,6 +140344,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 10,
+              "minimum": 0
+            }
           }
         },
         {
@@ -140985,6 +142103,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 100,
+              "minimum": 0
+            }
           }
         },
         {
@@ -143117,6 +144241,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         },
         {
@@ -143136,6 +144266,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         }
       ],
@@ -143336,6 +144472,12 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": null,
+              "minimum": 0
+            }
           }
         },
         {
@@ -146170,6 +147312,28 @@
       "storage": "service",
       "terraform": false,
       "type": "notify.sylphx.com/InboundEmail"
+    },
+    {
+      "collection": "inbound_messages",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "InboundMessage",
+      "message": "sylphx.notify.v1.InboundMessage",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}",
+      "plural": "inboundMessages",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "notify",
+      "shape": "record",
+      "singular": "inboundMessage",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "notify.sylphx.com/InboundMessage"
     },
     {
       "collection": "inbound_sms",
@@ -177130,6 +178294,47 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "delete"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Configure voicemail and create an inert standalone carrier application.\nNever buys, attaches, forwards or changes the voice profile of a line.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}",
+                    "pattern": "orgs/*/projects/*/envs/*/sms_numbers/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}:configureVoicemail"
+              },
+              "id": "notify.sms_numbers.configure_voicemail",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "notify:write",
+              "proto": "sylphx.notify.v1.NotifyService.ConfigureSmsNumberVoicemail",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.notify.v1.ConfigureSmsNumberVoicemailRequest",
+              "resource_field": null,
+              "response": "sylphx.notify.v1.SmsNumber",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "configure_voicemail"
             }
           ],
           "name": "sms_numbers",
@@ -177228,6 +178433,140 @@
           ],
           "name": "inbound_sms",
           "resource_type": "notify.sylphx.com/InboundSms"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Get one message in the unified SMS and voice inbox.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}",
+                    "pattern": "orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}"
+              },
+              "id": "notify.inbound_messages.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "notify:read",
+              "proto": "sylphx.notify.v1.NotifyService.GetInboundMessage",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.notify.v1.GetInboundMessageRequest",
+              "resource_field": null,
+              "response": "sylphx.notify.v1.InboundMessage",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "List SMS and voice messages in sequence order. The sequence advances when\nasynchronous content changes, so polling also observes completed transcripts.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}",
+                    "pattern": "orgs/*/projects/*/envs/*/sms_numbers/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "filter",
+                  "order_by"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_messages"
+              },
+              "id": "notify.inbound_messages.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.notify.v1.InboundMessage",
+                "items_field": "inbound_messages"
+              },
+              "permission": "notify:read",
+              "proto": "sylphx.notify.v1.NotifyService.ListInboundMessages",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.notify.v1.ListInboundMessagesRequest",
+              "resource_field": null,
+              "response": "sylphx.notify.v1.ListInboundMessagesResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Download retained voicemail bytes with the inbox's tenant/resource permission.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}",
+                    "pattern": "orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}:download"
+              },
+              "id": "notify.inbound_messages.download",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "notify:read",
+              "proto": "sylphx.notify.v1.NotifyService.DownloadInboundMessage",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.notify.v1.DownloadInboundMessageRequest",
+              "resource_field": null,
+              "response": "sylphx.notify.v1.DownloadInboundMessageResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "download"
+            }
+          ],
+          "name": "inbound_messages",
+          "resource_type": "notify.sylphx.com/InboundMessage"
         }
       ],
       "display_name": "Sylphx Notify",

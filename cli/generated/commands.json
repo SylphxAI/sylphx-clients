@@ -28600,6 +28600,43 @@
               },
               "summary": "Requests carrier release and stops recurring number billing. Read status until retired_time is set. Historical messages stay readable.",
               "verb": "delete"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "greeting",
+                  "flag": "--greeting",
+                  "required": true,
+                  "summary": "Plain-text greeting spoken before recording.",
+                  "type": "string"
+                },
+                {
+                  "field": "retention_days",
+                  "flag": "--retention-days",
+                  "required": true,
+                  "summary": "Content retention, 1–30 days.",
+                  "type": "int"
+                },
+                {
+                  "field": "max_recording_duration",
+                  "flag": "--max-recording-duration",
+                  "required": true,
+                  "summary": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+                  "type": "duration"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}:configureVoicemail",
+              "method": "notify.sms_numbers.configure_voicemail",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}"
+              },
+              "summary": "Configure voicemail and create an inert standalone carrier application. Never buys, attaches, forwards or changes the voice profile of a line.",
+              "verb": "configure-voicemail"
             }
           ],
           "noun": "sms-numbers",
@@ -28668,6 +28705,85 @@
           ],
           "noun": "inbound-sms",
           "resource_type": "notify.sylphx.com/InboundSms"
+        },
+        {
+          "collection": "inbound_messages",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}",
+              "method": "notify.inbound_messages.get",
+              "permission": "notify:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}"
+              },
+              "summary": "Get one message in the unified SMS and voice inbox.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Default 50; at most 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "A previous page's continuation token.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "sequence > N, optionally AND sender_number = \"…\".",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "sequence, oldest first.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_messages",
+              "method": "notify.inbound_messages.list",
+              "paginates": true,
+              "permission": "notify:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}"
+              },
+              "summary": "List SMS and voice messages in sequence order. The sequence advances when asynchronous content changes, so polling also observes completed transcripts.",
+              "verb": "list"
+            },
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}:download",
+              "method": "notify.inbound_messages.download",
+              "permission": "notify:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/sms_numbers/{sms_number}/inbound_messages/{inbound_message}"
+              },
+              "summary": "Download retained voicemail bytes with the inbox's tenant/resource permission.",
+              "verb": "download"
+            }
+          ],
+          "noun": "inbound-messages",
+          "resource_type": "notify.sylphx.com/InboundMessage"
         }
       ],
       "commands": [],

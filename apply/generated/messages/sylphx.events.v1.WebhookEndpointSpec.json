@@ -52,6 +52,12 @@
       "type": {
         "kind": "scalar",
         "scalar": "int32"
+      },
+      "validation": {
+        "int32": {
+          "maximum": 1000,
+          "minimum": 0
+        }
       }
     },
     {
@@ -88,6 +94,12 @@
       "type": {
         "kind": "scalar",
         "scalar": "int32"
+      },
+      "validation": {
+        "int32": {
+          "maximum": 10000,
+          "minimum": 0
+        }
       }
     },
     {

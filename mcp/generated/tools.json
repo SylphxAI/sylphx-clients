@@ -485,6 +485,7 @@
                       "requests_per_minute": {
                         "description": "Requests per minute.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -607,6 +608,7 @@
                       "requests_per_minute": {
                         "description": "Requests per minute.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -1365,6 +1367,7 @@
                       "requests_per_minute": {
                         "description": "Requests per minute.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -1512,6 +1515,7 @@
                       "requests_per_minute": {
                         "description": "Requests per minute.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -2215,6 +2219,8 @@
                       "max_steps_per_turn": {
                         "description": "Model and tool steps per turn, 1 to 1000; default 100.",
                         "format": "int32",
+                        "maximum": 1000,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "turn_timeout": {
@@ -2734,6 +2740,8 @@
                       "max_steps_per_turn": {
                         "description": "Model and tool steps per turn, 1 to 1000; default 100.",
                         "format": "int32",
+                        "maximum": 1000,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "turn_timeout": {
@@ -4970,6 +4978,7 @@
           "expected_version": {
             "description": "The acceptance-contract version observed by the caller.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "name": {
@@ -5062,6 +5071,7 @@
           "expected_version": {
             "description": "The contract version observed by the owner.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "name": {
@@ -7858,6 +7868,7 @@
                       "max_concurrent_sessions": {
                         "description": "Concurrent sessions per end user; excess sessions are revoked, oldest\nfirst. 0 is unlimited.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -16263,6 +16274,8 @@
                       "abort_incomplete_multipart_days": {
                         "description": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
                         "format": "int32",
+                        "maximum": 365,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "expiration_rules": {
@@ -16274,6 +16287,8 @@
                             "days": {
                               "description": "Expire an object this many days after it was written: 1 to 36500.",
                               "format": "int32",
+                              "maximum": 36500,
+                              "minimum": 1,
                               "type": "integer"
                             },
                             "prefix": {
@@ -16476,6 +16491,8 @@
                       "abort_incomplete_multipart_days": {
                         "description": "Abort a multipart upload that has not completed this many days after it\nstarted, and free its parts: 1 to 365. 0 keeps incomplete uploads until\nsomeone aborts them (and they are billed as stored bytes until then).",
                         "format": "int32",
+                        "maximum": 365,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "expiration_rules": {
@@ -16487,6 +16504,8 @@
                             "days": {
                               "description": "Expire an object this many days after it was written: 1 to 36500.",
                               "format": "int32",
+                              "maximum": 36500,
+                              "minimum": 1,
                               "type": "integer"
                             },
                             "prefix": {
@@ -16839,6 +16858,8 @@
                   "vector_dimensions": {
                     "description": "The vector dimension; 0 for lexical only.",
                     "format": "int32",
+                    "maximum": 4096,
+                    "minimum": 0,
                     "type": "integer",
                     "x-sylphx-immutable": true
                   }
@@ -16938,6 +16959,8 @@
                   "vector_dimensions": {
                     "description": "The vector dimension; 0 for lexical only.",
                     "format": "int32",
+                    "maximum": 4096,
+                    "minimum": 0,
                     "type": "integer",
                     "x-sylphx-immutable": true
                   }
@@ -18338,6 +18361,8 @@
                   "max_deliveries": {
                     "description": "Deliveries before a message dead-letters; default 5, 1 to 100.",
                     "format": "int32",
+                    "maximum": 100,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "retention": {
@@ -18443,6 +18468,8 @@
                   "max_deliveries": {
                     "description": "Deliveries before a message dead-letters; default 5, 1 to 100.",
                     "format": "int32",
+                    "maximum": 100,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "retention": {
@@ -18642,6 +18669,8 @@
           "max_messages": {
             "description": "At most this many; default 1, at most 100.",
             "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "name": {
@@ -18986,11 +19015,15 @@
                   "max_concurrent_deliveries": {
                     "description": "At most this many deliveries in flight; default 10.",
                     "format": "int32",
+                    "maximum": 1000,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "rate_limit_per_second": {
                     "description": "At most this many attempts start per second; 0 is no limit. Deliveries\nover the limit wait their turn; none is dropped.",
                     "format": "int32",
+                    "maximum": 10000,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "uri": {
@@ -19107,11 +19140,15 @@
                   "max_concurrent_deliveries": {
                     "description": "At most this many deliveries in flight; default 10.",
                     "format": "int32",
+                    "maximum": 1000,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "rate_limit_per_second": {
                     "description": "At most this many attempts start per second; 0 is no limit. Deliveries\nover the limit wait their turn; none is dropped.",
                     "format": "int32",
+                    "maximum": 10000,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "uri": {
@@ -21837,6 +21874,8 @@
                   "port": {
                     "description": "The port the application listens on; the public edge stays 443.",
                     "format": "int32",
+                    "maximum": 65535,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "regions": {
@@ -21853,11 +21892,15 @@
                       "max_instances": {
                         "description": "Instances at most; 0 means the plan's limit.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min_instances": {
                         "description": "Instances kept running with no traffic; 0 idles to zero and wakes on\nrequest.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -22057,6 +22100,8 @@
                   "port": {
                     "description": "The port the application listens on; the public edge stays 443.",
                     "format": "int32",
+                    "maximum": 65535,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "regions": {
@@ -22073,11 +22118,15 @@
                       "max_instances": {
                         "description": "Instances at most; 0 means the plan's limit.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min_instances": {
                         "description": "Instances kept running with no traffic; 0 idles to zero and wakes on\nrequest.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -22666,6 +22715,7 @@
                   "pull_request": {
                     "description": "The pull request number in the Service's SourceLink repository.",
                     "format": "int32",
+                    "minimum": 1,
                     "type": "integer",
                     "x-sylphx-immutable": true
                   },
@@ -25599,6 +25649,8 @@
           "max_hops": {
             "description": "How many hops to expand from the top entities, 0 to 2; default 2.",
             "format": "int32",
+            "maximum": 2,
+            "minimum": 0,
             "type": "integer"
           },
           "parent": {
@@ -28071,6 +28123,8 @@
                                 "count": {
                                   "description": "How many units; at least 1.",
                                   "format": "int32",
+                                  "maximum": 36500,
+                                  "minimum": 1,
                                   "type": "integer"
                                 },
                                 "unit": {
@@ -28135,6 +28189,8 @@
                               "recurring_interval_count": {
                                 "description": "Intervals per period; default 1.",
                                 "format": "int32",
+                                "maximum": 12,
+                                "minimum": 0,
                                 "type": "integer"
                               },
                               "tax_behavior": {
@@ -28144,6 +28200,8 @@
                               "trial_days": {
                                 "description": "Free trial days for a recurring price.",
                                 "format": "int32",
+                                "maximum": 730,
+                                "minimum": 0,
                                 "type": "integer"
                               },
                               "unit_amounts": {
@@ -29811,6 +29869,8 @@
                     "quantity": {
                       "description": "How many; default 1. Seats for a per-seat or family price.",
                       "format": "int32",
+                      "maximum": 10000,
+                      "minimum": 0,
                       "type": "integer"
                     }
                   },
@@ -36815,6 +36875,8 @@
                       "max_per_hour": {
                         "description": "At most this many messages to one recipient in any hour; 0 is no limit.",
                         "format": "int32",
+                        "maximum": 10000,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min_interval": {
@@ -37019,6 +37081,8 @@
                       "max_per_hour": {
                         "description": "At most this many messages to one recipient in any hour; 0 is no limit.",
                         "format": "int32",
+                        "maximum": 10000,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min_interval": {
@@ -39476,6 +39540,56 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Configure voicemail and create an inert standalone carrier application. Never buys, attaches, forwards or changes the voice profile of a line."
+      },
+      "description": "Configure voicemail and create an inert standalone carrier application.\nNever buys, attaches, forwards or changes the voice profile of a line.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}:configureVoicemail",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Configure the number's voicemail. No carrier-number writes occur.",
+        "properties": {
+          "greeting": {
+            "description": "Plain-text greeting spoken before recording.",
+            "type": "string"
+          },
+          "max_recording_duration": {
+            "description": "Maximum recording duration, 10–180 whole seconds (for example, \"120s\").",
+            "pattern": "^(?:(?:1[0-9]|[2-8][0-9]|9[0-9])|1(?:0[0-9]|[1-7][0-9]|80))(?:\\.0{1,9})?s$",
+            "type": "string"
+          },
+          "name": {
+            "description": "The number resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          },
+          "retention_days": {
+            "description": "Content retention, 1–30 days.",
+            "format": "int32",
+            "maximum": 30,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "greeting",
+          "retention_days",
+          "max_recording_duration"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.sms_numbers.configure_voicemail",
+      "permission": "notify:write",
+      "tool": "notify_sms_numbers_configure_voicemail"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -39551,6 +39665,116 @@
       "method_id": "notify.inbound_sms.list",
       "permission": "notify:read",
       "tool": "notify_inbound_sms_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Get one message in the unified SMS and voice inbox."
+      },
+      "description": "Get one message in the unified SMS and voice inbox.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Get a unified inbox entry.",
+        "properties": {
+          "name": {
+            "description": "The message resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundMessage"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_messages.get",
+      "permission": "notify:read",
+      "tool": "notify_inbound_messages_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "List SMS and voice messages in sequence order. The sequence advances when asynchronous content changes, so polling also observes completed transcripts."
+      },
+      "description": "List SMS and voice messages in sequence order. The sequence advances when\nasynchronous content changes, so polling also observes completed transcripts.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/sms_numbers/*}/inbound_messages",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "List the unified inbox.",
+        "properties": {
+          "filter": {
+            "description": "sequence > N, optionally AND sender_number = \"…\".",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "sequence, oldest first.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Default 50; at most 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "A previous page's continuation token.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The number whose inbox to read.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundMessage"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_messages.list",
+      "permission": "notify:read",
+      "tool": "notify_inbound_messages_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Download retained voicemail bytes with the inbox's tenant/resource permission."
+      },
+      "description": "Download retained voicemail bytes with the inbox's tenant/resource permission.",
+      "effect": "read",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*/inbound_messages/*}:download",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Download one retained voicemail recording.",
+        "properties": {
+          "name": {
+            "description": "The message resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundMessage"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_messages.download",
+      "permission": "notify:read",
+      "tool": "notify_inbound_messages_download"
     },
     {
       "annotations": {
@@ -41791,6 +42015,8 @@
                   "max_runners": {
                     "description": "Concurrent runners at most; 0 means the plan's limit.",
                     "format": "int32",
+                    "maximum": 1000,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "runner_class": {
@@ -41901,6 +42127,8 @@
                   "max_runners": {
                     "description": "Concurrent runners at most; 0 means the plan's limit.",
                     "format": "int32",
+                    "maximum": 1000,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "runner_class": {
@@ -42309,11 +42537,15 @@
                       "max": {
                         "description": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min": {
                         "description": "Optional floor over automatic demand sizing; defaults to zero.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -42430,11 +42662,15 @@
                       "max": {
                         "description": "Optional ceiling over automatic demand sizing; zero uses the deployment limit.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min": {
                         "description": "Optional floor over automatic demand sizing; defaults to zero.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -42721,16 +42957,22 @@
                       "dpi": {
                         "description": "Dots per inch; default 96.",
                         "format": "int32",
+                        "maximum": 480,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "height": {
                         "description": "Logical height in pixels; default 800.",
                         "format": "int32",
+                        "maximum": 2160,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "width": {
                         "description": "Logical width in pixels; default 1280.",
                         "format": "int32",
+                        "maximum": 3840,
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -42813,6 +43055,8 @@
                         "port": {
                           "description": "The guest port.",
                           "format": "int32",
+                          "maximum": 65535,
+                          "minimum": 1,
                           "type": "integer"
                         },
                         "visibility": {
@@ -43536,6 +43780,8 @@
               "port": {
                 "description": "The guest port.",
                 "format": "int32",
+                "maximum": 65535,
+                "minimum": 1,
                 "type": "integer"
               },
               "visibility": {
@@ -43587,6 +43833,8 @@
           "port": {
             "description": "The guest port.",
             "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
             "type": "integer"
           }
         },
@@ -43640,6 +43888,8 @@
                     "count": {
                       "description": "1 (default), 2 (double), or 3 (triple).",
                       "format": "int32",
+                      "maximum": 3,
+                      "minimum": 0,
                       "type": "integer"
                     },
                     "modifiers": {
@@ -43768,6 +44018,8 @@
                     "repeat": {
                       "description": "Press it this many times; default 1.",
                       "format": "int32",
+                      "maximum": 100,
+                      "minimum": 0,
                       "type": "integer"
                     }
                   },
@@ -43963,6 +44215,8 @@
                         "quality": {
                           "description": "JPEG and WebP quality 1 to 100; default 80.",
                           "format": "int32",
+                          "maximum": 100,
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "settle": {
@@ -44035,6 +44289,8 @@
                         "quality": {
                           "description": "JPEG and WebP quality 1 to 100; default 80.",
                           "format": "int32",
+                          "maximum": 100,
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "settle": {
@@ -44125,6 +44381,8 @@
               "quality": {
                 "description": "JPEG and WebP quality 1 to 100; default 80.",
                 "format": "int32",
+                "maximum": 100,
+                "minimum": 0,
                 "type": "integer"
               },
               "settle": {
@@ -44582,6 +44840,8 @@
                   "size_gib": {
                     "description": "Size in GiB, 1 to 1024; it may grow and never shrink. A `local` volume\nnever grows.",
                     "format": "int32",
+                    "maximum": 1024,
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "storage_class": {
@@ -44685,6 +44945,8 @@
                   "size_gib": {
                     "description": "Size in GiB, 1 to 1024; it may grow and never shrink. A `local` volume\nnever grows.",
                     "format": "int32",
+                    "maximum": 1024,
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "storage_class": {
@@ -46712,6 +46974,7 @@
                   "max_concurrent_runs": {
                     "description": "At most this many running Runs of this Workflow; 0 is unlimited within the\nplan.",
                     "format": "int32",
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "permission": {
@@ -46734,6 +46997,8 @@
                       "max_attempts": {
                         "description": "Attempts per step, 1 to 100; default 10.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "max_interval": {
@@ -46905,6 +47170,7 @@
                   "max_concurrent_runs": {
                     "description": "At most this many running Runs of this Workflow; 0 is unlimited within the\nplan.",
                     "format": "int32",
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "permission": {
@@ -46927,6 +47193,8 @@
                       "max_attempts": {
                         "description": "Attempts per step, 1 to 100; default 10.",
                         "format": "int32",
+                        "maximum": 100,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "max_interval": {
@@ -48137,6 +48405,8 @@
                   "max_retries": {
                     "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
                     "format": "int32",
+                    "maximum": 10,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "service": {
@@ -48286,6 +48556,8 @@
                   "max_retries": {
                     "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
                     "format": "int32",
+                    "maximum": 10,
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "service": {
@@ -48940,11 +49212,13 @@
                       "max_workers": {
                         "description": "The most workers at once; the Cell and the org quota cap it too. Default 1.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min_workers": {
                         "description": "Workers kept while shards remain; default 1.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -48953,6 +49227,7 @@
                   "scratch_gib": {
                     "description": "Local scratch disk at `/scratch` per worker, GiB; 0 is none.",
                     "format": "int32",
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "shard_count": {
@@ -48963,6 +49238,7 @@
                   "shard_retries": {
                     "description": "Attempts a shard gets after a failure; a preemption is not one. Default 3.",
                     "format": "int32",
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "shard_timeout": {
@@ -49019,6 +49295,8 @@
                       "max_retries": {
                         "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
                         "format": "int32",
+                        "maximum": 10,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "service": {
@@ -49162,11 +49440,13 @@
                       "max_workers": {
                         "description": "The most workers at once; the Cell and the org quota cap it too. Default 1.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "min_workers": {
                         "description": "Workers kept while shards remain; default 1.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -49175,6 +49455,7 @@
                   "scratch_gib": {
                     "description": "Local scratch disk at `/scratch` per worker, GiB; 0 is none.",
                     "format": "int32",
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "shard_count": {
@@ -49185,6 +49466,7 @@
                   "shard_retries": {
                     "description": "Attempts a shard gets after a failure; a preemption is not one. Default 3.",
                     "format": "int32",
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "shard_timeout": {
@@ -49241,6 +49523,8 @@
                       "max_retries": {
                         "description": "Re-runs after a non-zero exit, 0 to 10; backoff 30s doubling.",
                         "format": "int32",
+                        "maximum": 10,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "service": {
@@ -49838,6 +50122,7 @@
                       "requests_per_minute": {
                         "description": "Requests per minute.",
                         "format": "int32",
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -49939,6 +50224,8 @@
                       "max_steps_per_turn": {
                         "description": "Model and tool steps per turn, 1 to 1000; default 100.",
                         "format": "int32",
+                        "maximum": 1000,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "turn_timeout": {
@@ -51908,6 +52195,8 @@
           "max_hops": {
             "description": "How many hops to expand from the top entities, 0 to 2; default 2.",
             "format": "int32",
+            "maximum": 2,
+            "minimum": 0,
             "type": "integer"
           },
           "parent": {
