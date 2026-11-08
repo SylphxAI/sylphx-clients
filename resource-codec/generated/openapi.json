@@ -12729,7 +12729,8 @@
           "ID_MOVED",
           "EXEC_OUTCOME_UNKNOWN",
           "DESTINATION_COUNTRY_NOT_ALLOWED",
-          "BUDGET_EXHAUSTED"
+          "BUDGET_EXHAUSTED",
+          "NO_LOG_STREAMS_MAPPED"
         ],
         "type": "string"
       },
@@ -94997,6 +94998,9 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -95010,7 +95014,9 @@
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
           "INVALID_FIELD",
-          "PAGE_TOKEN_MISMATCH"
+          "PAGE_TOKEN_MISMATCH",
+          "NO_LOG_STREAMS_MAPPED",
+          "UNAVAILABLE"
         ],
         "x-sylphx-method": "observability.log_entries.query",
         "x-sylphx-permission": "observability:read",

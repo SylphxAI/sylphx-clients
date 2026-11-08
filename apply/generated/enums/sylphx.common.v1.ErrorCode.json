@@ -181,6 +181,11 @@
       "number": 36,
       "proto_name": "ERROR_CODE_BUDGET_EXHAUSTED",
       "wire": "BUDGET_EXHAUSTED"
+    },
+    {
+      "number": 37,
+      "proto_name": "ERROR_CODE_NO_LOG_STREAMS_MAPPED",
+      "wire": "NO_LOG_STREAMS_MAPPED"
     }
   ]
 }

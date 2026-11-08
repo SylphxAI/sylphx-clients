@@ -431,6 +431,9 @@ pub enum ErrorCode {
     DestinationCountryNotAllowed,
     /// RESOURCE_EXHAUSTED / 429: the daily SMS count or estimated USD budget is exhausted.
     BudgetExhausted,
+    /// FAILED_PRECONDITION: the environment has no exclusive platform
+    /// log stream mapping; missing or ambiguous placement is not zero traffic.
+    NoLogStreamsMapped,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -475,6 +478,7 @@ impl ErrorCode {
             Self::ExecOutcomeUnknown => "EXEC_OUTCOME_UNKNOWN",
             Self::DestinationCountryNotAllowed => "DESTINATION_COUNTRY_NOT_ALLOWED",
             Self::BudgetExhausted => "BUDGET_EXHAUSTED",
+            Self::NoLogStreamsMapped => "NO_LOG_STREAMS_MAPPED",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -518,6 +522,7 @@ impl ErrorCode {
             "EXEC_OUTCOME_UNKNOWN" => Self::ExecOutcomeUnknown,
             "DESTINATION_COUNTRY_NOT_ALLOWED" => Self::DestinationCountryNotAllowed,
             "BUDGET_EXHAUSTED" => Self::BudgetExhausted,
+            "NO_LOG_STREAMS_MAPPED" => Self::NoLogStreamsMapped,
             other => Self::Unknown(other.to_string()),
         }
     }

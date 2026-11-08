@@ -2646,7 +2646,7 @@ impl<'a, T: crate::runtime::Transport> LogEntriesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/log_entries:query` · permission `observability:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `NO_LOG_STREAMS_MAPPED`, `UNAVAILABLE`.
     pub async fn query(
         &self,
         request: QueryLogEntriesRequest,

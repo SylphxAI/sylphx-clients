@@ -1384,7 +1384,7 @@ export class LogEntriesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/log_entries:query` · permission `observability:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `NO_LOG_STREAMS_MAPPED`, `UNAVAILABLE`.
 	 */
 	async query(request: QueryLogEntriesRequest): Promise<QueryLogEntriesResponse> {
 		return this.client.call<QueryLogEntriesResponse>({
