@@ -673,7 +673,7 @@
             "type": "string"
           },
           "order_by": {
-            "description": "AIP-132 ordering over filterable fields.",
+            "description": "Custom ordering is not supported; leave empty.",
             "type": "string"
           },
           "page_size": {
@@ -902,9 +902,19 @@
       "sylphx.access.v1.ProjectSpec": {
         "description": "ProjectSpec is the caller-writable state of a Project.",
         "properties": {
+          "declared_key": {
+            "description": "Declared project identity, when managed by a project declaration.\nThis is the exact declaration key, for example `sylphx-notify`.",
+            "readOnly": true,
+            "type": "string"
+          },
           "limits": {
             "$ref": "#/components/schemas/sylphx.access.v1.UsageLimits",
             "description": "Usage limits shared by every key of the project; a key's own limits\nonly tighten them. Unset means no project-level limit."
+          },
+          "name": {
+            "description": "The project's human-readable name, independent of its generated slug.",
+            "readOnly": true,
+            "type": "string"
           },
           "slug": {
             "description": "Unique within the org.",
@@ -57490,7 +57500,7 @@
     },
     "/v1/orgs/{org}/projects": {
       "get": {
-        "description": "Lists projects in an org.",
+        "description": "Lists projects in an org. Filter by `spec.declared_key` to resolve a\ndeclared project, then list its envs and Hosting services by resource name.\nResults default to 50 per page (maximum 1000), ordered by slug then name.\nNon-empty order_by is refused until custom ordering is supported.",
         "operationId": "access_projects_list",
         "parameters": [
           {
@@ -57530,7 +57540,7 @@
             }
           },
           {
-            "description": "AIP-132 ordering over filterable fields.",
+            "description": "Custom ordering is not supported; leave empty.",
             "in": "query",
             "name": "order_by",
             "required": false,
@@ -57566,7 +57576,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Lists projects in an org.",
+        "summary": "Lists projects in an org. Filter by `spec.declared_key` to resolve a declared project, then list its envs and Hosting services by resource name. Results default to 50 per page (maximum 1000), ordered by slug then name. Non-empty order_by is refused until custom ordering is supported.",
         "tags": [
           "access"
         ],

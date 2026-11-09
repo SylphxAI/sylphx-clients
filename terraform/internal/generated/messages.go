@@ -81,6 +81,8 @@ func accessProjectSpec() []def.Field {
 	return []def.Field{
 		{Name: "slug", Kind: def.String, Flags: def.Required, Doc: "Unique within the org."},
 		{Name: "limits", Kind: def.Message, Msg: accessUsageLimits, Doc: "Usage limits shared by every key of the project; a key's own limits only tighten them. Unset means no project-level limit."},
+		{Name: "declared_key", Kind: def.String, Flags: def.OutputOnly, Doc: "Declared project identity, when managed by a project declaration. This is the exact declaration key, for example `sylphx-notify`."},
+		{Name: "name", Kind: def.String, Flags: def.OutputOnly, Doc: "The project's human-readable name, independent of its generated slug."},
 	}
 }
 

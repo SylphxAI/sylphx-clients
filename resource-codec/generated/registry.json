@@ -8057,7 +8057,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "AIP-132 ordering over filterable fields.",
+          "doc": "Custom ordering is not supported; leave empty.",
           "filterable": false,
           "name": "order_by",
           "number": 5,
@@ -8668,6 +8668,44 @@
           "type": {
             "kind": "message",
             "name": "sylphx.access.v1.UsageLimits"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Declared project identity, when managed by a project declaration.\nThis is the exact declaration key, for example `sylphx-notify`.",
+          "filterable": true,
+          "name": "declared_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The project's human-readable name, independent of its generated slug.",
+          "filterable": true,
+          "name": "name",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],
@@ -155564,7 +155602,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists projects in an org.",
+              "doc": "Lists projects in an org. Filter by `spec.declared_key` to resolve a\ndeclared project, then list its envs and Hosting services by resource name.\nResults default to 50 per page (maximum 1000), ordered by slug then name.\nNon-empty order_by is refused until custom ordering is supported.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",

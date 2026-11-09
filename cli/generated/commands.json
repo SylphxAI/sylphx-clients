@@ -273,7 +273,7 @@
                 {
                   "field": "order_by",
                   "flag": "--order-by",
-                  "summary": "AIP-132 ordering over filterable fields.",
+                  "summary": "Custom ordering is not supported; leave empty.",
                   "type": "string"
                 }
               ],
@@ -288,7 +288,7 @@
                 "optional": true,
                 "pattern": "orgs/{org}"
               },
-              "summary": "Lists projects in an org.",
+              "summary": "Lists projects in an org. Filter by `spec.declared_key` to resolve a declared project, then list its envs and Hosting services by resource name. Results default to 50 per page (maximum 1000), ordered by slug then name. Non-empty order_by is refused until custom ordering is supported.",
               "verb": "list"
             },
             {

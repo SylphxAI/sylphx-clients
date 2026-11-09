@@ -320,7 +320,7 @@ export interface ListProjectsRequest {
 	pageToken?: string
 	/** AIP-160 filter over labels, filterable spec fields, and Ready. */
 	filter?: string
-	/** AIP-132 ordering over filterable fields. */
+	/** Custom ordering is not supported; leave empty. */
 	orderBy?: string
 }
 
@@ -418,6 +418,13 @@ export interface ProjectSpec {
 	 * only tighten them. Unset means no project-level limit.
 	 */
 	limits?: UsageLimits
+	/**
+	 * Declared project identity, when managed by a project declaration.
+	 * This is the exact declaration key, for example `sylphx-notify`.
+	 */
+	readonly declaredKey?: string
+	/** The project's human-readable name, independent of its generated slug. */
+	readonly name?: string
 }
 
 /** ProjectStatus is the observed state of a Project. */
@@ -739,6 +746,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.access.v1.ProjectSpec': [
 		['limits', 'limits', 'sylphx.access.v1.UsageLimits'],
+		['declaredKey', 'declared_key'],
 	],
 	'sylphx.access.v1.ProjectStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -981,7 +989,10 @@ export class ProjectsCollection {
 	}
 
 	/**
-	 * Lists projects in an org.
+	 * Lists projects in an org. Filter by `spec.declared_key` to resolve a
+	 * declared project, then list its envs and Hosting services by resource name.
+	 * Results default to 50 per page (maximum 1000), ordered by slug then name.
+	 * Non-empty order_by is refused until custom ordering is supported.
 	 *
 	 * `GET /v1/{parent=orgs/*}/projects` · permission `access:read` · effect `read`
 	 *

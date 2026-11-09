@@ -657,7 +657,7 @@ pub struct ListProjectsRequest {
     /// AIP-160 filter over labels, filterable spec fields, and Ready.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub filter: String,
-    /// AIP-132 ordering over filterable fields.
+    /// Custom ordering is not supported; leave empty.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -876,6 +876,21 @@ pub struct ProjectSpec {
     /// only tighten them. Unset means no project-level limit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limits: Option<UsageLimits>,
+    /// Declared project identity, when managed by a project declaration.
+    /// This is the exact declaration key, for example `sylphx-notify`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "declaredKey"
+    )]
+    pub declared_key: String,
+    /// The project's human-readable name, independent of its generated slug.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
 }
 
 /// ProjectStatus is the observed state of a Project.
@@ -1801,7 +1816,10 @@ impl<'a, T: crate::runtime::Transport> ProjectsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists projects in an org.
+    /// Lists projects in an org. Filter by `spec.declared_key` to resolve a
+    /// declared project, then list its envs and Hosting services by resource name.
+    /// Results default to 50 per page (maximum 1000), ordered by slug then name.
+    /// Non-empty order_by is refused until custom ordering is supported.
     ///
     /// `GET /v1/{parent=orgs/*}/projects` · permission `access:read` · effect `read`
     ///

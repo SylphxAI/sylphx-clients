@@ -357,9 +357,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Lists projects in an org."
+        "title": "Lists projects in an org. Filter by `spec.declared_key` to resolve a declared project, then list its envs and Hosting services by resource name. Results default to 50 per page (maximum 1000), ordered by slug then name. Non-empty order_by is refused until custom ordering is supported."
       },
-      "description": "Lists projects in an org.",
+      "description": "Lists projects in an org. Filter by `spec.declared_key` to resolve a\ndeclared project, then list its envs and Hosting services by resource name.\nResults default to 50 per page (maximum 1000), ordered by slug then name.\nNon-empty order_by is refused until custom ordering is supported.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/projects",
       "input_schema": {
@@ -371,7 +371,7 @@
             "type": "string"
           },
           "order_by": {
-            "description": "AIP-132 ordering over filterable fields.",
+            "description": "Custom ordering is not supported; leave empty.",
             "type": "string"
           },
           "page_size": {
