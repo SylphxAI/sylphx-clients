@@ -1,0 +1,61 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_actions.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.support_actions.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "support_action_id",
+              "request_id",
+              "validate_only",
+              "expected_version"
+            ]
+          },
+          "id": "notify.support_actions.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_actions.begin_support_action_attempt",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_actions.record_support_action_receipt",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_actions.reconcile",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/SupportAction"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "sylphx.notify.v1.SupportSpamDisposition",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "SUPPORT_SPAM_DISPOSITION_SUPPRESSED",
+      "wire": "suppressed"
+    },
+    {
+      "number": 2,
+      "proto_name": "SUPPORT_SPAM_DISPOSITION_REVIEW_REQUIRED",
+      "wire": "review_required"
+    },
+    {
+      "number": 3,
+      "proto_name": "SUPPORT_SPAM_DISPOSITION_NOT_SPAM",
+      "wire": "not_spam"
+    },
+    {
+      "number": 4,
+      "proto_name": "SUPPORT_SPAM_DISPOSITION_CONFIRMED_CUSTOMER",
+      "wire": "confirmed_customer"
+    }
+  ]
+}

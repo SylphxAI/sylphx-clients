@@ -1,0 +1,35 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_reconciliations.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.support_reconciliations.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_reconciliations.run",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/SupportReconciliation"
+    }
+  ]
+}

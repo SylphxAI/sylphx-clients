@@ -33373,6 +33373,55 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.ApplySupportDecisionRequest": {
+        "description": "Request for ApplySupportDecision.",
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecision",
+            "description": "Complete new decision; omitting an unresolved track is refused."
+          },
+          "before": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportCaseState",
+            "description": "Observed primary state; also checked against authoritative storage."
+          },
+          "expected_version": {
+            "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical resource name, checked against the caller grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportCase"
+          },
+          "pending_proof": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportPendingProof",
+            "description": "Source proof for imported pending customer waits."
+          },
+          "request_id": {
+            "description": "Stable UUID for this logical operation.",
+            "type": "string"
+          },
+          "source_key": {
+            "description": "Immutable signal/decision identity for replay and audit.",
+            "type": "string"
+          },
+          "spam": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportSpamDisposition",
+            "description": "Spam disposition; only authenticated verdicts clear suppression."
+          },
+          "validate_only": {
+            "description": "Validate without changing state or contacting an effect provider.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "after"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.ArchiveInboxItemRequest": {
         "description": "The request of ArchiveInboxItem.",
         "properties": {
@@ -33385,6 +33434,53 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.BeginSupportActionAttemptRequest": {
+        "description": "Request for BeginSupportActionAttempt.",
+        "properties": {
+          "expected_version": {
+            "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical resource name, checked against the caller grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          },
+          "request_id": {
+            "description": "Stable UUID for this logical operation.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without changing state or contacting an effect provider.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.BeginSupportActionAttemptResponse": {
+        "description": "Fenced dispatch ownership; it is not a delivery receipt.",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction",
+            "description": "Current action and version."
+          },
+          "attempt_id": {
+            "description": "Unique attempt identity; settlement must match it.",
+            "type": "string"
+          },
+          "claim_expire_time": {
+            "description": "Claim expiry; expiry means unknown outcome, never safe retry.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.notify.v1.Broadcast": {
@@ -33940,6 +34036,142 @@
         "required": [
           "parent",
           "sms_number"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.CreateSupportActionRequest": {
+        "description": "Request to create a SupportAction.",
+        "properties": {
+          "expected_version": {
+            "description": "Case aggregate version observed by the caller.",
+            "format": "int64",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          },
+          "request_id": {
+            "description": "UUID request identity, stable across transport retries.",
+            "type": "string"
+          },
+          "support_action": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction",
+            "description": "Record to admit; actor and output fields are derived by the service."
+          },
+          "support_action_id": {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without admitting a case, message or effect.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "support_action",
+          "expected_version"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.CreateSupportCaseRequest": {
+        "description": "Request to create a SupportCase.",
+        "properties": {
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportCase"
+          },
+          "request_id": {
+            "description": "UUID request identity, stable across transport retries.",
+            "type": "string"
+          },
+          "support_case": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase",
+            "description": "Record to admit; actor and output fields are derived by the service."
+          },
+          "support_case_id": {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without admitting a case, message or effect.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "support_case"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.CreateSupportInboxRequest": {
+        "description": "Request to create a SupportInbox.",
+        "properties": {
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+          },
+          "request_id": {
+            "description": "UUID request identity, stable across transport retries.",
+            "type": "string"
+          },
+          "support_inbox": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox",
+            "description": "Record to admit; actor and output fields are derived by the service."
+          },
+          "support_inbox_id": {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without admitting a case, message or effect.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "support_inbox"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.CreateSupportThreadMessageRequest": {
+        "description": "Request to create a SupportThreadMessage.",
+        "properties": {
+          "expected_version": {
+            "description": "Case aggregate version observed by the caller.",
+            "format": "int64",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportThreadMessage"
+          },
+          "request_id": {
+            "description": "UUID request identity, stable across transport retries.",
+            "type": "string"
+          },
+          "support_thread_message": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage",
+            "description": "Record to admit; actor and output fields are derived by the service."
+          },
+          "support_thread_message_id": {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without admitting a case, message or effect.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "support_thread_message",
+          "expected_version"
         ],
         "type": "object"
       },
@@ -34821,6 +35053,90 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.GetSupportActionRequest": {
+        "description": "Request to get a SupportAction.",
+        "properties": {
+          "name": {
+            "description": "Canonical resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetSupportAuditEventRequest": {
+        "description": "Request to get a SupportAuditEvent.",
+        "properties": {
+          "name": {
+            "description": "Canonical resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAuditEvent"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetSupportCaseRequest": {
+        "description": "Request to get a SupportCase.",
+        "properties": {
+          "name": {
+            "description": "Canonical resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportCase"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetSupportInboxRequest": {
+        "description": "Request to get a SupportInbox.",
+        "properties": {
+          "name": {
+            "description": "Canonical resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetSupportReconciliationRequest": {
+        "description": "Request to get a SupportReconciliation.",
+        "properties": {
+          "name": {
+            "description": "Canonical resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportReconciliation"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetSupportThreadMessageRequest": {
+        "description": "Request to get a SupportThreadMessage.",
+        "properties": {
+          "name": {
+            "description": "Canonical resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportThreadMessage"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.GetSuppressionRequest": {
         "description": "The request of GetSuppression.",
         "properties": {
@@ -34847,6 +35163,94 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ImportSupportCasesRequest": {
+        "description": "Bounded, auditable history import by the owning service writer.",
+        "properties": {
+          "actions": {
+            "description": "Original actions/keys/receipts; ambiguous prior sends remain UNCERTAIN.\nSuppression never blocks inert CANCELLED/SUCCEEDED/UNCERTAIN history;\nimport admits no PENDING/IN_FLIGHT action under suppression and sends nothing.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+            },
+            "type": "array"
+          },
+          "audit_events": {
+            "description": "Original audit records; absent historical versions are not invented.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportAuditEvent"
+            },
+            "type": "array"
+          },
+          "messages": {
+            "description": "Original thread records, including internal messages and erasure tombstones.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "description": "Authenticated destination environment.",
+            "type": "string"
+          },
+          "request_id": {
+            "description": "Stable UUID for this batch.",
+            "type": "string"
+          },
+          "source": {
+            "description": "Stable source namespace and migration run identity.",
+            "type": "string"
+          },
+          "source_sha256": {
+            "description": "Full source-record hash of this batch; changed replay is refused.",
+            "type": "string"
+          },
+          "support_cases": {
+            "description": "Original case records and typed projections; at most 500.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+            },
+            "type": "array"
+          },
+          "validate_only": {
+            "description": "Validate and compare without writing.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ImportSupportCasesResponse": {
+        "description": "Losslessness receipt; exceptions keep an incomplete case from authoritative scheduling.",
+        "properties": {
+          "exceptions": {
+            "description": "Every missing classification/proof/source mismatch, not a truncated sample.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliationException"
+            },
+            "type": "array"
+          },
+          "imported": {
+            "description": "Inserted records, counted across every supplied kind.",
+            "format": "int64",
+            "type": "string"
+          },
+          "replayed": {
+            "description": "Exact unchanged replays; no duplicate effect is created.",
+            "format": "int64",
+            "type": "string"
+          },
+          "source": {
+            "description": "Source namespace echoed for verification.",
+            "type": "string"
+          },
+          "target_sha256": {
+            "description": "Full canonical destination batch hash.",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.notify.v1.InboundEmail": {
@@ -35193,6 +35597,56 @@
           "archived"
         ],
         "type": "string"
+      },
+      "sylphx.notify.v1.IngestSupportSignalRequest": {
+        "description": "Request for IngestSupportSignal.",
+        "properties": {
+          "evidence": {
+            "description": "Protected evidence references; never plaintext credentials.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence"
+            },
+            "type": "array"
+          },
+          "expected_version": {
+            "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical resource name, checked against the caller grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportCase"
+          },
+          "receive_time": {
+            "description": "Source-reported time used for intake latency verification.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "request_id": {
+            "description": "Stable UUID for this logical operation.",
+            "type": "string"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecisionReason",
+            "description": "Typed, verified signal; customer text is evidence, never authority."
+          },
+          "source_key": {
+            "description": "Immutable source-scoped event identity.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without changing state or contacting an effect provider.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "source_key",
+          "receive_time"
+        ],
+        "type": "object"
       },
       "sylphx.notify.v1.ListBroadcastsRequest": {
         "description": "The request of ListBroadcasts.",
@@ -35988,6 +36442,294 @@
             "description": "The page.",
             "items": {
               "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportActionsRequest": {
+        "description": "Request to list support_actions.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum rows; default 50, at most 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportActionsResponse": {
+        "description": "A page of scoped support_actions.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation; empty only after the final page.",
+            "type": "string"
+          },
+          "support_actions": {
+            "description": "Visible records only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportAuditEventsRequest": {
+        "description": "Request to list support_audit_events.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum rows; default 50, at most 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAuditEvent"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportAuditEventsResponse": {
+        "description": "A page of scoped support_audit_events.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation; empty only after the final page.",
+            "type": "string"
+          },
+          "support_audit_events": {
+            "description": "Visible records only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportAuditEvent"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportCasesRequest": {
+        "description": "Request to list support_cases.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum rows; default 50, at most 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportCase"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportCasesResponse": {
+        "description": "A page of scoped support_cases.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation; empty only after the final page.",
+            "type": "string"
+          },
+          "support_cases": {
+            "description": "Visible records only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportInboxesRequest": {
+        "description": "Request to list support_inboxes.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum rows; default 50, at most 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportInboxesResponse": {
+        "description": "A page of scoped support_inboxes.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation; empty only after the final page.",
+            "type": "string"
+          },
+          "support_inboxes": {
+            "description": "Visible records only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportReconciliationsRequest": {
+        "description": "Request to list support_reconciliations.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum rows; default 50, at most 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportReconciliation"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportReconciliationsResponse": {
+        "description": "A page of scoped support_reconciliations.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation; empty only after the final page.",
+            "type": "string"
+          },
+          "support_reconciliations": {
+            "description": "Visible records only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliation"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportThreadMessagesRequest": {
+        "description": "Request to list support_thread_messages.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "Maximum rows; default 50, at most 200.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated parent scope.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportThreadMessage"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListSupportThreadMessagesResponse": {
+        "description": "A page of scoped support_thread_messages.",
+        "properties": {
+          "next_page_token": {
+            "description": "Continuation; empty only after the final page.",
+            "type": "string"
+          },
+          "support_thread_messages": {
+            "description": "Visible records only.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage"
             },
             "type": "array"
           }
@@ -37262,6 +38004,72 @@
         },
         "type": "object"
       },
+      "sylphx.notify.v1.ReconcileSupportActionRequest": {
+        "description": "Request for ReconcileSupportAction.",
+        "properties": {
+          "expected_version": {
+            "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical resource name, checked against the caller grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          },
+          "request_id": {
+            "description": "Stable UUID for this logical operation.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without changing state or contacting an effect provider.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.RecordSupportActionReceiptRequest": {
+        "description": "Request for RecordSupportActionReceipt.",
+        "properties": {
+          "attempt_id": {
+            "description": "Fenced attempt identity returned by BeginSupportActionAttempt; mismatches are refused.",
+            "type": "string"
+          },
+          "expected_version": {
+            "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical resource name, checked against the caller grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActionReceipt",
+            "description": "Authenticated envelope bound to the action key and payload hash."
+          },
+          "request_id": {
+            "description": "Stable UUID for this logical operation.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without changing state or contacting an effect provider.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "receipt",
+          "attempt_id"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.RegisterPushDeviceRequest": {
         "description": "Registers one device without replacing the recipient's other devices.",
         "properties": {
@@ -37307,6 +38115,54 @@
             "description": "The sender the registration was bound to.",
             "type": "string",
             "x-sylphx-resource-reference": "notify.sylphx.com/Sender"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.RevealSupportRequesterRequest": {
+        "description": "Request for RevealSupportRequester.",
+        "properties": {
+          "expected_version": {
+            "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+            "format": "int64",
+            "type": "string"
+          },
+          "name": {
+            "description": "Canonical resource name, checked against the caller grant.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportCase"
+          },
+          "reason": {
+            "description": "Purpose of accessing unmasked personal data.",
+            "type": "string"
+          },
+          "request_id": {
+            "description": "Stable UUID for this logical operation.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without changing state or contacting an effect provider.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "expected_version",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.RevealSupportRequesterResponse": {
+        "description": "Protected requester disclosure; never returned in ordinary lists.",
+        "properties": {
+          "audit_event": {
+            "description": "Audit record of this access.",
+            "type": "string"
+          },
+          "identity": {
+            "description": "Unmasked source identity, possibly a synthetic channel address.",
+            "type": "string",
+            "x-sylphx-sensitive": true
           }
         },
         "type": "object"
@@ -37435,6 +38291,45 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.notify.v1.RunSupportReconciliationRequest": {
+        "description": "On-demand reconciliation; execution is invoked by the existing workflow authority.",
+        "properties": {
+          "inbox": {
+            "description": "Queue resource whose full population is covered.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliationKind",
+            "description": "Population/pass type."
+          },
+          "page_size": {
+            "description": "Maximum cases per bounded transaction; default 200, at most 500.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Continuation of the same snapshot, not a new empty population.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Authenticated environment scope.",
+            "type": "string"
+          },
+          "request_id": {
+            "description": "Stable pass identity; repeated invocation resumes the same pass.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate scope without running or scheduling the pass.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent"
+        ],
         "type": "object"
       },
       "sylphx.notify.v1.SendBroadcastRequest": {
@@ -37746,6 +38641,1167 @@
           }
         },
         "type": "object"
+      },
+      "sylphx.notify.v1.SupportAction": {
+        "description": "SupportAction is the case's business intent ledger, NOT an email outbox or\nnotify_deliveries row. Transport changes never mutate this record implicitly.\nStable keys and payload hashes survive all attempts, uncertain outcomes and\nmigration. Exactly-once visible results require duplicate-safe transport AND\nauthoritative provider/tenant reconciliation, not exactly-once HTTP delivery.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActor",
+            "description": "Authenticated creator or admitting workload.",
+            "readOnly": true
+          },
+          "attempt_count": {
+            "description": "Current dispatch attempt number; advances only on a new fenced claim.",
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "escalation": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportEscalation",
+            "description": "Notify an accountable reviewer through an existing API."
+          },
+          "failure_cause": {
+            "description": "Cause and unknown effect are separate facts.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "idempotency_key": {
+            "description": "Exact stable caller/source key; never replaced on retry or cutover.",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Strong ETag and creation/update times."
+          },
+          "name": {
+            "description": "Canonical action name.",
+            "type": "string"
+          },
+          "payload_sha256": {
+            "description": "SHA-256 of immutable admitted intent bytes; changed-key reuse is refused.",
+            "type": "string"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActionReceipt",
+            "description": "Latest authoritative receipt; dispatch/admission alone is not completion.",
+            "readOnly": true
+          },
+          "reconcile_time": {
+            "description": "Next permitted reconciliation/query time; UNKNOWN never means resend.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "remedy": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportRemedyRequest",
+            "description": "Request the tenant's own remedy API; Support never writes product data."
+          },
+          "reply": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportChannelReply",
+            "description": "Reply using an existing channel authority."
+          },
+          "source_records": {
+            "description": "Source outbox ID/key/payload/leases/attempts retained as protected evidence.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportSourceRecord"
+            },
+            "type": "array"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActionState",
+            "description": "Business state, independently versioned from the transport.",
+            "readOnly": true
+          },
+          "track_id": {
+            "description": "Related action/issue track in the same case.",
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uncertainty_episode": {
+            "description": "Storage-owned monotonic generation, incremented on each entry to UNCERTAIN.\nA reconciliation receipt must resolve this exact episode and attempt.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic concurrency version of the business action.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportActionReceipt": {
+        "description": "SupportActionReceipt is an immutable observation, linked to an authority's\nown receipt. A receipt envelope is verified before storage; strings supplied\nby a model/customer do not establish delivery, authorization or absence.",
+        "properties": {
+          "attempt_no": {
+            "description": "Exact attempt observed, including zero for imported never-claimed uncertainty.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "authority": {
+            "description": "Public authority that executed or queried the effect.",
+            "type": "string"
+          },
+          "evidence": {
+            "description": "Original envelope/evidence supporting verification.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence"
+            },
+            "type": "array"
+          },
+          "external_effect_id": {
+            "description": "Provider delivery/message ID or tenant remedy receipt identity.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable source receipt identity; conflicting replay is refused.",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "description": "The action's unchanged stable key.",
+            "type": "string"
+          },
+          "observe_time": {
+            "description": "Authoritative observation time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportEffectOutcome",
+            "description": "Confirmed applied, confirmed absent, unknown or rejected."
+          },
+          "payload_sha256": {
+            "description": "Binds the receipt to the exact immutable action payload.",
+            "type": "string"
+          },
+          "reconciliation": {
+            "description": "True only for a query-first reconciliation observation, not initial dispatch.",
+            "type": "boolean"
+          },
+          "resource": {
+            "description": "Public receipt resource, not a foreign database row or signed credential URL.",
+            "type": "string"
+          },
+          "uncertainty_episode": {
+            "description": "Exact uncertainty episode queried; zero for a non-reconciliation receipt.\nA new episode always requires a new authenticated query and receipt.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportActionState": {
+        "description": "SupportActionState separates business completion from transport acceptance.",
+        "enum": [
+          "pending",
+          "in_flight",
+          "uncertain",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportActor": {
+        "description": "SupportActor is derived from the authenticated caller or verified ingress.\nClaimed customer text can never select the actor, decider or delegated grant.",
+        "properties": {
+          "authority": {
+            "description": "Public source authority for a workload or channel event.",
+            "type": "string"
+          },
+          "delegated_for": {
+            "description": "Delegating principal, when the grant records one.",
+            "type": "string"
+          },
+          "principal": {
+            "description": "Acting Access principal or authenticated external source identity.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportAuditEvent": {
+        "description": "SupportAuditEvent journals a typed state transition or scheduling exception.\nIt is append-only apart from authorized personal-data erasure of evidence;\nactor, before/after, versions and source identities are never fabricated.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActor",
+            "description": "Verified actor/decider for this event."
+          },
+          "after": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecision",
+            "description": "New complete primary decision."
+          },
+          "before": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecision",
+            "description": "Previous complete primary decision, including tracks and deadlines."
+          },
+          "before_version": {
+            "description": "Previous aggregate version, checked before applying the event.",
+            "format": "int64",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Committed timestamps."
+          },
+          "name": {
+            "description": "Canonical audit name.",
+            "type": "string"
+          },
+          "overdue": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportOverdue",
+            "description": "Typed overdue fact, when this is a due-scan event instead of a transition."
+          },
+          "source_key": {
+            "description": "Source event key; repeated delivery cannot create another transition.",
+            "type": "string"
+          },
+          "source_records": {
+            "description": "Protected original historical event, when importing old audit without versions.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportSourceRecord"
+            },
+            "type": "array"
+          },
+          "uid": {
+            "description": "Immutable identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "version": {
+            "description": "New aggregate version; exactly before_version + 1 for a transition.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportCase": {
+        "description": "A SupportCase has one primary state and independently linked issue/action\ntracks. The case aggregate version serializes decisions across all tracks.\nNo API or resource name contains a deployment, database or provider address.",
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecision",
+            "description": "Current primary decision, including the required owner and next action."
+          },
+          "display_number": {
+            "description": "Original customer-visible case number, including legacy CS numbers.",
+            "type": "string"
+          },
+          "evidence": {
+            "description": "Source evidence, including admission-refused/automated records when linked.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence"
+            },
+            "type": "array"
+          },
+          "inbox": {
+            "description": "The queue owning this case.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+          },
+          "intake_time": {
+            "description": "Most recent committed intake time; compared with the inbox intake bound.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "last_activity_time": {
+            "description": "Last activity, including internal notes.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_inbound_time": {
+            "description": "Last inbound activity, if known.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_outbound_time": {
+            "description": "Last confirmed outbound activity, if known.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Strong ETag and common metadata."
+          },
+          "name": {
+            "description": "The canonical resource name.",
+            "type": "string"
+          },
+          "pending_proof": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportPendingProof",
+            "description": "Required migration proof before legacy pending may mean WAITING_CUSTOMER."
+          },
+          "priority": {
+            "description": "Case-level priority is separate from state and issue classification.",
+            "type": "string"
+          },
+          "receive_time": {
+            "description": "First source-reported received time, preserved through import.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "requester": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportRequester",
+            "description": "Masked case-scoped requester snapshot; Knowledge owns mutable contacts."
+          },
+          "resolve_time": {
+            "description": "Original resolution time, if known; FINAL_NO_REPLY is still ingestible.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "source_records": {
+            "description": "Exact source identities and protected full-record evidence references.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportSourceRecord"
+            },
+            "type": "array"
+          },
+          "source_state": {
+            "description": "Raw source state/priority/category are preserved rather than collapsed.",
+            "type": "string"
+          },
+          "spam": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportSpamDisposition",
+            "description": "Spam suppression survives incoming evidence/payment/notices until a verdict."
+          },
+          "subject": {
+            "description": "Case subject; untrusted customer content.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "tenant_subject": {
+            "description": "Tenant product/account reference. It conveys no verified account ownership.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "uid": {
+            "description": "Immutable platform identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "version": {
+            "description": "Aggregate version; every accepted decision increments it exactly once.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "inbox",
+          "requester",
+          "decision",
+          "receive_time"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportCaseState": {
+        "description": "SupportCaseState is the one primary operational state, not ownership,\ntransport delivery state, an agent turn or a replacement for linked tracks.",
+        "enum": [
+          "act_now",
+          "scheduled",
+          "waiting_customer",
+          "waiting_review",
+          "final_no_reply"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportChannel": {
+        "description": "A SupportChannel retains the configuration from an inbox's channel link.\nProvider credentials, provider conversations and delivery execution remain\nwith the channel authority. No inbound event may have two business custodians.",
+        "properties": {
+          "allowed_origins": {
+            "description": "Exact canonical origins; an empty list never means wildcard browser access.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "annotations": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Unindexed source annotations.",
+            "type": "object"
+          },
+          "anonymous_allowed": {
+            "description": "Whether platform-issued anonymous sessions may enter this browser channel.",
+            "type": "boolean"
+          },
+          "create_time": {
+            "description": "Original creation time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "description": "Human-readable channel label.",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Whether new intake is admitted; disabling never drops accepted events.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Stable channel-link identity within the inbox.",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Channel class: browser, email, social or product; credentials stay external.",
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Source metadata, not an authorization mechanism.",
+            "type": "object"
+          },
+          "transport": {
+            "description": "Public transport resource or authenticated ingress endpoint.",
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable source identity of this configuration record.",
+            "type": "string"
+          },
+          "update_time": {
+            "description": "Last configuration change.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "description": "Configuration revision, independent of case and delivery versions.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "transport"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportChannelReply": {
+        "description": "SupportChannelReply names an existing transport. No provider key is exposed.",
+        "properties": {
+          "body": {
+            "description": "Public reply body; legal/permission checks precede action admission.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "in_reply_to": {
+            "description": "Nearest parent provider message identity.",
+            "type": "string"
+          },
+          "local_message_id": {
+            "description": "Exact original local message identity and provider ancestry.",
+            "type": "string"
+          },
+          "recipient": {
+            "description": "Channel-scoped recipient/conversation identity, not verified tenant identity.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "references": {
+            "description": "Original ancestry in order.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "subject": {
+            "description": "Threading subject, when the channel has one.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "transport": {
+            "description": "Permissioned channel resource; deployment and provider host are irrelevant.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportDeadline": {
+        "description": "SupportDeadline retains the external or internal obligation independently of\nfollow-up scheduling. An empty case deadline list does not clear next_action_at.",
+        "properties": {
+          "basis": {
+            "description": "Exact rule, law, platform term or contract establishing the deadline.",
+            "type": "string"
+          },
+          "due_time": {
+            "description": "Absolute computed deadline; never extended by transport retry.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Immutable obligation identity within the case.",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "description": "Applicable jurisdiction, or an explicit internal/platform scope.",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDeadlineKind",
+            "description": "Legal, platform, contract or internal obligation."
+          },
+          "track_id": {
+            "description": "Related issue/action track; empty for a case-wide obligation.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "jurisdiction",
+          "basis",
+          "due_time"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportDeadlineKind": {
+        "description": "SupportDeadlineKind names the authority establishing an obligation.",
+        "enum": [
+          "legal",
+          "platform",
+          "contract",
+          "internal"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportDecision": {
+        "description": "A SupportDecision is a tenant-policy classification receipt. Applying it\nverifies permissions, expected version and evidence, then commits audit and\naction admission atomically. ACT_NOW never bypasses legal or permission checks.",
+        "properties": {
+          "deadlines": {
+            "description": "May be empty when no hard deadline applies; each entry keeps its basis.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportDeadline"
+            },
+            "type": "array"
+          },
+          "evidence_ids": {
+            "description": "Evidence IDs used by the decider, never evidence invented by a model.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "explanation": {
+            "description": "Customer-safe explanation; no credentials or unrestricted product records.",
+            "type": "string"
+          },
+          "next_action_at": {
+            "description": "Required for every state, including FINAL_NO_REPLY. Never a delivery retry.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "owner": {
+            "description": "Accountable Access principal; required even while waiting or final.",
+            "type": "string"
+          },
+          "policy_version": {
+            "description": "Immutable tenant-policy API resource and version that produced the decision.",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecisionReason",
+            "description": "Typed cause of this decision or reopen."
+          },
+          "reopen_triggers": {
+            "description": "Required triggers. On spam they request reclassification review only;\nno customer-facing reopen or outbound action occurs before a clearing verdict.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportReopenTrigger"
+            },
+            "type": "array"
+          },
+          "settlement_buffer": {
+            "description": "Nonnegative settlement buffer used in that calculation.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportCaseState",
+            "description": "Exactly one primary state."
+          },
+          "time_zone": {
+            "description": "IANA tenant time zone used for business-hours/deadline arithmetic.",
+            "type": "string"
+          },
+          "tracks": {
+            "description": "Independent linked issues and actions; mixed cases cannot drop an issue.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportTrack"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "owner",
+          "reason",
+          "explanation",
+          "next_action_at",
+          "reopen_triggers",
+          "policy_version",
+          "time_zone",
+          "settlement_buffer"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportDecisionReason": {
+        "description": "SupportDecisionReason distinguishes a fresh classification from a reopen.",
+        "enum": [
+          "policy",
+          "operator",
+          "new_evidence",
+          "new_payment",
+          "legal_notice",
+          "regulatory_notice",
+          "due",
+          "migration",
+          "spam_reclassification",
+          "not_spam",
+          "confirmed_customer",
+          "institutional_notice"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportEffectOutcome": {
+        "description": "SupportEffectOutcome distinguishes unknown from confirmed no-effect. Only an\nauthenticated query receipt proving NOT_APPLIED can release UNCERTAIN to a\nnew attempt of the SAME action/key. The receipt must bind the current attempt\nAND uncertainty episode; a prior episode's absence proof is never reusable.\nUNKNOWN remains scheduled for query/review.",
+        "enum": [
+          "applied",
+          "not_applied",
+          "unknown",
+          "rejected"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportEscalation": {
+        "description": "SupportEscalation names a reviewer and an existing notification operation.",
+        "properties": {
+          "brief": {
+            "description": "Review brief; internal, never a customer message.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "destination": {
+            "description": "Permissioned destination API resource.",
+            "type": "string"
+          },
+          "reviewer": {
+            "description": "Accountable principal or reviewer group.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportEvidence": {
+        "description": "SupportEvidence identifies protected source evidence. Raw email belongs to\nits existing transport authority; a reference is not another message store.",
+        "properties": {
+          "authority": {
+            "description": "Authenticated source, not a caller-selected trust claim.",
+            "type": "string"
+          },
+          "erased": {
+            "description": "Erasure keeps identity/hash/dedupe tombstones, never resurrects source content.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Stable evidence identity in the tenant environment.",
+            "type": "string"
+          },
+          "media_type": {
+            "description": "Registered media type of the original bytes.",
+            "type": "string"
+          },
+          "receive_time": {
+            "description": "Source-reported received time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "resource": {
+            "description": "Permissioned public API resource containing the bytes; never a credential URL.",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "SHA-256 of the original evidence bytes, lowercase hexadecimal.",
+            "type": "string"
+          },
+          "size_bytes": {
+            "description": "Exact byte length, not the number of Unicode characters.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportInbox": {
+        "description": "A SupportInbox is a tenant's case queue. It grants no identity or transport\nauthority. Access roles grant SupportService permissions on an org, project\nor resource. Every storage query also binds org, project, environment and cell.",
+        "properties": {
+          "channels": {
+            "description": "Verified links to existing transport resources, not transport credentials.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportChannel"
+            },
+            "type": "array"
+          },
+          "intake_bound": {
+            "description": "Maximum allowed delay from a received event to committed case intake.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
+          "locales": {
+            "description": "Supported BCP 47 locales; the language is still decided per message.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Labels, annotations, display name, timestamps and strong ETag."
+          },
+          "name": {
+            "description": "The canonical resource name.",
+            "type": "string"
+          },
+          "policy": {
+            "description": "Tenant-policy API resource; rule tables and remedy budgets remain there.",
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable platform identity; never substitutes for a source case ID.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "locales",
+          "policy",
+          "intake_bound"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportMessageVisibility": {
+        "description": "SupportMessageVisibility is a hard customer-projection boundary.",
+        "enum": [
+          "public",
+          "internal"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportOverdue": {
+        "description": "SupportOverdue makes every missed case/track action or obligation explicit.",
+        "properties": {
+          "detect_time": {
+            "description": "When the miss was detected.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "due_time": {
+            "description": "Time that was missed, never silently advanced by the scan.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "kind": {
+            "description": "next_action, track_next_action or deadline; exact target ID accompanies it.",
+            "type": "string"
+          },
+          "target_id": {
+            "description": "Deadline/track identity, or empty for the primary next action.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportPendingProof": {
+        "description": "SupportPendingProof records why legacy pending is genuinely a customer wait.\nWithout one of these source facts, policy must choose WAITING_REVIEW or SCHEDULED.",
+        "enum": [
+          "last_outbound",
+          "staff_action",
+          "source_history"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportReconciliation": {
+        "description": "SupportReconciliation proves a complete scoped pass or lists its uncertainty.\nWorkflows invokes FULL_DAILY and deadline-aligned DUE_SCAN on demand; no\nSupport-specific timer, poll loop or retained warm instance is introduced.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActor",
+            "description": "Verified principal/workload that requested the pass."
+          },
+          "checked_cases": {
+            "description": "Number of cases checked; zero proves nothing without complete coverage.",
+            "format": "int64",
+            "type": "string"
+          },
+          "complete": {
+            "description": "True only when every page in the declared population was checked.",
+            "type": "boolean"
+          },
+          "exceptions": {
+            "description": "Every exception is retained, not only a count or a truncated sample.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliationException"
+            },
+            "type": "array"
+          },
+          "inbox": {
+            "description": "Exact queue/scope covered; never a cross-tenant scan bypass.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliationKind",
+            "description": "Full daily population or earliest-deadline-aligned due population."
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Publication timestamps."
+          },
+          "name": {
+            "description": "Canonical report name.",
+            "type": "string"
+          },
+          "next_scan_time": {
+            "description": "Next on-demand scan, no later than the earliest unhandled obligation/action.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "overdue": {
+            "description": "Unhandled due obligations or next actions.",
+            "format": "int64",
+            "type": "string"
+          },
+          "population_sha256": {
+            "description": "Full canonical population hash for migration/read-compare, when applicable.",
+            "type": "string"
+          },
+          "snapshot_time": {
+            "description": "Snapshot/read time and source watermark used to establish coverage.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "source_watermark": {
+            "description": "Authoritative source cursor or snapshot token, not a secret.",
+            "type": "string"
+          },
+          "uid": {
+            "description": "Immutable identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "unowned": {
+            "description": "Cases without an accountable owner.",
+            "format": "int64",
+            "type": "string"
+          },
+          "unscheduled": {
+            "description": "Cases without a required next action.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportReconciliationException": {
+        "description": "SupportReconciliationException records the exact affected resource and reason.",
+        "properties": {
+          "due_time": {
+            "description": "Earliest related missed action or obligation, when applicable.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "kind": {
+            "description": "unowned, unscheduled, overdue, uncertain_action, intake_late or source_mismatch.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Actionable explanation with no unrestricted customer content.",
+            "type": "string"
+          },
+          "resource": {
+            "description": "Affected case/action/source resource, scoped by the authenticated query.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportReconciliationKind": {
+        "description": "SupportReconciliationKind chooses a scope, not another execution engine.",
+        "enum": [
+          "full_daily",
+          "due_scan",
+          "migration_compare"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportRemedyRequest": {
+        "description": "SupportRemedyRequest is a command for the tenant API, never a direct DB write.",
+        "properties": {
+          "authorization_receipt": {
+            "description": "Tenant authorization/verification receipt binding exact remedy arguments.",
+            "type": "string"
+          },
+          "operation": {
+            "description": "Published tenant operation resource or API endpoint, under the caller grant.",
+            "type": "string"
+          },
+          "request": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence",
+            "description": "Content-addressed, permissioned request evidence; contains no credentials."
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportReopenTrigger": {
+        "description": "SupportReopenTrigger applies even in FINAL_NO_REPLY. On suppressed spam it\nstarts reclassification review only; a verified not_spam/real-customer verdict\nmust precede reopen. Duplicated events/echoes are never new activity.",
+        "enum": [
+          "new_evidence",
+          "new_payment",
+          "legal_notice",
+          "regulatory_notice"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportRequester": {
+        "description": "SupportRequester is a case snapshot, never a second customer master or a\nverified identity inferred from From. Reveal requires a separately audited RPC.",
+        "properties": {
+          "contact": {
+            "description": "Permission-scoped Knowledge contact resource, when available.",
+            "type": "string"
+          },
+          "display_name": {
+            "description": "Source display name; treated as personal data.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "link_actor": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActor",
+            "description": "Who verified or cleared the link, if known."
+          },
+          "link_state": {
+            "description": "none, suggested, confirmed or cleared; an unconfirmed link grants nothing.",
+            "type": "string"
+          },
+          "link_time": {
+            "description": "When the source link was verified or cleared, if known.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "masked_identity": {
+            "description": "Masked contact address or channel identity for ordinary case reads.",
+            "type": "string"
+          },
+          "source_records": {
+            "description": "Original requester identity and source record, including tombstones.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportSourceRecord"
+            },
+            "type": "array"
+          },
+          "tenant_subject": {
+            "description": "Tenant-owned subject mapping, not a Support-issued user identity.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportSourceRecord": {
+        "description": "SupportSourceRecord preserves exact legacy IDs and complete protected source\nrecords, including nullable fields. Backfill compares counts and full hashes;\nit never reuses a historical source version as a new concurrency version.",
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence",
+            "description": "Evidence holding the full canonical source record, not a lossy projection."
+          },
+          "source": {
+            "description": "Stable source namespace, retained across retries and migration phases.",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "Unchanged source primary key, including numeric case/message/outbox IDs.",
+            "type": "string"
+          },
+          "source_table": {
+            "description": "Original relation or event kind.",
+            "type": "string"
+          },
+          "source_version": {
+            "description": "Original source version, if present; zero means absent, not fabricated.",
+            "format": "int64",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportSpamDisposition": {
+        "description": "SupportSpamDisposition is independent from primary state. SUPPRESSED and\nREVIEW_REQUIRED both keep FINAL_NO_REPLY and forbid outbound action admission.",
+        "enum": [
+          "suppressed",
+          "review_required",
+          "not_spam",
+          "confirmed_customer"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.SupportThreadMessage": {
+        "description": "SupportThreadMessage is the sole normalized case-thread record. Transport\nbuffers, provider indexes and agent context are not independent case history.",
+        "properties": {
+          "action": {
+            "description": "Related business action, never a notification delivery state alias.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          },
+          "author": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportActor",
+            "description": "Verified author; never inferred from a claimed From address."
+          },
+          "body": {
+            "description": "Text body or evidence projection; untrusted personal content.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "channel_id": {
+            "description": "Existing channel-link ID, not a credential.",
+            "type": "string"
+          },
+          "direction": {
+            "description": "Source direction: inbound, outbound or internal; independent of visibility.",
+            "type": "string"
+          },
+          "erased": {
+            "description": "Tombstone; source keys/ancestry survive authorized erasure.",
+            "type": "boolean"
+          },
+          "evidence": {
+            "description": "Source evidence, including explicitly untrusted HTML and attachments.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Timestamps and metadata."
+          },
+          "name": {
+            "description": "Canonical thread message name.",
+            "type": "string"
+          },
+          "source_key": {
+            "description": "Immutable source-scoped event identity; changed replays are refused.",
+            "type": "string"
+          },
+          "source_records": {
+            "description": "Original IDs/records for lossless migration.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.SupportSourceRecord"
+            },
+            "type": "array"
+          },
+          "thread_keys": {
+            "description": "Original provider message identity and ancestry.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "uid": {
+            "description": "Immutable identity.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportMessageVisibility",
+            "description": "Explicit audience; internal notes never enter the customer timeline."
+          }
+        },
+        "required": [
+          "source_key",
+          "visibility"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportTrack": {
+        "description": "SupportTrack is an independently scheduled issue or action linked to a case.",
+        "properties": {
+          "action": {
+            "description": "Action resource associated with an action track, when admitted.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SupportAction"
+          },
+          "category": {
+            "description": "Tenant's issue category, for example payment, privacy or technical.",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "description": "Evidence IDs relevant to this issue, not all case personal data.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Immutable identity within the case.",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportTrackKind",
+            "description": "ISSUE or ACTION; never a competing case/thread identity."
+          },
+          "linked_track_ids": {
+            "description": "Other track IDs in the same case; no cross-tenant links.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "next_action_at": {
+            "description": "Required follow-up for this track.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "owner": {
+            "description": "Accountable principal for this track.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Classification reason for this track.",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportCaseState",
+            "description": "Independent track state; primary state cannot hide outstanding tracks."
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "category",
+          "state",
+          "owner",
+          "next_action_at",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.SupportTrackKind": {
+        "description": "SupportTrackKind separates a reported issue from a requested durable action.",
+        "enum": [
+          "issue",
+          "action"
+        ],
+        "type": "string"
       },
       "sylphx.notify.v1.Suppression": {
         "description": "A Suppression stops delivery to one address on one channel. Bounces,\ncomplaints, carrier opt-outs, uninstalled devices, and unsubscribes write\nit; admission checks it before accepting a message.",
@@ -38139,6 +40195,28 @@
         },
         "required": [
           "sender"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.UpdateSupportInboxRequest": {
+        "description": "Conditional inbox configuration change.",
+        "properties": {
+          "support_inbox": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox",
+            "description": "Inbox with the current meta.etag."
+          },
+          "update_mask": {
+            "description": "Explicit fields to change; no case or transport state.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without changing configuration.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "support_inbox",
+          "update_mask"
         ],
         "type": "object"
       },
@@ -123965,6 +126043,3281 @@
         ],
         "x-sylphx-method": "events.subscriptions.update",
         "x-sylphx-permission": "events:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists scoped support_cases; no cross-tenant or internal-message projection.",
+        "operationId": "notify_support_cases_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum rows; default 50, at most 200.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSupportCasesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists scoped support_cases; no cross-tenant or internal-message projection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_cases.list",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates an idempotent SupportCase; changed replay and illegal state are refused.",
+        "operationId": "notify_support_cases_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "in": "query",
+            "name": "support_case_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "UUID request identity, stable across transport retries.",
+            "in": "query",
+            "name": "request_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without admitting a case, message or effect.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an idempotent SupportCase; changed replay and illegal state are refused.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_cases.create",
+        "x-sylphx-permission": "notify:support:operate",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets one SupportCase; protected identities require a separately audited reveal.",
+        "operationId": "notify_support_cases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one SupportCase; protected identities require a separately audited reveal.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_cases.get",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists scoped support_actions; no cross-tenant or internal-message projection.",
+        "operationId": "notify_support_actions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum rows; default 50, at most 200.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSupportActionsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists scoped support_actions; no cross-tenant or internal-message projection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_actions.list",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates an idempotent SupportAction; changed replay and illegal state are refused.",
+        "operationId": "notify_support_actions_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "in": "query",
+            "name": "support_action_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "UUID request identity, stable across transport retries.",
+            "in": "query",
+            "name": "request_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without admitting a case, message or effect.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Case aggregate version observed by the caller.",
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an idempotent SupportAction; changed replay and illegal state are refused.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_actions.create",
+        "x-sylphx-permission": "notify:support:actions",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets one SupportAction; protected identities require a separately audited reveal.",
+        "operationId": "notify_support_actions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_action",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one SupportAction; protected identities require a separately audited reveal.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_actions.get",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}:beginSupportActionAttempt": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nClaims one fenced attempt of a conclusively dispatchable action. An expired in-flight claim becomes UNCERTAIN, never PENDING.",
+        "operationId": "notify_support_actions_begin_support_action_attempt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_action",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expected_version": {
+                    "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this logical operation.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate without changing state or contacting an effect provider.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.BeginSupportActionAttemptResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Claims one fenced attempt of a conclusively dispatchable action. An expired in-flight claim becomes UNCERTAIN, never PENDING.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_actions.begin_support_action_attempt",
+        "x-sylphx-permission": "notify:support:dispatch",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}:reconcile": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nQueries the original authority/key first; UNKNOWN remains UNCERTAIN. Only a verified NOT_APPLIED query receipt for the current attempt and uncertainty episode permits another attempt of the same action/key.",
+        "operationId": "notify_support_actions_reconcile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_action",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expected_version": {
+                    "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this logical operation.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate without changing state or contacting an effect provider.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Queries the original authority/key first; UNKNOWN remains UNCERTAIN. Only a verified NOT_APPLIED query receipt for the current attempt and uncertainty episode permits another attempt of the same action/key.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_actions.reconcile",
+        "x-sylphx-permission": "notify:support:reconcile",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}:recordSupportActionReceipt": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRecords an authenticated immutable authority receipt. Transport state changes alone never change a case or business action.",
+        "operationId": "notify_support_actions_record_support_action_receipt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_action",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "attempt_id": {
+                    "description": "Fenced attempt identity returned by BeginSupportActionAttempt; mismatches are refused.",
+                    "type": "string"
+                  },
+                  "expected_version": {
+                    "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "receipt": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportActionReceipt",
+                    "description": "Authenticated envelope bound to the action key and payload hash."
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this logical operation.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate without changing state or contacting an effect provider.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "receipt",
+                  "attempt_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Records an authenticated immutable authority receipt. Transport state changes alone never change a case or business action.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_actions.record_support_action_receipt",
+        "x-sylphx-permission": "notify:support:receipts",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_audit_events": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists scoped support_audit_events; no cross-tenant or internal-message projection.",
+        "operationId": "notify_support_audit_events_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum rows; default 50, at most 200.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSupportAuditEventsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists scoped support_audit_events; no cross-tenant or internal-message projection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_audit_events.list",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_audit_events/{support_audit_event}": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets one SupportAuditEvent; protected identities require a separately audited reveal.",
+        "operationId": "notify_support_audit_events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_audit_event",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportAuditEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one SupportAuditEvent; protected identities require a separately audited reveal.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_audit_events.get",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_thread_messages": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists scoped support_thread_messages; no cross-tenant or internal-message projection.",
+        "operationId": "notify_support_thread_messages_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum rows; default 50, at most 200.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSupportThreadMessagesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists scoped support_thread_messages; no cross-tenant or internal-message projection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_thread_messages.list",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates an idempotent SupportThreadMessage; changed replay and illegal state are refused.",
+        "operationId": "notify_support_thread_messages_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "in": "query",
+            "name": "support_thread_message_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "UUID request identity, stable across transport retries.",
+            "in": "query",
+            "name": "request_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without admitting a case, message or effect.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Case aggregate version observed by the caller.",
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an idempotent SupportThreadMessage; changed replay and illegal state are refused.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_thread_messages.create",
+        "x-sylphx-permission": "notify:support:operate",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_thread_messages/{support_thread_message}": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets one SupportThreadMessage; protected identities require a separately audited reveal.",
+        "operationId": "notify_support_thread_messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_thread_message",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one SupportThreadMessage; protected identities require a separately audited reveal.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_thread_messages.get",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}:applySupportDecision": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nAtomically applies a typed decision, tracks and audit after checking expected_version. FINAL_NO_REPLY reopens to ACT_NOW only for an allowed trigger; spam requires a clearing verdict.",
+        "operationId": "notify_support_cases_apply_support_decision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "after": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecision",
+                    "description": "Complete new decision; omitting an unresolved track is refused."
+                  },
+                  "before": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportCaseState",
+                    "description": "Observed primary state; also checked against authoritative storage."
+                  },
+                  "expected_version": {
+                    "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "pending_proof": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportPendingProof",
+                    "description": "Source proof for imported pending customer waits."
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this logical operation.",
+                    "type": "string"
+                  },
+                  "source_key": {
+                    "description": "Immutable signal/decision identity for replay and audit.",
+                    "type": "string"
+                  },
+                  "spam": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportSpamDisposition",
+                    "description": "Spam disposition; only authenticated verdicts clear suppression."
+                  },
+                  "validate_only": {
+                    "description": "Validate without changing state or contacting an effect provider.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "after"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Atomically applies a typed decision, tracks and audit after checking expected_version. FINAL_NO_REPLY reopens to ACT_NOW only for an allowed trigger; spam requires a clearing verdict.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_cases.apply_support_decision",
+        "x-sylphx-permission": "notify:support:operate",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}:ingestSupportSignal": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nAdmits one authenticated source signal, deduped by immutable identity. Spam signals wake reclassification review without reopening, customer reply or new business action.",
+        "operationId": "notify_support_cases_ingest_support_signal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "evidence": {
+                    "description": "Protected evidence references; never plaintext credentials.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.notify.v1.SupportEvidence"
+                    },
+                    "type": "array"
+                  },
+                  "expected_version": {
+                    "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "receive_time": {
+                    "description": "Source-reported time used for intake latency verification.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this logical operation.",
+                    "type": "string"
+                  },
+                  "signal": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportDecisionReason",
+                    "description": "Typed, verified signal; customer text is evidence, never authority."
+                  },
+                  "source_key": {
+                    "description": "Immutable source-scoped event identity.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate without changing state or contacting an effect provider.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "source_key",
+                  "receive_time"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Admits one authenticated source signal, deduped by immutable identity. Spam signals wake reclassification review without reopening, customer reply or new business action.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_cases.ingest_support_signal",
+        "x-sylphx-permission": "notify:support:ingest",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}:revealSupportRequester": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReveals the protected case requester under a purpose-bound grant and appends an audited read.",
+        "operationId": "notify_support_cases_reveal_support_requester",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expected_version": {
+                    "description": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "Purpose of accessing unmasked personal data.",
+                    "type": "string"
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this logical operation.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate without changing state or contacting an effect provider.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.RevealSupportRequesterResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reveals the protected case requester under a purpose-bound grant and appends an audited read.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_cases.reveal_support_requester",
+        "x-sylphx-permission": "notify:support:reveal",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_cases:import": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nImports inert history with unchanged source IDs/keys/tombstones, full-record hashes and explicit migration exceptions. It sends nothing, runs no agent and meters no resolution.",
+        "operationId": "notify_support_cases_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "actions": {
+                    "description": "Original actions/keys/receipts; ambiguous prior sends remain UNCERTAIN.\nSuppression never blocks inert CANCELLED/SUCCEEDED/UNCERTAIN history;\nimport admits no PENDING/IN_FLIGHT action under suppression and sends nothing.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.notify.v1.SupportAction"
+                    },
+                    "type": "array"
+                  },
+                  "audit_events": {
+                    "description": "Original audit records; absent historical versions are not invented.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.notify.v1.SupportAuditEvent"
+                    },
+                    "type": "array"
+                  },
+                  "messages": {
+                    "description": "Original thread records, including internal messages and erasure tombstones.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.notify.v1.SupportThreadMessage"
+                    },
+                    "type": "array"
+                  },
+                  "request_id": {
+                    "description": "Stable UUID for this batch.",
+                    "type": "string"
+                  },
+                  "source": {
+                    "description": "Stable source namespace and migration run identity.",
+                    "type": "string"
+                  },
+                  "source_sha256": {
+                    "description": "Full source-record hash of this batch; changed replay is refused.",
+                    "type": "string"
+                  },
+                  "support_cases": {
+                    "description": "Original case records and typed projections; at most 500.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.notify.v1.SupportCase"
+                    },
+                    "type": "array"
+                  },
+                  "validate_only": {
+                    "description": "Validate and compare without writing.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ImportSupportCasesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Imports inert history with unchanged source IDs/keys/tombstones, full-record hashes and explicit migration exceptions. It sends nothing, runs no agent and meters no resolution.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_cases.import",
+        "x-sylphx-permission": "notify:support:import",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_inboxes": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists scoped support_inboxes; no cross-tenant or internal-message projection.",
+        "operationId": "notify_support_inboxes_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum rows; default 50, at most 200.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSupportInboxesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists scoped support_inboxes; no cross-tenant or internal-message projection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_inboxes.list",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates an idempotent SupportInbox; changed replay and illegal state are refused.",
+        "operationId": "notify_support_inboxes_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional caller-selected platform ID; legacy IDs stay in source_records.",
+            "in": "query",
+            "name": "support_inbox_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "UUID request identity, stable across transport retries.",
+            "in": "query",
+            "name": "request_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without admitting a case, message or effect.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an idempotent SupportInbox; changed replay and illegal state are refused.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_inboxes.create",
+        "x-sylphx-permission": "notify:support:configure",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_inboxes/{support_inbox}": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets one SupportInbox; protected identities require a separately audited reveal.",
+        "operationId": "notify_support_inboxes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_inbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one SupportInbox; protected identities require a separately audited reveal.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_inboxes.get",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      },
+      "patch": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates configuration with a strong ETag; intake never creates a missing inbox.",
+        "operationId": "notify_support_inboxes_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_inbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Explicit fields to change; no case or transport state.",
+            "in": "query",
+            "name": "update_mask",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated field paths.",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without changing configuration.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportInbox"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Updates configuration with a strong ETag; intake never creates a missing inbox.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_inboxes.update",
+        "x-sylphx-permission": "notify:support:configure",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_reconciliations": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists scoped support_reconciliations; no cross-tenant or internal-message projection.",
+        "operationId": "notify_support_reconciliations_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum rows; default 50, at most 200.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation bound to the same scope and filter.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "AIP-160 filter; cannot widen caller visibility.",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stable ordering, with resource identity as the final tie-breaker.",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListSupportReconciliationsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists scoped support_reconciliations; no cross-tenant or internal-message projection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_reconciliations.list",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_reconciliations/{support_reconciliation}": {
+      "get": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets one SupportReconciliation; protected identities require a separately audited reveal.",
+        "operationId": "notify_support_reconciliations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "support_reconciliation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets one SupportReconciliation; protected identities require a separately audited reveal.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED"
+        ],
+        "x-sylphx-method": "notify.support_reconciliations.get",
+        "x-sylphx-permission": "notify:support:read",
+        "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/support_reconciliations:run": {
+      "post": {
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRuns one scoped daily census, dense due pass or migration comparison on demand. Incomplete coverage never proves zero exceptions.",
+        "operationId": "notify_support_reconciliations_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "inbox": {
+                    "description": "Queue resource whose full population is covered.",
+                    "type": "string",
+                    "x-sylphx-resource-reference": "notify.sylphx.com/SupportInbox"
+                  },
+                  "kind": {
+                    "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliationKind",
+                    "description": "Population/pass type."
+                  },
+                  "page_size": {
+                    "description": "Maximum cases per bounded transaction; default 200, at most 500.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "page_token": {
+                    "description": "Continuation of the same snapshot, not a new empty population.",
+                    "type": "string"
+                  },
+                  "request_id": {
+                    "description": "Stable pass identity; repeated invocation resumes the same pass.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate scope without running or scheduling the pass.",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SupportReconciliation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "501": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Runs one scoped daily census, dense due pass or migration comparison on demand. Incomplete coverage never proves zero exceptions.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
+          "ETAG_MISMATCH",
+          "INVALID_STATE",
+          "UNAVAILABLE",
+          "UNIMPLEMENTED",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "notify.support_reconciliations.run",
+        "x-sylphx-permission": "notify:support:reconcile",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

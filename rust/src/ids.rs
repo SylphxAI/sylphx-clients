@@ -762,6 +762,33 @@ pub const BTA: Prefix = Prefix::new(
 );
 /// BankReceipt (`brc`, money).
 pub const BRC: Prefix = Prefix::new("brc", "BankReceipt", "money", Some("bank_receipts"));
+/// SupportInbox (`sinb`, notify).
+pub const SINB: Prefix = Prefix::new("sinb", "SupportInbox", "notify", Some("support_inboxes"));
+/// SupportCase (`scas`, notify).
+pub const SCAS: Prefix = Prefix::new("scas", "SupportCase", "notify", Some("support_cases"));
+/// SupportThreadMessage (`smsg`, notify).
+pub const SMSG: Prefix = Prefix::new(
+    "smsg",
+    "SupportThreadMessage",
+    "notify",
+    Some("support_thread_messages"),
+);
+/// SupportAction (`sact`, notify).
+pub const SACT: Prefix = Prefix::new("sact", "SupportAction", "notify", Some("support_actions"));
+/// SupportAuditEvent (`saud`, notify).
+pub const SAUD: Prefix = Prefix::new(
+    "saud",
+    "SupportAuditEvent",
+    "notify",
+    Some("support_audit_events"),
+);
+/// SupportReconciliation (`srec`, notify).
+pub const SREC: Prefix = Prefix::new(
+    "srec",
+    "SupportReconciliation",
+    "notify",
+    Some("support_reconciliations"),
+);
 /// InboundMessage (`inmsg`, notify).
 pub const INMSG: Prefix = Prefix::new(
     "inmsg",
@@ -784,5 +811,5 @@ pub const ALL: &[Prefix] = &[
     NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT,
     LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER,
     UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
-    CHP, CHR, BTA, BRC, INMSG,
+    CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
 ];

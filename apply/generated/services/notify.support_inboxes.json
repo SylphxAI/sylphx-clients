@@ -1,0 +1,49 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_inboxes.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.support_inboxes.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "support_inbox_id",
+              "request_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.support_inboxes.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "notify.support_inboxes.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/SupportInbox"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "collection": "support_inboxes",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SupportInbox",
+  "message": "sylphx.notify.v1.SupportInbox",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_inboxes/{support_inbox}",
+  "plural": "supportInboxes",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "supportInbox",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/SupportInbox"
+}

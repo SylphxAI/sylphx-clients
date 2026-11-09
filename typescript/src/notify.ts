@@ -24,10 +24,54 @@ export interface ApplyPhoneNumberRouteRequest {
 	validateOnly?: boolean
 }
 
+/** Request for ApplySupportDecision. */
+export interface ApplySupportDecisionRequest {
+	/** Canonical resource name, checked against the caller grant. */
+	name: string
+	/** Optimistic version precondition; mismatch returns ETAG_MISMATCH. */
+	expectedVersion: string
+	/** Stable UUID for this logical operation. */
+	requestId?: string
+	/** Validate without changing state or contacting an effect provider. */
+	validateOnly?: boolean
+	/** Observed primary state; also checked against authoritative storage. */
+	before?: SupportCaseState
+	/** Complete new decision; omitting an unresolved track is refused. */
+	after: SupportDecision
+	/** Spam disposition; only authenticated verdicts clear suppression. */
+	spam?: SupportSpamDisposition
+	/** Source proof for imported pending customer waits. */
+	pendingProof?: SupportPendingProof
+	/** Immutable signal/decision identity for replay and audit. */
+	sourceKey?: string
+}
+
 /** The request of ArchiveInboxItem. */
 export interface ArchiveInboxItemRequest {
 	/** The name of the inbox item. */
 	name: string
+}
+
+/** Request for BeginSupportActionAttempt. */
+export interface BeginSupportActionAttemptRequest {
+	/** Canonical resource name, checked against the caller grant. */
+	name: string
+	/** Optimistic version precondition; mismatch returns ETAG_MISMATCH. */
+	expectedVersion: string
+	/** Stable UUID for this logical operation. */
+	requestId?: string
+	/** Validate without changing state or contacting an effect provider. */
+	validateOnly?: boolean
+}
+
+/** Fenced dispatch ownership; it is not a delivery receipt. */
+export interface BeginSupportActionAttemptResponse {
+	/** Current action and version. */
+	action?: SupportAction
+	/** Unique attempt identity; settlement must match it. */
+	attemptId?: string
+	/** Claim expiry; expiry means unknown outcome, never safe retry. */
+	claimExpireTime?: string
 }
 
 /**
@@ -276,6 +320,66 @@ export interface CreateSmsNumberRequest {
 	smsNumberId?: string
 	/** The binding to create. */
 	smsNumber: SmsNumber
+}
+
+/** Request to create a SupportAction. */
+export interface CreateSupportActionRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Record to admit; actor and output fields are derived by the service. */
+	supportAction: SupportAction
+	/** Optional caller-selected platform ID; legacy IDs stay in source_records. */
+	supportActionId?: string
+	/** UUID request identity, stable across transport retries. */
+	requestId?: string
+	/** Validate without admitting a case, message or effect. */
+	validateOnly?: boolean
+	/** Case aggregate version observed by the caller. */
+	expectedVersion: string
+}
+
+/** Request to create a SupportCase. */
+export interface CreateSupportCaseRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Record to admit; actor and output fields are derived by the service. */
+	supportCase: SupportCase
+	/** Optional caller-selected platform ID; legacy IDs stay in source_records. */
+	supportCaseId?: string
+	/** UUID request identity, stable across transport retries. */
+	requestId?: string
+	/** Validate without admitting a case, message or effect. */
+	validateOnly?: boolean
+}
+
+/** Request to create a SupportInbox. */
+export interface CreateSupportInboxRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Record to admit; actor and output fields are derived by the service. */
+	supportInbox: SupportInbox
+	/** Optional caller-selected platform ID; legacy IDs stay in source_records. */
+	supportInboxId?: string
+	/** UUID request identity, stable across transport retries. */
+	requestId?: string
+	/** Validate without admitting a case, message or effect. */
+	validateOnly?: boolean
+}
+
+/** Request to create a SupportThreadMessage. */
+export interface CreateSupportThreadMessageRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Record to admit; actor and output fields are derived by the service. */
+	supportThreadMessage: SupportThreadMessage
+	/** Optional caller-selected platform ID; legacy IDs stay in source_records. */
+	supportThreadMessageId?: string
+	/** UUID request identity, stable across transport retries. */
+	requestId?: string
+	/** Validate without admitting a case, message or effect. */
+	validateOnly?: boolean
+	/** Case aggregate version observed by the caller. */
+	expectedVersion: string
 }
 
 /** The request of CreateSuppression. */
@@ -679,6 +783,42 @@ export interface GetSmsNumberRequest {
 	name: string
 }
 
+/** Request to get a SupportAction. */
+export interface GetSupportActionRequest {
+	/** Canonical resource name. */
+	name: string
+}
+
+/** Request to get a SupportAuditEvent. */
+export interface GetSupportAuditEventRequest {
+	/** Canonical resource name. */
+	name: string
+}
+
+/** Request to get a SupportCase. */
+export interface GetSupportCaseRequest {
+	/** Canonical resource name. */
+	name: string
+}
+
+/** Request to get a SupportInbox. */
+export interface GetSupportInboxRequest {
+	/** Canonical resource name. */
+	name: string
+}
+
+/** Request to get a SupportReconciliation. */
+export interface GetSupportReconciliationRequest {
+	/** Canonical resource name. */
+	name: string
+}
+
+/** Request to get a SupportThreadMessage. */
+export interface GetSupportThreadMessageRequest {
+	/** Canonical resource name. */
+	name: string
+}
+
 /** The request of GetSuppression. */
 export interface GetSuppressionRequest {
 	/** The name of the suppression to get. */
@@ -689,6 +829,46 @@ export interface GetSuppressionRequest {
 export interface GetTemplateRequest {
 	/** The name of the template to get. */
 	name: string
+}
+
+/** Bounded, auditable history import by the owning service writer. */
+export interface ImportSupportCasesRequest {
+	/** Authenticated destination environment. */
+	parent: string
+	/** Stable source namespace and migration run identity. */
+	source?: string
+	/** Original case records and typed projections; at most 500. */
+	supportCases?: SupportCase[]
+	/** Original thread records, including internal messages and erasure tombstones. */
+	messages?: SupportThreadMessage[]
+	/**
+	 * Original actions/keys/receipts; ambiguous prior sends remain UNCERTAIN.
+	 * Suppression never blocks inert CANCELLED/SUCCEEDED/UNCERTAIN history;
+	 * import admits no PENDING/IN_FLIGHT action under suppression and sends nothing.
+	 */
+	actions?: SupportAction[]
+	/** Original audit records; absent historical versions are not invented. */
+	auditEvents?: SupportAuditEvent[]
+	/** Full source-record hash of this batch; changed replay is refused. */
+	sourceSha256?: string
+	/** Stable UUID for this batch. */
+	requestId?: string
+	/** Validate and compare without writing. */
+	validateOnly?: boolean
+}
+
+/** Losslessness receipt; exceptions keep an incomplete case from authoritative scheduling. */
+export interface ImportSupportCasesResponse {
+	/** Source namespace echoed for verification. */
+	source?: string
+	/** Inserted records, counted across every supplied kind. */
+	imported?: string
+	/** Exact unchanged replays; no duplicate effect is created. */
+	replayed?: string
+	/** Full canonical destination batch hash. */
+	targetSha256?: string
+	/** Every missing classification/proof/source mismatch, not a truncated sample. */
+	exceptions?: SupportReconciliationException[]
 }
 
 /**
@@ -850,6 +1030,26 @@ export interface InboxItem {
 	readonly actionUri?: string
 	/** Read, unread, or archived. */
 	readonly state?: InboxItemState
+}
+
+/** Request for IngestSupportSignal. */
+export interface IngestSupportSignalRequest {
+	/** Canonical resource name, checked against the caller grant. */
+	name: string
+	/** Optimistic version precondition; mismatch returns ETAG_MISMATCH. */
+	expectedVersion: string
+	/** Stable UUID for this logical operation. */
+	requestId?: string
+	/** Validate without changing state or contacting an effect provider. */
+	validateOnly?: boolean
+	/** Typed, verified signal; customer text is evidence, never authority. */
+	signal?: SupportDecisionReason
+	/** Immutable source-scoped event identity. */
+	sourceKey: string
+	/** Protected evidence references; never plaintext credentials. */
+	evidence?: SupportEvidence[]
+	/** Source-reported time used for intake latency verification. */
+	receiveTime: string
 }
 
 /** The request of ListBroadcasts. */
@@ -1215,6 +1415,138 @@ export interface ListSmsNumbersResponse {
 	/** The page. */
 	smsNumbers?: SmsNumber[]
 	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** Request to list support_actions. */
+export interface ListSupportActionsRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Maximum rows; default 50, at most 200. */
+	pageSize?: number
+	/** Opaque continuation bound to the same scope and filter. */
+	pageToken?: string
+	/** AIP-160 filter; cannot widen caller visibility. */
+	filter?: string
+	/** Stable ordering, with resource identity as the final tie-breaker. */
+	orderBy?: string
+}
+
+/** A page of scoped support_actions. */
+export interface ListSupportActionsResponse {
+	/** Visible records only. */
+	supportActions?: SupportAction[]
+	/** Continuation; empty only after the final page. */
+	nextPageToken?: string
+}
+
+/** Request to list support_audit_events. */
+export interface ListSupportAuditEventsRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Maximum rows; default 50, at most 200. */
+	pageSize?: number
+	/** Opaque continuation bound to the same scope and filter. */
+	pageToken?: string
+	/** AIP-160 filter; cannot widen caller visibility. */
+	filter?: string
+	/** Stable ordering, with resource identity as the final tie-breaker. */
+	orderBy?: string
+}
+
+/** A page of scoped support_audit_events. */
+export interface ListSupportAuditEventsResponse {
+	/** Visible records only. */
+	supportAuditEvents?: SupportAuditEvent[]
+	/** Continuation; empty only after the final page. */
+	nextPageToken?: string
+}
+
+/** Request to list support_cases. */
+export interface ListSupportCasesRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Maximum rows; default 50, at most 200. */
+	pageSize?: number
+	/** Opaque continuation bound to the same scope and filter. */
+	pageToken?: string
+	/** AIP-160 filter; cannot widen caller visibility. */
+	filter?: string
+	/** Stable ordering, with resource identity as the final tie-breaker. */
+	orderBy?: string
+}
+
+/** A page of scoped support_cases. */
+export interface ListSupportCasesResponse {
+	/** Visible records only. */
+	supportCases?: SupportCase[]
+	/** Continuation; empty only after the final page. */
+	nextPageToken?: string
+}
+
+/** Request to list support_inboxes. */
+export interface ListSupportInboxesRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Maximum rows; default 50, at most 200. */
+	pageSize?: number
+	/** Opaque continuation bound to the same scope and filter. */
+	pageToken?: string
+	/** AIP-160 filter; cannot widen caller visibility. */
+	filter?: string
+	/** Stable ordering, with resource identity as the final tie-breaker. */
+	orderBy?: string
+}
+
+/** A page of scoped support_inboxes. */
+export interface ListSupportInboxesResponse {
+	/** Visible records only. */
+	supportInboxes?: SupportInbox[]
+	/** Continuation; empty only after the final page. */
+	nextPageToken?: string
+}
+
+/** Request to list support_reconciliations. */
+export interface ListSupportReconciliationsRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Maximum rows; default 50, at most 200. */
+	pageSize?: number
+	/** Opaque continuation bound to the same scope and filter. */
+	pageToken?: string
+	/** AIP-160 filter; cannot widen caller visibility. */
+	filter?: string
+	/** Stable ordering, with resource identity as the final tie-breaker. */
+	orderBy?: string
+}
+
+/** A page of scoped support_reconciliations. */
+export interface ListSupportReconciliationsResponse {
+	/** Visible records only. */
+	supportReconciliations?: SupportReconciliation[]
+	/** Continuation; empty only after the final page. */
+	nextPageToken?: string
+}
+
+/** Request to list support_thread_messages. */
+export interface ListSupportThreadMessagesRequest {
+	/** Authenticated parent scope. */
+	parent: string
+	/** Maximum rows; default 50, at most 200. */
+	pageSize?: number
+	/** Opaque continuation bound to the same scope and filter. */
+	pageToken?: string
+	/** AIP-160 filter; cannot widen caller visibility. */
+	filter?: string
+	/** Stable ordering, with resource identity as the final tie-breaker. */
+	orderBy?: string
+}
+
+/** A page of scoped support_thread_messages. */
+export interface ListSupportThreadMessagesResponse {
+	/** Visible records only. */
+	supportThreadMessages?: SupportThreadMessage[]
+	/** Continuation; empty only after the final page. */
 	nextPageToken?: string
 }
 
@@ -1883,6 +2215,34 @@ export interface Recipient {
 	test?: boolean
 }
 
+/** Request for ReconcileSupportAction. */
+export interface ReconcileSupportActionRequest {
+	/** Canonical resource name, checked against the caller grant. */
+	name: string
+	/** Optimistic version precondition; mismatch returns ETAG_MISMATCH. */
+	expectedVersion: string
+	/** Stable UUID for this logical operation. */
+	requestId?: string
+	/** Validate without changing state or contacting an effect provider. */
+	validateOnly?: boolean
+}
+
+/** Request for RecordSupportActionReceipt. */
+export interface RecordSupportActionReceiptRequest {
+	/** Canonical resource name, checked against the caller grant. */
+	name: string
+	/** Optimistic version precondition; mismatch returns ETAG_MISMATCH. */
+	expectedVersion: string
+	/** Stable UUID for this logical operation. */
+	requestId?: string
+	/** Validate without changing state or contacting an effect provider. */
+	validateOnly?: boolean
+	/** Authenticated envelope bound to the action key and payload hash. */
+	receipt: SupportActionReceipt
+	/** Fenced attempt identity returned by BeginSupportActionAttempt; mismatches are refused. */
+	attemptId: string
+}
+
 /** Registers one device without replacing the recipient's other devices. */
 export interface RegisterPushDeviceRequest {
 	/** The recipient to register for. */
@@ -1906,6 +2266,28 @@ export interface RegisterPushDeviceResponse {
 	readonly recipientUid?: string
 	/** Exact registration epoch, encoded as a decimal string in JSON. */
 	readonly registrationGeneration?: string
+}
+
+/** Request for RevealSupportRequester. */
+export interface RevealSupportRequesterRequest {
+	/** Canonical resource name, checked against the caller grant. */
+	name: string
+	/** Optimistic version precondition; mismatch returns ETAG_MISMATCH. */
+	expectedVersion: string
+	/** Stable UUID for this logical operation. */
+	requestId?: string
+	/** Validate without changing state or contacting an effect provider. */
+	validateOnly?: boolean
+	/** Purpose of accessing unmasked personal data. */
+	reason: string
+}
+
+/** Protected requester disclosure; never returned in ordinary lists. */
+export interface RevealSupportRequesterResponse {
+	/** Unmasked source identity, possibly a synthetic channel address. */
+	identity?: string
+	/** Audit record of this access. */
+	auditEvent?: string
 }
 
 /**
@@ -1971,6 +2353,24 @@ export interface RouteStatus {
 	readonly observedGeneration?: string
 	/** Ready, Reconciling, Stalled. */
 	readonly conditions?: common.Condition[]
+}
+
+/** On-demand reconciliation; execution is invoked by the existing workflow authority. */
+export interface RunSupportReconciliationRequest {
+	/** Authenticated environment scope. */
+	parent: string
+	/** Population/pass type. */
+	kind?: SupportReconciliationKind
+	/** Queue resource whose full population is covered. */
+	inbox?: string
+	/** Stable pass identity; repeated invocation resumes the same pass. */
+	requestId?: string
+	/** Continuation of the same snapshot, not a new empty population. */
+	pageToken?: string
+	/** Maximum cases per bounded transaction; default 200, at most 500. */
+	pageSize?: number
+	/** Validate scope without running or scheduling the pass. */
+	validateOnly?: boolean
 }
 
 /** The request of SendBroadcast. */
@@ -2125,6 +2525,520 @@ export interface SmsSender {
 	senderKey?: string
 	/** CLDR region codes the origin is registered for. */
 	regionCodes?: string[]
+}
+
+/**
+ * SupportAction is the case's business intent ledger, NOT an email outbox or
+ * notify_deliveries row. Transport changes never mutate this record implicitly.
+ * Stable keys and payload hashes survive all attempts, uncertain outcomes and
+ * migration. Exactly-once visible results require duplicate-safe transport AND
+ * authoritative provider/tenant reconciliation, not exactly-once HTTP delivery.
+ */
+export interface SupportAction {
+	/** Canonical action name. */
+	name?: string
+	/** Immutable identity. */
+	readonly uid?: string
+	/** Strong ETag and creation/update times. */
+	meta?: common.ResourceMeta
+	/** Exact stable caller/source key; never replaced on retry or cutover. */
+	idempotencyKey?: string
+	/** SHA-256 of immutable admitted intent bytes; changed-key reuse is refused. */
+	payloadSha256?: string
+	/** Related action/issue track in the same case. */
+	trackId?: string
+	/** Business state, independently versioned from the transport. */
+	readonly state?: SupportActionState
+	/** Optimistic concurrency version of the business action. */
+	readonly version?: string
+	/** Authenticated creator or admitting workload. */
+	readonly actor?: SupportActor
+	/** Reply using an existing channel authority. */
+	reply?: SupportChannelReply
+	/** Request the tenant's own remedy API; Support never writes product data. */
+	remedy?: SupportRemedyRequest
+	/** Notify an accountable reviewer through an existing API. */
+	escalation?: SupportEscalation
+	/** Latest authoritative receipt; dispatch/admission alone is not completion. */
+	readonly receipt?: SupportActionReceipt
+	/** Cause and unknown effect are separate facts. */
+	readonly failureCause?: string
+	/** Next permitted reconciliation/query time; UNKNOWN never means resend. */
+	readonly reconcileTime?: string
+	/** Source outbox ID/key/payload/leases/attempts retained as protected evidence. */
+	sourceRecords?: SupportSourceRecord[]
+	/** Current dispatch attempt number; advances only on a new fenced claim. */
+	readonly attemptCount?: number
+	/**
+	 * Storage-owned monotonic generation, incremented on each entry to UNCERTAIN.
+	 * A reconciliation receipt must resolve this exact episode and attempt.
+	 */
+	readonly uncertaintyEpisode?: string
+}
+
+/**
+ * SupportActionReceipt is an immutable observation, linked to an authority's
+ * own receipt. A receipt envelope is verified before storage; strings supplied
+ * by a model/customer do not establish delivery, authorization or absence.
+ */
+export interface SupportActionReceipt {
+	/** Stable source receipt identity; conflicting replay is refused. */
+	id?: string
+	/** Public authority that executed or queried the effect. */
+	authority?: string
+	/** Public receipt resource, not a foreign database row or signed credential URL. */
+	resource?: string
+	/** The action's unchanged stable key. */
+	idempotencyKey?: string
+	/** Binds the receipt to the exact immutable action payload. */
+	payloadSha256?: string
+	/** Confirmed applied, confirmed absent, unknown or rejected. */
+	outcome?: SupportEffectOutcome
+	/** Provider delivery/message ID or tenant remedy receipt identity. */
+	externalEffectId?: string
+	/** Authoritative observation time. */
+	observeTime?: string
+	/** True only for a query-first reconciliation observation, not initial dispatch. */
+	reconciliation?: boolean
+	/** Original envelope/evidence supporting verification. */
+	evidence?: SupportEvidence[]
+	/** Exact attempt observed, including zero for imported never-claimed uncertainty. */
+	attemptNo?: number
+	/**
+	 * Exact uncertainty episode queried; zero for a non-reconciliation receipt.
+	 * A new episode always requires a new authenticated query and receipt.
+	 */
+	uncertaintyEpisode?: string
+}
+
+/**
+ * SupportActor is derived from the authenticated caller or verified ingress.
+ * Claimed customer text can never select the actor, decider or delegated grant.
+ */
+export interface SupportActor {
+	/** Acting Access principal or authenticated external source identity. */
+	principal?: string
+	/** Delegating principal, when the grant records one. */
+	delegatedFor?: string
+	/** Public source authority for a workload or channel event. */
+	authority?: string
+}
+
+/**
+ * SupportAuditEvent journals a typed state transition or scheduling exception.
+ * It is append-only apart from authorized personal-data erasure of evidence;
+ * actor, before/after, versions and source identities are never fabricated.
+ */
+export interface SupportAuditEvent {
+	/** Canonical audit name. */
+	name?: string
+	/** Immutable identity. */
+	readonly uid?: string
+	/** Committed timestamps. */
+	meta?: common.ResourceMeta
+	/** Verified actor/decider for this event. */
+	actor?: SupportActor
+	/** Previous complete primary decision, including tracks and deadlines. */
+	before?: SupportDecision
+	/** New complete primary decision. */
+	after?: SupportDecision
+	/** Previous aggregate version, checked before applying the event. */
+	beforeVersion?: string
+	/** New aggregate version; exactly before_version + 1 for a transition. */
+	version?: string
+	/** Source event key; repeated delivery cannot create another transition. */
+	sourceKey?: string
+	/** Typed overdue fact, when this is a due-scan event instead of a transition. */
+	overdue?: SupportOverdue
+	/** Protected original historical event, when importing old audit without versions. */
+	sourceRecords?: SupportSourceRecord[]
+}
+
+/**
+ * A SupportCase has one primary state and independently linked issue/action
+ * tracks. The case aggregate version serializes decisions across all tracks.
+ * No API or resource name contains a deployment, database or provider address.
+ */
+export interface SupportCase {
+	/** The canonical resource name. */
+	name?: string
+	/** Immutable platform identity. */
+	readonly uid?: string
+	/** Strong ETag and common metadata. */
+	meta?: common.ResourceMeta
+	/** The queue owning this case. */
+	inbox?: string
+	/** Original customer-visible case number, including legacy CS numbers. */
+	displayNumber?: string
+	/** Case subject; untrusted customer content. */
+	subject?: string
+	/** Masked case-scoped requester snapshot; Knowledge owns mutable contacts. */
+	requester?: SupportRequester
+	/** Tenant product/account reference. It conveys no verified account ownership. */
+	tenantSubject?: string
+	/** Current primary decision, including the required owner and next action. */
+	decision?: SupportDecision
+	/** Aggregate version; every accepted decision increments it exactly once. */
+	readonly version?: string
+	/** First source-reported received time, preserved through import. */
+	receiveTime?: string
+	/** Most recent committed intake time; compared with the inbox intake bound. */
+	readonly intakeTime?: string
+	/** Exact source identities and protected full-record evidence references. */
+	sourceRecords?: SupportSourceRecord[]
+	/** Raw source state/priority/category are preserved rather than collapsed. */
+	sourceState?: string
+	/** Case-level priority is separate from state and issue classification. */
+	priority?: string
+	/** Last inbound activity, if known. */
+	lastInboundTime?: string
+	/** Last confirmed outbound activity, if known. */
+	lastOutboundTime?: string
+	/** Last activity, including internal notes. */
+	lastActivityTime?: string
+	/** Original resolution time, if known; FINAL_NO_REPLY is still ingestible. */
+	resolveTime?: string
+	/** Source evidence, including admission-refused/automated records when linked. */
+	evidence?: SupportEvidence[]
+	/** Spam suppression survives incoming evidence/payment/notices until a verdict. */
+	spam?: SupportSpamDisposition
+	/** Required migration proof before legacy pending may mean WAITING_CUSTOMER. */
+	pendingProof?: SupportPendingProof
+}
+
+/**
+ * A SupportChannel retains the configuration from an inbox's channel link.
+ * Provider credentials, provider conversations and delivery execution remain
+ * with the channel authority. No inbound event may have two business custodians.
+ */
+export interface SupportChannel {
+	/** Stable channel-link identity within the inbox. */
+	id?: string
+	/** Immutable source identity of this configuration record. */
+	uid?: string
+	/** Human-readable channel label. */
+	displayName?: string
+	/** Public transport resource or authenticated ingress endpoint. */
+	transport?: string
+	/** Exact canonical origins; an empty list never means wildcard browser access. */
+	allowedOrigins?: string[]
+	/** Whether platform-issued anonymous sessions may enter this browser channel. */
+	anonymousAllowed?: boolean
+	/** Whether new intake is admitted; disabling never drops accepted events. */
+	enabled?: boolean
+	/** Source metadata, not an authorization mechanism. */
+	labels?: Record<string, string>
+	/** Unindexed source annotations. */
+	annotations?: Record<string, string>
+	/** Configuration revision, independent of case and delivery versions. */
+	version?: string
+	/** Original creation time. */
+	createTime?: string
+	/** Last configuration change. */
+	updateTime?: string
+	/** Channel class: browser, email, social or product; credentials stay external. */
+	kind?: string
+}
+
+/** SupportChannelReply names an existing transport. No provider key is exposed. */
+export interface SupportChannelReply {
+	/** Permissioned channel resource; deployment and provider host are irrelevant. */
+	transport?: string
+	/** Channel-scoped recipient/conversation identity, not verified tenant identity. */
+	recipient?: string
+	/** Public reply body; legal/permission checks precede action admission. */
+	body?: string
+	/** Threading subject, when the channel has one. */
+	subject?: string
+	/** Exact original local message identity and provider ancestry. */
+	localMessageId?: string
+	/** Nearest parent provider message identity. */
+	inReplyTo?: string
+	/** Original ancestry in order. */
+	references?: string[]
+}
+
+/**
+ * SupportDeadline retains the external or internal obligation independently of
+ * follow-up scheduling. An empty case deadline list does not clear next_action_at.
+ */
+export interface SupportDeadline {
+	/** Immutable obligation identity within the case. */
+	id?: string
+	/** Legal, platform, contract or internal obligation. */
+	kind?: SupportDeadlineKind
+	/** Applicable jurisdiction, or an explicit internal/platform scope. */
+	jurisdiction?: string
+	/** Exact rule, law, platform term or contract establishing the deadline. */
+	basis?: string
+	/** Absolute computed deadline; never extended by transport retry. */
+	dueTime?: string
+	/** Related issue/action track; empty for a case-wide obligation. */
+	trackId?: string
+}
+
+/**
+ * A SupportDecision is a tenant-policy classification receipt. Applying it
+ * verifies permissions, expected version and evidence, then commits audit and
+ * action admission atomically. ACT_NOW never bypasses legal or permission checks.
+ */
+export interface SupportDecision {
+	/** Exactly one primary state. */
+	state?: SupportCaseState
+	/** Accountable Access principal; required even while waiting or final. */
+	owner?: string
+	/** Typed cause of this decision or reopen. */
+	reason?: SupportDecisionReason
+	/** Customer-safe explanation; no credentials or unrestricted product records. */
+	explanation?: string
+	/** Required for every state, including FINAL_NO_REPLY. Never a delivery retry. */
+	nextActionAt?: string
+	/** May be empty when no hard deadline applies; each entry keeps its basis. */
+	deadlines?: SupportDeadline[]
+	/** Independent linked issues and actions; mixed cases cannot drop an issue. */
+	tracks?: SupportTrack[]
+	/**
+	 * Required triggers. On spam they request reclassification review only;
+	 * no customer-facing reopen or outbound action occurs before a clearing verdict.
+	 */
+	reopenTriggers?: SupportReopenTrigger[]
+	/** Immutable tenant-policy API resource and version that produced the decision. */
+	policyVersion?: string
+	/** IANA tenant time zone used for business-hours/deadline arithmetic. */
+	timeZone?: string
+	/** Nonnegative settlement buffer used in that calculation. */
+	settlementBuffer?: string
+	/** Evidence IDs used by the decider, never evidence invented by a model. */
+	evidenceIds?: string[]
+}
+
+/** SupportEscalation names a reviewer and an existing notification operation. */
+export interface SupportEscalation {
+	/** Accountable principal or reviewer group. */
+	reviewer?: string
+	/** Permissioned destination API resource. */
+	destination?: string
+	/** Review brief; internal, never a customer message. */
+	brief?: string
+}
+
+/**
+ * SupportEvidence identifies protected source evidence. Raw email belongs to
+ * its existing transport authority; a reference is not another message store.
+ */
+export interface SupportEvidence {
+	/** Stable evidence identity in the tenant environment. */
+	id?: string
+	/** Authenticated source, not a caller-selected trust claim. */
+	authority?: string
+	/** Permissioned public API resource containing the bytes; never a credential URL. */
+	resource?: string
+	/** SHA-256 of the original evidence bytes, lowercase hexadecimal. */
+	sha256?: string
+	/** Registered media type of the original bytes. */
+	mediaType?: string
+	/** Exact byte length, not the number of Unicode characters. */
+	sizeBytes?: string
+	/** Source-reported received time. */
+	receiveTime?: string
+	/** Erasure keeps identity/hash/dedupe tombstones, never resurrects source content. */
+	erased?: boolean
+}
+
+/**
+ * A SupportInbox is a tenant's case queue. It grants no identity or transport
+ * authority. Access roles grant SupportService permissions on an org, project
+ * or resource. Every storage query also binds org, project, environment and cell.
+ */
+export interface SupportInbox {
+	/** The canonical resource name. */
+	name?: string
+	/** Immutable platform identity; never substitutes for a source case ID. */
+	readonly uid?: string
+	/** Labels, annotations, display name, timestamps and strong ETag. */
+	meta?: common.ResourceMeta
+	/** Supported BCP 47 locales; the language is still decided per message. */
+	locales?: string[]
+	/** Verified links to existing transport resources, not transport credentials. */
+	channels?: SupportChannel[]
+	/** Tenant-policy API resource; rule tables and remedy budgets remain there. */
+	policy?: string
+	/** Maximum allowed delay from a received event to committed case intake. */
+	intakeBound?: string
+}
+
+/** SupportOverdue makes every missed case/track action or obligation explicit. */
+export interface SupportOverdue {
+	/** next_action, track_next_action or deadline; exact target ID accompanies it. */
+	kind?: string
+	/** Deadline/track identity, or empty for the primary next action. */
+	targetId?: string
+	/** Time that was missed, never silently advanced by the scan. */
+	dueTime?: string
+	/** When the miss was detected. */
+	detectTime?: string
+}
+
+/**
+ * SupportReconciliation proves a complete scoped pass or lists its uncertainty.
+ * Workflows invokes FULL_DAILY and deadline-aligned DUE_SCAN on demand; no
+ * Support-specific timer, poll loop or retained warm instance is introduced.
+ */
+export interface SupportReconciliation {
+	/** Canonical report name. */
+	name?: string
+	/** Immutable identity. */
+	readonly uid?: string
+	/** Publication timestamps. */
+	meta?: common.ResourceMeta
+	/** Full daily population or earliest-deadline-aligned due population. */
+	kind?: SupportReconciliationKind
+	/** Exact queue/scope covered; never a cross-tenant scan bypass. */
+	inbox?: string
+	/** Verified principal/workload that requested the pass. */
+	actor?: SupportActor
+	/** Snapshot/read time and source watermark used to establish coverage. */
+	snapshotTime?: string
+	/** Authoritative source cursor or snapshot token, not a secret. */
+	sourceWatermark?: string
+	/** True only when every page in the declared population was checked. */
+	complete?: boolean
+	/** Number of cases checked; zero proves nothing without complete coverage. */
+	checkedCases?: string
+	/** Cases without an accountable owner. */
+	unowned?: string
+	/** Cases without a required next action. */
+	unscheduled?: string
+	/** Unhandled due obligations or next actions. */
+	overdue?: string
+	/** Every exception is retained, not only a count or a truncated sample. */
+	exceptions?: SupportReconciliationException[]
+	/** Next on-demand scan, no later than the earliest unhandled obligation/action. */
+	nextScanTime?: string
+	/** Full canonical population hash for migration/read-compare, when applicable. */
+	populationSha256?: string
+}
+
+/** SupportReconciliationException records the exact affected resource and reason. */
+export interface SupportReconciliationException {
+	/** Affected case/action/source resource, scoped by the authenticated query. */
+	resource?: string
+	/** unowned, unscheduled, overdue, uncertain_action, intake_late or source_mismatch. */
+	kind?: string
+	/** Actionable explanation with no unrestricted customer content. */
+	reason?: string
+	/** Earliest related missed action or obligation, when applicable. */
+	dueTime?: string
+}
+
+/** SupportRemedyRequest is a command for the tenant API, never a direct DB write. */
+export interface SupportRemedyRequest {
+	/** Published tenant operation resource or API endpoint, under the caller grant. */
+	operation?: string
+	/** Content-addressed, permissioned request evidence; contains no credentials. */
+	request?: SupportEvidence
+	/** Tenant authorization/verification receipt binding exact remedy arguments. */
+	authorizationReceipt?: string
+}
+
+/**
+ * SupportRequester is a case snapshot, never a second customer master or a
+ * verified identity inferred from From. Reveal requires a separately audited RPC.
+ */
+export interface SupportRequester {
+	/** Permission-scoped Knowledge contact resource, when available. */
+	contact?: string
+	/** Masked contact address or channel identity for ordinary case reads. */
+	maskedIdentity?: string
+	/** Source display name; treated as personal data. */
+	displayName?: string
+	/** none, suggested, confirmed or cleared; an unconfirmed link grants nothing. */
+	linkState?: string
+	/** Tenant-owned subject mapping, not a Support-issued user identity. */
+	tenantSubject?: string
+	/** Who verified or cleared the link, if known. */
+	linkActor?: SupportActor
+	/** When the source link was verified or cleared, if known. */
+	linkTime?: string
+	/** Original requester identity and source record, including tombstones. */
+	sourceRecords?: SupportSourceRecord[]
+}
+
+/**
+ * SupportSourceRecord preserves exact legacy IDs and complete protected source
+ * records, including nullable fields. Backfill compares counts and full hashes;
+ * it never reuses a historical source version as a new concurrency version.
+ */
+export interface SupportSourceRecord {
+	/** Stable source namespace, retained across retries and migration phases. */
+	source?: string
+	/** Original relation or event kind. */
+	sourceTable?: string
+	/** Unchanged source primary key, including numeric case/message/outbox IDs. */
+	sourceId?: string
+	/** Evidence holding the full canonical source record, not a lossy projection. */
+	evidence?: SupportEvidence
+	/** Original source version, if present; zero means absent, not fabricated. */
+	sourceVersion?: string
+}
+
+/**
+ * SupportThreadMessage is the sole normalized case-thread record. Transport
+ * buffers, provider indexes and agent context are not independent case history.
+ */
+export interface SupportThreadMessage {
+	/** Canonical thread message name. */
+	name?: string
+	/** Immutable identity. */
+	readonly uid?: string
+	/** Timestamps and metadata. */
+	meta?: common.ResourceMeta
+	/** Immutable source-scoped event identity; changed replays are refused. */
+	sourceKey?: string
+	/** Explicit audience; internal notes never enter the customer timeline. */
+	visibility?: SupportMessageVisibility
+	/** Verified author; never inferred from a claimed From address. */
+	author?: SupportActor
+	/** Text body or evidence projection; untrusted personal content. */
+	body?: string
+	/** Source evidence, including explicitly untrusted HTML and attachments. */
+	evidence?: SupportEvidence[]
+	/** Existing channel-link ID, not a credential. */
+	channelId?: string
+	/** Original provider message identity and ancestry. */
+	threadKeys?: string[]
+	/** Related business action, never a notification delivery state alias. */
+	action?: string
+	/** Tombstone; source keys/ancestry survive authorized erasure. */
+	erased?: boolean
+	/** Original IDs/records for lossless migration. */
+	sourceRecords?: SupportSourceRecord[]
+	/** Source direction: inbound, outbound or internal; independent of visibility. */
+	direction?: string
+}
+
+/** SupportTrack is an independently scheduled issue or action linked to a case. */
+export interface SupportTrack {
+	/** Immutable identity within the case. */
+	id?: string
+	/** ISSUE or ACTION; never a competing case/thread identity. */
+	kind?: SupportTrackKind
+	/** Tenant's issue category, for example payment, privacy or technical. */
+	category?: string
+	/** Independent track state; primary state cannot hide outstanding tracks. */
+	state?: SupportCaseState
+	/** Accountable principal for this track. */
+	owner?: string
+	/** Required follow-up for this track. */
+	nextActionAt?: string
+	/** Other track IDs in the same case; no cross-tenant links. */
+	linkedTrackIds?: string[]
+	/** Action resource associated with an action track, when admitted. */
+	action?: string
+	/** Evidence IDs relevant to this issue, not all case personal data. */
+	evidenceIds?: string[]
+	/** Classification reason for this track. */
+	reason?: string
 }
 
 /**
@@ -2316,6 +3230,16 @@ export interface UpdateSenderRequest {
 	validateOnly?: boolean
 }
 
+/** Conditional inbox configuration change. */
+export interface UpdateSupportInboxRequest {
+	/** Inbox with the current meta.etag. */
+	supportInbox: SupportInbox
+	/** Explicit fields to change; no case or transport state. */
+	updateMask: string
+	/** Validate without changing configuration. */
+	validateOnly?: boolean
+}
+
 /** The request of UpdateTemplate. */
 export interface UpdateTemplateRequest {
 	/** The template to update; `name` identifies it. */
@@ -2415,6 +3339,58 @@ export type PushPlatform = 'apns' | 'fcm' | 'web_push' | (string & {})
 /** What happens to mail judged spam on a Route. */
 export type RouteSpamPolicy = 'deliver' | 'drop' | 'reject' | (string & {})
 
+/** SupportActionState separates business completion from transport acceptance. */
+export type SupportActionState = 'pending' | 'in_flight' | 'uncertain' | 'succeeded' | 'failed' | 'cancelled' | (string & {})
+
+/**
+ * SupportCaseState is the one primary operational state, not ownership,
+ * transport delivery state, an agent turn or a replacement for linked tracks.
+ */
+export type SupportCaseState = 'act_now' | 'scheduled' | 'waiting_customer' | 'waiting_review' | 'final_no_reply' | (string & {})
+
+/** SupportDeadlineKind names the authority establishing an obligation. */
+export type SupportDeadlineKind = 'legal' | 'platform' | 'contract' | 'internal' | (string & {})
+
+/** SupportDecisionReason distinguishes a fresh classification from a reopen. */
+export type SupportDecisionReason = 'policy' | 'operator' | 'new_evidence' | 'new_payment' | 'legal_notice' | 'regulatory_notice' | 'due' | 'migration' | 'spam_reclassification' | 'not_spam' | 'confirmed_customer' | 'institutional_notice' | (string & {})
+
+/**
+ * SupportEffectOutcome distinguishes unknown from confirmed no-effect. Only an
+ * authenticated query receipt proving NOT_APPLIED can release UNCERTAIN to a
+ * new attempt of the SAME action/key. The receipt must bind the current attempt
+ * AND uncertainty episode; a prior episode's absence proof is never reusable.
+ * UNKNOWN remains scheduled for query/review.
+ */
+export type SupportEffectOutcome = 'applied' | 'not_applied' | 'unknown' | 'rejected' | (string & {})
+
+/** SupportMessageVisibility is a hard customer-projection boundary. */
+export type SupportMessageVisibility = 'public' | 'internal' | (string & {})
+
+/**
+ * SupportPendingProof records why legacy pending is genuinely a customer wait.
+ * Without one of these source facts, policy must choose WAITING_REVIEW or SCHEDULED.
+ */
+export type SupportPendingProof = 'last_outbound' | 'staff_action' | 'source_history' | (string & {})
+
+/** SupportReconciliationKind chooses a scope, not another execution engine. */
+export type SupportReconciliationKind = 'full_daily' | 'due_scan' | 'migration_compare' | (string & {})
+
+/**
+ * SupportReopenTrigger applies even in FINAL_NO_REPLY. On suppressed spam it
+ * starts reclassification review only; a verified not_spam/real-customer verdict
+ * must precede reopen. Duplicated events/echoes are never new activity.
+ */
+export type SupportReopenTrigger = 'new_evidence' | 'new_payment' | 'legal_notice' | 'regulatory_notice' | (string & {})
+
+/**
+ * SupportSpamDisposition is independent from primary state. SUPPRESSED and
+ * REVIEW_REQUIRED both keep FINAL_NO_REPLY and forbid outbound action admission.
+ */
+export type SupportSpamDisposition = 'suppressed' | 'review_required' | 'not_spam' | 'confirmed_customer' | (string & {})
+
+/** SupportTrackKind separates a reported issue from a requested durable action. */
+export type SupportTrackKind = 'issue' | 'action' | (string & {})
+
 /** Why an address is suppressed. */
 export type SuppressionReason = 'bounce' | 'complaint' | 'carrier_opt_out' | 'unsubscribe' | 'uninstalled' | 'manual' | (string & {})
 
@@ -2425,7 +3401,25 @@ runtime.registerSchemas({
 		['providerSessionToken', 'provider_session_token'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.ApplySupportDecisionRequest': [
+		['expectedVersion', 'expected_version'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+		['after', 'after', 'sylphx.notify.v1.SupportDecision'],
+		['pendingProof', 'pending_proof'],
+		['sourceKey', 'source_key'],
+	],
 	'sylphx.notify.v1.ArchiveInboxItemRequest': [],
+	'sylphx.notify.v1.BeginSupportActionAttemptRequest': [
+		['expectedVersion', 'expected_version'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.BeginSupportActionAttemptResponse': [
+		['action', 'action', 'sylphx.notify.v1.SupportAction'],
+		['attemptId', 'attempt_id'],
+		['claimExpireTime', 'claim_expire_time'],
+	],
 	'sylphx.notify.v1.Broadcast': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.notify.v1.BroadcastSpec'],
@@ -2509,6 +3503,32 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.CreateSmsNumberRequest': [
 		['smsNumberId', 'sms_number_id'],
 		['smsNumber', 'sms_number', 'sylphx.notify.v1.SmsNumber'],
+	],
+	'sylphx.notify.v1.CreateSupportActionRequest': [
+		['supportAction', 'support_action', 'sylphx.notify.v1.SupportAction'],
+		['supportActionId', 'support_action_id'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+		['expectedVersion', 'expected_version'],
+	],
+	'sylphx.notify.v1.CreateSupportCaseRequest': [
+		['supportCase', 'support_case', 'sylphx.notify.v1.SupportCase'],
+		['supportCaseId', 'support_case_id'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.CreateSupportInboxRequest': [
+		['supportInbox', 'support_inbox', 'sylphx.notify.v1.SupportInbox'],
+		['supportInboxId', 'support_inbox_id'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.CreateSupportThreadMessageRequest': [
+		['supportThreadMessage', 'support_thread_message', 'sylphx.notify.v1.SupportThreadMessage'],
+		['supportThreadMessageId', 'support_thread_message_id'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+		['expectedVersion', 'expected_version'],
 	],
 	'sylphx.notify.v1.CreateSuppressionRequest': [
 		['suppressionId', 'suppression_id'],
@@ -2620,8 +3640,27 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetRouteRequest': [],
 	'sylphx.notify.v1.GetSenderRequest': [],
 	'sylphx.notify.v1.GetSmsNumberRequest': [],
+	'sylphx.notify.v1.GetSupportActionRequest': [],
+	'sylphx.notify.v1.GetSupportAuditEventRequest': [],
+	'sylphx.notify.v1.GetSupportCaseRequest': [],
+	'sylphx.notify.v1.GetSupportInboxRequest': [],
+	'sylphx.notify.v1.GetSupportReconciliationRequest': [],
+	'sylphx.notify.v1.GetSupportThreadMessageRequest': [],
 	'sylphx.notify.v1.GetSuppressionRequest': [],
 	'sylphx.notify.v1.GetTemplateRequest': [],
+	'sylphx.notify.v1.ImportSupportCasesRequest': [
+		['supportCases', 'support_cases', 'sylphx.notify.v1.SupportCase'],
+		['messages', 'messages', 'sylphx.notify.v1.SupportThreadMessage'],
+		['actions', 'actions', 'sylphx.notify.v1.SupportAction'],
+		['auditEvents', 'audit_events', 'sylphx.notify.v1.SupportAuditEvent'],
+		['sourceSha256', 'source_sha256'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.ImportSupportCasesResponse': [
+		['targetSha256', 'target_sha256'],
+		['exceptions', 'exceptions', 'sylphx.notify.v1.SupportReconciliationException'],
+	],
 	'sylphx.notify.v1.InboundEmail': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['messageId', 'message_id'],
@@ -2658,6 +3697,14 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.InboxItem': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['actionUri', 'action_uri'],
+	],
+	'sylphx.notify.v1.IngestSupportSignalRequest': [
+		['expectedVersion', 'expected_version'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+		['sourceKey', 'source_key'],
+		['evidence', 'evidence', 'sylphx.notify.v1.SupportEvidence'],
+		['receiveTime', 'receive_time'],
 	],
 	'sylphx.notify.v1.ListBroadcastsRequest': [
 		['pageSize', 'page_size'],
@@ -2808,6 +3855,60 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListSmsNumbersResponse': [
 		['smsNumbers', 'sms_numbers', 'sylphx.notify.v1.SmsNumber'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSupportActionsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListSupportActionsResponse': [
+		['supportActions', 'support_actions', 'sylphx.notify.v1.SupportAction'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSupportAuditEventsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListSupportAuditEventsResponse': [
+		['supportAuditEvents', 'support_audit_events', 'sylphx.notify.v1.SupportAuditEvent'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSupportCasesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListSupportCasesResponse': [
+		['supportCases', 'support_cases', 'sylphx.notify.v1.SupportCase'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSupportInboxesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListSupportInboxesResponse': [
+		['supportInboxes', 'support_inboxes', 'sylphx.notify.v1.SupportInbox'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSupportReconciliationsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListSupportReconciliationsResponse': [
+		['supportReconciliations', 'support_reconciliations', 'sylphx.notify.v1.SupportReconciliation'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListSupportThreadMessagesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['orderBy', 'order_by'],
+	],
+	'sylphx.notify.v1.ListSupportThreadMessagesResponse': [
+		['supportThreadMessages', 'support_thread_messages', 'sylphx.notify.v1.SupportThreadMessage'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListSuppressionsRequest': [
@@ -2991,6 +4092,18 @@ runtime.registerSchemas({
 		['languageCode', 'language_code'],
 		['timeZone', 'time_zone'],
 	],
+	'sylphx.notify.v1.ReconcileSupportActionRequest': [
+		['expectedVersion', 'expected_version'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.RecordSupportActionReceiptRequest': [
+		['expectedVersion', 'expected_version'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+		['receipt', 'receipt', 'sylphx.notify.v1.SupportActionReceipt'],
+		['attemptId', 'attempt_id'],
+	],
 	'sylphx.notify.v1.RegisterPushDeviceRequest': [
 		['device', 'device', 'sylphx.notify.v1.PushDevice'],
 	],
@@ -2999,6 +4112,14 @@ runtime.registerSchemas({
 		['applicationServerKey', 'application_server_key'],
 		['recipientUid', 'recipient_uid'],
 		['registrationGeneration', 'registration_generation'],
+	],
+	'sylphx.notify.v1.RevealSupportRequesterRequest': [
+		['expectedVersion', 'expected_version'],
+		['requestId', 'request_id'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.RevealSupportRequesterResponse': [
+		['auditEvent', 'audit_event'],
 	],
 	'sylphx.notify.v1.Route': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3016,6 +4137,12 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.RouteStatus': [
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+	],
+	'sylphx.notify.v1.RunSupportReconciliationRequest': [
+		['requestId', 'request_id'],
+		['pageToken', 'page_token'],
+		['pageSize', 'page_size'],
+		['validateOnly', 'validate_only'],
 	],
 	'sylphx.notify.v1.SendBroadcastRequest': [
 		['validateOnly', 'validate_only'],
@@ -3071,6 +4198,150 @@ runtime.registerSchemas({
 		['phoneNumber', 'phone_number'],
 		['senderKey', 'sender_key'],
 		['regionCodes', 'region_codes'],
+	],
+	'sylphx.notify.v1.SupportAction': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['idempotencyKey', 'idempotency_key'],
+		['payloadSha256', 'payload_sha256'],
+		['trackId', 'track_id'],
+		['actor', 'actor', 'sylphx.notify.v1.SupportActor'],
+		['reply', 'reply', 'sylphx.notify.v1.SupportChannelReply'],
+		['remedy', 'remedy', 'sylphx.notify.v1.SupportRemedyRequest'],
+		['escalation', 'escalation', 'sylphx.notify.v1.SupportEscalation'],
+		['receipt', 'receipt', 'sylphx.notify.v1.SupportActionReceipt'],
+		['failureCause', 'failure_cause'],
+		['reconcileTime', 'reconcile_time'],
+		['sourceRecords', 'source_records', 'sylphx.notify.v1.SupportSourceRecord'],
+		['attemptCount', 'attempt_count'],
+		['uncertaintyEpisode', 'uncertainty_episode'],
+	],
+	'sylphx.notify.v1.SupportActionReceipt': [
+		['idempotencyKey', 'idempotency_key'],
+		['payloadSha256', 'payload_sha256'],
+		['externalEffectId', 'external_effect_id'],
+		['observeTime', 'observe_time'],
+		['evidence', 'evidence', 'sylphx.notify.v1.SupportEvidence'],
+		['attemptNo', 'attempt_no'],
+		['uncertaintyEpisode', 'uncertainty_episode'],
+	],
+	'sylphx.notify.v1.SupportActor': [
+		['delegatedFor', 'delegated_for'],
+	],
+	'sylphx.notify.v1.SupportAuditEvent': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['actor', 'actor', 'sylphx.notify.v1.SupportActor'],
+		['before', 'before', 'sylphx.notify.v1.SupportDecision'],
+		['after', 'after', 'sylphx.notify.v1.SupportDecision'],
+		['beforeVersion', 'before_version'],
+		['sourceKey', 'source_key'],
+		['overdue', 'overdue', 'sylphx.notify.v1.SupportOverdue'],
+		['sourceRecords', 'source_records', 'sylphx.notify.v1.SupportSourceRecord'],
+	],
+	'sylphx.notify.v1.SupportCase': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['displayNumber', 'display_number'],
+		['requester', 'requester', 'sylphx.notify.v1.SupportRequester'],
+		['tenantSubject', 'tenant_subject'],
+		['decision', 'decision', 'sylphx.notify.v1.SupportDecision'],
+		['receiveTime', 'receive_time'],
+		['intakeTime', 'intake_time'],
+		['sourceRecords', 'source_records', 'sylphx.notify.v1.SupportSourceRecord'],
+		['sourceState', 'source_state'],
+		['lastInboundTime', 'last_inbound_time'],
+		['lastOutboundTime', 'last_outbound_time'],
+		['lastActivityTime', 'last_activity_time'],
+		['resolveTime', 'resolve_time'],
+		['evidence', 'evidence', 'sylphx.notify.v1.SupportEvidence'],
+		['pendingProof', 'pending_proof'],
+	],
+	'sylphx.notify.v1.SupportChannel': [
+		['displayName', 'display_name'],
+		['allowedOrigins', 'allowed_origins'],
+		['anonymousAllowed', 'anonymous_allowed'],
+		['labels', 'labels', undefined, 'map'],
+		['annotations', 'annotations', undefined, 'map'],
+		['createTime', 'create_time'],
+		['updateTime', 'update_time'],
+	],
+	'sylphx.notify.v1.SupportChannelReply': [
+		['localMessageId', 'local_message_id'],
+		['inReplyTo', 'in_reply_to'],
+	],
+	'sylphx.notify.v1.SupportDeadline': [
+		['dueTime', 'due_time'],
+		['trackId', 'track_id'],
+	],
+	'sylphx.notify.v1.SupportDecision': [
+		['nextActionAt', 'next_action_at'],
+		['deadlines', 'deadlines', 'sylphx.notify.v1.SupportDeadline'],
+		['tracks', 'tracks', 'sylphx.notify.v1.SupportTrack'],
+		['reopenTriggers', 'reopen_triggers'],
+		['policyVersion', 'policy_version'],
+		['timeZone', 'time_zone'],
+		['settlementBuffer', 'settlement_buffer'],
+		['evidenceIds', 'evidence_ids'],
+	],
+	'sylphx.notify.v1.SupportEscalation': [],
+	'sylphx.notify.v1.SupportEvidence': [
+		['mediaType', 'media_type'],
+		['sizeBytes', 'size_bytes'],
+		['receiveTime', 'receive_time'],
+	],
+	'sylphx.notify.v1.SupportInbox': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['channels', 'channels', 'sylphx.notify.v1.SupportChannel'],
+		['intakeBound', 'intake_bound'],
+	],
+	'sylphx.notify.v1.SupportOverdue': [
+		['targetId', 'target_id'],
+		['dueTime', 'due_time'],
+		['detectTime', 'detect_time'],
+	],
+	'sylphx.notify.v1.SupportReconciliation': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['actor', 'actor', 'sylphx.notify.v1.SupportActor'],
+		['snapshotTime', 'snapshot_time'],
+		['sourceWatermark', 'source_watermark'],
+		['checkedCases', 'checked_cases'],
+		['exceptions', 'exceptions', 'sylphx.notify.v1.SupportReconciliationException'],
+		['nextScanTime', 'next_scan_time'],
+		['populationSha256', 'population_sha256'],
+	],
+	'sylphx.notify.v1.SupportReconciliationException': [
+		['dueTime', 'due_time'],
+	],
+	'sylphx.notify.v1.SupportRemedyRequest': [
+		['request', 'request', 'sylphx.notify.v1.SupportEvidence'],
+		['authorizationReceipt', 'authorization_receipt'],
+	],
+	'sylphx.notify.v1.SupportRequester': [
+		['maskedIdentity', 'masked_identity'],
+		['displayName', 'display_name'],
+		['linkState', 'link_state'],
+		['tenantSubject', 'tenant_subject'],
+		['linkActor', 'link_actor', 'sylphx.notify.v1.SupportActor'],
+		['linkTime', 'link_time'],
+		['sourceRecords', 'source_records', 'sylphx.notify.v1.SupportSourceRecord'],
+	],
+	'sylphx.notify.v1.SupportSourceRecord': [
+		['sourceTable', 'source_table'],
+		['sourceId', 'source_id'],
+		['evidence', 'evidence', 'sylphx.notify.v1.SupportEvidence'],
+		['sourceVersion', 'source_version'],
+	],
+	'sylphx.notify.v1.SupportThreadMessage': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['sourceKey', 'source_key'],
+		['author', 'author', 'sylphx.notify.v1.SupportActor'],
+		['evidence', 'evidence', 'sylphx.notify.v1.SupportEvidence'],
+		['channelId', 'channel_id'],
+		['threadKeys', 'thread_keys'],
+		['sourceRecords', 'source_records', 'sylphx.notify.v1.SupportSourceRecord'],
+	],
+	'sylphx.notify.v1.SupportTrack': [
+		['nextActionAt', 'next_action_at'],
+		['linkedTrackIds', 'linked_track_ids'],
+		['evidenceIds', 'evidence_ids'],
 	],
 	'sylphx.notify.v1.Suppression': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3150,6 +4421,11 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.UpdateSupportInboxRequest': [
+		['supportInbox', 'support_inbox', 'sylphx.notify.v1.SupportInbox'],
+		['updateMask', 'update_mask'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.UpdateTemplateRequest': [
 		['template', 'template', 'sylphx.notify.v1.Template'],
 		['updateMask', 'update_mask'],
@@ -3219,6 +4495,18 @@ export class NotifyApi {
 	readonly inboundSms: InboundSmsCollection
 	/** The `inbound_messages` collection. */
 	readonly inboundMessages: InboundMessagesCollection
+	/** The `support_inboxes` collection. */
+	readonly supportInboxes: SupportInboxesCollection
+	/** The `support_cases` collection. */
+	readonly supportCases: SupportCasesCollection
+	/** The `support_thread_messages` collection. */
+	readonly supportThreadMessages: SupportThreadMessagesCollection
+	/** The `support_actions` collection. */
+	readonly supportActions: SupportActionsCollection
+	/** The `support_audit_events` collection. */
+	readonly supportAuditEvents: SupportAuditEventsCollection
+	/** The `support_reconciliations` collection. */
+	readonly supportReconciliations: SupportReconciliationsCollection
 
 	constructor(client: runtime.Client) {
 		this.phoneNumbers = new PhoneNumbersCollection(client)
@@ -3240,6 +4528,12 @@ export class NotifyApi {
 		this.smsNumbers = new SmsNumbersCollection(client)
 		this.inboundSms = new InboundSmsCollection(client)
 		this.inboundMessages = new InboundMessagesCollection(client)
+		this.supportInboxes = new SupportInboxesCollection(client)
+		this.supportCases = new SupportCasesCollection(client)
+		this.supportThreadMessages = new SupportThreadMessagesCollection(client)
+		this.supportActions = new SupportActionsCollection(client)
+		this.supportAuditEvents = new SupportAuditEventsCollection(client)
+		this.supportReconciliations = new SupportReconciliationsCollection(client)
 	}
 }
 
@@ -5167,6 +6461,563 @@ export class InboundMessagesCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.notify.v1.DownloadInboundMessageRequest',
 			responseType: 'sylphx.notify.v1.DownloadInboundMessageResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `support_inboxes` of Sylphx Notify: Resource type `notify.sylphx.com/SupportInbox`. */
+export class SupportInboxesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one SupportInbox; protected identities require a separately audited reveal.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/support_inboxes/*}` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async get(request: GetSupportInboxRequest): Promise<SupportInbox> {
+		return this.client.call<SupportInbox>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_inboxes/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SupportInbox',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists scoped support_inboxes; no cross-tenant or internal-message projection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/support_inboxes` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async list(request: ListSupportInboxesRequest): Promise<ListSupportInboxesResponse> {
+		return this.client.call<ListSupportInboxesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_inboxes`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListSupportInboxesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSupportInboxesRequest): AsyncGenerator<SupportInbox> {
+		let next: ListSupportInboxesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.supportInboxes ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates an idempotent SupportInbox; changed replay and illegal state are refused.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/support_inboxes` · permission `notify:support:configure` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateSupportInboxRequest): Promise<SupportInbox> {
+		return this.client.call<SupportInbox>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_inboxes`,
+			query: { support_inbox_id: request.supportInboxId, request_id: request.requestId, validate_only: request.validateOnly },
+			body: request.supportInbox ?? {},
+			bodyType: 'sylphx.notify.v1.SupportInbox',
+			responseType: 'sylphx.notify.v1.SupportInbox',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Updates configuration with a strong ETag; intake never creates a missing inbox.
+	 *
+	 * `PATCH /v1/{support_inbox.name=orgs/*\/projects/*\/envs/*\/support_inboxes/*}` · permission `notify:support:configure` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateSupportInboxRequest): Promise<SupportInbox> {
+		return this.client.call<SupportInbox>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.supportInbox?.name, 'orgs/*/projects/*/envs/*/support_inboxes/*', 'support_inbox.name')}`,
+			query: { update_mask: request.updateMask, validate_only: request.validateOnly },
+			body: request.supportInbox ?? {},
+			bodyType: 'sylphx.notify.v1.SupportInbox',
+			responseType: 'sylphx.notify.v1.SupportInbox',
+			mutation: true,
+		})
+	}
+}
+
+/** `support_cases` of Sylphx Notify: Resource type `notify.sylphx.com/SupportCase`. */
+export class SupportCasesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one SupportCase; protected identities require a separately audited reveal.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*}` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async get(request: GetSupportCaseRequest): Promise<SupportCase> {
+		return this.client.call<SupportCase>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SupportCase',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists scoped support_cases; no cross-tenant or internal-message projection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/support_cases` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async list(request: ListSupportCasesRequest): Promise<ListSupportCasesResponse> {
+		return this.client.call<ListSupportCasesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_cases`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListSupportCasesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSupportCasesRequest): AsyncGenerator<SupportCase> {
+		let next: ListSupportCasesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.supportCases ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates an idempotent SupportCase; changed replay and illegal state are refused.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/support_cases` · permission `notify:support:operate` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateSupportCaseRequest): Promise<SupportCase> {
+		return this.client.call<SupportCase>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_cases`,
+			query: { support_case_id: request.supportCaseId, request_id: request.requestId, validate_only: request.validateOnly },
+			body: request.supportCase ?? {},
+			bodyType: 'sylphx.notify.v1.SupportCase',
+			responseType: 'sylphx.notify.v1.SupportCase',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Atomically applies a typed decision, tracks and audit after checking expected_version. FINAL_NO_REPLY reopens to ACT_NOW only for an allowed trigger; spam requires a clearing verdict.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*}:applySupportDecision` · permission `notify:support:operate` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async applySupportDecision(request: ApplySupportDecisionRequest): Promise<SupportCase> {
+		return this.client.call<SupportCase>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*', 'name')}:applySupportDecision`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.ApplySupportDecisionRequest',
+			responseType: 'sylphx.notify.v1.SupportCase',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Admits one authenticated source signal, deduped by immutable identity. Spam signals wake reclassification review without reopening, customer reply or new business action.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*}:ingestSupportSignal` · permission `notify:support:ingest` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async ingestSupportSignal(request: IngestSupportSignalRequest): Promise<SupportCase> {
+		return this.client.call<SupportCase>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*', 'name')}:ingestSupportSignal`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.IngestSupportSignalRequest',
+			responseType: 'sylphx.notify.v1.SupportCase',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Reveals the protected case requester under a purpose-bound grant and appends an audited read.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*}:revealSupportRequester` · permission `notify:support:reveal` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async revealSupportRequester(request: RevealSupportRequesterRequest): Promise<RevealSupportRequesterResponse> {
+		return this.client.call<RevealSupportRequesterResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*', 'name')}:revealSupportRequester`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.RevealSupportRequesterRequest',
+			responseType: 'sylphx.notify.v1.RevealSupportRequesterResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Imports inert history with unchanged source IDs/keys/tombstones, full-record hashes and explicit migration exceptions. It sends nothing, runs no agent and meters no resolution.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/support_cases:import` · permission `notify:support:import` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async import(request: ImportSupportCasesRequest): Promise<ImportSupportCasesResponse> {
+		return this.client.call<ImportSupportCasesResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_cases:import`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.notify.v1.ImportSupportCasesRequest',
+			responseType: 'sylphx.notify.v1.ImportSupportCasesResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `support_thread_messages` of Sylphx Notify: Resource type `notify.sylphx.com/SupportThreadMessage`. */
+export class SupportThreadMessagesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one SupportThreadMessage; protected identities require a separately audited reveal.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*\/support_thread_messages/*}` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async get(request: GetSupportThreadMessageRequest): Promise<SupportThreadMessage> {
+		return this.client.call<SupportThreadMessage>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*/support_thread_messages/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SupportThreadMessage',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists scoped support_thread_messages; no cross-tenant or internal-message projection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/support_cases/*}/support_thread_messages` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async list(request: ListSupportThreadMessagesRequest): Promise<ListSupportThreadMessagesResponse> {
+		return this.client.call<ListSupportThreadMessagesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/support_cases/*', 'parent')}/support_thread_messages`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListSupportThreadMessagesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSupportThreadMessagesRequest): AsyncGenerator<SupportThreadMessage> {
+		let next: ListSupportThreadMessagesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.supportThreadMessages ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates an idempotent SupportThreadMessage; changed replay and illegal state are refused.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/support_cases/*}/support_thread_messages` · permission `notify:support:operate` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateSupportThreadMessageRequest): Promise<SupportThreadMessage> {
+		return this.client.call<SupportThreadMessage>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/support_cases/*', 'parent')}/support_thread_messages`,
+			query: { support_thread_message_id: request.supportThreadMessageId, request_id: request.requestId, validate_only: request.validateOnly, expected_version: request.expectedVersion },
+			body: request.supportThreadMessage ?? {},
+			bodyType: 'sylphx.notify.v1.SupportThreadMessage',
+			responseType: 'sylphx.notify.v1.SupportThreadMessage',
+			mutation: true,
+		})
+	}
+}
+
+/** `support_actions` of Sylphx Notify: Resource type `notify.sylphx.com/SupportAction`. */
+export class SupportActionsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one SupportAction; protected identities require a separately audited reveal.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*\/support_actions/*}` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async get(request: GetSupportActionRequest): Promise<SupportAction> {
+		return this.client.call<SupportAction>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*/support_actions/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SupportAction',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists scoped support_actions; no cross-tenant or internal-message projection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/support_cases/*}/support_actions` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async list(request: ListSupportActionsRequest): Promise<ListSupportActionsResponse> {
+		return this.client.call<ListSupportActionsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/support_cases/*', 'parent')}/support_actions`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListSupportActionsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSupportActionsRequest): AsyncGenerator<SupportAction> {
+		let next: ListSupportActionsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.supportActions ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates an idempotent SupportAction; changed replay and illegal state are refused.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/support_cases/*}/support_actions` · permission `notify:support:actions` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateSupportActionRequest): Promise<SupportAction> {
+		return this.client.call<SupportAction>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/support_cases/*', 'parent')}/support_actions`,
+			query: { support_action_id: request.supportActionId, request_id: request.requestId, validate_only: request.validateOnly, expected_version: request.expectedVersion },
+			body: request.supportAction ?? {},
+			bodyType: 'sylphx.notify.v1.SupportAction',
+			responseType: 'sylphx.notify.v1.SupportAction',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Claims one fenced attempt of a conclusively dispatchable action. An expired in-flight claim becomes UNCERTAIN, never PENDING.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*\/support_actions/*}:beginSupportActionAttempt` · permission `notify:support:dispatch` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async beginSupportActionAttempt(request: BeginSupportActionAttemptRequest): Promise<BeginSupportActionAttemptResponse> {
+		return this.client.call<BeginSupportActionAttemptResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*/support_actions/*', 'name')}:beginSupportActionAttempt`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.BeginSupportActionAttemptRequest',
+			responseType: 'sylphx.notify.v1.BeginSupportActionAttemptResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Records an authenticated immutable authority receipt. Transport state changes alone never change a case or business action.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*\/support_actions/*}:recordSupportActionReceipt` · permission `notify:support:receipts` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async recordSupportActionReceipt(request: RecordSupportActionReceiptRequest): Promise<SupportAction> {
+		return this.client.call<SupportAction>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*/support_actions/*', 'name')}:recordSupportActionReceipt`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.RecordSupportActionReceiptRequest',
+			responseType: 'sylphx.notify.v1.SupportAction',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Queries the original authority/key first; UNKNOWN remains UNCERTAIN. Only a verified NOT_APPLIED query receipt for the current attempt and uncertainty episode permits another attempt of the same action/key.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*\/support_actions/*}:reconcile` · permission `notify:support:reconcile` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async reconcile(request: ReconcileSupportActionRequest): Promise<SupportAction> {
+		return this.client.call<SupportAction>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*/support_actions/*', 'name')}:reconcile`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.notify.v1.ReconcileSupportActionRequest',
+			responseType: 'sylphx.notify.v1.SupportAction',
+			mutation: true,
+		})
+	}
+}
+
+/** `support_audit_events` of Sylphx Notify: Resource type `notify.sylphx.com/SupportAuditEvent`. */
+export class SupportAuditEventsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one SupportAuditEvent; protected identities require a separately audited reveal.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/support_cases/*\/support_audit_events/*}` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async get(request: GetSupportAuditEventRequest): Promise<SupportAuditEvent> {
+		return this.client.call<SupportAuditEvent>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_cases/*/support_audit_events/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SupportAuditEvent',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists scoped support_audit_events; no cross-tenant or internal-message projection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/support_cases/*}/support_audit_events` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async list(request: ListSupportAuditEventsRequest): Promise<ListSupportAuditEventsResponse> {
+		return this.client.call<ListSupportAuditEventsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/support_cases/*', 'parent')}/support_audit_events`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListSupportAuditEventsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSupportAuditEventsRequest): AsyncGenerator<SupportAuditEvent> {
+		let next: ListSupportAuditEventsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.supportAuditEvents ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+}
+
+/** `support_reconciliations` of Sylphx Notify: Resource type `notify.sylphx.com/SupportReconciliation`. */
+export class SupportReconciliationsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets one SupportReconciliation; protected identities require a separately audited reveal.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/support_reconciliations/*}` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async get(request: GetSupportReconciliationRequest): Promise<SupportReconciliation> {
+		return this.client.call<SupportReconciliation>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/support_reconciliations/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.SupportReconciliation',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists scoped support_reconciliations; no cross-tenant or internal-message projection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/support_reconciliations` · permission `notify:support:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+	 */
+	async list(request: ListSupportReconciliationsRequest): Promise<ListSupportReconciliationsResponse> {
+		return this.client.call<ListSupportReconciliationsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_reconciliations`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListSupportReconciliationsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListSupportReconciliationsRequest): AsyncGenerator<SupportReconciliation> {
+		let next: ListSupportReconciliationsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.supportReconciliations ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Runs one scoped daily census, dense due pass or migration comparison on demand. Incomplete coverage never proves zero exceptions.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/support_reconciliations:run` · permission `notify:support:reconcile` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async run(request: RunSupportReconciliationRequest): Promise<SupportReconciliation> {
+		return this.client.call<SupportReconciliation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/support_reconciliations:run`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.notify.v1.RunSupportReconciliationRequest',
+			responseType: 'sylphx.notify.v1.SupportReconciliation',
 			mutation: true,
 		})
 	}

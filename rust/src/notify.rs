@@ -47,6 +47,66 @@ pub struct ApplyPhoneNumberRouteRequest {
     pub validate_only: bool,
 }
 
+/// Request for ApplySupportDecision.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ApplySupportDecisionRequest {
+    /// Canonical resource name, checked against the caller grant.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optimistic version precondition; mismatch returns ETAG_MISMATCH.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+    /// Stable UUID for this logical operation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without changing state or contacting an effect provider.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Observed primary state; also checked against authoritative storage.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before: Option<SupportCaseState>,
+    /// Complete new decision; omitting an unresolved track is refused.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<SupportDecision>,
+    /// Spam disposition; only authenticated verdicts clear suppression.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spam: Option<SupportSpamDisposition>,
+    /// Source proof for imported pending customer waits.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "pendingProof"
+    )]
+    pub pending_proof: Option<SupportPendingProof>,
+    /// Immutable signal/decision identity for replay and audit.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceKey"
+    )]
+    pub source_key: String,
+}
+
 /// The request of ArchiveInboxItem.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -56,6 +116,64 @@ pub struct ArchiveInboxItemRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// Request for BeginSupportActionAttempt.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginSupportActionAttemptRequest {
+    /// Canonical resource name, checked against the caller grant.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optimistic version precondition; mismatch returns ETAG_MISMATCH.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+    /// Stable UUID for this logical operation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without changing state or contacting an effect provider.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Fenced dispatch ownership; it is not a delivery receipt.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginSupportActionAttemptResponse {
+    /// Current action and version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action: Option<SupportAction>,
+    /// Unique attempt identity; settlement must match it.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "attemptId"
+    )]
+    pub attempt_id: String,
+    /// Claim expiry; expiry means unknown outcome, never safe retry.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "claimExpireTime"
+    )]
+    pub claim_expire_time: String,
 }
 
 /// A Broadcast sends one template to a segment of recipients, fired by a
@@ -656,6 +774,190 @@ pub struct CreateSmsNumberRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "smsNumber")]
     pub sms_number: Option<SmsNumber>,
+}
+
+/// Request to create a SupportAction.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateSupportActionRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Record to admit; actor and output fields are derived by the service.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "supportAction"
+    )]
+    pub support_action: Option<SupportAction>,
+    /// Optional caller-selected platform ID; legacy IDs stay in source_records.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "supportActionId"
+    )]
+    pub support_action_id: String,
+    /// UUID request identity, stable across transport retries.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without admitting a case, message or effect.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Case aggregate version observed by the caller.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+}
+
+/// Request to create a SupportCase.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateSupportCaseRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Record to admit; actor and output fields are derived by the service.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "supportCase"
+    )]
+    pub support_case: Option<SupportCase>,
+    /// Optional caller-selected platform ID; legacy IDs stay in source_records.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "supportCaseId"
+    )]
+    pub support_case_id: String,
+    /// UUID request identity, stable across transport retries.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without admitting a case, message or effect.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Request to create a SupportInbox.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateSupportInboxRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Record to admit; actor and output fields are derived by the service.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "supportInbox"
+    )]
+    pub support_inbox: Option<SupportInbox>,
+    /// Optional caller-selected platform ID; legacy IDs stay in source_records.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "supportInboxId"
+    )]
+    pub support_inbox_id: String,
+    /// UUID request identity, stable across transport retries.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without admitting a case, message or effect.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Request to create a SupportThreadMessage.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateSupportThreadMessageRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Record to admit; actor and output fields are derived by the service.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "supportThreadMessage"
+    )]
+    pub support_thread_message: Option<SupportThreadMessage>,
+    /// Optional caller-selected platform ID; legacy IDs stay in source_records.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "supportThreadMessageId"
+    )]
+    pub support_thread_message_id: String,
+    /// UUID request identity, stable across transport retries.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without admitting a case, message or effect.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Case aggregate version observed by the caller.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
 }
 
 /// The request of CreateSuppression.
@@ -1514,6 +1816,72 @@ pub struct GetSmsNumberRequest {
     pub name: String,
 }
 
+/// Request to get a SupportAction.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSupportActionRequest {
+    /// Canonical resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request to get a SupportAuditEvent.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSupportAuditEventRequest {
+    /// Canonical resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request to get a SupportCase.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSupportCaseRequest {
+    /// Canonical resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request to get a SupportInbox.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSupportInboxRequest {
+    /// Canonical resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request to get a SupportReconciliation.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSupportReconciliationRequest {
+    /// Canonical resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request to get a SupportThreadMessage.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetSupportThreadMessageRequest {
+    /// Canonical resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetSuppression.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1534,6 +1902,88 @@ pub struct GetTemplateRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// Bounded, auditable history import by the owning service writer.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ImportSupportCasesRequest {
+    /// Authenticated destination environment.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Stable source namespace and migration run identity.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub source: String,
+    /// Original case records and typed projections; at most 500.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "supportCases")]
+    pub support_cases: Vec<SupportCase>,
+    /// Original thread records, including internal messages and erasure tombstones.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub messages: Vec<SupportThreadMessage>,
+    /// Original actions/keys/receipts; ambiguous prior sends remain UNCERTAIN.
+    /// Suppression never blocks inert CANCELLED/SUCCEEDED/UNCERTAIN history;
+    /// import admits no PENDING/IN_FLIGHT action under suppression and sends nothing.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actions: Vec<SupportAction>,
+    /// Original audit records; absent historical versions are not invented.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "auditEvents")]
+    pub audit_events: Vec<SupportAuditEvent>,
+    /// Full source-record hash of this batch; changed replay is refused.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceSha256"
+    )]
+    pub source_sha256: String,
+    /// Stable UUID for this batch.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate and compare without writing.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Losslessness receipt; exceptions keep an incomplete case from authoritative scheduling.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ImportSupportCasesResponse {
+    /// Source namespace echoed for verification.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub source: String,
+    /// Inserted records, counted across every supplied kind.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub imported: i64,
+    /// Exact unchanged replays; no duplicate effect is created.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub replayed: i64,
+    /// Full canonical destination batch hash.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetSha256"
+    )]
+    pub target_sha256: String,
+    /// Every missing classification/proof/source mismatch, not a truncated sample.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exceptions: Vec<SupportReconciliationException>,
 }
 
 /// An Inbound Email is one mail a mailbox holds, received or sent, kept as
@@ -1945,6 +2395,65 @@ pub struct InboxItem {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state: Option<InboxItemState>,
+}
+
+/// Request for IngestSupportSignal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct IngestSupportSignalRequest {
+    /// Canonical resource name, checked against the caller grant.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optimistic version precondition; mismatch returns ETAG_MISMATCH.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+    /// Stable UUID for this logical operation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without changing state or contacting an effect provider.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Typed, verified signal; customer text is evidence, never authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signal: Option<SupportDecisionReason>,
+    /// Immutable source-scoped event identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceKey"
+    )]
+    pub source_key: String,
+    /// Protected evidence references; never plaintext credentials.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<SupportEvidence>,
+    /// Source-reported time used for intake latency verification.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiveTime"
+    )]
+    pub receive_time: String,
 }
 
 /// The request of ListBroadcasts.
@@ -2806,6 +3315,332 @@ pub struct ListSmsNumbersResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "smsNumbers")]
     pub sms_numbers: Vec<SmsNumber>,
     /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request to list support_actions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportActionsRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum rows; default 50, at most 200.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation bound to the same scope and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter; cannot widen caller visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Stable ordering, with resource identity as the final tie-breaker.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// A page of scoped support_actions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportActionsResponse {
+    /// Visible records only.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "supportActions"
+    )]
+    pub support_actions: Vec<SupportAction>,
+    /// Continuation; empty only after the final page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request to list support_audit_events.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportAuditEventsRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum rows; default 50, at most 200.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation bound to the same scope and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter; cannot widen caller visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Stable ordering, with resource identity as the final tie-breaker.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// A page of scoped support_audit_events.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportAuditEventsResponse {
+    /// Visible records only.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "supportAuditEvents"
+    )]
+    pub support_audit_events: Vec<SupportAuditEvent>,
+    /// Continuation; empty only after the final page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request to list support_cases.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportCasesRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum rows; default 50, at most 200.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation bound to the same scope and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter; cannot widen caller visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Stable ordering, with resource identity as the final tie-breaker.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// A page of scoped support_cases.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportCasesResponse {
+    /// Visible records only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "supportCases")]
+    pub support_cases: Vec<SupportCase>,
+    /// Continuation; empty only after the final page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request to list support_inboxes.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportInboxesRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum rows; default 50, at most 200.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation bound to the same scope and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter; cannot widen caller visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Stable ordering, with resource identity as the final tie-breaker.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// A page of scoped support_inboxes.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportInboxesResponse {
+    /// Visible records only.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "supportInboxes"
+    )]
+    pub support_inboxes: Vec<SupportInbox>,
+    /// Continuation; empty only after the final page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request to list support_reconciliations.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportReconciliationsRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum rows; default 50, at most 200.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation bound to the same scope and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter; cannot widen caller visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Stable ordering, with resource identity as the final tie-breaker.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// A page of scoped support_reconciliations.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportReconciliationsResponse {
+    /// Visible records only.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "supportReconciliations"
+    )]
+    pub support_reconciliations: Vec<SupportReconciliation>,
+    /// Continuation; empty only after the final page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request to list support_thread_messages.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportThreadMessagesRequest {
+    /// Authenticated parent scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum rows; default 50, at most 200.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Opaque continuation bound to the same scope and filter.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter; cannot widen caller visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+    /// Stable ordering, with resource identity as the final tie-breaker.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orderBy"
+    )]
+    pub order_by: String,
+}
+
+/// A page of scoped support_thread_messages.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListSupportThreadMessagesResponse {
+    /// Visible records only.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "supportThreadMessages"
+    )]
+    pub support_thread_messages: Vec<SupportThreadMessage>,
+    /// Continuation; empty only after the final page.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4262,6 +5097,90 @@ pub struct Recipient {
     pub test: bool,
 }
 
+/// Request for ReconcileSupportAction.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReconcileSupportActionRequest {
+    /// Canonical resource name, checked against the caller grant.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optimistic version precondition; mismatch returns ETAG_MISMATCH.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+    /// Stable UUID for this logical operation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without changing state or contacting an effect provider.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Request for RecordSupportActionReceipt.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RecordSupportActionReceiptRequest {
+    /// Canonical resource name, checked against the caller grant.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optimistic version precondition; mismatch returns ETAG_MISMATCH.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+    /// Stable UUID for this logical operation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without changing state or contacting an effect provider.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Authenticated envelope bound to the action key and payload hash.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<SupportActionReceipt>,
+    /// Fenced attempt identity returned by BeginSupportActionAttempt; mismatches are refused.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "attemptId"
+    )]
+    pub attempt_id: String,
+}
+
 /// Registers one device without replacing the recipient's other devices.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -4319,6 +5238,64 @@ pub struct RegisterPushDeviceResponse {
         alias = "registrationGeneration"
     )]
     pub registration_generation: i64,
+}
+
+/// Request for RevealSupportRequester.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RevealSupportRequesterRequest {
+    /// Canonical resource name, checked against the caller grant.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optimistic version precondition; mismatch returns ETAG_MISMATCH.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "expectedVersion"
+    )]
+    pub expected_version: i64,
+    /// Stable UUID for this logical operation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Validate without changing state or contacting an effect provider.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+    /// Purpose of accessing unmasked personal data.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+}
+
+/// Protected requester disclosure; never returned in ordinary lists.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RevealSupportRequesterResponse {
+    /// Unmasked source identity, possibly a synthetic channel address.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub identity: String,
+    /// Audit record of this access.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "auditEvent"
+    )]
+    pub audit_event: String,
 }
 
 /// A Route sends the mail a receiving Email Domain accepts for one address, a
@@ -4426,6 +5403,51 @@ pub struct RouteStatus {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conditions: Vec<crate::common::Condition>,
+}
+
+/// On-demand reconciliation; execution is invoked by the existing workflow authority.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RunSupportReconciliationRequest {
+    /// Authenticated environment scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Population/pass type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<SupportReconciliationKind>,
+    /// Queue resource whose full population is covered.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub inbox: String,
+    /// Stable pass identity; repeated invocation resumes the same pass.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestId"
+    )]
+    pub request_id: String,
+    /// Continuation of the same snapshot, not a new empty population.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// Maximum cases per bounded transaction; default 200, at most 500.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Validate scope without running or scheduling the pass.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
 }
 
 /// The request of SendBroadcast.
@@ -4801,6 +5823,1158 @@ pub struct SmsSender {
     /// CLDR region codes the origin is registered for.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "regionCodes")]
     pub region_codes: Vec<String>,
+}
+
+/// SupportAction is the case's business intent ledger, NOT an email outbox or
+/// notify_deliveries row. Transport changes never mutate this record implicitly.
+/// Stable keys and payload hashes survive all attempts, uncertain outcomes and
+/// migration. Exactly-once visible results require duplicate-safe transport AND
+/// authoritative provider/tenant reconciliation, not exactly-once HTTP delivery.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportAction {
+    /// Canonical action name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Strong ETag and creation/update times.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Exact stable caller/source key; never replaced on retry or cutover.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "idempotencyKey"
+    )]
+    pub idempotency_key: String,
+    /// SHA-256 of immutable admitted intent bytes; changed-key reuse is refused.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payloadSha256"
+    )]
+    pub payload_sha256: String,
+    /// Related action/issue track in the same case.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "trackId"
+    )]
+    pub track_id: String,
+    /// Business state, independently versioned from the transport.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<SupportActionState>,
+    /// Optimistic concurrency version of the business action.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub version: i64,
+    /// Authenticated creator or admitting workload.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor: Option<SupportActor>,
+    /// Reply using an existing channel authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply: Option<SupportChannelReply>,
+    /// Request the tenant's own remedy API; Support never writes product data.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remedy: Option<SupportRemedyRequest>,
+    /// Notify an accountable reviewer through an existing API.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escalation: Option<SupportEscalation>,
+    /// Latest authoritative receipt; dispatch/admission alone is not completion.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<SupportActionReceipt>,
+    /// Cause and unknown effect are separate facts.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "failureCause"
+    )]
+    pub failure_cause: String,
+    /// Next permitted reconciliation/query time; UNKNOWN never means resend.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "reconcileTime"
+    )]
+    pub reconcile_time: String,
+    /// Source outbox ID/key/payload/leases/attempts retained as protected evidence.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sourceRecords"
+    )]
+    pub source_records: Vec<SupportSourceRecord>,
+    /// Current dispatch attempt number; advances only on a new fenced claim.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "attemptCount"
+    )]
+    pub attempt_count: i32,
+    /// Storage-owned monotonic generation, incremented on each entry to UNCERTAIN.
+    /// A reconciliation receipt must resolve this exact episode and attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "uncertaintyEpisode"
+    )]
+    pub uncertainty_episode: i64,
+}
+
+/// SupportActionReceipt is an immutable observation, linked to an authority's
+/// own receipt. A receipt envelope is verified before storage; strings supplied
+/// by a model/customer do not establish delivery, authorization or absence.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportActionReceipt {
+    /// Stable source receipt identity; conflicting replay is refused.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// Public authority that executed or queried the effect.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub authority: String,
+    /// Public receipt resource, not a foreign database row or signed credential URL.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub resource: String,
+    /// The action's unchanged stable key.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "idempotencyKey"
+    )]
+    pub idempotency_key: String,
+    /// Binds the receipt to the exact immutable action payload.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payloadSha256"
+    )]
+    pub payload_sha256: String,
+    /// Confirmed applied, confirmed absent, unknown or rejected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome: Option<SupportEffectOutcome>,
+    /// Provider delivery/message ID or tenant remedy receipt identity.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "externalEffectId"
+    )]
+    pub external_effect_id: String,
+    /// Authoritative observation time.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "observeTime"
+    )]
+    pub observe_time: String,
+    /// True only for a query-first reconciliation observation, not initial dispatch.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reconciliation: bool,
+    /// Original envelope/evidence supporting verification.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<SupportEvidence>,
+    /// Exact attempt observed, including zero for imported never-claimed uncertainty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "attemptNo"
+    )]
+    pub attempt_no: i32,
+    /// Exact uncertainty episode queried; zero for a non-reconciliation receipt.
+    /// A new episode always requires a new authenticated query and receipt.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "uncertaintyEpisode"
+    )]
+    pub uncertainty_episode: i64,
+}
+
+/// SupportActor is derived from the authenticated caller or verified ingress.
+/// Claimed customer text can never select the actor, decider or delegated grant.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportActor {
+    /// Acting Access principal or authenticated external source identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub principal: String,
+    /// Delegating principal, when the grant records one.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "delegatedFor"
+    )]
+    pub delegated_for: String,
+    /// Public source authority for a workload or channel event.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub authority: String,
+}
+
+/// SupportAuditEvent journals a typed state transition or scheduling exception.
+/// It is append-only apart from authorized personal-data erasure of evidence;
+/// actor, before/after, versions and source identities are never fabricated.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportAuditEvent {
+    /// Canonical audit name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Committed timestamps.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Verified actor/decider for this event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor: Option<SupportActor>,
+    /// Previous complete primary decision, including tracks and deadlines.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before: Option<SupportDecision>,
+    /// New complete primary decision.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<SupportDecision>,
+    /// Previous aggregate version, checked before applying the event.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "beforeVersion"
+    )]
+    pub before_version: i64,
+    /// New aggregate version; exactly before_version + 1 for a transition.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub version: i64,
+    /// Source event key; repeated delivery cannot create another transition.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceKey"
+    )]
+    pub source_key: String,
+    /// Typed overdue fact, when this is a due-scan event instead of a transition.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overdue: Option<SupportOverdue>,
+    /// Protected original historical event, when importing old audit without versions.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sourceRecords"
+    )]
+    pub source_records: Vec<SupportSourceRecord>,
+}
+
+/// A SupportCase has one primary state and independently linked issue/action
+/// tracks. The case aggregate version serializes decisions across all tracks.
+/// No API or resource name contains a deployment, database or provider address.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportCase {
+    /// The canonical resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable platform identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Strong ETag and common metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The queue owning this case.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub inbox: String,
+    /// Original customer-visible case number, including legacy CS numbers.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayNumber"
+    )]
+    pub display_number: String,
+    /// Case subject; untrusted customer content.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub subject: String,
+    /// Masked case-scoped requester snapshot; Knowledge owns mutable contacts.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requester: Option<SupportRequester>,
+    /// Tenant product/account reference. It conveys no verified account ownership.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tenantSubject"
+    )]
+    pub tenant_subject: String,
+    /// Current primary decision, including the required owner and next action.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decision: Option<SupportDecision>,
+    /// Aggregate version; every accepted decision increments it exactly once.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub version: i64,
+    /// First source-reported received time, preserved through import.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiveTime"
+    )]
+    pub receive_time: String,
+    /// Most recent committed intake time; compared with the inbox intake bound.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "intakeTime"
+    )]
+    pub intake_time: String,
+    /// Exact source identities and protected full-record evidence references.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sourceRecords"
+    )]
+    pub source_records: Vec<SupportSourceRecord>,
+    /// Raw source state/priority/category are preserved rather than collapsed.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceState"
+    )]
+    pub source_state: String,
+    /// Case-level priority is separate from state and issue classification.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub priority: String,
+    /// Last inbound activity, if known.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastInboundTime"
+    )]
+    pub last_inbound_time: String,
+    /// Last confirmed outbound activity, if known.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastOutboundTime"
+    )]
+    pub last_outbound_time: String,
+    /// Last activity, including internal notes.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastActivityTime"
+    )]
+    pub last_activity_time: String,
+    /// Original resolution time, if known; FINAL_NO_REPLY is still ingestible.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "resolveTime"
+    )]
+    pub resolve_time: String,
+    /// Source evidence, including admission-refused/automated records when linked.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<SupportEvidence>,
+    /// Spam suppression survives incoming evidence/payment/notices until a verdict.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spam: Option<SupportSpamDisposition>,
+    /// Required migration proof before legacy pending may mean WAITING_CUSTOMER.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "pendingProof"
+    )]
+    pub pending_proof: Option<SupportPendingProof>,
+}
+
+/// A SupportChannel retains the configuration from an inbox's channel link.
+/// Provider credentials, provider conversations and delivery execution remain
+/// with the channel authority. No inbound event may have two business custodians.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportChannel {
+    /// Stable channel-link identity within the inbox.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// Immutable source identity of this configuration record.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Human-readable channel label.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// Public transport resource or authenticated ingress endpoint.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub transport: String,
+    /// Exact canonical origins; an empty list never means wildcard browser access.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "allowedOrigins"
+    )]
+    pub allowed_origins: Vec<String>,
+    /// Whether platform-issued anonymous sessions may enter this browser channel.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "anonymousAllowed"
+    )]
+    pub anonymous_allowed: bool,
+    /// Whether new intake is admitted; disabling never drops accepted events.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub enabled: bool,
+    /// Source metadata, not an authorization mechanism.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub labels: std::collections::BTreeMap<String, String>,
+    /// Unindexed source annotations.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub annotations: std::collections::BTreeMap<String, String>,
+    /// Configuration revision, independent of case and delivery versions.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub version: i64,
+    /// Original creation time.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// Last configuration change.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateTime"
+    )]
+    pub update_time: String,
+    /// Channel class: browser, email, social or product; credentials stay external.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub kind: String,
+}
+
+/// SupportChannelReply names an existing transport. No provider key is exposed.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportChannelReply {
+    /// Permissioned channel resource; deployment and provider host are irrelevant.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub transport: String,
+    /// Channel-scoped recipient/conversation identity, not verified tenant identity.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub recipient: String,
+    /// Public reply body; legal/permission checks precede action admission.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub body: String,
+    /// Threading subject, when the channel has one.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub subject: String,
+    /// Exact original local message identity and provider ancestry.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "localMessageId"
+    )]
+    pub local_message_id: String,
+    /// Nearest parent provider message identity.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "inReplyTo"
+    )]
+    pub in_reply_to: String,
+    /// Original ancestry in order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub references: Vec<String>,
+}
+
+/// SupportDeadline retains the external or internal obligation independently of
+/// follow-up scheduling. An empty case deadline list does not clear next_action_at.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportDeadline {
+    /// Immutable obligation identity within the case.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// Legal, platform, contract or internal obligation.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<SupportDeadlineKind>,
+    /// Applicable jurisdiction, or an explicit internal/platform scope.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub jurisdiction: String,
+    /// Exact rule, law, platform term or contract establishing the deadline.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub basis: String,
+    /// Absolute computed deadline; never extended by transport retry.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dueTime"
+    )]
+    pub due_time: String,
+    /// Related issue/action track; empty for a case-wide obligation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "trackId"
+    )]
+    pub track_id: String,
+}
+
+/// A SupportDecision is a tenant-policy classification receipt. Applying it
+/// verifies permissions, expected version and evidence, then commits audit and
+/// action admission atomically. ACT_NOW never bypasses legal or permission checks.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportDecision {
+    /// Exactly one primary state.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<SupportCaseState>,
+    /// Accountable Access principal; required even while waiting or final.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub owner: String,
+    /// Typed cause of this decision or reopen.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<SupportDecisionReason>,
+    /// Customer-safe explanation; no credentials or unrestricted product records.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub explanation: String,
+    /// Required for every state, including FINAL_NO_REPLY. Never a delivery retry.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextActionAt"
+    )]
+    pub next_action_at: String,
+    /// May be empty when no hard deadline applies; each entry keeps its basis.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deadlines: Vec<SupportDeadline>,
+    /// Independent linked issues and actions; mixed cases cannot drop an issue.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tracks: Vec<SupportTrack>,
+    /// Required triggers. On spam they request reclassification review only;
+    /// no customer-facing reopen or outbound action occurs before a clearing verdict.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "reopenTriggers"
+    )]
+    pub reopen_triggers: Vec<SupportReopenTrigger>,
+    /// Immutable tenant-policy API resource and version that produced the decision.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "policyVersion"
+    )]
+    pub policy_version: String,
+    /// IANA tenant time zone used for business-hours/deadline arithmetic.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "timeZone"
+    )]
+    pub time_zone: String,
+    /// Nonnegative settlement buffer used in that calculation.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "settlementBuffer"
+    )]
+    pub settlement_buffer: String,
+    /// Evidence IDs used by the decider, never evidence invented by a model.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "evidenceIds")]
+    pub evidence_ids: Vec<String>,
+}
+
+/// SupportEscalation names a reviewer and an existing notification operation.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportEscalation {
+    /// Accountable principal or reviewer group.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reviewer: String,
+    /// Permissioned destination API resource.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub destination: String,
+    /// Review brief; internal, never a customer message.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub brief: String,
+}
+
+/// SupportEvidence identifies protected source evidence. Raw email belongs to
+/// its existing transport authority; a reference is not another message store.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportEvidence {
+    /// Stable evidence identity in the tenant environment.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// Authenticated source, not a caller-selected trust claim.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub authority: String,
+    /// Permissioned public API resource containing the bytes; never a credential URL.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub resource: String,
+    /// SHA-256 of the original evidence bytes, lowercase hexadecimal.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
+    /// Registered media type of the original bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "mediaType"
+    )]
+    pub media_type: String,
+    /// Exact byte length, not the number of Unicode characters.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "sizeBytes"
+    )]
+    pub size_bytes: i64,
+    /// Source-reported received time.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "receiveTime"
+    )]
+    pub receive_time: String,
+    /// Erasure keeps identity/hash/dedupe tombstones, never resurrects source content.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub erased: bool,
+}
+
+/// A SupportInbox is a tenant's case queue. It grants no identity or transport
+/// authority. Access roles grant SupportService permissions on an org, project
+/// or resource. Every storage query also binds org, project, environment and cell.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportInbox {
+    /// The canonical resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable platform identity; never substitutes for a source case ID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Labels, annotations, display name, timestamps and strong ETag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Supported BCP 47 locales; the language is still decided per message.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub locales: Vec<String>,
+    /// Verified links to existing transport resources, not transport credentials.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub channels: Vec<SupportChannel>,
+    /// Tenant-policy API resource; rule tables and remedy budgets remain there.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub policy: String,
+    /// Maximum allowed delay from a received event to committed case intake.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "intakeBound"
+    )]
+    pub intake_bound: String,
+}
+
+/// SupportOverdue makes every missed case/track action or obligation explicit.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportOverdue {
+    /// next_action, track_next_action or deadline; exact target ID accompanies it.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub kind: String,
+    /// Deadline/track identity, or empty for the primary next action.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "targetId"
+    )]
+    pub target_id: String,
+    /// Time that was missed, never silently advanced by the scan.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dueTime"
+    )]
+    pub due_time: String,
+    /// When the miss was detected.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "detectTime"
+    )]
+    pub detect_time: String,
+}
+
+/// SupportReconciliation proves a complete scoped pass or lists its uncertainty.
+/// Workflows invokes FULL_DAILY and deadline-aligned DUE_SCAN on demand; no
+/// Support-specific timer, poll loop or retained warm instance is introduced.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportReconciliation {
+    /// Canonical report name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Publication timestamps.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Full daily population or earliest-deadline-aligned due population.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<SupportReconciliationKind>,
+    /// Exact queue/scope covered; never a cross-tenant scan bypass.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub inbox: String,
+    /// Verified principal/workload that requested the pass.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor: Option<SupportActor>,
+    /// Snapshot/read time and source watermark used to establish coverage.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "snapshotTime"
+    )]
+    pub snapshot_time: String,
+    /// Authoritative source cursor or snapshot token, not a secret.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceWatermark"
+    )]
+    pub source_watermark: String,
+    /// True only when every page in the declared population was checked.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub complete: bool,
+    /// Number of cases checked; zero proves nothing without complete coverage.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "checkedCases"
+    )]
+    pub checked_cases: i64,
+    /// Cases without an accountable owner.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub unowned: i64,
+    /// Cases without a required next action.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub unscheduled: i64,
+    /// Unhandled due obligations or next actions.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub overdue: i64,
+    /// Every exception is retained, not only a count or a truncated sample.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exceptions: Vec<SupportReconciliationException>,
+    /// Next on-demand scan, no later than the earliest unhandled obligation/action.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextScanTime"
+    )]
+    pub next_scan_time: String,
+    /// Full canonical population hash for migration/read-compare, when applicable.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "populationSha256"
+    )]
+    pub population_sha256: String,
+}
+
+/// SupportReconciliationException records the exact affected resource and reason.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportReconciliationException {
+    /// Affected case/action/source resource, scoped by the authenticated query.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub resource: String,
+    /// unowned, unscheduled, overdue, uncertain_action, intake_late or source_mismatch.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub kind: String,
+    /// Actionable explanation with no unrestricted customer content.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
+    /// Earliest related missed action or obligation, when applicable.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dueTime"
+    )]
+    pub due_time: String,
+}
+
+/// SupportRemedyRequest is a command for the tenant API, never a direct DB write.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportRemedyRequest {
+    /// Published tenant operation resource or API endpoint, under the caller grant.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub operation: String,
+    /// Content-addressed, permissioned request evidence; contains no credentials.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request: Option<SupportEvidence>,
+    /// Tenant authorization/verification receipt binding exact remedy arguments.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizationReceipt"
+    )]
+    pub authorization_receipt: String,
+}
+
+/// SupportRequester is a case snapshot, never a second customer master or a
+/// verified identity inferred from From. Reveal requires a separately audited RPC.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportRequester {
+    /// Permission-scoped Knowledge contact resource, when available.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub contact: String,
+    /// Masked contact address or channel identity for ordinary case reads.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maskedIdentity"
+    )]
+    pub masked_identity: String,
+    /// Source display name; treated as personal data.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "displayName"
+    )]
+    pub display_name: String,
+    /// none, suggested, confirmed or cleared; an unconfirmed link grants nothing.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "linkState"
+    )]
+    pub link_state: String,
+    /// Tenant-owned subject mapping, not a Support-issued user identity.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tenantSubject"
+    )]
+    pub tenant_subject: String,
+    /// Who verified or cleared the link, if known.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "linkActor")]
+    pub link_actor: Option<SupportActor>,
+    /// When the source link was verified or cleared, if known.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "linkTime"
+    )]
+    pub link_time: String,
+    /// Original requester identity and source record, including tombstones.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sourceRecords"
+    )]
+    pub source_records: Vec<SupportSourceRecord>,
+}
+
+/// SupportSourceRecord preserves exact legacy IDs and complete protected source
+/// records, including nullable fields. Backfill compares counts and full hashes;
+/// it never reuses a historical source version as a new concurrency version.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportSourceRecord {
+    /// Stable source namespace, retained across retries and migration phases.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub source: String,
+    /// Original relation or event kind.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceTable"
+    )]
+    pub source_table: String,
+    /// Unchanged source primary key, including numeric case/message/outbox IDs.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceId"
+    )]
+    pub source_id: String,
+    /// Evidence holding the full canonical source record, not a lossy projection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<SupportEvidence>,
+    /// Original source version, if present; zero means absent, not fabricated.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "sourceVersion"
+    )]
+    pub source_version: i64,
+}
+
+/// SupportThreadMessage is the sole normalized case-thread record. Transport
+/// buffers, provider indexes and agent context are not independent case history.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportThreadMessage {
+    /// Canonical thread message name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Immutable identity.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Timestamps and metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Immutable source-scoped event identity; changed replays are refused.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceKey"
+    )]
+    pub source_key: String,
+    /// Explicit audience; internal notes never enter the customer timeline.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visibility: Option<SupportMessageVisibility>,
+    /// Verified author; never inferred from a claimed From address.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<SupportActor>,
+    /// Text body or evidence projection; untrusted personal content.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub body: String,
+    /// Source evidence, including explicitly untrusted HTML and attachments.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<SupportEvidence>,
+    /// Existing channel-link ID, not a credential.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "channelId"
+    )]
+    pub channel_id: String,
+    /// Original provider message identity and ancestry.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "threadKeys")]
+    pub thread_keys: Vec<String>,
+    /// Related business action, never a notification delivery state alias.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub action: String,
+    /// Tombstone; source keys/ancestry survive authorized erasure.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub erased: bool,
+    /// Original IDs/records for lossless migration.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "sourceRecords"
+    )]
+    pub source_records: Vec<SupportSourceRecord>,
+    /// Source direction: inbound, outbound or internal; independent of visibility.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub direction: String,
+}
+
+/// SupportTrack is an independently scheduled issue or action linked to a case.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SupportTrack {
+    /// Immutable identity within the case.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// ISSUE or ACTION; never a competing case/thread identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<SupportTrackKind>,
+    /// Tenant's issue category, for example payment, privacy or technical.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub category: String,
+    /// Independent track state; primary state cannot hide outstanding tracks.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<SupportCaseState>,
+    /// Accountable principal for this track.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub owner: String,
+    /// Required follow-up for this track.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextActionAt"
+    )]
+    pub next_action_at: String,
+    /// Other track IDs in the same case; no cross-tenant links.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "linkedTrackIds"
+    )]
+    pub linked_track_ids: Vec<String>,
+    /// Action resource associated with an action track, when admitted.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub action: String,
+    /// Evidence IDs relevant to this issue, not all case personal data.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "evidenceIds")]
+    pub evidence_ids: Vec<String>,
+    /// Classification reason for this track.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub reason: String,
 }
 
 /// A Suppression stops delivery to one address on one channel. Bounces,
@@ -5258,6 +7432,37 @@ pub struct UpdateSenderRequest {
     )]
     pub allow_missing: bool,
     /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Conditional inbox configuration change.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateSupportInboxRequest {
+    /// Inbox with the current meta.etag.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "supportInbox"
+    )]
+    pub support_inbox: Option<SupportInbox>,
+    /// Explicit fields to change; no case or transport state.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+    /// Validate without changing configuration.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -6282,6 +8487,684 @@ impl crate::runtime::QueryValue for RouteSpamPolicy {
     }
 }
 
+/// SupportActionState separates business completion from transport acceptance.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportActionState {
+    /// Admitted but conclusively not dispatched, or confirmed absent after query.
+    Pending,
+    /// An attempt owns dispatch; its expiry does not prove non-delivery.
+    InFlight,
+    /// The peer may have applied it. Query with the original key; never blindly resend.
+    Uncertain,
+    /// Authoritative receipt proves the requested customer-visible outcome.
+    Succeeded,
+    /// Authoritative terminal refusal; keep any receipt and uncertainty provenance.
+    Failed,
+    /// Proven undispatched intent was cancelled; in-flight effects cannot be erased.
+    Cancelled,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportActionState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Pending => "pending",
+            Self::InFlight => "in_flight",
+            Self::Uncertain => "uncertain",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "pending" => Self::Pending,
+            "in_flight" => Self::InFlight,
+            "uncertain" => Self::Uncertain,
+            "succeeded" => Self::Succeeded,
+            "failed" => Self::Failed,
+            "cancelled" => Self::Cancelled,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportActionState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportActionState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportActionState {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportCaseState is the one primary operational state, not ownership,
+/// transport delivery state, an agent turn or a replacement for linked tracks.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportCaseState {
+    /// Verify and triage immediately. This grants no refund or disclosure right.
+    ActNow,
+    /// A specific future action is scheduled; next_action_at remains required.
+    Scheduled,
+    /// Awaiting customer input; follow-up and inbound intake remain active.
+    WaitingCustomer,
+    /// Awaiting an accountable review, not an unowned holding bucket.
+    WaitingReview,
+    /// No reply is currently owed. Intake and mandatory reopen triggers stay active.
+    FinalNoReply,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportCaseState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::ActNow => "act_now",
+            Self::Scheduled => "scheduled",
+            Self::WaitingCustomer => "waiting_customer",
+            Self::WaitingReview => "waiting_review",
+            Self::FinalNoReply => "final_no_reply",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "act_now" => Self::ActNow,
+            "scheduled" => Self::Scheduled,
+            "waiting_customer" => Self::WaitingCustomer,
+            "waiting_review" => Self::WaitingReview,
+            "final_no_reply" => Self::FinalNoReply,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportCaseState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportCaseState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportCaseState {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportDeadlineKind names the authority establishing an obligation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportDeadlineKind {
+    /// Statutory or regulatory deadline.
+    Legal,
+    /// Channel/store/platform terms.
+    Platform,
+    /// Customer contract.
+    Contract,
+    /// Tenant's internal service target.
+    Internal,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportDeadlineKind {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Legal => "legal",
+            Self::Platform => "platform",
+            Self::Contract => "contract",
+            Self::Internal => "internal",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "legal" => Self::Legal,
+            "platform" => Self::Platform,
+            "contract" => Self::Contract,
+            "internal" => Self::Internal,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportDeadlineKind {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportDeadlineKind {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportDeadlineKind {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportDecisionReason distinguishes a fresh classification from a reopen.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportDecisionReason {
+    /// An authenticated tenant policy classified the evidence.
+    Policy,
+    /// A permitted person deliberately changed the decision.
+    Operator,
+    /// New customer evidence automatically reopened the case.
+    NewEvidence,
+    /// A newly verified payment automatically reopened the case.
+    NewPayment,
+    /// A formal legal notice automatically reopened the case.
+    LegalNotice,
+    /// A formal regulatory notice automatically reopened the case.
+    RegulatoryNotice,
+    /// The scheduled next action or a hard deadline became due.
+    Due,
+    /// An auditable migration classification, not fabricated historical provenance.
+    Migration,
+    /// New signal on suppressed spam; wake review without reopening or replying.
+    SpamReclassification,
+    /// Authorized not_spam verdict permits a customer-facing reopen.
+    NotSpam,
+    /// Confirmed real customer permits a customer-facing reopen.
+    ConfirmedCustomer,
+    /// Formal institutional notice wakes review; never independently sends/reopens spam.
+    InstitutionalNotice,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportDecisionReason {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Policy => "policy",
+            Self::Operator => "operator",
+            Self::NewEvidence => "new_evidence",
+            Self::NewPayment => "new_payment",
+            Self::LegalNotice => "legal_notice",
+            Self::RegulatoryNotice => "regulatory_notice",
+            Self::Due => "due",
+            Self::Migration => "migration",
+            Self::SpamReclassification => "spam_reclassification",
+            Self::NotSpam => "not_spam",
+            Self::ConfirmedCustomer => "confirmed_customer",
+            Self::InstitutionalNotice => "institutional_notice",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "policy" => Self::Policy,
+            "operator" => Self::Operator,
+            "new_evidence" => Self::NewEvidence,
+            "new_payment" => Self::NewPayment,
+            "legal_notice" => Self::LegalNotice,
+            "regulatory_notice" => Self::RegulatoryNotice,
+            "due" => Self::Due,
+            "migration" => Self::Migration,
+            "spam_reclassification" => Self::SpamReclassification,
+            "not_spam" => Self::NotSpam,
+            "confirmed_customer" => Self::ConfirmedCustomer,
+            "institutional_notice" => Self::InstitutionalNotice,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportDecisionReason {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportDecisionReason {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportDecisionReason {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportEffectOutcome distinguishes unknown from confirmed no-effect. Only an
+/// authenticated query receipt proving NOT_APPLIED can release UNCERTAIN to a
+/// new attempt of the SAME action/key. The receipt must bind the current attempt
+/// AND uncertainty episode; a prior episode's absence proof is never reusable.
+/// UNKNOWN remains scheduled for query/review.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportEffectOutcome {
+    /// Authoritative proof that the intended effect occurred.
+    Applied,
+    /// Authoritative provider/tenant query proves the effect did not occur.
+    NotApplied,
+    /// The query or lost response cannot establish whether the effect occurred.
+    UnknownValue,
+    /// Authoritative refusal before any effect.
+    Rejected,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportEffectOutcome {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Applied => "applied",
+            Self::NotApplied => "not_applied",
+            Self::UnknownValue => "unknown",
+            Self::Rejected => "rejected",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "applied" => Self::Applied,
+            "not_applied" => Self::NotApplied,
+            "unknown" => Self::UnknownValue,
+            "rejected" => Self::Rejected,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportEffectOutcome {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportEffectOutcome {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportEffectOutcome {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportMessageVisibility is a hard customer-projection boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportMessageVisibility {
+    /// Customer-visible message.
+    Public,
+    /// Private note, diagnostics or operator-only fact.
+    Internal,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportMessageVisibility {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Public => "public",
+            Self::Internal => "internal",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "public" => Self::Public,
+            "internal" => Self::Internal,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportMessageVisibility {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportMessageVisibility {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportMessageVisibility {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportPendingProof records why legacy pending is genuinely a customer wait.
+/// Without one of these source facts, policy must choose WAITING_REVIEW or SCHEDULED.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportPendingProof {
+    /// Last outbound message explicitly requests customer input.
+    LastOutbound,
+    /// Last staff action explicitly records a customer wait.
+    StaffAction,
+    /// Source history establishes that customer input is outstanding.
+    SourceHistory,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportPendingProof {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::LastOutbound => "last_outbound",
+            Self::StaffAction => "staff_action",
+            Self::SourceHistory => "source_history",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "last_outbound" => Self::LastOutbound,
+            "staff_action" => Self::StaffAction,
+            "source_history" => Self::SourceHistory,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportPendingProof {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportPendingProof {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportPendingProof {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportReconciliationKind chooses a scope, not another execution engine.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportReconciliationKind {
+    /// Complete daily census of every scoped case, including final/waiting cases.
+    FullDaily,
+    /// Dense scan aligned to the earliest deadline, track or primary next action.
+    DueScan,
+    /// Lossless source/target population comparison before a fenced migration step.
+    MigrationCompare,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportReconciliationKind {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::FullDaily => "full_daily",
+            Self::DueScan => "due_scan",
+            Self::MigrationCompare => "migration_compare",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "full_daily" => Self::FullDaily,
+            "due_scan" => Self::DueScan,
+            "migration_compare" => Self::MigrationCompare,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportReconciliationKind {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportReconciliationKind {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportReconciliationKind {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportReopenTrigger applies even in FINAL_NO_REPLY. On suppressed spam it
+/// starts reclassification review only; a verified not_spam/real-customer verdict
+/// must precede reopen. Duplicated events/echoes are never new activity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportReopenTrigger {
+    /// New customer evidence.
+    NewEvidence,
+    /// New verified payment.
+    NewPayment,
+    /// Formal legal notice.
+    LegalNotice,
+    /// Formal regulatory notice.
+    RegulatoryNotice,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportReopenTrigger {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::NewEvidence => "new_evidence",
+            Self::NewPayment => "new_payment",
+            Self::LegalNotice => "legal_notice",
+            Self::RegulatoryNotice => "regulatory_notice",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "new_evidence" => Self::NewEvidence,
+            "new_payment" => Self::NewPayment,
+            "legal_notice" => Self::LegalNotice,
+            "regulatory_notice" => Self::RegulatoryNotice,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportReopenTrigger {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportReopenTrigger {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportReopenTrigger {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportSpamDisposition is independent from primary state. SUPPRESSED and
+/// REVIEW_REQUIRED both keep FINAL_NO_REPLY and forbid outbound action admission.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportSpamDisposition {
+    /// Source/policy spam suppression is active.
+    Suppressed,
+    /// A signal requires review; suppression is still active.
+    ReviewRequired,
+    /// A verified not_spam verdict cleared suppression.
+    NotSpam,
+    /// A verified real-customer determination cleared suppression.
+    ConfirmedCustomer,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportSpamDisposition {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Suppressed => "suppressed",
+            Self::ReviewRequired => "review_required",
+            Self::NotSpam => "not_spam",
+            Self::ConfirmedCustomer => "confirmed_customer",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "suppressed" => Self::Suppressed,
+            "review_required" => Self::ReviewRequired,
+            "not_spam" => Self::NotSpam,
+            "confirmed_customer" => Self::ConfirmedCustomer,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportSpamDisposition {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportSpamDisposition {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportSpamDisposition {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// SupportTrackKind separates a reported issue from a requested durable action.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SupportTrackKind {
+    /// A customer issue requiring its own disposition.
+    Issue,
+    /// A durable reply, remedy request or escalation.
+    Action,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl SupportTrackKind {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Issue => "issue",
+            Self::Action => "action",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "issue" => Self::Issue,
+            "action" => Self::Action,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for SupportTrackKind {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SupportTrackKind {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for SupportTrackKind {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// Why an address is suppressed.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -6495,6 +9378,48 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
     /// The `inbound_messages` collection.
     pub fn inbound_messages(&self) -> InboundMessagesCollection<'a, T> {
         InboundMessagesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `support_inboxes` collection.
+    pub fn support_inboxes(&self) -> SupportInboxesCollection<'a, T> {
+        SupportInboxesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `support_cases` collection.
+    pub fn support_cases(&self) -> SupportCasesCollection<'a, T> {
+        SupportCasesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `support_thread_messages` collection.
+    pub fn support_thread_messages(&self) -> SupportThreadMessagesCollection<'a, T> {
+        SupportThreadMessagesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `support_actions` collection.
+    pub fn support_actions(&self) -> SupportActionsCollection<'a, T> {
+        SupportActionsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `support_audit_events` collection.
+    pub fn support_audit_events(&self) -> SupportAuditEventsCollection<'a, T> {
+        SupportAuditEventsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `support_reconciliations` collection.
+    pub fn support_reconciliations(&self) -> SupportReconciliationsCollection<'a, T> {
+        SupportReconciliationsCollection {
             client: self.client,
         }
     }
@@ -9696,6 +12621,913 @@ impl<'a, T: crate::runtime::Transport> InboundMessagesCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `support_inboxes` of Sylphx Notify: Resource type `notify.sylphx.com/SupportInbox`.
+pub struct SupportInboxesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SupportInboxesCollection<'a, T> {
+    /// Gets one SupportInbox; protected identities require a separately audited reveal.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/support_inboxes/*}` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn get(
+        &self,
+        request: GetSupportInboxRequest,
+    ) -> Result<SupportInbox, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_inboxes/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists scoped support_inboxes; no cross-tenant or internal-message projection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/support_inboxes` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn list(
+        &self,
+        request: ListSupportInboxesRequest,
+    ) -> Result<ListSupportInboxesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_inboxes",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSupportInboxesRequest,
+    ) -> Result<Vec<SupportInbox>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.support_inboxes);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates an idempotent SupportInbox; changed replay and illegal state are refused.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/support_inboxes` · permission `notify:support:configure` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateSupportInboxRequest,
+    ) -> Result<SupportInbox, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_inboxes",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("support_inbox_id", &request.support_inbox_id);
+        query.push("request_id", &request.request_id);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.support_inbox)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Updates configuration with a strong ETag; intake never creates a missing inbox.
+    ///
+    /// `PATCH /v1/{support_inbox.name=orgs/*/projects/*/envs/*/support_inboxes/*}` · permission `notify:support:configure` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateSupportInboxRequest,
+    ) -> Result<SupportInbox, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .support_inbox
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/support_inboxes/*",
+                "support_inbox.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.support_inbox)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `support_cases` of Sylphx Notify: Resource type `notify.sylphx.com/SupportCase`.
+pub struct SupportCasesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SupportCasesCollection<'a, T> {
+    /// Gets one SupportCase; protected identities require a separately audited reveal.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn get(
+        &self,
+        request: GetSupportCaseRequest,
+    ) -> Result<SupportCase, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists scoped support_cases; no cross-tenant or internal-message projection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/support_cases` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn list(
+        &self,
+        request: ListSupportCasesRequest,
+    ) -> Result<ListSupportCasesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_cases",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSupportCasesRequest,
+    ) -> Result<Vec<SupportCase>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.support_cases);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates an idempotent SupportCase; changed replay and illegal state are refused.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/support_cases` · permission `notify:support:operate` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateSupportCaseRequest,
+    ) -> Result<SupportCase, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_cases",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("support_case_id", &request.support_case_id);
+        query.push("request_id", &request.request_id);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.support_case)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Atomically applies a typed decision, tracks and audit after checking expected_version. FINAL_NO_REPLY reopens to ACT_NOW only for an allowed trigger; spam requires a clearing verdict.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}:applySupportDecision` · permission `notify:support:operate` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn apply_support_decision(
+        &self,
+        request: ApplySupportDecisionRequest,
+    ) -> Result<SupportCase, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:applySupportDecision",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Admits one authenticated source signal, deduped by immutable identity. Spam signals wake reclassification review without reopening, customer reply or new business action.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}:ingestSupportSignal` · permission `notify:support:ingest` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn ingest_support_signal(
+        &self,
+        request: IngestSupportSignalRequest,
+    ) -> Result<SupportCase, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:ingestSupportSignal",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reveals the protected case requester under a purpose-bound grant and appends an audited read.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}:revealSupportRequester` · permission `notify:support:reveal` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn reveal_support_requester(
+        &self,
+        request: RevealSupportRequesterRequest,
+    ) -> Result<RevealSupportRequesterResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:revealSupportRequester",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Imports inert history with unchanged source IDs/keys/tombstones, full-record hashes and explicit migration exceptions. It sends nothing, runs no agent and meters no resolution.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/support_cases:import` · permission `notify:support:import` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn import(
+        &self,
+        request: ImportSupportCasesRequest,
+    ) -> Result<ImportSupportCasesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_cases:import",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `support_thread_messages` of Sylphx Notify: Resource type `notify.sylphx.com/SupportThreadMessage`.
+pub struct SupportThreadMessagesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SupportThreadMessagesCollection<'a, T> {
+    /// Gets one SupportThreadMessage; protected identities require a separately audited reveal.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_thread_messages/*}` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn get(
+        &self,
+        request: GetSupportThreadMessageRequest,
+    ) -> Result<SupportThreadMessage, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*/support_thread_messages/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists scoped support_thread_messages; no cross-tenant or internal-message projection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_thread_messages` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn list(
+        &self,
+        request: ListSupportThreadMessagesRequest,
+    ) -> Result<ListSupportThreadMessagesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_thread_messages",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSupportThreadMessagesRequest,
+    ) -> Result<Vec<SupportThreadMessage>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.support_thread_messages);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates an idempotent SupportThreadMessage; changed replay and illegal state are refused.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_thread_messages` · permission `notify:support:operate` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateSupportThreadMessageRequest,
+    ) -> Result<SupportThreadMessage, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_thread_messages",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push(
+            "support_thread_message_id",
+            &request.support_thread_message_id,
+        );
+        query.push("request_id", &request.request_id);
+        query.push("validate_only", &request.validate_only);
+        query.push("expected_version", &request.expected_version);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.support_thread_message)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `support_actions` of Sylphx Notify: Resource type `notify.sylphx.com/SupportAction`.
+pub struct SupportActionsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SupportActionsCollection<'a, T> {
+    /// Gets one SupportAction; protected identities require a separately audited reveal.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn get(
+        &self,
+        request: GetSupportActionRequest,
+    ) -> Result<SupportAction, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*/support_actions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists scoped support_actions; no cross-tenant or internal-message projection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_actions` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn list(
+        &self,
+        request: ListSupportActionsRequest,
+    ) -> Result<ListSupportActionsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_actions",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSupportActionsRequest,
+    ) -> Result<Vec<SupportAction>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.support_actions);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates an idempotent SupportAction; changed replay and illegal state are refused.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_actions` · permission `notify:support:actions` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateSupportActionRequest,
+    ) -> Result<SupportAction, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_actions",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("support_action_id", &request.support_action_id);
+        query.push("request_id", &request.request_id);
+        query.push("validate_only", &request.validate_only);
+        query.push("expected_version", &request.expected_version);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.support_action)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Claims one fenced attempt of a conclusively dispatchable action. An expired in-flight claim becomes UNCERTAIN, never PENDING.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}:beginSupportActionAttempt` · permission `notify:support:dispatch` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn begin_support_action_attempt(
+        &self,
+        request: BeginSupportActionAttemptRequest,
+    ) -> Result<BeginSupportActionAttemptResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:beginSupportActionAttempt",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*/support_actions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Records an authenticated immutable authority receipt. Transport state changes alone never change a case or business action.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}:recordSupportActionReceipt` · permission `notify:support:receipts` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn record_support_action_receipt(
+        &self,
+        request: RecordSupportActionReceiptRequest,
+    ) -> Result<SupportAction, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:recordSupportActionReceipt",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*/support_actions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Queries the original authority/key first; UNKNOWN remains UNCERTAIN. Only a verified NOT_APPLIED query receipt for the current attempt and uncertainty episode permits another attempt of the same action/key.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}:reconcile` · permission `notify:support:reconcile` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn reconcile(
+        &self,
+        request: ReconcileSupportActionRequest,
+    ) -> Result<SupportAction, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:reconcile",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*/support_actions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `support_audit_events` of Sylphx Notify: Resource type `notify.sylphx.com/SupportAuditEvent`.
+pub struct SupportAuditEventsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SupportAuditEventsCollection<'a, T> {
+    /// Gets one SupportAuditEvent; protected identities require a separately audited reveal.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_audit_events/*}` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn get(
+        &self,
+        request: GetSupportAuditEventRequest,
+    ) -> Result<SupportAuditEvent, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_cases/*/support_audit_events/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists scoped support_audit_events; no cross-tenant or internal-message projection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_audit_events` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn list(
+        &self,
+        request: ListSupportAuditEventsRequest,
+    ) -> Result<ListSupportAuditEventsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_audit_events",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/support_cases/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSupportAuditEventsRequest,
+    ) -> Result<Vec<SupportAuditEvent>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.support_audit_events);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+}
+
+/// `support_reconciliations` of Sylphx Notify: Resource type `notify.sylphx.com/SupportReconciliation`.
+pub struct SupportReconciliationsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SupportReconciliationsCollection<'a, T> {
+    /// Gets one SupportReconciliation; protected identities require a separately audited reveal.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/support_reconciliations/*}` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn get(
+        &self,
+        request: GetSupportReconciliationRequest,
+    ) -> Result<SupportReconciliation, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/support_reconciliations/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists scoped support_reconciliations; no cross-tenant or internal-message projection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/support_reconciliations` · permission `notify:support:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`.
+    pub async fn list(
+        &self,
+        request: ListSupportReconciliationsRequest,
+    ) -> Result<ListSupportReconciliationsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_reconciliations",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListSupportReconciliationsRequest,
+    ) -> Result<Vec<SupportReconciliation>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.support_reconciliations);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Runs one scoped daily census, dense due pass or migration comparison on demand. Incomplete coverage never proves zero exceptions.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/support_reconciliations:run` · permission `notify:support:reconcile` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `UNAVAILABLE`, `UNIMPLEMENTED`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn run(
+        &self,
+        request: RunSupportReconciliationRequest,
+    ) -> Result<SupportReconciliation, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/support_reconciliations:run",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

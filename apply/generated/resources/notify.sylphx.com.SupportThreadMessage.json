@@ -1,0 +1,22 @@
+{
+  "collection": "support_thread_messages",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SupportThreadMessage",
+  "message": "sylphx.notify.v1.SupportThreadMessage",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_thread_messages/{support_thread_message}",
+  "plural": "supportThreadMessages",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "supportThreadMessage",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/SupportThreadMessage"
+}

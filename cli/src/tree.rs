@@ -431,10 +431,37 @@ fn parse_value(f: &FlagSpec, raw: &[String]) -> Result<Value, String> {
 }
 
 /// Required flags a request still lacks after `--from-file` and the flags.
+/// A partial update leaves unselected resource fields unchanged; request-level
+/// preconditions remain required, as do all fields in a full replacement.
 pub fn missing_required(m: &MethodCmd, args: &Value) -> Vec<String> {
+    let mask = m
+        .is_update()
+        .then(|| args.get("update_mask").and_then(Value::as_str))
+        .flatten()
+        .filter(|mask| !mask.trim().is_empty());
+    let resource_prefix = m.resource_field().map(|field| format!("{field}."));
     m.flags
         .iter()
         .filter(|f| f.required && get_path(args, &f.field).is_none())
+        .filter(|f| {
+            let Some((mask, field)) = mask.zip(
+                resource_prefix
+                    .as_deref()
+                    .and_then(|prefix| f.field.strip_prefix(prefix)),
+            ) else {
+                return true;
+            };
+            mask.split(',').map(str::trim).any(|path| {
+                path == "*"
+                    || path == field
+                    || field
+                        .strip_prefix(path)
+                        .is_some_and(|rest| rest.starts_with('.'))
+                    || path
+                        .strip_prefix(field)
+                        .is_some_and(|rest| rest.starts_with('.'))
+            })
+        })
         .map(|f| f.flag.clone())
         .collect()
 }
@@ -478,6 +505,105 @@ mod tests {
         let m = cmd.try_get_matches_from(argv).expect("parses");
         let (service, sub) = m.subcommand().expect("service");
         find(&load(), service, sub).map(|(c, _)| c.method.clone())
+    }
+
+    #[test]
+    fn masked_support_inbox_update_requires_only_selected_resource_fields() {
+        let tree = load();
+        let method = tree
+            .services
+            .iter()
+            .flat_map(|s| &s.collections)
+            .flat_map(|c| &c.commands)
+            .find(|m| m.method == "notify.support_inboxes.update")
+            .unwrap();
+        let matches = method_command(method)
+            .try_get_matches_from([
+                "update",
+                "orgs/o/projects/p/envs/e/support_inboxes/i",
+                "--policy",
+                "policy-v2",
+            ])
+            .unwrap();
+        let (values, mask) = flag_values(method, &matches).unwrap();
+        assert_eq!(mask, ["policy"]);
+        let mut fields = Map::new();
+        for (field, value) in values {
+            set_path(&mut fields, &field, value);
+        }
+        fields.insert("update_mask".into(), Value::String(mask.join(",")));
+        let mut args = Value::Object(fields);
+        assert!(missing_required(method, &args).is_empty());
+        assert_eq!(
+            get_path(&args, "support_inbox.policy"),
+            Some(&Value::String("policy-v2".into()))
+        );
+        assert!(get_path(&args, "support_inbox.locales").is_none());
+
+        args["update_mask"] = Value::String("policy,locales".into());
+        assert_eq!(missing_required(method, &args), ["--locales"]);
+        args["update_mask"] = Value::String("*".into());
+        assert_eq!(
+            missing_required(method, &args),
+            ["--locales", "--intake-bound"]
+        );
+        args.as_object_mut().unwrap().remove("update_mask");
+        assert_eq!(
+            missing_required(method, &args),
+            ["--locales", "--intake-bound"]
+        );
+
+        let create = tree
+            .services
+            .iter()
+            .flat_map(|s| &s.collections)
+            .flat_map(|c| &c.commands)
+            .find(|m| m.method == "notify.support_inboxes.create")
+            .unwrap();
+        args["update_mask"] = Value::String("policy".into());
+        assert!(missing_required(create, &args).contains(&"--locales".into()));
+
+        let mut request_required = method.clone();
+        let mut precondition = method
+            .flags
+            .iter()
+            .find(|f| f.flag == "--locales")
+            .unwrap()
+            .clone();
+        precondition.field = "expected_version".into();
+        precondition.flag = "--expected-version".into();
+        request_required.flags.push(precondition);
+        assert_eq!(
+            missing_required(&request_required, &args),
+            ["--expected-version"]
+        );
+    }
+
+    #[test]
+    fn update_mask_matches_resource_path_boundaries() {
+        let tree = load();
+        let method = tree
+            .services
+            .iter()
+            .flat_map(|s| &s.collections)
+            .flat_map(|c| &c.commands)
+            .find(|m| m.method == "access.orgs.update")
+            .unwrap();
+        for (mask, required) in [
+            ("spec", true),
+            ("spec.slug", true),
+            ("spec.slug.child", true),
+            ("spec.slug_extra", false),
+            ("labels", false),
+            ("", true),
+        ] {
+            let args = serde_json::json!({"update_mask": mask});
+            assert_eq!(
+                missing_required(method, &args).contains(&"--spec.slug".into()),
+                required,
+                "{mask}"
+            );
+        }
     }
 
     #[test]

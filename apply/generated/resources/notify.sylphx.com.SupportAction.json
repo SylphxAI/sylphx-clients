@@ -1,0 +1,22 @@
+{
+  "collection": "support_actions",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SupportAction",
+  "message": "sylphx.notify.v1.SupportAction",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}",
+  "plural": "supportActions",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "supportAction",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/SupportAction"
+}

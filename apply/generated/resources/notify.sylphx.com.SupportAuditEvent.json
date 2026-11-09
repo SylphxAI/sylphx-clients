@@ -1,0 +1,22 @@
+{
+  "collection": "support_audit_events",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SupportAuditEvent",
+  "message": "sylphx.notify.v1.SupportAuditEvent",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_audit_events/{support_audit_event}",
+  "plural": "supportAuditEvents",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "supportAuditEvent",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/SupportAuditEvent"
+}

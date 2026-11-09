@@ -84,6 +84,9 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
 - Mutations wait for their Operation (`--no-wait` to skip); `--dry-run` sets
   `validate_only`; updates send the etag they read and a mask of the flags
   given; destructive calls ask first (`--yes` to skip).
+  A masked update requires resource fields only within the selected paths;
+  fields outside the mask are left unchanged. Creates, unmasked replacement
+  updates, and wildcard masks retain the full required-field checks.
 - `sylphx apply` reads `sylphx.toml` (or `--manifest PATH`, including a Release's
   `declarations.json`) and uses the shared Resource planner and writer.
   `--offline` checks without a key or network; `--dry-run` plans without

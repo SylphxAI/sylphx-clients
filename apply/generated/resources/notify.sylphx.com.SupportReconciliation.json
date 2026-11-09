@@ -1,0 +1,22 @@
+{
+  "collection": "support_reconciliations",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "SupportReconciliation",
+  "message": "sylphx.notify.v1.SupportReconciliation",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_reconciliations/{support_reconciliation}",
+  "plural": "supportReconciliations",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "record",
+  "singular": "supportReconciliation",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/SupportReconciliation"
+}

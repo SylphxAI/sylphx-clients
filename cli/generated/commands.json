@@ -28784,6 +28784,1726 @@
           ],
           "noun": "inbound-messages",
           "resource_type": "notify.sylphx.com/InboundMessage"
+        },
+        {
+          "collection": "support_inboxes",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/support_inboxes/*}",
+              "method": "notify.support_inboxes.get",
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_inboxes/{support_inbox}"
+              },
+              "served": false,
+              "summary": "Gets one SupportInbox; protected identities require a separately audited reveal.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum rows; default 50, at most 200.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation bound to the same scope and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter; cannot widen caller visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "Stable ordering, with resource identity as the final tie-breaker.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/support_inboxes",
+              "method": "notify.support_inboxes.list",
+              "paginates": true,
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "served": false,
+              "summary": "Lists scoped support_inboxes; no cross-tenant or internal-message projection.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_inbox.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_inbox.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.locales",
+                  "flag": "--locales",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Supported BCP 47 locales; the language is still decided per message.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.channels",
+                  "flag": "--channels",
+                  "repeated": true,
+                  "summary": "Verified links to existing transport resources, not transport credentials.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_inbox.policy",
+                  "flag": "--policy",
+                  "required": true,
+                  "summary": "Tenant-policy API resource; rule tables and remedy budgets remain there.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.intake_bound",
+                  "flag": "--intake-bound",
+                  "required": true,
+                  "summary": "Maximum allowed delay from a received event to committed case intake.",
+                  "type": "duration"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "UUID request identity, stable across transport retries.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/support_inboxes",
+              "method": "notify.support_inboxes.create",
+              "permission": "notify:support:configure",
+              "positional": {
+                "arg": "ID",
+                "field": "support_inbox_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "support_inbox",
+              "served": false,
+              "summary": "Creates an idempotent SupportInbox; changed replay and illegal state are refused.",
+              "verb": "create"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "support_inbox.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_inbox.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_inbox.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.locales",
+                  "flag": "--locales",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Supported BCP 47 locales; the language is still decided per message.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.channels",
+                  "flag": "--channels",
+                  "repeated": true,
+                  "summary": "Verified links to existing transport resources, not transport credentials.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_inbox.policy",
+                  "flag": "--policy",
+                  "required": true,
+                  "summary": "Tenant-policy API resource; rule tables and remedy budgets remain there.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_inbox.intake_bound",
+                  "flag": "--intake-bound",
+                  "required": true,
+                  "summary": "Maximum allowed delay from a received event to committed case intake.",
+                  "type": "duration"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "PATCH /v1/{support_inbox.name=orgs/*/projects/*/envs/*/support_inboxes/*}",
+              "method": "notify.support_inboxes.update",
+              "permission": "notify:support:configure",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "support_inbox.name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_inboxes/{support_inbox}"
+              },
+              "resource_field": "support_inbox",
+              "sends_etag": true,
+              "served": false,
+              "summary": "Updates configuration with a strong ETag; intake never creates a missing inbox.",
+              "update_mask": "from-flags",
+              "verb": "update"
+            }
+          ],
+          "noun": "support-inboxes",
+          "resource_type": "notify.sylphx.com/SupportInbox"
+        },
+        {
+          "collection": "support_cases",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}",
+              "method": "notify.support_cases.get",
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Gets one SupportCase; protected identities require a separately audited reveal.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum rows; default 50, at most 200.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation bound to the same scope and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter; cannot widen caller visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "Stable ordering, with resource identity as the final tie-breaker.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/support_cases",
+              "method": "notify.support_cases.list",
+              "paginates": true,
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "served": false,
+              "summary": "Lists scoped support_cases; no cross-tenant or internal-message projection.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_case.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_case.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.inbox",
+                  "flag": "--inbox",
+                  "required": true,
+                  "summary": "The queue owning this case.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.display_number",
+                  "flag": "--display-number",
+                  "summary": "Original customer-visible case number, including legacy CS numbers.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.subject",
+                  "flag": "--subject",
+                  "sensitive": true,
+                  "summary": "Case subject; untrusted customer content.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.contact",
+                  "flag": "--requester.contact",
+                  "summary": "Permission-scoped Knowledge contact resource, when available.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.masked_identity",
+                  "flag": "--requester.masked-identity",
+                  "summary": "Masked contact address or channel identity for ordinary case reads.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.display_name",
+                  "flag": "--requester.display-name",
+                  "sensitive": true,
+                  "summary": "Source display name; treated as personal data.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.link_state",
+                  "flag": "--requester.link-state",
+                  "summary": "none, suggested, confirmed or cleared; an unconfirmed link grants nothing.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.tenant_subject",
+                  "flag": "--requester.tenant-subject",
+                  "sensitive": true,
+                  "summary": "Tenant-owned subject mapping, not a Support-issued user identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.link_actor.principal",
+                  "flag": "--requester.link-actor.principal",
+                  "summary": "Acting Access principal or authenticated external source identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.link_actor.delegated_for",
+                  "flag": "--requester.link-actor.delegated-for",
+                  "summary": "Delegating principal, when the grant records one.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.link_actor.authority",
+                  "flag": "--requester.link-actor.authority",
+                  "summary": "Public source authority for a workload or channel event.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.requester.link_time",
+                  "flag": "--requester.link-time",
+                  "summary": "When the source link was verified or cleared, if known.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.requester.source_records",
+                  "flag": "--requester.source-records",
+                  "repeated": true,
+                  "summary": "Original requester identity and source record, including tombstones.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_case.tenant_subject",
+                  "flag": "--tenant-subject",
+                  "sensitive": true,
+                  "summary": "Tenant product/account reference. It conveys no verified account ownership.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.decision.state",
+                  "flag": "--decision.state",
+                  "required": true,
+                  "summary": "Exactly one primary state.",
+                  "type": "enum",
+                  "values": [
+                    "act_now",
+                    "scheduled",
+                    "waiting_customer",
+                    "waiting_review",
+                    "final_no_reply"
+                  ]
+                },
+                {
+                  "field": "support_case.decision.owner",
+                  "flag": "--decision.owner",
+                  "required": true,
+                  "summary": "Accountable Access principal; required even while waiting or final.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.decision.reason",
+                  "flag": "--decision.reason",
+                  "required": true,
+                  "summary": "Typed cause of this decision or reopen.",
+                  "type": "enum",
+                  "values": [
+                    "policy",
+                    "operator",
+                    "new_evidence",
+                    "new_payment",
+                    "legal_notice",
+                    "regulatory_notice",
+                    "due",
+                    "migration",
+                    "spam_reclassification",
+                    "not_spam",
+                    "confirmed_customer",
+                    "institutional_notice"
+                  ]
+                },
+                {
+                  "field": "support_case.decision.explanation",
+                  "flag": "--decision.explanation",
+                  "required": true,
+                  "summary": "Customer-safe explanation; no credentials or unrestricted product records.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.decision.next_action_at",
+                  "flag": "--decision.next-action-at",
+                  "required": true,
+                  "summary": "Required for every state, including FINAL_NO_REPLY. Never a delivery retry.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.decision.deadlines",
+                  "flag": "--decision.deadlines",
+                  "repeated": true,
+                  "summary": "May be empty when no hard deadline applies; each entry keeps its basis.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_case.decision.tracks",
+                  "flag": "--decision.tracks",
+                  "repeated": true,
+                  "summary": "Independent linked issues and actions; mixed cases cannot drop an issue.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_case.decision.reopen_triggers",
+                  "flag": "--decision.reopen-triggers",
+                  "repeated": true,
+                  "required": true,
+                  "summary": "Required triggers. On spam they request reclassification review only; no customer-facing reopen or outbound action occurs before a clearing verdict.",
+                  "type": "enum",
+                  "values": [
+                    "new_evidence",
+                    "new_payment",
+                    "legal_notice",
+                    "regulatory_notice"
+                  ]
+                },
+                {
+                  "field": "support_case.decision.policy_version",
+                  "flag": "--decision.policy-version",
+                  "required": true,
+                  "summary": "Immutable tenant-policy API resource and version that produced the decision.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.decision.time_zone",
+                  "flag": "--decision.time-zone",
+                  "required": true,
+                  "summary": "IANA tenant time zone used for business-hours/deadline arithmetic.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.decision.settlement_buffer",
+                  "flag": "--decision.settlement-buffer",
+                  "required": true,
+                  "summary": "Nonnegative settlement buffer used in that calculation.",
+                  "type": "duration"
+                },
+                {
+                  "field": "support_case.decision.evidence_ids",
+                  "flag": "--decision.evidence-ids",
+                  "repeated": true,
+                  "summary": "Evidence IDs used by the decider, never evidence invented by a model.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.receive_time",
+                  "flag": "--receive-time",
+                  "required": true,
+                  "summary": "First source-reported received time, preserved through import.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.source_records",
+                  "flag": "--source-records",
+                  "repeated": true,
+                  "summary": "Exact source identities and protected full-record evidence references.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_case.source_state",
+                  "flag": "--source-state",
+                  "summary": "Raw source state/priority/category are preserved rather than collapsed.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.priority",
+                  "flag": "--priority",
+                  "summary": "Case-level priority is separate from state and issue classification.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_case.last_inbound_time",
+                  "flag": "--last-inbound-time",
+                  "summary": "Last inbound activity, if known.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.last_outbound_time",
+                  "flag": "--last-outbound-time",
+                  "summary": "Last confirmed outbound activity, if known.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.last_activity_time",
+                  "flag": "--last-activity-time",
+                  "summary": "Last activity, including internal notes.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.resolve_time",
+                  "flag": "--resolve-time",
+                  "summary": "Original resolution time, if known; FINAL_NO_REPLY is still ingestible.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_case.evidence",
+                  "flag": "--evidence",
+                  "repeated": true,
+                  "summary": "Source evidence, including admission-refused/automated records when linked.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_case.spam",
+                  "flag": "--spam",
+                  "summary": "Spam suppression survives incoming evidence/payment/notices until a verdict.",
+                  "type": "enum",
+                  "values": [
+                    "suppressed",
+                    "review_required",
+                    "not_spam",
+                    "confirmed_customer"
+                  ]
+                },
+                {
+                  "field": "support_case.pending_proof",
+                  "flag": "--pending-proof",
+                  "summary": "Required migration proof before legacy pending may mean WAITING_CUSTOMER.",
+                  "type": "enum",
+                  "values": [
+                    "last_outbound",
+                    "staff_action",
+                    "source_history"
+                  ]
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "UUID request identity, stable across transport retries.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/support_cases",
+              "method": "notify.support_cases.create",
+              "permission": "notify:support:operate",
+              "positional": {
+                "arg": "ID",
+                "field": "support_case_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "support_case",
+              "served": false,
+              "summary": "Creates an idempotent SupportCase; changed replay and illegal state are refused.",
+              "verb": "create"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                  "type": "int"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this logical operation.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "before",
+                  "flag": "--before",
+                  "summary": "Observed primary state; also checked against authoritative storage.",
+                  "type": "enum",
+                  "values": [
+                    "act_now",
+                    "scheduled",
+                    "waiting_customer",
+                    "waiting_review",
+                    "final_no_reply"
+                  ]
+                },
+                {
+                  "field": "after",
+                  "flag": "--after",
+                  "required": true,
+                  "summary": "Complete new decision; omitting an unresolved track is refused.",
+                  "type": "json"
+                },
+                {
+                  "field": "spam",
+                  "flag": "--spam",
+                  "summary": "Spam disposition; only authenticated verdicts clear suppression.",
+                  "type": "enum",
+                  "values": [
+                    "suppressed",
+                    "review_required",
+                    "not_spam",
+                    "confirmed_customer"
+                  ]
+                },
+                {
+                  "field": "pending_proof",
+                  "flag": "--pending-proof",
+                  "summary": "Source proof for imported pending customer waits.",
+                  "type": "enum",
+                  "values": [
+                    "last_outbound",
+                    "staff_action",
+                    "source_history"
+                  ]
+                },
+                {
+                  "field": "source_key",
+                  "flag": "--source-key",
+                  "summary": "Immutable signal/decision identity for replay and audit.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}:applySupportDecision",
+              "method": "notify.support_cases.apply_support_decision",
+              "permission": "notify:support:operate",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Atomically applies a typed decision, tracks and audit after checking expected_version. FINAL_NO_REPLY reopens to ACT_NOW only for an allowed trigger; spam requires a clearing verdict.",
+              "verb": "apply-support-decision"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                  "type": "int"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this logical operation.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "signal",
+                  "flag": "--signal",
+                  "summary": "Typed, verified signal; customer text is evidence, never authority.",
+                  "type": "enum",
+                  "values": [
+                    "policy",
+                    "operator",
+                    "new_evidence",
+                    "new_payment",
+                    "legal_notice",
+                    "regulatory_notice",
+                    "due",
+                    "migration",
+                    "spam_reclassification",
+                    "not_spam",
+                    "confirmed_customer",
+                    "institutional_notice"
+                  ]
+                },
+                {
+                  "field": "source_key",
+                  "flag": "--source-key",
+                  "required": true,
+                  "summary": "Immutable source-scoped event identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "evidence",
+                  "flag": "--evidence",
+                  "repeated": true,
+                  "summary": "Protected evidence references; never plaintext credentials.",
+                  "type": "json"
+                },
+                {
+                  "field": "receive_time",
+                  "flag": "--receive-time",
+                  "required": true,
+                  "summary": "Source-reported time used for intake latency verification.",
+                  "type": "timestamp"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}:ingestSupportSignal",
+              "method": "notify.support_cases.ingest_support_signal",
+              "permission": "notify:support:ingest",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Admits one authenticated source signal, deduped by immutable identity. Spam signals wake reclassification review without reopening, customer reply or new business action.",
+              "verb": "ingest-support-signal"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                  "type": "int"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this logical operation.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "reason",
+                  "flag": "--reason",
+                  "required": true,
+                  "summary": "Purpose of accessing unmasked personal data.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*}:revealSupportRequester",
+              "method": "notify.support_cases.reveal_support_requester",
+              "permission": "notify:support:reveal",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Reveals the protected case requester under a purpose-bound grant and appends an audited read.",
+              "verb": "reveal-support-requester"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "source",
+                  "flag": "--source",
+                  "summary": "Stable source namespace and migration run identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_cases",
+                  "flag": "--support-cases",
+                  "repeated": true,
+                  "summary": "Original case records and typed projections; at most 500.",
+                  "type": "json"
+                },
+                {
+                  "field": "messages",
+                  "flag": "--messages",
+                  "repeated": true,
+                  "summary": "Original thread records, including internal messages and erasure tombstones.",
+                  "type": "json"
+                },
+                {
+                  "field": "actions",
+                  "flag": "--actions",
+                  "repeated": true,
+                  "summary": "Original actions/keys/receipts; ambiguous prior sends remain UNCERTAIN. Suppression never blocks inert CANCELLED/SUCCEEDED/UNCERTAIN history; import admits no PENDING/IN_FLIGHT action under suppression and sends nothing.",
+                  "type": "json"
+                },
+                {
+                  "field": "audit_events",
+                  "flag": "--audit-events",
+                  "repeated": true,
+                  "summary": "Original audit records; absent historical versions are not invented.",
+                  "type": "json"
+                },
+                {
+                  "field": "source_sha256",
+                  "flag": "--source-sha256",
+                  "summary": "Full source-record hash of this batch; changed replay is refused.",
+                  "type": "string"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this batch.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/support_cases:import",
+              "method": "notify.support_cases.import",
+              "permission": "notify:support:import",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "served": false,
+              "summary": "Imports inert history with unchanged source IDs/keys/tombstones, full-record hashes and explicit migration exceptions. It sends nothing, runs no agent and meters no resolution.",
+              "verb": "import"
+            }
+          ],
+          "noun": "support-cases",
+          "resource_type": "notify.sylphx.com/SupportCase"
+        },
+        {
+          "collection": "support_thread_messages",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_thread_messages/*}",
+              "method": "notify.support_thread_messages.get",
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_thread_messages/{support_thread_message}"
+              },
+              "served": false,
+              "summary": "Gets one SupportThreadMessage; protected identities require a separately audited reveal.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum rows; default 50, at most 200.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation bound to the same scope and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter; cannot widen caller visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "Stable ordering, with resource identity as the final tie-breaker.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_thread_messages",
+              "method": "notify.support_thread_messages.list",
+              "paginates": true,
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Lists scoped support_thread_messages; no cross-tenant or internal-message projection.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_thread_message.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_thread_message.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.source_key",
+                  "flag": "--source-key",
+                  "required": true,
+                  "summary": "Immutable source-scoped event identity; changed replays are refused.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.visibility",
+                  "flag": "--visibility",
+                  "required": true,
+                  "summary": "Explicit audience; internal notes never enter the customer timeline.",
+                  "type": "enum",
+                  "values": [
+                    "public",
+                    "internal"
+                  ]
+                },
+                {
+                  "field": "support_thread_message.author.principal",
+                  "flag": "--author.principal",
+                  "summary": "Acting Access principal or authenticated external source identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.author.delegated_for",
+                  "flag": "--author.delegated-for",
+                  "summary": "Delegating principal, when the grant records one.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.author.authority",
+                  "flag": "--author.authority",
+                  "summary": "Public source authority for a workload or channel event.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.body",
+                  "flag": "--body",
+                  "sensitive": true,
+                  "summary": "Text body or evidence projection; untrusted personal content.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.evidence",
+                  "flag": "--evidence",
+                  "repeated": true,
+                  "summary": "Source evidence, including explicitly untrusted HTML and attachments.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_thread_message.channel_id",
+                  "flag": "--channel-id",
+                  "summary": "Existing channel-link ID, not a credential.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.thread_keys",
+                  "flag": "--thread-keys",
+                  "repeated": true,
+                  "summary": "Original provider message identity and ancestry.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.action",
+                  "flag": "--action",
+                  "summary": "Related business action, never a notification delivery state alias.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_thread_message.erased",
+                  "flag": "--erased",
+                  "summary": "Tombstone; source keys/ancestry survive authorized erasure.",
+                  "type": "bool"
+                },
+                {
+                  "field": "support_thread_message.source_records",
+                  "flag": "--source-records",
+                  "repeated": true,
+                  "summary": "Original IDs/records for lossless migration.",
+                  "type": "json"
+                },
+                {
+                  "field": "support_thread_message.direction",
+                  "flag": "--direction",
+                  "summary": "Source direction: inbound, outbound or internal; independent of visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "UUID request identity, stable across transport retries.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Case aggregate version observed by the caller.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_thread_messages",
+              "method": "notify.support_thread_messages.create",
+              "permission": "notify:support:operate",
+              "positional": {
+                "arg": "ID",
+                "field": "support_thread_message_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "support_thread_message",
+              "served": false,
+              "summary": "Creates an idempotent SupportThreadMessage; changed replay and illegal state are refused.",
+              "verb": "create"
+            }
+          ],
+          "noun": "support-thread-messages",
+          "resource_type": "notify.sylphx.com/SupportThreadMessage"
+        },
+        {
+          "collection": "support_actions",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}",
+              "method": "notify.support_actions.get",
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}"
+              },
+              "served": false,
+              "summary": "Gets one SupportAction; protected identities require a separately audited reveal.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum rows; default 50, at most 200.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation bound to the same scope and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter; cannot widen caller visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "Stable ordering, with resource identity as the final tie-breaker.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_actions",
+              "method": "notify.support_actions.list",
+              "paginates": true,
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Lists scoped support_actions; no cross-tenant or internal-message projection.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_action.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "support_action.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.idempotency_key",
+                  "flag": "--idempotency-key",
+                  "summary": "Exact stable caller/source key; never replaced on retry or cutover.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.payload_sha256",
+                  "flag": "--payload-sha256",
+                  "summary": "SHA-256 of immutable admitted intent bytes; changed-key reuse is refused.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.track_id",
+                  "flag": "--track-id",
+                  "summary": "Related action/issue track in the same case.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.transport",
+                  "flag": "--reply.transport",
+                  "summary": "Permissioned channel resource; deployment and provider host are irrelevant.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.recipient",
+                  "flag": "--reply.recipient",
+                  "sensitive": true,
+                  "summary": "Channel-scoped recipient/conversation identity, not verified tenant identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.body",
+                  "flag": "--reply.body",
+                  "sensitive": true,
+                  "summary": "Public reply body; legal/permission checks precede action admission.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.subject",
+                  "flag": "--reply.subject",
+                  "sensitive": true,
+                  "summary": "Threading subject, when the channel has one.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.local_message_id",
+                  "flag": "--reply.local-message-id",
+                  "summary": "Exact original local message identity and provider ancestry.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.in_reply_to",
+                  "flag": "--reply.in-reply-to",
+                  "summary": "Nearest parent provider message identity.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.reply.references",
+                  "flag": "--reply.references",
+                  "repeated": true,
+                  "summary": "Original ancestry in order.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.operation",
+                  "flag": "--remedy.operation",
+                  "summary": "Published tenant operation resource or API endpoint, under the caller grant.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.request.id",
+                  "flag": "--remedy.request.id",
+                  "summary": "Stable evidence identity in the tenant environment.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.request.authority",
+                  "flag": "--remedy.request.authority",
+                  "summary": "Authenticated source, not a caller-selected trust claim.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.request.resource",
+                  "flag": "--remedy.request.resource",
+                  "summary": "Permissioned public API resource containing the bytes; never a credential URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.request.sha256",
+                  "flag": "--remedy.request.sha256",
+                  "summary": "SHA-256 of the original evidence bytes, lowercase hexadecimal.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.request.media_type",
+                  "flag": "--remedy.request.media-type",
+                  "summary": "Registered media type of the original bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.remedy.request.size_bytes",
+                  "flag": "--remedy.request.size-bytes",
+                  "summary": "Exact byte length, not the number of Unicode characters.",
+                  "type": "int"
+                },
+                {
+                  "field": "support_action.remedy.request.receive_time",
+                  "flag": "--remedy.request.receive-time",
+                  "summary": "Source-reported received time.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "support_action.remedy.request.erased",
+                  "flag": "--remedy.request.erased",
+                  "summary": "Erasure keeps identity/hash/dedupe tombstones, never resurrects source content.",
+                  "type": "bool"
+                },
+                {
+                  "field": "support_action.remedy.authorization_receipt",
+                  "flag": "--remedy.authorization-receipt",
+                  "summary": "Tenant authorization/verification receipt binding exact remedy arguments.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.escalation.reviewer",
+                  "flag": "--escalation.reviewer",
+                  "summary": "Accountable principal or reviewer group.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.escalation.destination",
+                  "flag": "--escalation.destination",
+                  "summary": "Permissioned destination API resource.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.escalation.brief",
+                  "flag": "--escalation.brief",
+                  "sensitive": true,
+                  "summary": "Review brief; internal, never a customer message.",
+                  "type": "string"
+                },
+                {
+                  "field": "support_action.source_records",
+                  "flag": "--source-records",
+                  "repeated": true,
+                  "summary": "Source outbox ID/key/payload/leases/attempts retained as protected evidence.",
+                  "type": "json"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "UUID request identity, stable across transport retries.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Case aggregate version observed by the caller.",
+                  "type": "int"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_actions",
+              "method": "notify.support_actions.create",
+              "permission": "notify:support:actions",
+              "positional": {
+                "arg": "ID",
+                "field": "support_action_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "support_action",
+              "served": false,
+              "summary": "Creates an idempotent SupportAction; changed replay and illegal state are refused.",
+              "verb": "create"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                  "type": "int"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this logical operation.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}:beginSupportActionAttempt",
+              "method": "notify.support_actions.begin_support_action_attempt",
+              "permission": "notify:support:dispatch",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}"
+              },
+              "served": false,
+              "summary": "Claims one fenced attempt of a conclusively dispatchable action. An expired in-flight claim becomes UNCERTAIN, never PENDING.",
+              "verb": "begin-support-action-attempt"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                  "type": "int"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this logical operation.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                },
+                {
+                  "field": "receipt",
+                  "flag": "--receipt",
+                  "required": true,
+                  "summary": "Authenticated envelope bound to the action key and payload hash.",
+                  "type": "json"
+                },
+                {
+                  "field": "attempt_id",
+                  "flag": "--attempt-id",
+                  "required": true,
+                  "summary": "Fenced attempt identity returned by BeginSupportActionAttempt; mismatches are refused.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}:recordSupportActionReceipt",
+              "method": "notify.support_actions.record_support_action_receipt",
+              "permission": "notify:support:receipts",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}"
+              },
+              "served": false,
+              "summary": "Records an authenticated immutable authority receipt. Transport state changes alone never change a case or business action.",
+              "verb": "record-support-action-receipt"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "expected_version",
+                  "flag": "--expected-version",
+                  "required": true,
+                  "summary": "Optimistic version precondition; mismatch returns ETAG_MISMATCH.",
+                  "type": "int"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable UUID for this logical operation.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_actions/*}:reconcile",
+              "method": "notify.support_actions.reconcile",
+              "permission": "notify:support:reconcile",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_actions/{support_action}"
+              },
+              "served": false,
+              "summary": "Queries the original authority/key first; UNKNOWN remains UNCERTAIN. Only a verified NOT_APPLIED query receipt for the current attempt and uncertainty episode permits another attempt of the same action/key.",
+              "verb": "reconcile"
+            }
+          ],
+          "noun": "support-actions",
+          "resource_type": "notify.sylphx.com/SupportAction"
+        },
+        {
+          "collection": "support_audit_events",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/support_cases/*/support_audit_events/*}",
+              "method": "notify.support_audit_events.get",
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}/support_audit_events/{support_audit_event}"
+              },
+              "served": false,
+              "summary": "Gets one SupportAuditEvent; protected identities require a separately audited reveal.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum rows; default 50, at most 200.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation bound to the same scope and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter; cannot widen caller visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "Stable ordering, with resource identity as the final tie-breaker.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/support_cases/*}/support_audit_events",
+              "method": "notify.support_audit_events.list",
+              "paginates": true,
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_cases/{support_case}"
+              },
+              "served": false,
+              "summary": "Lists scoped support_audit_events; no cross-tenant or internal-message projection.",
+              "verb": "list"
+            }
+          ],
+          "noun": "support-audit-events",
+          "resource_type": "notify.sylphx.com/SupportAuditEvent"
+        },
+        {
+          "collection": "support_reconciliations",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/support_reconciliations/*}",
+              "method": "notify.support_reconciliations.get",
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/support_reconciliations/{support_reconciliation}"
+              },
+              "served": false,
+              "summary": "Gets one SupportReconciliation; protected identities require a separately audited reveal.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum rows; default 50, at most 200.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Opaque continuation bound to the same scope and filter.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter; cannot widen caller visibility.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "Stable ordering, with resource identity as the final tie-breaker.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/support_reconciliations",
+              "method": "notify.support_reconciliations.list",
+              "paginates": true,
+              "permission": "notify:support:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "served": false,
+              "summary": "Lists scoped support_reconciliations; no cross-tenant or internal-message projection.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "kind",
+                  "flag": "--kind",
+                  "summary": "Population/pass type.",
+                  "type": "enum",
+                  "values": [
+                    "full_daily",
+                    "due_scan",
+                    "migration_compare"
+                  ]
+                },
+                {
+                  "field": "inbox",
+                  "flag": "--inbox",
+                  "summary": "Queue resource whose full population is covered.",
+                  "type": "string"
+                },
+                {
+                  "field": "request_id",
+                  "flag": "--request-id",
+                  "summary": "Stable pass identity; repeated invocation resumes the same pass.",
+                  "type": "string"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Continuation of the same snapshot, not a new empty population.",
+                  "type": "string"
+                },
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum cases per bounded transaction; default 200, at most 500.",
+                  "type": "int"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/support_reconciliations:run",
+              "method": "notify.support_reconciliations.run",
+              "permission": "notify:support:reconcile",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "served": false,
+              "summary": "Runs one scoped daily census, dense due pass or migration comparison on demand. Incomplete coverage never proves zero exceptions.",
+              "verb": "run"
+            }
+          ],
+          "noun": "support-reconciliations",
+          "resource_type": "notify.sylphx.com/SupportReconciliation"
         }
       ],
       "commands": [],

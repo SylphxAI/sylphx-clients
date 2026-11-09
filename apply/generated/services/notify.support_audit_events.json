@@ -1,0 +1,28 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_audit_events.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.support_audit_events.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/SupportAuditEvent"
+    }
+  ]
+}

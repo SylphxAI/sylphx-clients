@@ -1,0 +1,40 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.support_thread_messages.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token",
+              "filter",
+              "order_by"
+            ]
+          },
+          "id": "notify.support_thread_messages.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "support_thread_message_id",
+              "request_id",
+              "validate_only",
+              "expected_version"
+            ]
+          },
+          "id": "notify.support_thread_messages.create",
+          "kind": "create"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/SupportThreadMessage"
+    }
+  ]
+}
