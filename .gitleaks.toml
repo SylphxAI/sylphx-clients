@@ -23,3 +23,12 @@ condition = "AND"
 paths = ['''(^|/)typescript/src/[a-z_]+\.ts$''']
 regexTarget = "line"
 regexes = ['''^\s*\['[A-Za-z][A-Za-z0-9]*', '[a-z][a-z0-9_]*'(, '[A-Za-z0-9_.]+')?\],\s*$''']
+
+# Intentionally malformed, deterministic token used by the end-user keys contract.
+[[allowlists]]
+description = "End-user keys short-secret test vector"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(^|/)contracts/fixtures/end-user-keys\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"token": "kk_live_AbCd4AYnNL",?\s*$''']
