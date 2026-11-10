@@ -153,11 +153,16 @@ jobs:
       - name: Python scripts compile
         run: python3 -m compileall -q scripts
 
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+
       - name: Automation preserves branch history
         run: |
           set -euo pipefail
           bash localize-action/test/run.sh
           python3 -I scripts/test-promote-branches.py
+          python3 -I scripts/test-npm-promotion.py
 
       # The workflow is YAML the release depends on, and every workflow here
       # is a release path.

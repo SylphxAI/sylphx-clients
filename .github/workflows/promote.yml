@@ -4,58 +4,102 @@
 name: Promote
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Released version, e.g. 0.24.0'
-        required: true
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+# Preserve pending completions and serialize smoke plus both public channels.
+# Every completion reconciles the newest successful receipt, not its old source.
+concurrency:
+  group: client-production-promotion
+  cancel-in-progress: false
+  queue: max
 
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 jobs:
-  promote:
+  smoke:
+    # workflow_run grants secrets: admit only our successful immutable tag release.
+    if: github.repository == 'SylphxAI/sylphx-clients' && github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     runs-on: sylphx-linux-standard
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.candidate.outputs.version }}
+      sdk: ${{ steps.candidate.outputs.sdk }}
+      source: ${{ steps.candidate.outputs.source }}
+      eligible: ${{ steps.candidate.outputs.eligible }}
     steps:
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - name: npm dist-tags
+      - name: Select the newest successful published candidate (never downgrade)
+        id: candidate
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          V: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+        run: python3 -I scripts/promote-npm.py select
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        if: steps.candidate.outputs.eligible == 'true'
+        with:
+          ref: ${{ steps.candidate.outputs.source }}
+          path: candidate
+          persist-credentials: false
+      - name: Clean registry consumer against production
+        if: steps.candidate.outputs.eligible == 'true'
+        env:
+          CLI_VERSION: ${{ steps.candidate.outputs.version }}
+          SDK_VERSION: ${{ steps.candidate.outputs.sdk }}
         run: |
           set -euo pipefail
-          # The registry serves reads from a cache: right after a dist-tag
-          # write, `npm view` can still show the old tag for some seconds
-          # (the 0.25.1 promotion failed its readback five times over this).
-          # Wait up to 60 s for the write to show before calling it failed.
-          readback() {
-            for _ in $(seq 1 12); do
-              [ "$(npm view "$1" dist-tags.latest --prefer-online)" = "$2" ] && { echo "readback: $1 latest = $2"; return 0; }
-              sleep 5
-            done
-            echo "::error::$1 latest is not $2 after 60 s"
-            return 1
-          }
-          for p in @sylphx/cli-linux-x64 @sylphx/cli-linux-arm64 @sylphx/cli-darwin-x64 @sylphx/cli-darwin-arm64 @sylphx/cli @sylphx/mcp; do
-            npm dist-tag add "$p@$V" latest
-            readback "$p" "$V"
-          done
-          # The SDK has its own version; the release tag records it.
-          S="$(curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/v$V/typescript/package.json" | jq -r .version)"
-          npm dist-tag add "@sylphx/sdk@$S" latest
-          readback @sylphx/sdk "$S"
+          control="$GITHUB_WORKSPACE/scripts/production-smoke.mjs"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          export HOME="$work/home" SYLPHX_CONFIG_DIR="$work/config" SYLPHX_NO_KEYCHAIN=1
+          mkdir -p "$HOME" "$work/app" "$work/cache"
+          unset SYLPHX_API_KEY SYLPHX_PUBLISHABLE_KEY SYLPHX_BASE_URL SYLPHX_URL SYLPHX_SECRET_URL
+          cd "$work/app"
+          echo '{"name":"production-release-smoke","private":true}' > package.json
+          # Optional peers are still required when importing every SDK entry point.
+          mapfile -t peers < <(node -e 'const p=require(process.argv[1]); for(const [n,v] of Object.entries(p.peerDependencies??{})) console.log(`${n}@${v}`)' "$GITHUB_WORKSPACE/candidate/typescript/package.json")
+          npm install --registry=https://registry.npmjs.org --cache="$work/cache" --no-audit --no-fund --no-package-lock \
+            "@sylphx/cli@$CLI_VERSION" "@sylphx/sdk@$SDK_VERSION" "${peers[@]}"
+          node "$control"
+
+  promote:
+    needs: smoke
+    if: needs.smoke.outputs.eligible == 'true'
+    runs-on: sylphx-linux-standard
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: npm dist-tags (read back every write)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          V: ${{ needs.smoke.outputs.version }}
+          S: ${{ needs.smoke.outputs.sdk }}
+        run: python3 -I scripts/promote-npm.py promote
 
   homebrew:
-    needs: promote
+    needs: [smoke, promote]
+    if: needs.promote.result == 'success'
     runs-on: sylphx-linux-standard
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         timeout-minutes: 10
         with:
-          ref: v${{ inputs.version }}
+          ref: ${{ needs.smoke.outputs.source }}
           persist-credentials: false
       - name: Tap token (SylphxAI/homebrew-tap only)
         id: token
@@ -73,12 +117,13 @@ jobs:
       - name: Formula bump pull request (auto-merge)
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
-          V: ${{ inputs.version }}
+          V: ${{ needs.smoke.outputs.version }}
         run: |
           set -euo pipefail
           GH_TOKEN="${{ github.token }}" gh release download "v$V" -R "$GITHUB_REPOSITORY" -p SHA256SUMS -D "$RUNNER_TEMP"
           scripts/brew-formula.sh "$V" "$RUNNER_TEMP/SHA256SUMS" > "$RUNNER_TEMP/sylphx.rb"
-          git clone -q "https://x-access-token:${GH_TOKEN}@github.com/SylphxAI/homebrew-tap.git" "$RUNNER_TEMP/tap"
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            clone -q https://github.com/SylphxAI/homebrew-tap.git "$RUNNER_TEMP/tap"
           cd "$RUNNER_TEMP/tap"
           cp "$RUNNER_TEMP/sylphx.rb" Formula/sylphx.rb
           if git diff --quiet; then echo "readback: the tap formula is already $V"; exit 0; fi
@@ -86,9 +131,10 @@ jobs:
           git checkout -b "$branch"
           git -c user.name='sylphx-release-bot[bot]' -c user.email='sylphx-release-bot[bot]@users.noreply.github.com' \
             commit -qam "feat: sylphx $V"
-          git push -q origin "HEAD:refs/heads/$branch"
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            push -q origin "HEAD:refs/heads/$branch"
           url="$(gh pr list -R SylphxAI/homebrew-tap --head "$branch" --json url --jq '.[0].url // ""')"
           [ -n "$url" ] || url="$(gh pr create -R SylphxAI/homebrew-tap --head "$branch" --title "feat: sylphx $V" \
             --body "Formula for sylphx v$V, rendered by scripts/brew-formula.sh from the release's SHA256SUMS.")"
-          gh pr merge "$url" --auto
+          gh pr merge "$url" --auto --match-head-commit "$(git rev-parse HEAD)"
           echo "readback: $url (auto-merge on; lands after ci-ok)"

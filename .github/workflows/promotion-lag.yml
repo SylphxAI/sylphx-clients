@@ -1,0 +1,24 @@
+name: npm promotion lag
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_run:
+    workflows: [Promote]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lag:
+    if: github.repository == 'SylphxAI/sylphx-clients'
+    runs-on: sylphx-linux-standard
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Alert on >1 release or >7 days (unknown fails)
+        run: python3 -I scripts/check-npm-promotion-lag.py

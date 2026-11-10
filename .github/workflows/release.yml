@@ -368,3 +368,40 @@ jobs:
             on_registry "$crate" "$version" || { echo "::error::$crate@$version did not appear"; exit 1; }
             echo "readback: $crate@$version"
           done < "$RUNNER_TEMP/crates-list"
+
+  # A dispatch may run control from main while TAG selects historical source.
+  # Freeze the actual published tree, rather than misusing workflow_run.head_sha.
+  production-candidate:
+    needs: [check, github-release, npm]
+    if: needs.check.outputs.prerelease == 'false'
+    runs-on: sylphx-linux-standard
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - name: Freeze production candidate
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, pathlib, subprocess
+          cli = json.loads(pathlib.Path('cli/npm/cli/package.json').read_text())['version']
+          sdk = json.loads(pathlib.Path('typescript/package.json').read_text())['version']
+          assert os.environ['TAG'] == f'v{cli}', 'release tag must match the published CLI'
+          receipt = {
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'tag': os.environ['TAG'],
+              'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'cli': cli, 'sdk': sdk,
+          }
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'production-candidate.json'
+          path.write_text(json.dumps(receipt) + '\n')
+          PYTHON
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: production-candidate-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-candidate.json
+          if-no-files-found: error
+          retention-days: 3

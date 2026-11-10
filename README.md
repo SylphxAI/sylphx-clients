@@ -11,7 +11,7 @@ Everything a customer or an app uses to call Sylphx, generated from one schema
 | `resource-codec/` | `sylphx-resource-codec` | crates.io | the native Root registry index, router, schema validator and problem types; `generated/` is generated |
 | `workload/` | `sylphx-workload` | crates.io | the shared SPIFFE Workload API client and customer workload identity constructor |
 | `apply/` | `sylphx-apply` | crates.io | apply orchestration; `generated/` is generated |
-| `typescript/` | `@sylphx/sdk` | npm (dist-tag `next` until the Access cutover) | `package.json`, `tsconfig*.json`, `README.md`, `test/` (`src/` is generated) |
+| `typescript/` | `@sylphx/sdk` | npm (`next`, then automatic production-smoke promotion to `latest`) | `package.json`, `tsconfig*.json`, `README.md`, `test/` (`src/` is generated) |
 | `next/` | `@sylphx/next` | npm (dist-tag `next`) | everything: branded App Router sign-in and a Next.js cache handler for ISR and `'use cache'` on Sylphx KV and Buckets; it is not generated and calls the SDK |
 
 The SDK `rust/src/` and TypeScript `src/`, and each client's `generated/`
@@ -89,3 +89,32 @@ not `/bin/sh`: Cargo passes binary target names verbatim in
 characters. Both the cached and direct-compiler paths preserve those names,
 argument bytes and compiler exit codes. Cache startup remains lazy and a
 cache outage does not replay compiler errors.
+
+### Production promotion
+
+The Access hold ended: on 2026-11-07 at 06:29 UTC, the Resource API front at
+`https://api.sylphx.com/openapi.json` served the generated v1 schema (572 paths),
+and `/v1/whoami` returned the structured unauthenticated 401, both at revision
+`f412cc5f12ae392b3d987111293133cd1eac2b32`. This satisfies the former
+Access-cutover condition for both SDK and CLI.
+
+After a successful Release (tag push or dispatch repair), `Promote` reconciles
+the newest successful run-attempt-bound published-source receipt, not the
+triggering version. It installs the exact CLI and independent SDK versions from npm in a fresh consumer with the SDK's declared peers. It
+checks the CLI version, calls the live API schema and unauthenticated whoami,
+and imports every JavaScript SDK entry point as ESM and CJS. CSS exports are
+checked as assets. Only then are the CLI, platform, MCP and SDK `latest` tags
+advanced, with a bounded readback wait, followed by the normal Homebrew formula
+pull request/merge queue. Older superseded releases never downgrade channels.
+There is no manual dist-tag release path.
+
+If the newest npm `next` has no retained successful source receipt, promotion
+fails as unknown rather than promoting an older release. Receipts have the
+organization's three-day artifact retention; the normal successful release event
+runs immediately.
+
+`npm promotion lag` checks all seven promoted packages every six hours and after promotion. It fails with
+an Actions error when `latest` trails stable `next` by more than one release
+or the oldest unpromoted release is over seven days old; unavailable or malformed
+registry evidence is unknown and fails. Investigate the failed Release/Promote
+run before allowing another version; do not bypass its production smoke.
