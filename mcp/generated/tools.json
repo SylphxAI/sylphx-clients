@@ -47641,7 +47641,8 @@
                             "control_expired",
                             "budget_warning",
                             "paused",
-                            "resumed"
+                            "resumed",
+                            "device_lost"
                           ],
                           "type": "string"
                         },

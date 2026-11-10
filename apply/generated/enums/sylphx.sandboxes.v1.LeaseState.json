@@ -36,6 +36,11 @@
       "number": 7,
       "proto_name": "LEASE_STATE_REFUSED",
       "wire": "refused"
+    },
+    {
+      "number": 8,
+      "proto_name": "LEASE_STATE_UNHEALTHY",
+      "wire": "unhealthy"
     }
   ]
 }

@@ -3320,6 +3320,8 @@ pub enum LeaseEventKind {
     Paused,
     /// The lease was resumed.
     Resumed,
+    /// The Android device went offline; its guest remains until release or expiry.
+    DeviceLost,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3340,6 +3342,7 @@ impl LeaseEventKind {
             Self::BudgetWarning => "budget_warning",
             Self::Paused => "paused",
             Self::Resumed => "resumed",
+            Self::DeviceLost => "device_lost",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3359,6 +3362,7 @@ impl LeaseEventKind {
             "budget_warning" => Self::BudgetWarning,
             "paused" => Self::Paused,
             "resumed" => Self::Resumed,
+            "device_lost" => Self::DeviceLost,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -3538,6 +3542,9 @@ pub enum LeaseState {
     Ended,
     /// Refused at grant; see `refusal`.
     Refused,
+    /// The machine is retained but its Android device is unavailable. The Ready
+    /// condition names DeviceLost; release and expiry still free the machine.
+    Unhealthy,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3553,6 +3560,7 @@ impl LeaseState {
             Self::Ending => "ending",
             Self::Ended => "ended",
             Self::Refused => "refused",
+            Self::Unhealthy => "unhealthy",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3567,6 +3575,7 @@ impl LeaseState {
             "ending" => Self::Ending,
             "ended" => Self::Ended,
             "refused" => Self::Refused,
+            "unhealthy" => Self::Unhealthy,
             other => Self::Unknown(other.to_string()),
         }
     }
@@ -4620,7 +4629,7 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:exec` · permission `sandboxes:exec` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `STALE_GENERATION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `EXEC_OUTCOME_UNKNOWN`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `DEVICE_LOST`, `STALE_GENERATION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `EXEC_OUTCOME_UNKNOWN`.
     pub async fn exec(
         &self,
         request: ExecLeaseRequest,
@@ -4837,7 +4846,7 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:act` · permission `sandboxes:exec` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `STALE_GENERATION`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `DEVICE_LOST`, `STALE_GENERATION`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
     pub async fn act(
         &self,
         request: ActLeaseRequest,
@@ -4866,7 +4875,7 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:openStream` · permission `sandboxes:exec` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `DEVICE_LOST`.
     pub async fn open_stream(
         &self,
         request: OpenLeaseStreamRequest,
@@ -4895,7 +4904,7 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:acquireControl` · permission `sandboxes:exec` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `DEVICE_LOST`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
     pub async fn acquire_control(
         &self,
         request: AcquireLeaseControlRequest,
@@ -4973,7 +4982,7 @@ impl<'a, T: crate::runtime::Transport> LeasesCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/leases/*}:installApp` · permission `sandboxes:exec` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `NOT_FOUND`, `UNIMPLEMENTED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `DEVICE_LOST`, `NOT_FOUND`, `UNIMPLEMENTED`.
     pub async fn install_app(
         &self,
         request: InstallLeaseAppRequest,

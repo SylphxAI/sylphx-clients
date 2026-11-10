@@ -434,6 +434,10 @@ pub enum ErrorCode {
     /// FAILED_PRECONDITION: the environment has no exclusive platform
     /// log stream mapping; missing or ambiguous placement is not zero traffic.
     NoLogStreamsMapped,
+    /// FAILED_PRECONDITION / 409: the Android device is no longer online. The
+    /// lease retains its machine and files until release or expiry. No new
+    /// device action or execution was dispatched.
+    DeviceLost,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -479,6 +483,7 @@ impl ErrorCode {
             Self::DestinationCountryNotAllowed => "DESTINATION_COUNTRY_NOT_ALLOWED",
             Self::BudgetExhausted => "BUDGET_EXHAUSTED",
             Self::NoLogStreamsMapped => "NO_LOG_STREAMS_MAPPED",
+            Self::DeviceLost => "DEVICE_LOST",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -523,6 +528,7 @@ impl ErrorCode {
             "DESTINATION_COUNTRY_NOT_ALLOWED" => Self::DestinationCountryNotAllowed,
             "BUDGET_EXHAUSTED" => Self::BudgetExhausted,
             "NO_LOG_STREAMS_MAPPED" => Self::NoLogStreamsMapped,
+            "DEVICE_LOST" => Self::DeviceLost,
             other => Self::Unknown(other.to_string()),
         }
     }

@@ -12740,7 +12740,8 @@
           "EXEC_OUTCOME_UNKNOWN",
           "DESTINATION_COUNTRY_NOT_ALLOWED",
           "BUDGET_EXHAUSTED",
-          "NO_LOG_STREAMS_MAPPED"
+          "NO_LOG_STREAMS_MAPPED",
+          "DEVICE_LOST"
         ],
         "type": "string"
       },
@@ -44874,7 +44875,8 @@
           "control_expired",
           "budget_warning",
           "paused",
-          "resumed"
+          "resumed",
+          "device_lost"
         ],
         "type": "string"
       },
@@ -45071,7 +45073,8 @@
           "paused",
           "ending",
           "ended",
-          "refused"
+          "refused",
+          "unhealthy"
         ],
         "type": "string"
       },
@@ -94082,6 +94085,7 @@
           "RESOURCE_NOT_FOUND",
           "INVALID_FIELD",
           "INVALID_STATE",
+          "DEVICE_LOST",
           "CONTROL_HELD",
           "CONTROL_HELD_BY_HUMAN"
         ],
@@ -94208,6 +94212,7 @@
           "RESOURCE_NOT_FOUND",
           "INVALID_FIELD",
           "INVALID_STATE",
+          "DEVICE_LOST",
           "STALE_GENERATION",
           "CONTROL_HELD",
           "CONTROL_HELD_BY_HUMAN"
@@ -94582,6 +94587,7 @@
           "PERMISSION_DENIED",
           "RESOURCE_NOT_FOUND",
           "INVALID_STATE",
+          "DEVICE_LOST",
           "STALE_GENERATION",
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS",
@@ -94771,6 +94777,9 @@
           "404": {
             "$ref": "#/components/responses/Problem"
           },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
           "501": {
             "$ref": "#/components/responses/Problem"
           },
@@ -94788,6 +94797,7 @@
           "PERMISSION_DENIED",
           "RESOURCE_NOT_FOUND",
           "INVALID_STATE",
+          "DEVICE_LOST",
           "NOT_FOUND",
           "UNIMPLEMENTED"
         ],
@@ -95232,6 +95242,9 @@
           "404": {
             "$ref": "#/components/responses/Problem"
           },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -95245,7 +95258,8 @@
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
           "RESOURCE_NOT_FOUND",
-          "INVALID_STATE"
+          "INVALID_STATE",
+          "DEVICE_LOST"
         ],
         "x-sylphx-method": "sandboxes.leases.open_stream",
         "x-sylphx-permission": "sandboxes:exec",

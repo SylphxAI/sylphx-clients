@@ -186,6 +186,11 @@
       "number": 37,
       "proto_name": "ERROR_CODE_NO_LOG_STREAMS_MAPPED",
       "wire": "NO_LOG_STREAMS_MAPPED"
+    },
+    {
+      "number": 38,
+      "proto_name": "ERROR_CODE_DEVICE_LOST",
+      "wire": "DEVICE_LOST"
     }
   ]
 }

@@ -1546,7 +1546,7 @@ export type EndReason = 'released' | 'expired' | 'idle' | 'cpu_budget' | 'cost_b
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | (string & {})
 
 /** LeaseEventKind is what a LeaseEvent records. */
-export type LeaseEventKind = 'granted' | 'ready' | 'refused' | 'ended' | 'renewed' | 'network_changed' | 'control_acquired' | 'control_released' | 'control_expired' | 'budget_warning' | 'paused' | 'resumed' | (string & {})
+export type LeaseEventKind = 'granted' | 'ready' | 'refused' | 'ended' | 'renewed' | 'network_changed' | 'control_acquired' | 'control_released' | 'control_expired' | 'budget_warning' | 'paused' | 'resumed' | 'device_lost' | (string & {})
 
 /** LeaseKind is what a lease's machine serves. */
 export type LeaseKind = 'general' | 'browser' | 'desktop' | 'android' | 'ios' | (string & {})
@@ -1558,7 +1558,7 @@ export type LeaseKind = 'general' | 'browser' | 'desktop' | 'android' | 'ios' | 
 export type LeaseRefusal = 'no_capacity' | 'no_matching_cell' | 'shape_not_offered' | 'shape_not_entitled' | 'image_not_found' | 'abuse_hold' | 'unavailable' | (string & {})
 
 /** LeaseState is the lease state machine (sandboxes-e2b.md §5.4). */
-export type LeaseState = 'requested' | 'granted' | 'ready' | 'paused' | 'ending' | 'ended' | 'refused' | (string & {})
+export type LeaseState = 'requested' | 'granted' | 'ready' | 'paused' | 'ending' | 'ended' | 'refused' | 'unhealthy' | (string & {})
 
 /** MouseButton is a pointer button. */
 export type MouseButton = 'left' | 'right' | 'middle' | 'back' | 'forward' | (string & {})
@@ -2405,7 +2405,7 @@ export class LeasesCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:exec` · permission `sandboxes:exec` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `STALE_GENERATION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `EXEC_OUTCOME_UNKNOWN`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `DEVICE_LOST`, `STALE_GENERATION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `EXEC_OUTCOME_UNKNOWN`.
 	 */
 	async exec(request: ExecLeaseRequest): Promise<ExecLeaseResponse> {
 		return this.client.call<ExecLeaseResponse>({
@@ -2557,7 +2557,7 @@ export class LeasesCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:act` · permission `sandboxes:exec` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `STALE_GENERATION`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `DEVICE_LOST`, `STALE_GENERATION`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
 	 */
 	async act(request: ActLeaseRequest): Promise<ActLeaseResponse> {
 		return this.client.call<ActLeaseResponse>({
@@ -2578,7 +2578,7 @@ export class LeasesCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:openStream` · permission `sandboxes:exec` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `DEVICE_LOST`.
 	 */
 	async openStream(request: OpenLeaseStreamRequest): Promise<StreamSession> {
 		return this.client.call<StreamSession>({
@@ -2599,7 +2599,7 @@ export class LeasesCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:acquireControl` · permission `sandboxes:exec` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `DEVICE_LOST`, `CONTROL_HELD`, `CONTROL_HELD_BY_HUMAN`.
 	 */
 	async acquireControl(request: AcquireLeaseControlRequest): Promise<AcquireLeaseControlResponse> {
 		return this.client.call<AcquireLeaseControlResponse>({
@@ -2651,7 +2651,7 @@ export class LeasesCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/leases/*}:installApp` · permission `sandboxes:exec` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `NOT_FOUND`, `UNIMPLEMENTED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `DEVICE_LOST`, `NOT_FOUND`, `UNIMPLEMENTED`.
 	 */
 	async installApp(request: InstallLeaseAppRequest): Promise<InstallLeaseAppResponse> {
 		return this.client.call<InstallLeaseAppResponse>({

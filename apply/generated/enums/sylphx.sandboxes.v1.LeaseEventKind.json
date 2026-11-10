@@ -61,6 +61,11 @@
       "number": 12,
       "proto_name": "LEASE_EVENT_KIND_RESUMED",
       "wire": "resumed"
+    },
+    {
+      "number": 13,
+      "proto_name": "LEASE_EVENT_KIND_DEVICE_LOST",
+      "wire": "device_lost"
     }
   ]
 }
