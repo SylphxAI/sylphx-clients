@@ -1,6 +1,6 @@
 [package]
 name = "sylphx-resource-codec"
-version = "0.1.13"
+version = "0.1.14"
 description = "Sylphx's native Resource API registry, routing, schema validation, and problem details. Shared by clients and the Resource API front."
 keywords = ["sylphx", "api", "schema", "validation"]
 categories = ["api-bindings"]
