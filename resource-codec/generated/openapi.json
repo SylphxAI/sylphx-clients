@@ -11366,6 +11366,36 @@
         ],
         "type": "object"
       },
+      "sylphx.broker.v1.GitHubActionBudget": {
+        "description": "Admission budget for content creation through one TrustPolicy.\nBroker reserves admission atomically before provider I/O, including failures.",
+        "properties": {
+          "per_hour": {
+            "description": "Maximum admissions in a rolling 3600-second window; 1 to 500.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "per_minute": {
+            "description": "Maximum admissions in a rolling 60-second window; 1 to 80.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "per_minute",
+          "per_hour"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.GitHubPullRequestHead": {
+        "description": "The source revision of a created pull request.",
+        "properties": {
+          "sha": {
+            "description": "Full Git object id returned by GitHub.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.ListTokenExchangesRequest": {
         "description": "The request of ListTokenExchanges.",
         "properties": {
@@ -11450,6 +11480,67 @@
               "$ref": "#/components/schemas/sylphx.broker.v1.TrustPolicy"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.broker.v1.OpenGitHubPullRequestRequest": {
+        "description": "The request of OpenGitHubPullRequest.",
+        "properties": {
+          "base": {
+            "description": "Existing target branch in repository.",
+            "type": "string"
+          },
+          "body": {
+            "description": "Pull request description.",
+            "type": "string"
+          },
+          "draft": {
+            "description": "Whether to create a draft.",
+            "type": "boolean"
+          },
+          "head": {
+            "description": "Existing branch in repository. Cross-fork owner:branch syntax is refused.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Policy authorizing this action, not an installation-token exchange.",
+            "type": "string",
+            "x-sylphx-resource-reference": "broker.sylphx.com/TrustPolicy"
+          },
+          "repository": {
+            "description": "One exact owner/name from the policy's repository list.",
+            "type": "string"
+          },
+          "title": {
+            "description": "Pull request title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "repository",
+          "head",
+          "base",
+          "title"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.OpenGitHubPullRequestResponse": {
+        "description": "The response of OpenGitHubPullRequest. Never contains credentials.",
+        "properties": {
+          "head": {
+            "$ref": "#/components/schemas/sylphx.broker.v1.GitHubPullRequestHead",
+            "description": "Resolved source revision."
+          },
+          "html_url": {
+            "description": "Public GitHub pull request URL.",
+            "type": "string"
+          },
+          "number": {
+            "description": "Repository-local pull request number.",
+            "format": "int64",
+            "type": "string"
           }
         },
         "type": "object"
@@ -11653,6 +11744,10 @@
           "credential_kind": {
             "$ref": "#/components/schemas/sylphx.broker.v1.CredentialKind",
             "description": "What Broker issues: `access_token` or `vapid_assertion` on the wire."
+          },
+          "github_action_budget": {
+            "$ref": "#/components/schemas/sylphx.broker.v1.GitHubActionBudget",
+            "description": "Required for GitHub user actions. Zero denies actions; ceilings are 80 per\nminute and 500 per hour. This policy budget does not replace GitHub limits."
           },
           "max_ttl": {
             "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
@@ -13851,6 +13946,29 @@
         },
         "type": "object"
       },
+      "sylphx.connections.v1.BeginConnectionAuthorizationRequest": {
+        "description": "The request of BeginConnectionAuthorization.",
+        "properties": {
+          "etag": {
+            "description": "Required current etag when replacing an existing authorization attempt.",
+            "type": "string"
+          },
+          "github_user": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.GitHubUserConfig",
+            "description": "Verified App provider and expected user; must match an existing Connection."
+          },
+          "name": {
+            "description": "Explicit Connection name. Creates a pending Connection if it does not exist.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          }
+        },
+        "required": [
+          "name",
+          "github_user"
+        ],
+        "type": "object"
+      },
       "sylphx.connections.v1.BeginConnectionProviderRegistrationRequest": {
         "description": "An ordinary Access admin requests a manifest ceremony in one organization.",
         "properties": {
@@ -13921,6 +14039,25 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "sylphx.connections.v1.CompleteConnectionAuthorizationRequest": {
+        "description": "The request of CompleteConnectionAuthorization.",
+        "properties": {
+          "authorization_id": {
+            "description": "Exact attempt returned by begin; stale attempts never poll the provider.",
+            "type": "string"
+          },
+          "name": {
+            "description": "User Connection being authorized.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          }
+        },
+        "required": [
+          "name",
+          "authorization_id"
+        ],
         "type": "object"
       },
       "sylphx.connections.v1.Connection": {
@@ -14041,6 +14178,10 @@
             "type": "string",
             "x-sylphx-immutable": true
           },
+          "github_user": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.GitHubUserConfig",
+            "description": "GitHub user authorization. Mutually exclusive with all other kinds.\nDevice authorization keeps credentials sealed inside Broker, bound to the\nConnection name and version, for user actions only."
+          },
           "provider": {
             "description": "The provider this is an installation of; unset for Web Push.",
             "type": "string",
@@ -14070,6 +14211,11 @@
           "account": {
             "$ref": "#/components/schemas/sylphx.connections.v1.ExternalAccount",
             "description": "The third-party account the provider is installed on.",
+            "readOnly": true
+          },
+          "authorization": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.GitHubUserAuthorization",
+            "description": "Current device ceremony, present only while the Connection is authorizing.\nContains no device code or token. Use a fresh Idempotency-Key for each poll.",
             "readOnly": true
           },
           "conditions": {
@@ -14358,6 +14504,58 @@
         "required": [
           "url",
           "active"
+        ],
+        "type": "object"
+      },
+      "sylphx.connections.v1.GitHubUserAuthorization": {
+        "description": "Public device ceremony for an expected GitHub user. The device code stays sealed.",
+        "properties": {
+          "authorization_id": {
+            "description": "Opaque attempt identity; a new begin invalidates the preceding attempt.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expire_time": {
+            "description": "Begin again after this ceremony expires.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "next_poll_time": {
+            "description": "Earliest time CompleteConnectionAuthorization may poll GitHub.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "user_code": {
+            "description": "Human code entered while signed in as the expected user.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "verification_uri": {
+            "description": "https://github.com/login/device; the operator approves the App here.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.connections.v1.GitHubUserConfig": {
+        "description": "User authorization for a GitHub App, established through device authorization.\nBroker verifies GET /user before activation. Provider and login are immutable.",
+        "properties": {
+          "login": {
+            "description": "Expected verified GitHub login; never inferred from untrusted input alone.",
+            "type": "string"
+          },
+          "provider": {
+            "description": "App provider whose OAuth client issued the authorization.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          }
+        },
+        "required": [
+          "provider",
+          "login"
         ],
         "type": "object"
       },
@@ -56875,6 +57073,222 @@
           "response": "sylphx.connections.v1.Connection"
         },
         "x-sylphx-method": "connections.connections.update",
+        "x-sylphx-permission": "connections:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/connections/{connection}:beginAuthorization": {
+      "post": {
+        "description": "Begins GitHub device authorization for a new or existing user Connection.\nThe operator opens verification_uri and enters user_code once. Broker keeps\nthe device code and all resulting tokens; clients never supply credentials.\nReauthorization preserves the Connection's provider and expected login.",
+        "operationId": "connections_connections_begin_authorization",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "etag": {
+                    "description": "Required current etag when replacing an existing authorization attempt.",
+                    "type": "string"
+                  },
+                  "github_user": {
+                    "$ref": "#/components/schemas/sylphx.connections.v1.GitHubUserConfig",
+                    "description": "Verified App provider and expected user; must match an existing Connection."
+                  }
+                },
+                "required": [
+                  "github_user"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Begins GitHub device authorization for a new or existing user Connection. The operator opens verification_uri and enters user_code once. Broker keeps the device code and all resulting tokens; clients never supply credentials. Reauthorization preserves the Connection's provider and expected login.",
+        "tags": [
+          "connections"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS",
+          "ETAG_MISMATCH",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-lro": {
+          "metadata": "sylphx.common.v1.OperationProgress",
+          "response": "sylphx.connections.v1.Connection"
+        },
+        "x-sylphx-method": "connections.connections.begin_authorization",
+        "x-sylphx-permission": "connections:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/connections/{connection}:completeAuthorization": {
+      "post": {
+        "description": "Polls one authorization attempt no earlier than next_poll_time. Only an\nexplicit pending response allows another provider poll. Unknown outcomes\nrequire a new authorization; successful credentials are sealed and committed\nbefore the Connection becomes active. A completed attempt is safe to replay.",
+        "operationId": "connections_connections_complete_authorization",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "authorization_id": {
+                    "description": "Exact attempt returned by begin; stale attempts never poll the provider.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authorization_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Polls one authorization attempt no earlier than next_poll_time. Only an explicit pending response allows another provider poll. Unknown outcomes require a new authorization; successful credentials are sealed and committed before the Connection becomes active. A completed attempt is safe to replay.",
+        "tags": [
+          "connections"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_NOT_FOUND",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-lro": {
+          "metadata": "sylphx.common.v1.OperationProgress",
+          "response": "sylphx.connections.v1.Connection"
+        },
+        "x-sylphx-method": "connections.connections.complete_authorization",
         "x-sylphx-permission": "connections:write",
         "x-sylphx-stage": "preview"
       }
@@ -141586,6 +142000,136 @@
         ],
         "x-sylphx-method": "broker.trust_policies.exchange_token",
         "x-sylphx-permission": "broker:exchange",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/trust_policies/{trust_policy}:openGitHubPullRequest": {
+      "post": {
+        "description": "Opens a pull request as the user authorized by the policy's GitHub user\nConnection. Credentials remain inside Broker. Requires an exact repository,\npolicy subject and actor, and pull_requests=write. Fork heads are refused.",
+        "operationId": "broker_trust_policies_open_git_hub_pull_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trust_policy",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "base": {
+                    "description": "Existing target branch in repository.",
+                    "type": "string"
+                  },
+                  "body": {
+                    "description": "Pull request description.",
+                    "type": "string"
+                  },
+                  "draft": {
+                    "description": "Whether to create a draft.",
+                    "type": "boolean"
+                  },
+                  "head": {
+                    "description": "Existing branch in repository. Cross-fork owner:branch syntax is refused.",
+                    "type": "string"
+                  },
+                  "repository": {
+                    "description": "One exact owner/name from the policy's repository list.",
+                    "type": "string"
+                  },
+                  "title": {
+                    "description": "Pull request title.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "repository",
+                  "head",
+                  "base",
+                  "title"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.OpenGitHubPullRequestResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Opens a pull request as the user authorized by the policy's GitHub user Connection. Credentials remain inside Broker. Requires an exact repository, policy subject and actor, and pull_requests=write. Fork heads are refused.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RATE_LIMITED",
+          "UNAVAILABLE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "broker.trust_policies.open_git_hub_pull_request",
+        "x-sylphx-permission": "broker:github:pull_requests:create",
         "x-sylphx-stage": "preview"
       }
     },

@@ -8129,6 +8129,18 @@
                   "type": "string"
                 },
                 {
+                  "field": "trust_policy.spec.github_action_budget.per_minute",
+                  "flag": "--spec.github-action-budget.per-minute",
+                  "summary": "Maximum admissions in a rolling 60-second window; 1 to 80.",
+                  "type": "int"
+                },
+                {
+                  "field": "trust_policy.spec.github_action_budget.per_hour",
+                  "flag": "--spec.github-action-budget.per-hour",
+                  "summary": "Maximum admissions in a rolling 3600-second window; 1 to 500.",
+                  "type": "int"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -8224,6 +8236,18 @@
                   "repeated": true,
                   "summary": "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not.",
                   "type": "string"
+                },
+                {
+                  "field": "trust_policy.spec.github_action_budget.per_minute",
+                  "flag": "--spec.github-action-budget.per-minute",
+                  "summary": "Maximum admissions in a rolling 60-second window; 1 to 80.",
+                  "type": "int"
+                },
+                {
+                  "field": "trust_policy.spec.github_action_budget.per_hour",
+                  "flag": "--spec.github-action-budget.per-hour",
+                  "summary": "Maximum admissions in a rolling 3600-second window; 1 to 500.",
+                  "type": "int"
                 },
                 {
                   "field": "validate_only",
@@ -8352,6 +8376,62 @@
               },
               "summary": "Exchanges the caller's Access grant for a read-only GitHub App installation token. Requires the explicit `broker:exchange:read` scope on this policy, with the same subject, actor, Connection and repository checks as ExchangeToken. Every resolved permission must be read-only: omitting permissions inherits the policy and is refused if it has writes. The provider's returned permissions must confirm the requested ceiling. Writes one TokenExchange audit record; `broker:read` cannot issue tokens.",
               "verb": "exchange-read-token"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "repository",
+                  "flag": "--repository",
+                  "required": true,
+                  "summary": "One exact owner/name from the policy's repository list.",
+                  "type": "string"
+                },
+                {
+                  "field": "head",
+                  "flag": "--head",
+                  "required": true,
+                  "summary": "Existing branch in repository. Cross-fork owner:branch syntax is refused.",
+                  "type": "string"
+                },
+                {
+                  "field": "base",
+                  "flag": "--base",
+                  "required": true,
+                  "summary": "Existing target branch in repository.",
+                  "type": "string"
+                },
+                {
+                  "field": "title",
+                  "flag": "--title",
+                  "required": true,
+                  "summary": "Pull request title.",
+                  "type": "string"
+                },
+                {
+                  "field": "body",
+                  "flag": "--body",
+                  "summary": "Pull request description.",
+                  "type": "string"
+                },
+                {
+                  "field": "draft",
+                  "flag": "--draft",
+                  "summary": "Whether to create a draft.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/trust_policies/*}:openGitHubPullRequest",
+              "method": "broker.trust_policies.open_git_hub_pull_request",
+              "permission": "broker:github:pull_requests:create",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/trust_policies/{trust_policy}"
+              },
+              "summary": "Opens a pull request as the user authorized by the policy's GitHub user Connection. Credentials remain inside Broker. Requires an exact repository, policy subject and actor, and pull_requests=write. Fork heads are refused.",
+              "verb": "open-git-hub-pull-request"
             }
           ],
           "noun": "trust-policies",
@@ -10423,6 +10503,66 @@
               "effect": "write",
               "flags": [
                 {
+                  "field": "github_user",
+                  "flag": "--github-user",
+                  "required": true,
+                  "summary": "Verified App provider and expected user; must match an existing Connection.",
+                  "type": "json"
+                },
+                {
+                  "field": "etag",
+                  "flag": "--etag",
+                  "summary": "Required current etag when replacing an existing authorization attempt.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/connections/*}:beginAuthorization",
+              "method": "connections.connections.begin_authorization",
+              "permission": "connections:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/connections/{connection}"
+              },
+              "summary": "Begins GitHub device authorization for a new or existing user Connection. The operator opens verification_uri and enters user_code once. Broker keeps the device code and all resulting tokens; clients never supply credentials. Reauthorization preserves the Connection's provider and expected login.",
+              "verb": "begin-authorization",
+              "waits": {
+                "default": true,
+                "skip_flag": "--no-wait"
+              }
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "authorization_id",
+                  "flag": "--authorization-id",
+                  "required": true,
+                  "summary": "Exact attempt returned by begin; stale attempts never poll the provider.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/connections/*}:completeAuthorization",
+              "method": "connections.connections.complete_authorization",
+              "permission": "connections:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/connections/{connection}"
+              },
+              "summary": "Polls one authorization attempt no earlier than next_poll_time. Only an explicit pending response allows another provider poll. Unknown outcomes require a new authorization; successful credentials are sealed and committed before the Connection becomes active. A completed attempt is safe to replay.",
+              "verb": "complete-authorization",
+              "waits": {
+                "default": true,
+                "skip_flag": "--no-wait"
+              }
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
                   "default_from_context": true,
                   "field": "parent",
                   "flag": "--parent",
@@ -10472,6 +10612,18 @@
                   "field": "connection.spec.web_push.contact",
                   "flag": "--spec.web-push.contact",
                   "summary": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.github_user.provider",
+                  "flag": "--spec.github-user.provider",
+                  "summary": "App provider whose OAuth client issued the authorization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.github_user.login",
+                  "flag": "--spec.github-user.login",
+                  "summary": "Expected verified GitHub login; never inferred from untrusted input alone.",
                   "type": "string"
                 },
                 {
@@ -10531,6 +10683,18 @@
                   "field": "connection.spec.web_push.contact",
                   "flag": "--spec.web-push.contact",
                   "summary": "Operator contact, a mailto: or HTTPS URI; used as the JWT subject.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.github_user.provider",
+                  "flag": "--spec.github-user.provider",
+                  "summary": "App provider whose OAuth client issued the authorization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.github_user.login",
+                  "flag": "--spec.github-user.login",
+                  "summary": "Expected verified GitHub login; never inferred from untrusted input alone.",
                   "type": "string"
                 },
                 {

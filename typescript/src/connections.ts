@@ -29,6 +29,16 @@ export interface AdoptConnectionProviderResponse {
 	connectionProvider?: ConnectionProvider
 }
 
+/** The request of BeginConnectionAuthorization. */
+export interface BeginConnectionAuthorizationRequest {
+	/** Explicit Connection name. Creates a pending Connection if it does not exist. */
+	name: string
+	/** Verified App provider and expected user; must match an existing Connection. */
+	githubUser: GitHubUserConfig
+	/** Required current etag when replacing an existing authorization attempt. */
+	etag?: string
+}
+
 /** An ordinary Access admin requests a manifest ceremony in one organization. */
 export interface BeginConnectionProviderRegistrationRequest {
 	/** The organization that will own the provider and custody references. */
@@ -62,6 +72,14 @@ export interface BeginConnectionProviderRegistrationResponse {
 	manifest?: string
 	/** State expires ten minutes after begin. */
 	expireTime?: string
+}
+
+/** The request of CompleteConnectionAuthorization. */
+export interface CompleteConnectionAuthorizationRequest {
+	/** User Connection being authorized. */
+	name: string
+	/** Exact attempt returned by begin; stale attempts never poll the provider. */
+	authorizationId: string
 }
 
 /**
@@ -142,6 +160,12 @@ export interface ConnectionSpec {
 	 * external_id. The Connection kind cannot change after creation.
 	 */
 	webPush?: WebPushConfig
+	/**
+	 * GitHub user authorization. Mutually exclusive with all other kinds.
+	 * Device authorization keeps credentials sealed inside Broker, bound to the
+	 * Connection name and version, for user actions only.
+	 */
+	githubUser?: GitHubUserConfig
 }
 
 /**
@@ -172,6 +196,11 @@ export interface ConnectionStatus {
 	readonly suspendTime?: string
 	/** When the status was last read back from the provider. */
 	readonly verifyTime?: string
+	/**
+	 * Current device ceremony, present only while the Connection is authorizing.
+	 * Contains no device code or token. Use a fresh Idempotency-Key for each poll.
+	 */
+	readonly authorization?: GitHubUserAuthorization
 }
 
 /** The request of CreateConnection. */
@@ -284,6 +313,31 @@ export interface GitHubManifestHookAttributes {
 	active?: boolean
 }
 
+/** Public device ceremony for an expected GitHub user. The device code stays sealed. */
+export interface GitHubUserAuthorization {
+	/** Opaque attempt identity; a new begin invalidates the preceding attempt. */
+	readonly authorizationId?: string
+	/** Human code entered while signed in as the expected user. */
+	readonly userCode?: string
+	/** https://github.com/login/device; the operator approves the App here. */
+	readonly verificationUri?: string
+	/** Begin again after this ceremony expires. */
+	readonly expireTime?: string
+	/** Earliest time CompleteConnectionAuthorization may poll GitHub. */
+	readonly nextPollTime?: string
+}
+
+/**
+ * User authorization for a GitHub App, established through device authorization.
+ * Broker verifies GET /user before activation. Provider and login are immutable.
+ */
+export interface GitHubUserConfig {
+	/** App provider whose OAuth client issued the authorization. */
+	provider?: string
+	/** Expected verified GitHub login; never inferred from untrusted input alone. */
+	login?: string
+}
+
 /** The request of ListConnectionProviders. */
 export interface ListConnectionProvidersRequest {
 	/** The org to list in. */
@@ -387,6 +441,9 @@ runtime.registerSchemas({
 	'sylphx.connections.v1.AdoptConnectionProviderResponse': [
 		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],
 	],
+	'sylphx.connections.v1.BeginConnectionAuthorizationRequest': [
+		['githubUser', 'github_user', 'sylphx.connections.v1.GitHubUserConfig'],
+	],
 	'sylphx.connections.v1.BeginConnectionProviderRegistrationRequest': [
 		['connectionProviderId', 'connection_provider_id'],
 		['signingKey', 'signing_key'],
@@ -399,6 +456,9 @@ runtime.registerSchemas({
 		['callbackUrl', 'callback_url'],
 		['registrationUrl', 'registration_url'],
 		['expireTime', 'expire_time'],
+	],
+	'sylphx.connections.v1.CompleteConnectionAuthorizationRequest': [
+		['authorizationId', 'authorization_id'],
 	],
 	'sylphx.connections.v1.Connection': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -422,6 +482,7 @@ runtime.registerSchemas({
 	'sylphx.connections.v1.ConnectionSpec': [
 		['externalId', 'external_id'],
 		['webPush', 'web_push', 'sylphx.connections.v1.WebPushConfig'],
+		['githubUser', 'github_user', 'sylphx.connections.v1.GitHubUserConfig'],
 	],
 	'sylphx.connections.v1.ConnectionStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -432,6 +493,7 @@ runtime.registerSchemas({
 		['installTime', 'install_time'],
 		['suspendTime', 'suspend_time'],
 		['verifyTime', 'verify_time'],
+		['authorization', 'authorization', 'sylphx.connections.v1.GitHubUserAuthorization'],
 	],
 	'sylphx.connections.v1.CreateConnectionRequest': [
 		['connection', 'connection', 'sylphx.connections.v1.Connection'],
@@ -461,6 +523,14 @@ runtime.registerSchemas({
 		['hookAttributes', 'hook_attributes', 'sylphx.connections.v1.GitHubManifestHookAttributes'],
 	],
 	'sylphx.connections.v1.GitHubManifestHookAttributes': [],
+	'sylphx.connections.v1.GitHubUserAuthorization': [
+		['authorizationId', 'authorization_id'],
+		['userCode', 'user_code'],
+		['verificationUri', 'verification_uri'],
+		['expireTime', 'expire_time'],
+		['nextPollTime', 'next_poll_time'],
+	],
+	'sylphx.connections.v1.GitHubUserConfig': [],
 	'sylphx.connections.v1.ListConnectionProvidersRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -693,6 +763,50 @@ export class ConnectionsCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Begins GitHub device authorization for a new or existing user Connection.
+	 * The operator opens verification_uri and enters user_code once. Broker keeps
+	 * the device code and all resulting tokens; clients never supply credentials.
+	 * Reauthorization preserves the Connection's provider and expected login.
+	 *
+	 * `POST /v1/{name=orgs/*\/connections/*}:beginAuthorization` · permission `connections:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async beginAuthorization(request: BeginConnectionAuthorizationRequest): Promise<runtime.Operation<Connection>> {
+		const operation = await this.client.call<common.Operation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connections/*', 'name')}:beginAuthorization`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.connections.v1.BeginConnectionAuthorizationRequest',
+			responseType: 'sylphx.common.v1.Operation',
+			mutation: true,
+		})
+		return new runtime.Operation<Connection>(this.client, operation, 'sylphx.connections.v1.Connection')
+	}
+
+	/**
+	 * Polls one authorization attempt no earlier than next_poll_time. Only an
+	 * explicit pending response allows another provider poll. Unknown outcomes
+	 * require a new authorization; successful credentials are sealed and committed
+	 * before the Connection becomes active. A completed attempt is safe to replay.
+	 *
+	 * `POST /v1/{name=orgs/*\/connections/*}:completeAuthorization` · permission `connections:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async completeAuthorization(request: CompleteConnectionAuthorizationRequest): Promise<runtime.Operation<Connection>> {
+		const operation = await this.client.call<common.Operation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connections/*', 'name')}:completeAuthorization`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.connections.v1.CompleteConnectionAuthorizationRequest',
+			responseType: 'sylphx.common.v1.Operation',
+			mutation: true,
+		})
+		return new runtime.Operation<Connection>(this.client, operation, 'sylphx.connections.v1.Connection')
 	}
 
 	/**

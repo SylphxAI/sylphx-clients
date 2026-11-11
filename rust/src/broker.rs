@@ -225,6 +225,40 @@ pub struct GetTrustPolicyRequest {
     pub name: String,
 }
 
+/// Admission budget for content creation through one TrustPolicy.
+/// Broker reserves admission atomically before provider I/O, including failures.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitHubActionBudget {
+    /// Maximum admissions in a rolling 60-second window; 1 to 80.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "perMinute"
+    )]
+    pub per_minute: i32,
+    /// Maximum admissions in a rolling 3600-second window; 1 to 500.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "perHour"
+    )]
+    pub per_hour: i32,
+}
+
+/// The source revision of a created pull request.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitHubPullRequestHead {
+    /// Full Git object id returned by GitHub.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha: String,
+}
+
 /// The request of ListTokenExchanges.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -323,6 +357,66 @@ pub struct ListTrustPoliciesResponse {
         alias = "nextPageToken"
     )]
     pub next_page_token: String,
+}
+
+/// The request of OpenGitHubPullRequest.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OpenGitHubPullRequestRequest {
+    /// Policy authorizing this action, not an installation-token exchange.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// One exact owner/name from the policy's repository list.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub repository: String,
+    /// Existing branch in repository. Cross-fork owner:branch syntax is refused.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub head: String,
+    /// Existing target branch in repository.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub base: String,
+    /// Pull request title.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub title: String,
+    /// Pull request description.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub body: String,
+    /// Whether to create a draft.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub draft: bool,
+}
+
+/// The response of OpenGitHubPullRequest. Never contains credentials.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct OpenGitHubPullRequestResponse {
+    /// Repository-local pull request number.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub number: i64,
+    /// Public GitHub pull request URL.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "htmlUrl"
+    )]
+    pub html_url: String,
+    /// Resolved source revision.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head: Option<GitHubPullRequestHead>,
 }
 
 /// The request of RevokeTokenExchange.
@@ -576,6 +670,14 @@ pub struct TrustPolicySpec {
     /// delegated or not.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub actors: Vec<String>,
+    /// Required for GitHub user actions. Zero denies actions; ceilings are 80 per
+    /// minute and 500 per hour. This policy budget does not replace GitHub limits.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "githubActionBudget"
+    )]
+    pub github_action_budget: Option<GitHubActionBudget>,
 }
 
 /// TrustPolicyStatus is the observed state of a TrustPolicy.
@@ -946,6 +1048,34 @@ impl<'a, T: crate::runtime::Transport> TrustPoliciesCollection<'a, T> {
     ) -> Result<ExchangeReadTokenResponse, crate::runtime::Error> {
         let path = format!(
             "/v1/{}:exchangeReadToken",
+            crate::runtime::path_param(&request.name, "orgs/*/trust_policies/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Opens a pull request as the user authorized by the policy's GitHub user
+    /// Connection. Credentials remain inside Broker. Requires an exact repository,
+    /// policy subject and actor, and pull_requests=write. Fork heads are refused.
+    ///
+    /// `POST /v1/{name=orgs/*/trust_policies/*}:openGitHubPullRequest` · permission `broker:github:pull_requests:create` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn open_git_hub_pull_request(
+        &self,
+        request: OpenGitHubPullRequestRequest,
+    ) -> Result<OpenGitHubPullRequestResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:openGitHubPullRequest",
             crate::runtime::path_param(&request.name, "orgs/*/trust_policies/*", "name")?
         );
         let query = crate::runtime::Query::default();

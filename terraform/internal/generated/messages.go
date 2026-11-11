@@ -168,6 +168,14 @@ func billingMoney() []def.Field {
 	}
 }
 
+// brokerGitHubActionBudget is `sylphx.broker.v1.GitHubActionBudget`.
+func brokerGitHubActionBudget() []def.Field {
+	return []def.Field{
+		{Name: "per_minute", Kind: def.Int32, Flags: def.Required, Doc: "Maximum admissions in a rolling 60-second window; 1 to 80."},
+		{Name: "per_hour", Kind: def.Int32, Flags: def.Required, Doc: "Maximum admissions in a rolling 3600-second window; 1 to 500."},
+	}
+}
+
 // brokerTrustPolicySpec is `sylphx.broker.v1.TrustPolicySpec`.
 func brokerTrustPolicySpec() []def.Field {
 	return []def.Field{
@@ -178,6 +186,7 @@ func brokerTrustPolicySpec() []def.Field {
 		{Name: "credential_kind", Kind: def.Enum, Values: []string{"access_token", "runner_registration", "vapid_assertion"}, Flags: def.Required, Doc: "What Broker issues: `access_token` or `vapid_assertion` on the wire."},
 		{Name: "max_ttl", Kind: def.Duration, Doc: "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID."},
 		{Name: "actors", Kind: def.String, Repeated: true, Doc: "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not."},
+		{Name: "github_action_budget", Kind: def.Message, Msg: brokerGitHubActionBudget, Doc: "Required for GitHub user actions. Zero denies actions; ceilings are 80 per minute and 500 per hour. This policy budget does not replace GitHub limits."},
 	}
 }
 
@@ -288,6 +297,7 @@ func connectionsConnectionSpec() []def.Field {
 		{Name: "provider", Kind: def.String, Flags: def.Immutable, Doc: "The provider this is an installation of; unset for Web Push."},
 		{Name: "external_id", Kind: def.String, Flags: def.Immutable, Doc: "The provider's id of the installation, for example a GitHub App installation id. Unset for Web Push."},
 		{Name: "web_push", Kind: def.Message, Msg: connectionsWebPushConfig, Doc: "Web Push assertion configuration. Mutually exclusive with provider and external_id. The Connection kind cannot change after creation."},
+		{Name: "github_user", Kind: def.Message, Msg: connectionsGitHubUserConfig, Doc: "GitHub user authorization. Mutually exclusive with all other kinds. Device authorization keeps credentials sealed inside Broker, bound to the Connection name and version, for user actions only."},
 	}
 }
 
@@ -304,6 +314,7 @@ func connectionsConnectionStatus() []def.Field {
 		{Name: "install_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the provider says the installation was created."},
 		{Name: "suspend_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the provider suspended the installation."},
 		{Name: "verify_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the status was last read back from the provider."},
+		{Name: "authorization", Kind: def.Message, Msg: connectionsGitHubUserAuthorization, Flags: def.OutputOnly, Doc: "Current device ceremony, present only while the Connection is authorizing. Contains no device code or token. Use a fresh Idempotency-Key for each poll."},
 	}
 }
 
@@ -324,6 +335,25 @@ func connectionsGitHubAppConfig() []def.Field {
 		{Name: "client_id", Kind: def.String, Doc: "The App's OAuth client id."},
 		{Name: "signing_key", Kind: def.String, Flags: def.Required, Doc: "The imported, non-exportable SIGN Key (RS256) that signs App assertions; only the credential service may use it."},
 		{Name: "webhook_secret", Kind: def.String, Doc: "The Secret holding the webhook secret that verifies deliveries."},
+	}
+}
+
+// connectionsGitHubUserAuthorization is `sylphx.connections.v1.GitHubUserAuthorization`.
+func connectionsGitHubUserAuthorization() []def.Field {
+	return []def.Field{
+		{Name: "authorization_id", Kind: def.String, Flags: def.OutputOnly, Doc: "Opaque attempt identity; a new begin invalidates the preceding attempt."},
+		{Name: "user_code", Kind: def.String, Flags: def.OutputOnly, Doc: "Human code entered while signed in as the expected user."},
+		{Name: "verification_uri", Kind: def.String, Flags: def.OutputOnly, Doc: "https://github.com/login/device; the operator approves the App here."},
+		{Name: "expire_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "Begin again after this ceremony expires."},
+		{Name: "next_poll_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "Earliest time CompleteConnectionAuthorization may poll GitHub."},
+	}
+}
+
+// connectionsGitHubUserConfig is `sylphx.connections.v1.GitHubUserConfig`.
+func connectionsGitHubUserConfig() []def.Field {
+	return []def.Field{
+		{Name: "provider", Kind: def.String, Flags: def.Required, Doc: "App provider whose OAuth client issued the authorization."},
+		{Name: "login", Kind: def.String, Flags: def.Required, Doc: "Expected verified GitHub login; never inferred from untrusted input alone."},
 	}
 }
 

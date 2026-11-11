@@ -48,6 +48,25 @@ pub struct AdoptConnectionProviderResponse {
     pub connection_provider: Option<ConnectionProvider>,
 }
 
+/// The request of BeginConnectionAuthorization.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginConnectionAuthorizationRequest {
+    /// Explicit Connection name. Creates a pending Connection if it does not exist.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Verified App provider and expected user; must match an existing Connection.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "githubUser")]
+    pub github_user: Option<GitHubUserConfig>,
+    /// Required current etag when replacing an existing authorization attempt.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+}
+
 /// An ordinary Access admin requests a manifest ceremony in one organization.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -143,6 +162,26 @@ pub struct BeginConnectionProviderRegistrationResponse {
         alias = "expireTime"
     )]
     pub expire_time: String,
+}
+
+/// The request of CompleteConnectionAuthorization.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CompleteConnectionAuthorizationRequest {
+    /// User Connection being authorized.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Exact attempt returned by begin; stale attempts never poll the provider.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizationId"
+    )]
+    pub authorization_id: String,
 }
 
 /// A Connection is a third-party relationship: a provider installation, or
@@ -285,6 +324,11 @@ pub struct ConnectionSpec {
     /// external_id. The Connection kind cannot change after creation.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "webPush")]
     pub web_push: Option<WebPushConfig>,
+    /// GitHub user authorization. Mutually exclusive with all other kinds.
+    /// Device authorization keeps credentials sealed inside Broker, bound to the
+    /// Connection name and version, for user actions only.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "githubUser")]
+    pub github_user: Option<GitHubUserConfig>,
 }
 
 /// ConnectionStatus is the observed state of a Connection, as last read back
@@ -364,6 +408,12 @@ pub struct ConnectionStatus {
         alias = "verifyTime"
     )]
     pub verify_time: String,
+    /// Current device ceremony, present only while the Connection is authorizing.
+    /// Contains no device code or token. Use a fresh Idempotency-Key for each poll.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization: Option<GitHubUserAuthorization>,
 }
 
 /// The request of CreateConnection.
@@ -598,6 +648,74 @@ pub struct GitHubManifestHookAttributes {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub active: bool,
+}
+
+/// Public device ceremony for an expected GitHub user. The device code stays sealed.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitHubUserAuthorization {
+    /// Opaque attempt identity; a new begin invalidates the preceding attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizationId"
+    )]
+    pub authorization_id: String,
+    /// Human code entered while signed in as the expected user.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "userCode"
+    )]
+    pub user_code: String,
+    /// https://github.com/login/device; the operator approves the App here.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "verificationUri"
+    )]
+    pub verification_uri: String,
+    /// Begin again after this ceremony expires.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+    /// Earliest time CompleteConnectionAuthorization may poll GitHub.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPollTime"
+    )]
+    pub next_poll_time: String,
+}
+
+/// User authorization for a GitHub App, established through device authorization.
+/// Broker verifies GET /user before activation. Provider and login are immutable.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitHubUserConfig {
+    /// App provider whose OAuth client issued the authorization.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub provider: String,
+    /// Expected verified GitHub login; never inferred from untrusted input alone.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub login: String,
 }
 
 /// The request of ListConnectionProviders.
@@ -1264,6 +1382,66 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Begins GitHub device authorization for a new or existing user Connection.
+    /// The operator opens verification_uri and enters user_code once. Broker keeps
+    /// the device code and all resulting tokens; clients never supply credentials.
+    /// Reauthorization preserves the Connection's provider and expected login.
+    ///
+    /// `POST /v1/{name=orgs/*/connections/*}:beginAuthorization` · permission `connections:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn begin_authorization(
+        &self,
+        request: BeginConnectionAuthorizationRequest,
+    ) -> Result<crate::runtime::Operation<'a, T, Connection>, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:beginAuthorization",
+            crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        let operation = self.client.call(http).await?;
+        Ok(crate::runtime::Operation::new(self.client, operation))
+    }
+
+    /// Polls one authorization attempt no earlier than next_poll_time. Only an
+    /// explicit pending response allows another provider poll. Unknown outcomes
+    /// require a new authorization; successful credentials are sealed and committed
+    /// before the Connection becomes active. A completed attempt is safe to replay.
+    ///
+    /// `POST /v1/{name=orgs/*/connections/*}:completeAuthorization` · permission `connections:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn complete_authorization(
+        &self,
+        request: CompleteConnectionAuthorizationRequest,
+    ) -> Result<crate::runtime::Operation<'a, T, Connection>, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:completeAuthorization",
+            crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        let operation = self.client.call(http).await?;
+        Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
     /// Records an installation; the controller confirms it with the provider.

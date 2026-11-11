@@ -11961,6 +11961,27 @@
                     ],
                     "type": "string"
                   },
+                  "github_action_budget": {
+                    "additionalProperties": false,
+                    "description": "Required for GitHub user actions. Zero denies actions; ceilings are 80 per\nminute and 500 per hour. This policy budget does not replace GitHub limits.",
+                    "properties": {
+                      "per_hour": {
+                        "description": "Maximum admissions in a rolling 3600-second window; 1 to 500.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "per_minute": {
+                        "description": "Maximum admissions in a rolling 60-second window; 1 to 80.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "per_minute",
+                      "per_hour"
+                    ],
+                    "type": "object"
+                  },
                   "max_ttl": {
                     "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
@@ -12093,6 +12114,27 @@
                       "vapid_assertion"
                     ],
                     "type": "string"
+                  },
+                  "github_action_budget": {
+                    "additionalProperties": false,
+                    "description": "Required for GitHub user actions. Zero denies actions; ceilings are 80 per\nminute and 500 per hour. This policy budget does not replace GitHub limits.",
+                    "properties": {
+                      "per_hour": {
+                        "description": "Maximum admissions in a rolling 3600-second window; 1 to 500.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "per_minute": {
+                        "description": "Maximum admissions in a rolling 60-second window; 1 to 80.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "per_minute",
+                      "per_hour"
+                    ],
+                    "type": "object"
                   },
                   "max_ttl": {
                     "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
@@ -14865,6 +14907,98 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Begins GitHub device authorization for a new or existing user Connection. The operator opens verification_uri and enters user_code once. Broker keeps the device code and all resulting tokens; clients never supply credentials. Reauthorization preserves the Connection's provider and expected login."
+      },
+      "description": "Begins GitHub device authorization for a new or existing user Connection.\nThe operator opens verification_uri and enters user_code once. Broker keeps\nthe device code and all resulting tokens; clients never supply credentials.\nReauthorization preserves the Connection's provider and expected login.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/connections/*}:beginAuthorization",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of BeginConnectionAuthorization.",
+        "properties": {
+          "etag": {
+            "description": "Required current etag when replacing an existing authorization attempt.",
+            "type": "string"
+          },
+          "github_user": {
+            "additionalProperties": false,
+            "description": "Verified App provider and expected user; must match an existing Connection.",
+            "properties": {
+              "login": {
+                "description": "Expected verified GitHub login; never inferred from untrusted input alone.",
+                "type": "string"
+              },
+              "provider": {
+                "description": "App provider whose OAuth client issued the authorization.",
+                "type": "string",
+                "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+              }
+            },
+            "required": [
+              "provider",
+              "login"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "Explicit Connection name. Creates a pending Connection if it does not exist.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          }
+        },
+        "required": [
+          "name",
+          "github_user"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "connections.connections.begin_authorization",
+      "permission": "connections:write",
+      "tool": "connections_connections_begin_authorization"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Polls one authorization attempt no earlier than next_poll_time. Only an explicit pending response allows another provider poll. Unknown outcomes require a new authorization; successful credentials are sealed and committed before the Connection becomes active. A completed attempt is safe to replay."
+      },
+      "description": "Polls one authorization attempt no earlier than next_poll_time. Only an\nexplicit pending response allows another provider poll. Unknown outcomes\nrequire a new authorization; successful credentials are sealed and committed\nbefore the Connection becomes active. A completed attempt is safe to replay.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/connections/*}:completeAuthorization",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CompleteConnectionAuthorization.",
+        "properties": {
+          "authorization_id": {
+            "description": "Exact attempt returned by begin; stale attempts never poll the provider.",
+            "type": "string"
+          },
+          "name": {
+            "description": "User Connection being authorized.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          }
+        },
+        "required": [
+          "name",
+          "authorization_id"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "connections.connections.complete_authorization",
+      "permission": "connections:write",
+      "tool": "connections_connections_complete_authorization"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Records an installation; the controller confirms it with the provider."
       },
       "description": "Records an installation; the controller confirms it with the provider.",
@@ -14915,6 +15049,26 @@
                     "description": "The provider's id of the installation, for example a GitHub App\ninstallation id. Unset for Web Push.",
                     "type": "string",
                     "x-sylphx-immutable": true
+                  },
+                  "github_user": {
+                    "additionalProperties": false,
+                    "description": "GitHub user authorization. Mutually exclusive with all other kinds.\nDevice authorization keeps credentials sealed inside Broker, bound to the\nConnection name and version, for user actions only.",
+                    "properties": {
+                      "login": {
+                        "description": "Expected verified GitHub login; never inferred from untrusted input alone.",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "description": "App provider whose OAuth client issued the authorization.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+                      }
+                    },
+                    "required": [
+                      "provider",
+                      "login"
+                    ],
+                    "type": "object"
                   },
                   "provider": {
                     "description": "The provider this is an installation of; unset for Web Push.",
@@ -15032,6 +15186,26 @@
                     "description": "The provider's id of the installation, for example a GitHub App\ninstallation id. Unset for Web Push.",
                     "type": "string",
                     "x-sylphx-immutable": true
+                  },
+                  "github_user": {
+                    "additionalProperties": false,
+                    "description": "GitHub user authorization. Mutually exclusive with all other kinds.\nDevice authorization keeps credentials sealed inside Broker, bound to the\nConnection name and version, for user actions only.",
+                    "properties": {
+                      "login": {
+                        "description": "Expected verified GitHub login; never inferred from untrusted input alone.",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "description": "App provider whose OAuth client issued the authorization.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+                      }
+                    },
+                    "required": [
+                      "provider",
+                      "login"
+                    ],
+                    "type": "object"
                   },
                   "provider": {
                     "description": "The provider this is an installation of; unset for Web Push.",

@@ -38449,6 +38449,75 @@
       "package": "sylphx.broker.v1"
     },
     {
+      "doc": "Admission budget for content creation through one TrustPolicy.\nBroker reserves admission atomically before provider I/O, including failures.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum admissions in a rolling 60-second window; 1 to 80.",
+          "filterable": false,
+          "name": "per_minute",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum admissions in a rolling 3600-second window; 1 to 500.",
+          "filterable": false,
+          "name": "per_hour",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.GitHubActionBudget",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The source revision of a created pull request.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Full Git object id returned by GitHub.",
+          "filterable": false,
+          "name": "sha",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.GitHubPullRequestHead",
+      "package": "sylphx.broker.v1"
+    },
+    {
       "doc": "The request of ListTokenExchanges.",
       "fields": [
         {
@@ -38694,6 +38763,204 @@
         }
       ],
       "name": "sylphx.broker.v1.ListTrustPoliciesResponse",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The request of OpenGitHubPullRequest.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Policy authorizing this action, not an installation-token exchange.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "broker.sylphx.com/TrustPolicy",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "One exact owner/name from the policy's repository list.",
+          "filterable": false,
+          "name": "repository",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Existing branch in repository. Cross-fork owner:branch syntax is refused.",
+          "filterable": false,
+          "name": "head",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Existing target branch in repository.",
+          "filterable": false,
+          "name": "base",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Pull request title.",
+          "filterable": false,
+          "name": "title",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Pull request description.",
+          "filterable": false,
+          "name": "body",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Whether to create a draft.",
+          "filterable": false,
+          "name": "draft",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.OpenGitHubPullRequestRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The response of OpenGitHubPullRequest. Never contains credentials.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Repository-local pull request number.",
+          "filterable": false,
+          "name": "number",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Public GitHub pull request URL.",
+          "filterable": false,
+          "name": "html_url",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Resolved source revision.",
+          "filterable": false,
+          "name": "head",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.broker.v1.GitHubPullRequestHead"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.OpenGitHubPullRequestResponse",
       "package": "sylphx.broker.v1"
     },
     {
@@ -39395,6 +39662,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Required for GitHub user actions. Zero denies actions; ceilings are 80 per\nminute and 500 per hour. This policy budget does not replace GitHub limits.",
+          "filterable": false,
+          "name": "github_action_budget",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.broker.v1.GitHubActionBudget"
           }
         }
       ],
@@ -45206,6 +45492,70 @@
       "package": "sylphx.connections.v1"
     },
     {
+      "doc": "The request of BeginConnectionAuthorization.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Explicit Connection name. Creates a pending Connection if it does not exist.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/Connection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Verified App provider and expected user; must match an existing Connection.",
+          "filterable": false,
+          "name": "github_user",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.GitHubUserConfig"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Required current etag when replacing an existing authorization attempt.",
+          "filterable": false,
+          "name": "etag",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.BeginConnectionAuthorizationRequest",
+      "package": "sylphx.connections.v1"
+    },
+    {
       "doc": "An ordinary Access admin requests a manifest ceremony in one organization.",
       "fields": [
         {
@@ -45435,6 +45785,51 @@
         }
       ],
       "name": "sylphx.connections.v1.BeginConnectionProviderRegistrationResponse",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "The request of CompleteConnectionAuthorization.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "User Connection being authorized.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/Connection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact attempt returned by begin; stale attempts never poll the provider.",
+          "filterable": false,
+          "name": "authorization_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.CompleteConnectionAuthorizationRequest",
       "package": "sylphx.connections.v1"
     },
     {
@@ -45830,6 +46225,25 @@
             "kind": "message",
             "name": "sylphx.connections.v1.WebPushConfig"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "GitHub user authorization. Mutually exclusive with all other kinds.\nDevice authorization keeps credentials sealed inside Broker, bound to the\nConnection name and version, for user actions only.",
+          "filterable": false,
+          "name": "github_user",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.GitHubUserConfig"
+          }
         }
       ],
       "name": "sylphx.connections.v1.ConnectionSpec",
@@ -46029,6 +46443,25 @@
           "type": {
             "kind": "well_known",
             "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Current device ceremony, present only while the Connection is authorizing.\nContains no device code or token. Use a fresh Idempotency-Key for each poll.",
+          "filterable": false,
+          "name": "authorization",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.GitHubUserAuthorization"
           }
         }
       ],
@@ -46651,6 +47084,153 @@
         }
       ],
       "name": "sylphx.connections.v1.GitHubManifestHookAttributes",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "Public device ceremony for an expected GitHub user. The device code stays sealed.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Opaque attempt identity; a new begin invalidates the preceding attempt.",
+          "filterable": false,
+          "name": "authorization_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Human code entered while signed in as the expected user.",
+          "filterable": false,
+          "name": "user_code",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "https://github.com/login/device; the operator approves the App here.",
+          "filterable": false,
+          "name": "verification_uri",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Begin again after this ceremony expires.",
+          "filterable": false,
+          "name": "expire_time",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Earliest time CompleteConnectionAuthorization may poll GitHub.",
+          "filterable": false,
+          "name": "next_poll_time",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.GitHubUserAuthorization",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "User authorization for a GitHub App, established through device authorization.\nBroker verifies GET /user before activation. Provider and login are immutable.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "App provider whose OAuth client issued the authorization.",
+          "filterable": false,
+          "name": "provider",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/ConnectionProvider",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Expected verified GitHub login; never inferred from untrusted input alone.",
+          "filterable": false,
+          "name": "login",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.GitHubUserConfig",
       "package": "sylphx.connections.v1"
     },
     {
@@ -163968,6 +164548,51 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "exchange_read_token"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Opens a pull request as the user authorized by the policy's GitHub user\nConnection. Credentials remain inside Broker. Requires an exact repository,\npolicy subject and actor, and pull_requests=write. Fork heads are refused.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "RATE_LIMITED",
+                "UNAVAILABLE",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/trust_policies/{trust_policy}",
+                    "pattern": "orgs/*/trust_policies/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/trust_policies/*}:openGitHubPullRequest"
+              },
+              "id": "broker.trust_policies.open_git_hub_pull_request",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "broker:github:pull_requests:create",
+              "proto": "sylphx.broker.v1.BrokerService.OpenGitHubPullRequest",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.OpenGitHubPullRequestRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.OpenGitHubPullRequestResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "open_git_hub_pull_request"
             }
           ],
           "name": "trust_policies",
@@ -165871,6 +166496,101 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Begins GitHub device authorization for a new or existing user Connection.\nThe operator opens verification_uri and enters user_code once. Broker keeps\nthe device code and all resulting tokens; clients never supply credentials.\nReauthorization preserves the Connection's provider and expected login.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "RESOURCE_ALREADY_EXISTS",
+                "ETAG_MISMATCH",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/connections/{connection}",
+                    "pattern": "orgs/*/connections/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/connections/*}:beginAuthorization"
+              },
+              "id": "connections.connections.begin_authorization",
+              "kind": "custom",
+              "lro": {
+                "metadata": "sylphx.common.v1.OperationProgress",
+                "response": "sylphx.connections.v1.Connection"
+              },
+              "mcp": "default",
+              "page": null,
+              "permission": "connections:write",
+              "proto": "sylphx.connections.v1.ConnectionsService.BeginConnectionAuthorization",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.connections.v1.BeginConnectionAuthorizationRequest",
+              "resource_field": null,
+              "response": "sylphx.common.v1.Operation",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "begin_authorization"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Polls one authorization attempt no earlier than next_poll_time. Only an\nexplicit pending response allows another provider poll. Unknown outcomes\nrequire a new authorization; successful credentials are sealed and committed\nbefore the Connection becomes active. A completed attempt is safe to replay.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "RESOURCE_NOT_FOUND",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/connections/{connection}",
+                    "pattern": "orgs/*/connections/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/connections/*}:completeAuthorization"
+              },
+              "id": "connections.connections.complete_authorization",
+              "kind": "custom",
+              "lro": {
+                "metadata": "sylphx.common.v1.OperationProgress",
+                "response": "sylphx.connections.v1.Connection"
+              },
+              "mcp": "default",
+              "page": null,
+              "permission": "connections:write",
+              "proto": "sylphx.connections.v1.ConnectionsService.CompleteConnectionAuthorization",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.connections.v1.CompleteConnectionAuthorizationRequest",
+              "resource_field": null,
+              "response": "sylphx.common.v1.Operation",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "complete_authorization"
             },
             {
               "cancellable": false,

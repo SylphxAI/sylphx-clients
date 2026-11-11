@@ -23,6 +23,20 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "connections.connections.begin_authorization",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "connections.connections.complete_authorization",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "connection_id",
               "validate_only"

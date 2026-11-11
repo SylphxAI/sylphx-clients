@@ -138,6 +138,23 @@ export interface GetTrustPolicyRequest {
 	name: string
 }
 
+/**
+ * Admission budget for content creation through one TrustPolicy.
+ * Broker reserves admission atomically before provider I/O, including failures.
+ */
+export interface GitHubActionBudget {
+	/** Maximum admissions in a rolling 60-second window; 1 to 80. */
+	perMinute?: number
+	/** Maximum admissions in a rolling 3600-second window; 1 to 500. */
+	perHour?: number
+}
+
+/** The source revision of a created pull request. */
+export interface GitHubPullRequestHead {
+	/** Full Git object id returned by GitHub. */
+	sha?: string
+}
+
 /** The request of ListTokenExchanges. */
 export interface ListTokenExchangesRequest {
 	/** The trust policy to list under. */
@@ -176,6 +193,34 @@ export interface ListTrustPoliciesResponse {
 	trustPolicies?: TrustPolicy[]
 	/** The token of the next page; empty on the last page. */
 	nextPageToken?: string
+}
+
+/** The request of OpenGitHubPullRequest. */
+export interface OpenGitHubPullRequestRequest {
+	/** Policy authorizing this action, not an installation-token exchange. */
+	name: string
+	/** One exact owner/name from the policy's repository list. */
+	repository: string
+	/** Existing branch in repository. Cross-fork owner:branch syntax is refused. */
+	head: string
+	/** Existing target branch in repository. */
+	base: string
+	/** Pull request title. */
+	title: string
+	/** Pull request description. */
+	body?: string
+	/** Whether to create a draft. */
+	draft?: boolean
+}
+
+/** The response of OpenGitHubPullRequest. Never contains credentials. */
+export interface OpenGitHubPullRequestResponse {
+	/** Repository-local pull request number. */
+	number?: string
+	/** Public GitHub pull request URL. */
+	htmlUrl?: string
+	/** Resolved source revision. */
+	head?: GitHubPullRequestHead
 }
 
 /** The request of RevokeTokenExchange. */
@@ -318,6 +363,11 @@ export interface TrustPolicySpec {
 	 * delegated or not.
 	 */
 	actors?: string[]
+	/**
+	 * Required for GitHub user actions. Zero denies actions; ceilings are 80 per
+	 * minute and 500 per hour. This policy budget does not replace GitHub limits.
+	 */
+	githubActionBudget?: GitHubActionBudget
 }
 
 /** TrustPolicyStatus is the observed state of a TrustPolicy. */
@@ -374,6 +424,11 @@ runtime.registerSchemas({
 	],
 	'sylphx.broker.v1.GetTokenExchangeRequest': [],
 	'sylphx.broker.v1.GetTrustPolicyRequest': [],
+	'sylphx.broker.v1.GitHubActionBudget': [
+		['perMinute', 'per_minute'],
+		['perHour', 'per_hour'],
+	],
+	'sylphx.broker.v1.GitHubPullRequestHead': [],
 	'sylphx.broker.v1.ListTokenExchangesRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -390,6 +445,11 @@ runtime.registerSchemas({
 	'sylphx.broker.v1.ListTrustPoliciesResponse': [
 		['trustPolicies', 'trust_policies', 'sylphx.broker.v1.TrustPolicy'],
 		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.broker.v1.OpenGitHubPullRequestRequest': [],
+	'sylphx.broker.v1.OpenGitHubPullRequestResponse': [
+		['htmlUrl', 'html_url'],
+		['head', 'head', 'sylphx.broker.v1.GitHubPullRequestHead'],
 	],
 	'sylphx.broker.v1.RevokeTokenExchangeRequest': [],
 	'sylphx.broker.v1.SignVapidAssertionRequest': [],
@@ -415,6 +475,7 @@ runtime.registerSchemas({
 		['permissions', 'permissions', undefined, 'map'],
 		['credentialKind', 'credential_kind'],
 		['maxTtl', 'max_ttl'],
+		['githubActionBudget', 'github_action_budget', 'sylphx.broker.v1.GitHubActionBudget'],
 	],
 	'sylphx.broker.v1.TrustPolicyStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -600,6 +661,26 @@ export class TrustPoliciesCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.ExchangeReadTokenRequest',
 			responseType: 'sylphx.broker.v1.ExchangeReadTokenResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Opens a pull request as the user authorized by the policy's GitHub user
+	 * Connection. Credentials remain inside Broker. Requires an exact repository,
+	 * policy subject and actor, and pull_requests=write. Fork heads are refused.
+	 *
+	 * `POST /v1/{name=orgs/*\/trust_policies/*}:openGitHubPullRequest` · permission `broker:github:pull_requests:create` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async openGitHubPullRequest(request: OpenGitHubPullRequestRequest): Promise<OpenGitHubPullRequestResponse> {
+		return this.client.call<OpenGitHubPullRequestResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/trust_policies/*', 'name')}:openGitHubPullRequest`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.OpenGitHubPullRequestRequest',
+			responseType: 'sylphx.broker.v1.OpenGitHubPullRequestResponse',
 			mutation: true,
 		})
 	}
