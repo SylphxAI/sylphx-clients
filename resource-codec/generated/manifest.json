@@ -1990,6 +1990,12 @@
           "number": 38,
           "proto_name": "ERROR_CODE_DEVICE_LOST",
           "wire": "DEVICE_LOST"
+        },
+        {
+          "doc": "FAILED_PRECONDITION / 409: a released manifest owns a requested resource\nfield. Change the declaration in the named file and key path, then release.",
+          "number": 39,
+          "proto_name": "ERROR_CODE_FAILED_PRECONDITION",
+          "wire": "FAILED_PRECONDITION"
         }
       ]
     },
@@ -6239,6 +6245,12 @@
     {
       "code": "DEVICE_LOST",
       "doc": "FAILED_PRECONDITION / 409: the Android device is no longer online. The\nlease retains its machine and files until release or expiry. No new\ndevice action or execution was dispatched.",
+      "grpc_status": "FAILED_PRECONDITION",
+      "http_status": 409
+    },
+    {
+      "code": "FAILED_PRECONDITION",
+      "doc": "FAILED_PRECONDITION / 409: a released manifest owns a requested resource\nfield. Change the declaration in the named file and key path, then release.",
       "grpc_status": "FAILED_PRECONDITION",
       "http_status": 409
     }
@@ -167505,7 +167517,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Updates a database.",
+              "doc": "Updates a database. Fields declared by the current Release's sylphx.toml\nremain manifest-owned. An overlapping update mask returns HTTP 409 with\nFAILED_PRECONDITION, the file and key path, and the Release's source commit.\nChange and release the declaration instead. Undeclared fields remain writable;\nreleasing a manifest without a field restores API writes to that field.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
@@ -167514,6 +167526,7 @@
                 "UNKNOWN_FIELD",
                 "INVALID_FIELD",
                 "ETAG_MISMATCH",
+                "FAILED_PRECONDITION",
                 "IDEMPOTENCY_KEY_REUSED",
                 "IDEMPOTENCY_IN_PROGRESS"
               ],

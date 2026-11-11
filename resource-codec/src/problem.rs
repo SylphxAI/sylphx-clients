@@ -133,6 +133,7 @@ fn title(code: &str) -> &'static str {
         "SPEND_LIMIT_REACHED" => "The spend limit is reached.",
         "RATE_LIMITED" => "Too many requests.",
         "INVALID_STATE" => "The resource's state forbids this call.",
+        "FAILED_PRECONDITION" => "The released manifest owns this field.",
         "UNAVAILABLE" => "The service is unavailable.",
         "UNIMPLEMENTED" => "This method is not served yet.",
         "NOT_YET_PROPAGATED" => "The key is not active in this region yet.",

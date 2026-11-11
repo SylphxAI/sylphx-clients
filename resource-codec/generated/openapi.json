@@ -12741,7 +12741,8 @@
           "DESTINATION_COUNTRY_NOT_ALLOWED",
           "BUDGET_EXHAUSTED",
           "NO_LOG_STREAMS_MAPPED",
-          "DEVICE_LOST"
+          "DEVICE_LOST",
+          "FAILED_PRECONDITION"
         ],
         "type": "string"
       },
@@ -81048,7 +81049,7 @@
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates a database.",
+        "description": "Updates a database. Fields declared by the current Release's sylphx.toml\nremain manifest-owned. An overlapping update mask returns HTTP 409 with\nFAILED_PRECONDITION, the file and key path, and the Release's source commit.\nChange and release the declaration instead. Undeclared fields remain writable;\nreleasing a manifest without a field restores API writes to that field.",
         "operationId": "data_databases_update",
         "parameters": [
           {
@@ -81161,7 +81162,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Updates a database.",
+        "summary": "Updates a database. Fields declared by the current Release's sylphx.toml remain manifest-owned. An overlapping update mask returns HTTP 409 with FAILED_PRECONDITION, the file and key path, and the Release's source commit. Change and release the declaration instead. Undeclared fields remain writable; releasing a manifest without a field restores API writes to that field.",
         "tags": [
           "data"
         ],
@@ -81173,6 +81174,7 @@
           "UNKNOWN_FIELD",
           "INVALID_FIELD",
           "ETAG_MISMATCH",
+          "FAILED_PRECONDITION",
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS"
         ],

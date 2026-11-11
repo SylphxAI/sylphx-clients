@@ -191,6 +191,11 @@
       "number": 38,
       "proto_name": "ERROR_CODE_DEVICE_LOST",
       "wire": "DEVICE_LOST"
+    },
+    {
+      "number": 39,
+      "proto_name": "ERROR_CODE_FAILED_PRECONDITION",
+      "wire": "FAILED_PRECONDITION"
     }
   ]
 }

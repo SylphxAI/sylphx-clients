@@ -438,6 +438,9 @@ pub enum ErrorCode {
     /// lease retains its machine and files until release or expiry. No new
     /// device action or execution was dispatched.
     DeviceLost,
+    /// FAILED_PRECONDITION / 409: a released manifest owns a requested resource
+    /// field. Change the declaration in the named file and key path, then release.
+    FailedPrecondition,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -484,6 +487,7 @@ impl ErrorCode {
             Self::BudgetExhausted => "BUDGET_EXHAUSTED",
             Self::NoLogStreamsMapped => "NO_LOG_STREAMS_MAPPED",
             Self::DeviceLost => "DEVICE_LOST",
+            Self::FailedPrecondition => "FAILED_PRECONDITION",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -529,6 +533,7 @@ impl ErrorCode {
             "BUDGET_EXHAUSTED" => Self::BudgetExhausted,
             "NO_LOG_STREAMS_MAPPED" => Self::NoLogStreamsMapped,
             "DEVICE_LOST" => Self::DeviceLost,
+            "FAILED_PRECONDITION" => Self::FailedPrecondition,
             other => Self::Unknown(other.to_string()),
         }
     }

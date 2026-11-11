@@ -15406,9 +15406,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Updates a database."
+        "title": "Updates a database. Fields declared by the current Release's sylphx.toml remain manifest-owned. An overlapping update mask returns HTTP 409 with FAILED_PRECONDITION, the file and key path, and the Release's source commit. Change and release the declaration instead. Undeclared fields remain writable; releasing a manifest without a field restores API writes to that field."
       },
-      "description": "Updates a database.",
+      "description": "Updates a database. Fields declared by the current Release's sylphx.toml\nremain manifest-owned. An overlapping update mask returns HTTP 409 with\nFAILED_PRECONDITION, the file and key path, and the Release's source commit.\nChange and release the declaration instead. Undeclared fields remain writable;\nreleasing a manifest without a field restores API writes to that field.",
       "effect": "write",
       "http": "PATCH /v1/{database.name=orgs/*/projects/*/envs/*/databases/*}",
       "input_schema": {

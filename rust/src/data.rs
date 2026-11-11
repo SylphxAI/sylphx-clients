@@ -4714,11 +4714,15 @@ impl<'a, T: crate::runtime::Transport> DatabasesCollection<'a, T> {
         Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
-    /// Updates a database.
+    /// Updates a database. Fields declared by the current Release's sylphx.toml
+    /// remain manifest-owned. An overlapping update mask returns HTTP 409 with
+    /// FAILED_PRECONDITION, the file and key path, and the Release's source commit.
+    /// Change and release the declaration instead. Undeclared fields remain writable;
+    /// releasing a manifest without a field restores API writes to that field.
     ///
     /// `PATCH /v1/{database.name=orgs/*/projects/*/envs/*/databases/*}` · permission `data:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
     pub async fn update(
         &self,
         request: UpdateDatabaseRequest,
