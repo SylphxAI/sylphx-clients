@@ -320,8 +320,6 @@ jobs:
           echo "any=$([ -s "$out/list" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publish
         if: steps.pack.outputs.any == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           while read -r tgz tag name version; do

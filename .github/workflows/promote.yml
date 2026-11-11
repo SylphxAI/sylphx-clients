@@ -74,8 +74,13 @@ jobs:
   promote:
     needs: smoke
     if: needs.smoke.outputs.eligible == 'true'
-    runs-on: sylphx-linux-standard
+    # npm trusted publishing (OIDC) runs on GitHub-hosted runners only; the
+    # self-hosted JIT fleet cannot mint the required OIDC identity.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -84,9 +89,10 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      # Trusted publishing (OIDC) needs npm >= 11.5.1.
+      - run: npm install -g npm@^11.5.1
       - name: npm dist-tags (read back every write)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           V: ${{ needs.smoke.outputs.version }}
           S: ${{ needs.smoke.outputs.sdk }}
         run: python3 -I scripts/promote-npm.py promote
