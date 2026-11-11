@@ -418,3 +418,33 @@ controller Deployment's `env`):
 - name: SYLPHX_APPLY_CLI_IMAGE
   value: registry.sylphx.com/library/sylphx-cli@sha256:<digest from the run summary>
 ```
+
+## Lease request files
+
+`--from-file` contains the **whole method request**, not just the HTTP body.
+Lease request field names are checked against the schema before defaults or API
+calls. Unknown or misplaced fields fail with `UNKNOWN_FIELD` and the dotted
+field path; caller-owned map keys remain open.
+
+For example, create an Android lease lasting 1800 seconds:
+
+```json
+{
+  "parent": "orgs/ORG/projects/PROJECT/envs/ENV",
+  "lease": {
+    "spec": {
+      "kind": "android",
+      "image": "template:android",
+      "shape": "linux-l",
+      "ttl": "1800s"
+    }
+  }
+}
+```
+
+Run `sylphx sandboxes leases create --from-file android.json --output json`.
+A top-level `spec` in this file is invalid: the path is `lease.spec`. The
+server's REST body for `POST /v1/{parent}/leases` is the Lease itself, so its
+body uses a top-level `spec` instead. Do not interchange the two documents.
+After creation the CLI prints the server-resolved kind, image, size and TTL
+on stderr; stdout retains the selected output format.

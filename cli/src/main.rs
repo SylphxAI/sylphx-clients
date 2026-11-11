@@ -295,6 +295,10 @@ async fn main() -> ExitCode {
             eprintln!("error: {e}");
             ExitCode::from(2)
         }
+        Err(Failure::Input(e)) => {
+            eprintln!("error: {}: {}", e.code, e.detail);
+            ExitCode::from(2)
+        }
         Err(Failure::Refused(e)) => {
             eprintln!("error: {e}");
             ExitCode::from(1)
@@ -310,6 +314,8 @@ async fn main() -> ExitCode {
 #[derive(Debug)]
 enum Failure {
     Usage(String),
+    /// A local schema refusal, before any request can be submitted.
+    Input(sylphx_resource_codec::problem::ApiError),
     /// A one-line reason on stderr, exit 1.
     Refused(String),
     Api(Error),
@@ -1185,6 +1191,22 @@ async fn generated(
         }
         None => Map::new(),
     };
+    // Files contain the whole method request, not its HTTP resource body.
+    // Validate before resolving defaults (which can contact the API), so a
+    // misplaced field can never disappear while the SDK shapes that body.
+    if method.method == "sandboxes.leases.create" && root.get_one::<String>("from-file").is_some() {
+        let ix = sylphx_resource_codec::ir::Index::embedded();
+        if let Some((request, _)) = ix.methods.iter().find(|(m, _)| m.id == method.method) {
+            sylphx_resource_codec::schema::validate_field_names(
+                &ix,
+                &request.request,
+                &Value::Object(args.clone()),
+                "",
+                sylphx_resource_codec::schema::FieldNames::Canonical,
+            )
+            .map_err(Failure::Input)?;
+        }
+    }
     let file_args = Value::Object(args.clone());
     let (values, mask) = tree::flag_values(method, mm)?;
     for (field, value) in &values {
@@ -1310,6 +1332,25 @@ async fn generated(
     let mut result = client
         .invoke(&method.method, Value::Object(args.clone()))
         .await?;
+    // Use the authority's resolved spec, not client guesses about defaults.
+    // Keep stdout machine-readable for --output json/yaml consumers.
+    if method.method == "sandboxes.leases.create" {
+        if let Some(spec) = result.get("spec") {
+            eprintln!(
+                "Resolved lease spec: kind={} image={} size={} ttl={}",
+                spec.get("kind")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown"),
+                spec.get("image")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown"),
+                spec.get("shape")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown"),
+                spec.get("ttl").and_then(Value::as_str).unwrap_or("unknown"),
+            );
+        }
+    }
     if method.paginates && root.get_flag("all") {
         result = follow_pages(client, method, args, result).await?;
     }

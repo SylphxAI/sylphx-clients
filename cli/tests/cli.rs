@@ -74,6 +74,112 @@ async fn apply_json_empty_manifest_has_no_changes_and_errors_exit_one() {
 
 const ENV: &str = "orgs/org_a/projects/prj_a/envs/env_a";
 
+#[tokio::test]
+async fn lease_file_unknown_fields_are_refused_before_dispatch() {
+    for (case, request, path) in [
+        (
+            "misplaced",
+            json!({"parent": ENV, "spec": {"kind": "android", "ttl": "1800s"}}),
+            "spec",
+        ),
+        (
+            "typo",
+            json!({"parent": ENV, "lease": {"spec": {"kind": "android", "ttll": "1800s"}}}),
+            "lease.spec.ttll",
+        ),
+        (
+            "extra",
+            json!({"parent": ENV, "lease": {"spec": {"device": {"model": "pixel_7", "extra": true}}}}),
+            "lease.spec.device.extra",
+        ),
+    ] {
+        let sb = Sandbox::new(&format!("strict-lease-{case}"));
+        std::fs::write(sb.dir.join("request.json"), request.to_string()).unwrap();
+        let (url, log) = serve(vec![(200, json!({"name": format!("{ENV}/leases/wrong")}))]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "sandboxes",
+                "leases",
+                "create",
+                "--from-file",
+                "request.json",
+                "-o",
+                "json",
+            ],
+        )
+        .await;
+        let error = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(2), "{case}: {error}");
+        assert!(error.contains("UNKNOWN_FIELD"), "{case}: {error}");
+        assert!(error.contains(&format!("`{path}`")), "{case}: {error}");
+        assert!(
+            log.lock().is_empty(),
+            "{case}: refused input reached the API"
+        );
+    }
+}
+
+#[tokio::test]
+async fn lease_file_preserves_android_ttl_and_prints_authoritative_spec() {
+    for (extension, ttl) in [("json", "1800s"), ("yaml", "30m")] {
+        let sb = Sandbox::new(&format!("strict-lease-valid-{extension}"));
+        let spec =
+            json!({"kind": "android", "image": "template:android", "shape": "linux-l", "ttl": ttl});
+        let lease = json!({"spec": spec, "meta": {"labels": {"custom_label": "test"}}});
+        let request = json!({"parent": ENV, "lease": lease, "skip_wait_ready": true});
+        let file = format!("request.{extension}");
+        let text = if extension == "json" {
+            request.to_string()
+        } else {
+            serde_yaml_ng::to_string(&request).unwrap()
+        };
+        std::fs::write(sb.dir.join(&file), text).unwrap();
+        let mut resolved_spec = spec.clone();
+        resolved_spec["ttl"] = json!("1800s");
+        let response = json!({"name": format!("{ENV}/leases/android-test"), "spec": resolved_spec});
+        let (url, log) = serve(vec![(200, response.clone())]).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "sandboxes",
+                "leases",
+                "create",
+                "--from-file",
+                &file,
+                "-o",
+                "json",
+            ],
+        )
+        .await;
+        let error = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(0), "{error}");
+        assert_eq!(
+            serde_json::from_slice::<Value>(&out.stdout).unwrap(),
+            response
+        );
+        assert!(
+            error.contains(
+                "Resolved lease spec: kind=android image=template:android size=linux-l ttl=1800s"
+            ),
+            "{error}"
+        );
+        let calls = log.lock();
+        assert_eq!(calls.len(), 1, "{calls:?}");
+        assert!(
+            calls[0].line.contains("skip_wait_ready=true"),
+            "{:?}",
+            calls[0]
+        );
+        assert_eq!(
+            serde_json::from_str::<Value>(&calls[0].body).unwrap(),
+            lease
+        );
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Seen {
     line: String,

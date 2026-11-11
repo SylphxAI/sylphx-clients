@@ -61,6 +61,7 @@ pub(super) async fn project(client: &Client, org: Option<&str>) -> Result<String
         .map_err(|f| Outcome::Platform {
             reason: match f {
                 Failure::Usage(s) | Failure::Refused(s) => s,
+                Failure::Input(e) => format!("{}: {}", e.code, e.detail),
                 Failure::Api(e) => why(&e),
                 Failure::Exit(_) => "stopped".into(),
             },

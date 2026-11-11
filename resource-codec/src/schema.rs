@@ -2,10 +2,82 @@
 //! unknown fields are refused, types and enum values are checked, and
 //! output-only fields a caller sent are dropped.
 
+use heck::ToLowerCamelCase;
 use serde_json::{Map, Value};
 
 use crate::ir::{Field, Index, Type};
 use crate::problem::ApiError;
+
+/// The names accepted at a request boundary. Generated CLI request shaping
+/// uses canonical names; typed HTTP decoders also accept ProtoJSON aliases.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FieldNames {
+    Canonical,
+    ProtobufJson,
+}
+
+/// Refuses unknown field names recursively, leaving value validation to the
+/// owning API. This preserves supported service-specific values (for example
+/// Sandboxes' `30m` duration shorthand) without losing misspelled fields.
+/// Maps keep caller-owned keys; Struct/Any payloads remain open.
+pub fn validate_field_names(
+    ix: &Index,
+    msg: &str,
+    v: &Value,
+    at: &str,
+    names: FieldNames,
+) -> Result<(), ApiError> {
+    let (Some(message), Some(obj)) = (ix.message(msg), v.as_object()) else {
+        return Ok(());
+    };
+    for (key, value) in obj {
+        let path = join(at, key);
+        let field = message
+            .fields
+            .iter()
+            .find(|f| {
+                &f.name == key
+                    || (names == FieldNames::ProtobufJson && f.name.to_lower_camel_case() == *key)
+            })
+            .ok_or_else(|| {
+                ApiError::new(
+                    "UNKNOWN_FIELD",
+                    format!("`{path}` is not a field of this request."),
+                )
+            })?;
+        if field.repeated {
+            if let Some(items) = value.as_array() {
+                for (i, item) in items.iter().enumerate() {
+                    field_names_in_type(ix, &field.r#type, item, &format!("{path}[{i}]"), names)?;
+                }
+            }
+        } else {
+            field_names_in_type(ix, &field.r#type, value, &path, names)?;
+        }
+    }
+    Ok(())
+}
+
+fn field_names_in_type(
+    ix: &Index,
+    ty: &Type,
+    v: &Value,
+    at: &str,
+    names: FieldNames,
+) -> Result<(), ApiError> {
+    match ty {
+        Type::Message { name } => validate_field_names(ix, name, v, at, names)?,
+        Type::Map { value } => {
+            if let Some(entries) = v.as_object() {
+                for (key, entry) in entries {
+                    field_names_in_type(ix, value, entry, &format!("{at}[{key:?}]"), names)?;
+                }
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
 
 /// Checks `v` against message `msg`. `at` is the field path so far, for
 /// error details.
@@ -266,6 +338,59 @@ mod tests {
         let e = validate(&ix, db, &json!({"meta": {"labels": {"a": 1}}}), "").unwrap_err();
         assert_eq!(e.code, "INVALID_FIELD");
         assert!(validate(&ix, db, &json!({"meta": {"generation": "3"}}), "").is_ok());
+    }
+
+    #[test]
+    fn field_names_preserve_service_values_and_caller_map_keys() {
+        let ix = Index::embedded();
+        let lease = "sylphx.sandboxes.v1.Lease";
+        assert!(validate_field_names(
+            &ix,
+            lease,
+            &json!({
+                "spec": {"kind": "android", "ttl": "30m"},
+                "meta": {"labels": {"custom_label": "test"}}
+            }),
+            "",
+            FieldNames::Canonical,
+        )
+        .is_ok());
+        let error = validate_field_names(
+            &ix,
+            lease,
+            &json!({
+                "spec": {"volumes": [{"typo": true}]}
+            }),
+            "",
+            FieldNames::Canonical,
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "UNKNOWN_FIELD");
+        assert!(error.detail.contains("spec.volumes[0].typo"), "{error:?}");
+    }
+
+    #[test]
+    fn field_names_accept_protojson_only_at_typed_http_boundaries() {
+        let ix = Index::embedded();
+        let lease = "sylphx.sandboxes.v1.Lease";
+        for mount in [
+            json!({"volume": "vol", "mount_path": "/workspace", "read_only": true}),
+            json!({"volume": "vol", "mountPath": "/workspace", "readOnly": true}),
+        ] {
+            let body = json!({"spec": {"volumes": [mount]}});
+            validate_field_names(&ix, lease, &body, "", FieldNames::ProtobufJson).unwrap();
+        }
+        let alias = json!({"spec": {"volumes": [{"mountPath": "/workspace"}]}});
+        let error =
+            validate_field_names(&ix, lease, &alias, "", FieldNames::Canonical).unwrap_err();
+        assert_eq!(error.code, "UNKNOWN_FIELD");
+        assert!(error.detail.contains("spec.volumes[0].mountPath"));
+        for names in [FieldNames::Canonical, FieldNames::ProtobufJson] {
+            let typo = json!({"spec": {"volumes": [{"mountPATH": "/workspace"}]}});
+            let error = validate_field_names(&ix, lease, &typo, "", names).unwrap_err();
+            assert_eq!(error.code, "UNKNOWN_FIELD");
+            assert!(error.detail.contains("spec.volumes[0].mountPATH"));
+        }
     }
 
     #[test]

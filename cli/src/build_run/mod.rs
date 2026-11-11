@@ -622,6 +622,7 @@ async fn run_opts(
         Err(f) => {
             let reason = match f {
                 Failure::Usage(s) | Failure::Refused(s) => s,
+                Failure::Input(e) => format!("{}: {}", e.code, e.detail),
                 Failure::Api(e) => why(&e),
                 Failure::Exit(_) => "not signed in".into(),
             };

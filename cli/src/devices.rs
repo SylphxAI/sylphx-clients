@@ -1066,6 +1066,7 @@ pub(crate) async fn parent_env(
 fn why_failure(f: Failure) -> String {
     match f {
         Failure::Usage(s) | Failure::Refused(s) => s,
+        Failure::Input(e) => format!("{}: {}", e.code, e.detail),
         Failure::Api(e) => why(&e),
         Failure::Exit(_) => "stopped".into(),
     }

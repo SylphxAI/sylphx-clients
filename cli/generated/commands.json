@@ -15,7 +15,7 @@
     },
     {
       "flag": "--from-file",
-      "summary": "Read the whole request body from a YAML or JSON file.",
+      "summary": "Read the whole method request from a YAML or JSON file; unknown lease request fields are refused with their path.",
       "type": "path"
     }
   ],
