@@ -151,7 +151,13 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(apply::command())
-        .subcommand(Command::new("logout").about("Revoke and forget the selected org credential (--all: every stored credential)"))
+        .subcommand(Command::new("logout").about("Forget local credentials; verified device-login credentials are also revoked")
+                .arg(
+                    Arg::new("revoke")
+                        .long("revoke")
+                        .action(ArgAction::SetTrue)
+                        .help("Revoke the process API key, or selected stored keys (--all: all stored); may affect other clients"),
+                ))
         .subcommand(
             Command::new("org")
                 .about("Choose the active organization for commands without an explicit or linked org")
@@ -415,7 +421,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             let creds = context::load_credentials();
             let all = m.get_flag("all");
             let legacy = org.is_none() && creds.active_org.is_none() && creds.store.is_some();
-            let selected = if all || legacy {
+            let selected = if legacy {
                 None
             } else {
                 let linked = std::env::current_dir()
@@ -425,27 +431,56 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                     &creds,
                     org.or_else(|| linked.as_ref().and_then(|l| l.at(1))),
                 )
+                .or_else(|| {
+                    // A stale checkout link must not suppress revocation of the
+                    // remaining sessions when implicitly logging out everywhere.
+                    if all && org.is_none() {
+                        context::selected_org(&creds, None)
+                    } else {
+                        None
+                    }
+                })
                 .map(|o| o.id.clone())
             };
+            let revoke = sub.get_flag("revoke");
+            let explicit = context::explicit_key(api_key.clone());
+            // Neither an org slot nor a key name proves a browser login. An
+            // unmarked session (including old configs) must fail safe locally.
+            let device_session = !legacy
+                && creds
+                    .orgs
+                    .iter()
+                    .any(|o| Some(o.id.as_str()) == selected.as_deref() && o.device_issued);
             let mut keys = Vec::new();
-            for entry in &creds.orgs {
-                if all || selected.as_deref() == Some(&entry.id) {
-                    if let Some(key) = context::org_key(&creds, entry) {
-                        keys.push(key);
+            if let Some(key) = explicit {
+                // An override selects the process credential, never stored keys.
+                if revoke {
+                    keys.push(key);
+                }
+            } else {
+                for entry in &creds.orgs {
+                    if (revoke || (device_session && entry.device_issued))
+                        && (all || selected.as_deref() == Some(&entry.id))
+                    {
+                        if let Some(key) = context::org_key(&creds, entry) {
+                            keys.push(key);
+                        }
                     }
                 }
-            }
-            if all || legacy || creds.orgs.is_empty() {
-                if let Some(key) = context::stored_key(&creds) {
-                    keys.push(key);
+                if revoke && (all || legacy || creds.orgs.is_empty()) {
+                    if let Some(key) = context::stored_key(&creds) {
+                        keys.push(key);
+                    }
                 }
             }
             let url = base_url
                 .clone()
                 .or_else(|| std::env::var("SYLPHX_BASE_URL").ok())
                 .or(creds.base_url.clone());
+            let mut attempted = false;
             for key in &keys {
                 if key.starts_with("sylphx_sk_") {
+                    attempted = true;
                     if let Err(e) = auth::revoke_self(&auth::api_root(url.as_deref()), key).await {
                         eprintln!("warning: could not revoke a key server-side ({e}); revoke it in Settings → API keys");
                     }
@@ -462,7 +497,11 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                     "no stored credential for the selected organization".into(),
                 ));
             }
-            println!("Logged out: stored credentials removed; server revocation attempted.");
+            if attempted {
+                println!("Logged out: stored credentials removed; server revocation attempted.");
+            } else {
+                println!("Logged out: stored credentials removed locally; no server revocation.");
+            }
             Ok(())
         }
         "whoami" => {

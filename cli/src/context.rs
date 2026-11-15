@@ -37,6 +37,9 @@ pub struct OrgCredential {
     pub id: String,
     pub slug: String,
     pub key_name: String,
+    /// Only a successful device approval establishes automatic logout revocation.
+    #[serde(default)]
+    pub device_issued: bool,
     pub store: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api_key: Option<String>,
@@ -113,6 +116,7 @@ pub fn store_keys(
             id: key.org_id.clone(),
             slug: key.org_slug.clone(),
             key_name: key.key_name.clone(),
+            device_issued: true,
             store: if in_keychain { "keychain" } else { "file" }.into(),
             api_key: (!in_keychain).then(|| key.api_key.clone()),
         };
@@ -489,6 +493,15 @@ pub struct Resolved {
     pub explicit: bool,
 }
 
+/// Per-process API keys take precedence over every stored login.
+pub fn explicit_key(api_key: Option<String>) -> Option<String> {
+    api_key.or_else(|| {
+        std::env::var("SYLPHX_API_KEY")
+            .ok()
+            .filter(|k| !k.is_empty())
+    })
+}
+
 /// Explicit credentials override stored logins. Otherwise choose `--org`,
 /// the linked/environment org, then the active organization. Legacy single-key
 /// credentials keep their original behavior until a device login replaces them.
@@ -505,11 +518,7 @@ pub fn resolve(
                 .filter(|u| !u.is_empty())
         })
         .or(stored.base_url.clone());
-    let given = api_key.or_else(|| {
-        std::env::var("SYLPHX_API_KEY")
-            .ok()
-            .filter(|k| !k.is_empty())
-    });
+    let given = explicit_key(api_key);
     let explicit = given.is_some();
     let key = given.or_else(|| {
         if stored.orgs.is_empty()

@@ -1397,7 +1397,6 @@ async fn supplied_login_and_logout_preserve_scoped_org_credentials() {
         (200, whoami_reply()),
         (200, json!({"ok": true})),
         (200, json!({"ok": true})),
-        (200, json!({"ok": true})),
     ]);
     let (url, log) = serve(replies).await;
     let sb = Sandbox::new("supplied-login-orgs");
@@ -1413,6 +1412,7 @@ async fn supplied_login_and_logout_preserve_scoped_org_credentials() {
     assert_success(&run_stored(&sb, &url, &["whoami"]).await);
     assert_success(&run_stored(&sb, &url, &["whoami", "--org", "beta"]).await);
     assert_success(&run_stored(&sb, &url, &["logout"]).await);
+    assert_eq!(log.lock().len(), 4, "supplied logout must make no request");
     let path = sb.dir.join("config/credentials.json");
     let creds: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(creds["orgs"].as_array().unwrap().len(), 2);
@@ -1423,13 +1423,310 @@ async fn supplied_login_and_logout_preserve_scoped_org_credentials() {
     for (request, key) in seen[2..].iter().zip([
         "sylphx_sk_supplied",
         "sylphx_sk_org_b",
-        "sylphx_sk_supplied",
         "sylphx_sk_org_a",
         "sylphx_sk_org_b",
     ]) {
         assert!(request.head.contains(&format!("Bearer {key}")));
     }
-    assert_eq!(seen.len(), 7);
+    assert_eq!(seen.len(), 6);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn supplied_api_key_logout_is_local_unless_revoke_is_explicit() {
+    // Keep replies available to observe any unintended HTTP request.
+    let (url, log) = serve(vec![(200, json!({"ok": true})); 8]).await;
+    let sb = Sandbox::new("logout-api-key");
+    for args in [vec!["logout"], vec!["logout", "--all"]] {
+        assert_success(
+            &run_stored(
+                &sb,
+                &url,
+                &["login", "--key", "sylphx_sk_supplied", "--no-verify"],
+            )
+            .await,
+        );
+        let cache = sb.dir.join("config/token-cache");
+        std::fs::create_dir_all(&cache).unwrap();
+        std::fs::write(cache.join("test.json"), "{}").unwrap();
+        let out = run_stored(&sb, &url, &args).await;
+        assert_success(&out);
+        assert!(String::from_utf8_lossy(&out.stdout).contains("no server revocation"));
+        assert!(!sb.dir.join("config/credentials.json").exists());
+        assert!(!cache.exists());
+        assert!(
+            log.lock().is_empty(),
+            "API-key logout must make no HTTP request"
+        );
+    }
+    assert_success(
+        &run_stored(
+            &sb,
+            &url,
+            &["login", "--key", "sylphx_sk_supplied", "--no-verify"],
+        )
+        .await,
+    );
+    assert_success(&run_stored(&sb, &url, &["logout", "--revoke"]).await);
+    assert!(!sb.dir.join("config/credentials.json").exists());
+    let seen = log.lock();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0].line, "POST /v1/access/keys/self:revoke HTTP/1.1");
+    assert!(seen[0].head.contains("Bearer sylphx_sk_supplied"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn process_api_key_logout_never_revokes_stored_browser_keys() {
+    for (label, args, env_key, revoke) in [
+        ("env", vec!["logout"], true, false),
+        ("env-all", vec!["logout", "--all"], true, false),
+        (
+            "flag",
+            vec!["logout", "--api-key", "sylphx_sk_override"],
+            false,
+            false,
+        ),
+        (
+            "flag-all",
+            vec!["logout", "--all", "--api-key", "sylphx_sk_override"],
+            false,
+            false,
+        ),
+        ("env-revoke", vec!["logout", "--revoke"], true, true),
+        (
+            "flag-revoke-all",
+            vec![
+                "logout",
+                "--all",
+                "--revoke",
+                "--api-key",
+                "sylphx_sk_override",
+            ],
+            false,
+            true,
+        ),
+    ] {
+        let mut replies = two_org_replies();
+        replies.extend(vec![(200, json!({"ok": true})); 4]);
+        let (url, log) = serve(replies).await;
+        let sb = Sandbox::new(&format!("logout-override-{label}"));
+        assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+        let out = if env_key {
+            run(&sb, &url, &args).await
+        } else {
+            run_stored(&sb, &url, &args).await
+        };
+        assert_success(&out);
+        {
+            let seen = log.lock();
+            assert_eq!(seen.len(), if revoke { 3 } else { 2 });
+            if revoke {
+                assert_eq!(seen[2].line, "POST /v1/access/keys/self:revoke HTTP/1.1");
+                let key = if env_key {
+                    "sylphx_sk_test"
+                } else {
+                    "sylphx_sk_override"
+                };
+                assert!(seen[2].head.contains(&format!("Bearer {key}")));
+            }
+        }
+        let path = sb.dir.join("config/credentials.json");
+        if args.contains(&"--all") {
+            assert!(!path.exists());
+        } else {
+            let creds: Value =
+                serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            assert_eq!(creds["orgs"].as_array().unwrap().len(), 1);
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn logout_all_missing_linked_org_falls_back_only_for_implicit_all() {
+    for env_link in [false, true] {
+        for device_session in [false, true] {
+            let mut replies = two_org_replies();
+            replies.extend(vec![(200, json!({"ok": true})); 2]);
+            let (url, log) = serve(replies).await;
+            let sb = Sandbox::new(&format!("logout-missing-link-{env_link}-{device_session}"));
+            assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+            let path = sb.dir.join("config/credentials.json");
+            let mut creds: Value =
+                serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            assert_eq!(creds["active_org"], "org_a");
+            if !device_session {
+                creds["orgs"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("device_issued");
+            }
+            let original = creds.to_string();
+            std::fs::write(&path, &original).unwrap();
+            if !env_link {
+                std::fs::write(
+                    sb.dir.join(".sylphx/project.json"),
+                    json!({"org": "orgs/missing", "project": "orgs/missing/projects/prj_x", "env": "orgs/missing/projects/prj_x/envs/env_x"}).to_string(),
+                )
+                .unwrap();
+            }
+            // Bare logout must still refuse the absent linked org. An explicit
+            // absent org must not gain the implicit --all fallback either.
+            for args in [vec!["logout"], vec!["logout", "--org", "missing"]] {
+                let mut c = sb.cmd(&url, &args);
+                c.env_remove("SYLPHX_API_KEY");
+                if env_link {
+                    c.env(
+                        "SYLPHX_ENVIRONMENT",
+                        "orgs/missing/projects/prj_x/envs/env_x",
+                    );
+                }
+                let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+                    .await
+                    .unwrap();
+                assert!(!out.status.success());
+                assert!(String::from_utf8_lossy(&out.stderr)
+                    .contains("no stored credential for the selected organization"));
+                assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
+                assert_eq!(log.lock().len(), 2, "refusal must not revoke any key");
+            }
+            // Explicit --org with --all keeps its existing selection semantics.
+            // Restore the same credentials afterward to exercise implicit --all.
+            assert_success(&run_stored(&sb, &url, &["logout", "--all", "--org", "missing"]).await);
+            assert!(!path.exists());
+            assert_eq!(log.lock().len(), 2);
+            std::fs::write(&path, &original).unwrap();
+            let mut c = sb.cmd(&url, &["logout", "--all"]);
+            c.env_remove("SYLPHX_API_KEY");
+            if env_link {
+                c.env(
+                    "SYLPHX_ENVIRONMENT",
+                    "orgs/missing/projects/prj_x/envs/env_x",
+                );
+            }
+            let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+                .await
+                .unwrap();
+            assert_success(&out);
+            assert!(!path.exists());
+            let seen = log.lock();
+            assert_eq!(seen.len(), if device_session { 4 } else { 2 });
+            for request in &seen[2..] {
+                assert_eq!(request.line, "POST /v1/access/keys/self:revoke HTTP/1.1");
+            }
+        }
+    }
+}
+
+async fn check_linked_logout_all(linked_device: bool) {
+    for env_link in [false, true] {
+        let mut replies = two_org_replies();
+        replies.extend(vec![(200, json!({"ok": true})); 2]);
+        let (url, log) = serve(replies).await;
+        let sb = Sandbox::new(&format!("logout-linked-{linked_device}-{env_link}"));
+        assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+        let path = sb.dir.join("config/credentials.json");
+        let mut creds: Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(creds["active_org"], "org_a");
+        assert_eq!(creds["orgs"][0]["device_issued"], true);
+        assert_eq!(creds["orgs"][1]["device_issued"], true);
+        let unmarked = if linked_device { 0 } else { 1 };
+        creds["orgs"][unmarked]
+            .as_object_mut()
+            .unwrap()
+            .remove("device_issued");
+        std::fs::write(&path, creds.to_string()).unwrap();
+        let mut c = sb.cmd(&url, &["logout", "--all"]);
+        c.env_remove("SYLPHX_API_KEY");
+        if env_link {
+            // Overrides the project file's org_a as well as active_org.
+            c.env("SYLPHX_ENVIRONMENT", "orgs/org_b/projects/prj_b/envs/env_b");
+        } else {
+            std::fs::write(
+                sb.dir.join(".sylphx/project.json"),
+                json!({"org": "orgs/org_b", "project": "orgs/org_b/projects/prj_b", "env": "orgs/org_b/projects/prj_b/envs/env_b"}).to_string(),
+            )
+            .unwrap();
+        }
+        let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+            .await
+            .unwrap();
+        assert_success(&out);
+        assert!(!path.exists(), "--all must clear both local credentials");
+        let seen = log.lock();
+        assert_eq!(seen.len(), if linked_device { 3 } else { 2 });
+        if linked_device {
+            assert_eq!(seen[2].line, "POST /v1/access/keys/self:revoke HTTP/1.1");
+            assert!(seen[2].head.contains("Bearer sylphx_sk_org_b"));
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn logout_all_linked_device_org_revokes_despite_unmarked_active_org() {
+    check_linked_logout_all(true).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn logout_all_linked_unmarked_org_does_not_revoke_marked_active_org() {
+    check_linked_logout_all(false).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn unmarked_org_api_key_logout_requires_explicit_revoke() {
+    for all in [false, true] {
+        for revoke in [false, true] {
+            let mut replies = two_org_replies();
+            replies.extend(vec![(200, json!({"ok": true})); 4]);
+            let (url, log) = serve(replies).await;
+            let sb = Sandbox::new(&format!("logout-unmarked-{all}-{revoke}"));
+            assert_success(&run_stored(&sb, &url, &["login", "--no-verify"]).await);
+            let path = sb.dir.join("config/credentials.json");
+            let mut creds: Value =
+                serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            assert_eq!(creds["orgs"][0]["device_issued"], true);
+            assert_eq!(creds["orgs"][1]["device_issued"], true);
+            // Imported/old org slots have no reliable provenance. Even an
+            // authentic-looking device key name cannot authorize revocation.
+            creds["orgs"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("device_issued");
+            std::fs::write(&path, creds.to_string()).unwrap();
+            let mut args = vec!["logout"];
+            if all {
+                args.push("--all");
+            }
+            if revoke {
+                args.push("--revoke");
+            }
+            assert_success(&run_stored(&sb, &url, &args).await);
+            let seen = log.lock();
+            assert_eq!(
+                seen.len(),
+                2 + if revoke {
+                    if all {
+                        2
+                    } else {
+                        1
+                    }
+                } else {
+                    0
+                }
+            );
+            if revoke {
+                assert_eq!(seen[2].line, "POST /v1/access/keys/self:revoke HTTP/1.1");
+                assert!(seen[2].head.contains("Bearer sylphx_sk_org_a"));
+            }
+            if all {
+                assert!(!path.exists());
+            } else {
+                let left: Value =
+                    serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+                assert_eq!(left["orgs"].as_array().unwrap().len(), 1);
+                assert_eq!(left["active_org"], "org_b");
+            }
+        }
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]

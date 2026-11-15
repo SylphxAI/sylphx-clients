@@ -11,8 +11,8 @@ sylphx login --api-key -              # agents and CI: an Access key on stdin (o
 sylphx token --scope hosting:deploy   # one short-lived token (15 min) for one scope, on stdout only
 sylphx org use acme                   # active org when no --org, resource name, or linked context selects another
 sylphx whoami --org beta              # use beta's stored credential for this command only
-sylphx logout                         # revoke and forget the selected org; keep other org logins
-sylphx logout --all                   # revoke and forget every stored credential
+sylphx logout                         # forget selected credentials; supplied API keys are not revoked
+sylphx logout --all                   # forget all stored credentials; add --revoke to revoke supplied keys
 sylphx auth status                   # first use discovers/provisions the default project and production environment
 sylphx link --env orgs/…/envs/…       # optional advanced target override for this directory
 sylphx data databases create main --spec.compute-units 2
@@ -43,6 +43,19 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   Existing single-key credentials files and keychain entries remain readable.
   Re-login merges approved org credentials without deleting other orgs;
   `logout --org <slug>` removes just that org, while `logout --all` removes all.
+  API-key sessions (supplied login keys or process overrides) log out locally only.
+  Pass `logout --revoke` to revoke the supplied key server-side too; this can break
+  other clients sharing it. A process override revokes only that process key, never
+  unrelated stored keys, even with `--all`. Without an override, `--revoke` targets
+  the selected stored credential (`--all`: every stored credential).
+
+  Device logins stored by this version record their origin and retain automatic
+  server-side revocation on logout. Older/imported org entries have no reliable
+  origin marker: logout removes them locally unless `--revoke` is explicit. To
+  restore automatic revocation, sign in again through the browser. From a device
+  session, `--all` automatically revokes only marked device credentials; unmarked
+  entries are removed locally. Logout also clears the local token cache. Changing
+  an environment variable is outside the CLI: unset `SYLPHX_API_KEY` separately.
 - `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]`: flags
   are the spec fields in dotted kebab-case (`--spec.compute-units`);
   `--from-file` takes a whole request; `--output table|json|yaml|name`.
