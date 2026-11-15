@@ -1845,8 +1845,51 @@ impl Run<'_> {
         let Some((reference, bundle)) = &self.source_history else {
             return Ok(String::new());
         };
-        g.upload(&format!("{WS}/.sylphx/source.bundle"), USER, bundle)
+        for (i, part) in bundle.chunks(history::CHUNK_SIZE).enumerate() {
+            if let Err(e) = g
+                .upload(&format!("{WS}/.sylphx/source.bundle.part.{i}"), USER, part)
+                .await
+            {
+                // Preserve the upload fault. An unreachable guest is reclaimed
+                // with its cold workspace when the lease is released.
+                let _ = g
+                    .run(
+                        USER,
+                        &[
+                            "/bin/sh".into(),
+                            "-c".into(),
+                            history::CLEAN_PARTS.into(),
+                            "source-history".into(),
+                            WS.into(),
+                        ],
+                        &BTreeMap::new(),
+                    )
+                    .await;
+                return Err(e);
+            }
+        }
+        let (code, _, stderr) = g
+            .run(
+                USER,
+                &[
+                    "/bin/sh".into(),
+                    "-c".into(),
+                    history::REASSEMBLE.into(),
+                    "source-history".into(),
+                    WS.into(),
+                    bundle.len().div_ceil(history::CHUNK_SIZE).to_string(),
+                    bundle.len().to_string(),
+                    history::digest(bundle),
+                ],
+                &BTreeMap::new(),
+            )
             .await?;
+        if code != 0 {
+            return Err(Fault::Other(format!(
+                "source history reassembly failed ({code}): {}",
+                String::from_utf8_lossy(&stderr)
+            )));
+        }
         let script = shell_call(&[
             "/bin/sh",
             "-c",

@@ -95,9 +95,41 @@ pub async fn prepare(root: &Path, base: &str) -> Result<(String, Vec<u8>), Strin
     Ok((reference, bundle))
 }
 
+/// Leave ample room for multipart framing below the proxy's 100 MiB body limit.
+pub const CHUNK_SIZE: usize = 32 * 1024 * 1024;
+
+pub fn digest(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+/// Only publish a complete, byte-identical bundle. Parts are lease-local, and
+/// are removed on both success and failure; no Git command runs on partial data.
+pub const REASSEMBLE: &str = r#"set -eu
+W=$1 N=$2 S=$3 H=$4
+P="$W/.sylphx/source.bundle.part"
+T="$W/.sylphx/source.bundle.tmp"
+trap 'rm -f "$T" "$P".*' EXIT
+trap 'exit 1' HUP INT TERM
+: > "$T"
+i=0
+while [ "$i" -lt "$N" ]; do
+  cat "$P.$i" >> "$T"
+  i=$((i + 1))
+done
+test "$(wc -c < "$T")" -eq "$S"
+printf '%s  %s\n' "$H" "$T" | sha256sum -c --quiet
+mv -f "$T" "$W/.sylphx/source.bundle"
+"#;
+
+pub const CLEAN_PARTS: &str =
+    r#"rm -f "$1/.sylphx/source.bundle.part."* "$1/.sylphx/source.bundle.tmp""#;
+
 /// Install objects and refs without checking out files over the synced tree.
 pub const APPLY: &str = r#"set -e
 W=$1 B=$2
+trap 'rm -f "$W/.sylphx/source.bundle"' EXIT
+trap 'exit 1' HUP INT TERM
 cd "$W/tree"
 git init -q
 case "$B" in
@@ -162,6 +194,96 @@ mod tests {
             String::from_utf8_lossy(&o.stderr)
         );
         String::from_utf8(o.stdout).unwrap().trim().into()
+    }
+
+    fn reassemble(ws: &Path, bytes: &[u8], count: usize) -> std::process::Output {
+        Command::new("sh")
+            .args(["-c", REASSEMBLE, "history"])
+            .arg(ws)
+            .arg(count.to_string())
+            .arg(bytes.len().to_string())
+            .arg(digest(bytes))
+            .output()
+            .unwrap()
+    }
+
+    fn stage(ws: &Path, bytes: &[u8]) -> usize {
+        let mut count = 0;
+        for (i, part) in bytes.chunks(CHUNK_SIZE).enumerate() {
+            assert!(part.len() <= CHUNK_SIZE);
+            // Exercise the actual upload encoder, including multipart framing.
+            let body = sylphx_build_lease::guest::multipart("sylphx0000000000000000", part);
+            assert!(body.len() < 33 * 1024 * 1024);
+            fs::write(ws.join(format!(".sylphx/source.bundle.part.{i}")), part).unwrap();
+            count += 1;
+        }
+        count
+    }
+
+    #[tokio::test]
+    async fn multi_chunk_history_roundtrip() {
+        let s = Scratch::new();
+        let src = s.0.join("src");
+        let ws = s.0.join("workspace with spaces");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(ws.join("tree")).unwrap();
+        fs::create_dir_all(ws.join(".sylphx")).unwrap();
+        git(&src, &["init", "-q"]);
+        // Deterministic incompressible content makes the real Git bundle
+        // exceed the production threshold, not a test-only chunk size.
+        let mut state = 0x12345678u32;
+        let bytes: Vec<u8> = (0..CHUNK_SIZE + 65536)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                state as u8
+            })
+            .collect();
+        fs::write(src.join("large"), &bytes).unwrap();
+        git(&src, &["add", "large"]);
+        git(&src, &["commit", "-qm", "large"]);
+        let head = git(&src, &["rev-parse", "HEAD"]);
+        let (reference, bundle) = prepare(&src, &head).await.unwrap();
+        let count = stage(&ws, &bundle);
+        assert!(count > 1, "bundle must exceed the production threshold");
+        let o = reassemble(&ws, &bundle, count);
+        assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+        assert_eq!(fs::read(ws.join(".sylphx/source.bundle")).unwrap(), bundle);
+        assert_eq!(fs::read_dir(ws.join(".sylphx")).unwrap().count(), 1);
+        let o = Command::new("sh")
+            .args(["-c", APPLY, "history"])
+            .arg(&ws)
+            .arg(reference)
+            .output()
+            .unwrap();
+        assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+        assert_eq!(git(&ws.join("tree"), &["rev-parse", "HEAD"]), head);
+        let blob = Command::new("git")
+            .arg("-C")
+            .arg(ws.join("tree"))
+            .args(["show", "HEAD:large"])
+            .output()
+            .unwrap();
+        assert!(blob.status.success());
+        assert_eq!(blob.stdout, bytes);
+        assert_eq!(fs::read_dir(ws.join(".sylphx")).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn reassembly_rejects_missing_truncated_and_corrupt_parts() {
+        let s = Scratch::new();
+        fs::create_dir_all(s.0.join(".sylphx")).unwrap();
+        for (part, count) in [
+            (&b"payload"[..], 2),
+            (&b"short"[..], 1),
+            (&b"corrupt"[..], 1),
+        ] {
+            stage(&s.0, part);
+            let o = reassemble(&s.0, b"payload", count);
+            assert!(!o.status.success());
+            assert_eq!(fs::read_dir(s.0.join(".sylphx")).unwrap().count(), 0);
+        }
     }
 
     #[tokio::test]
