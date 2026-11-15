@@ -1023,6 +1023,12 @@ export interface GetStoreConnectionRequest {
 	name: string
 }
 
+/** The request of GetStoreConsumptionRequest. */
+export interface GetStoreConsumptionRequestRequest {
+	/** The name of the store consumption request to get. */
+	name: string
+}
+
 /** The request of GetStorePurchase. */
 export interface GetStorePurchaseRequest {
 	/** The name of the store purchase to get. */
@@ -1504,6 +1510,26 @@ export interface ListStoreConnectionsResponse {
 	nextPageToken?: string
 }
 
+/** The request of ListStoreConsumptionRequests. */
+export interface ListStoreConsumptionRequestsRequest {
+	/** The parent to list in. */
+	parent: string
+	/** At most this many; default 50, clamped to 1000. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+	/** AIP-160 filter over `store`, `transaction_id`, `store_purchase`, `status`. */
+	filter?: string
+}
+
+/** The response of ListStoreConsumptionRequests. */
+export interface ListStoreConsumptionRequestsResponse {
+	/** The page. */
+	storeConsumptionRequests?: StoreConsumptionRequest[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
 /** The request of ListStorePurchases. */
 export interface ListStorePurchasesRequest {
 	/** The parent to list in. */
@@ -1933,6 +1959,52 @@ export interface ReleaseUsageReservationRequest {
 	name: string
 }
 
+/** The request of ReportStorePurchaseUsage. */
+export interface ReportStorePurchaseUsageRequest {
+	/** The store purchase to report usage for. */
+	name: string
+	/**
+	 * Optional consumption request resource name when targeting a specific
+	 * captured `CONSUMPTION_REQUEST`.
+	 */
+	consumptionRequest?: string
+	/**
+	 * Apple `deliveryStatus`: `DELIVERED`, `UNDELIVERED_QUALITY_ISSUE`,
+	 * `UNDELIVERED_WRONG_ITEM`, `UNDELIVERED_SERVER_OUTAGE`, or
+	 * `UNDELIVERED_OTHER`.
+	 */
+	deliveryStatus: string
+	/**
+	 * Apple `sampleContentProvided`: whether a free sample or trial was offered.
+	 * Explicit presence is required so an omitted value is never defaulted.
+	 */
+	sampleContentProvided: boolean
+	/**
+	 * Apple `consumptionPercentage` in milliunits (0..=100000, where 25000 is
+	 * 25%). Required for non-subscription purchases (0 when undelivered) and
+	 * omitted for auto-renewable subscriptions.
+	 */
+	consumptionPercentage?: number
+	/**
+	 * Optional Apple `refundPreference`: `DECLINE`, `GRANT_FULL`, or
+	 * `GRANT_PRORATED`.
+	 */
+	refundPreference?: string
+	/**
+	 * Non-empty attestation confirming the caller holds exclusive reporting
+	 * custody for this purchase (never a consent override).
+	 */
+	custodyAttestation: string
+}
+
+/** The response of ReportStorePurchaseUsage. */
+export interface ReportStorePurchaseUsageResponse {
+	/** The updated store consumption request record. */
+	storeConsumptionRequest?: StoreConsumptionRequest
+	/** The store purchase that was answered. */
+	storePurchase?: StorePurchase
+}
+
 /** Resolves held evidence without altering its original receipt. */
 export interface ResolveBankReceiptRequest {
 	/** Receipt name. */
@@ -2359,6 +2431,61 @@ export interface StoreConnectionStatus {
 	readonly notificationUrl?: string
 	/** The service account's email, read from the stored key (Play only). */
 	readonly serviceAccountEmail?: string
+}
+
+/**
+ * A Store Consumption Request is an Apple App Store Server Notifications V2
+ * `CONSUMPTION_REQUEST` observed by Money, with its 12-hour deadline and
+ * immutable dispatch status. Money never invents usage or consent facts and
+ * sends nothing to Apple without a verified buyer consent grant.
+ */
+export interface StoreConsumptionRequest {
+	/** `orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}`. */
+	name?: string
+	/** `scr_<cell><ulid>`; never reused. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** Store name (`app_store`). */
+	readonly store?: string
+	/** App Store bundle identifier. */
+	readonly bundleId?: string
+	/** `production` or `sandbox`. */
+	readonly environment?: string
+	/** App Store transaction identifier. */
+	readonly transactionId?: string
+	/** App Store original transaction identifier. */
+	readonly originalTransactionId?: string
+	/** Store notification UUID that opened this request. */
+	readonly notificationId?: string
+	/** Apple's `consumptionRequestReason`, when present. */
+	readonly consumptionRequestReason?: string
+	/** Linked StorePurchase resource name, when verified in Money. */
+	readonly storePurchase?: string
+	/** Linked buyer subject, when known. */
+	readonly subject?: Subject
+	/**
+	 * Current state: `pending`, `consent_missing`, `consent_withdrawn`,
+	 * `in_flight`, `sent`, `failed_retryable`, `failed_terminal`, or
+	 * `expired`.
+	 */
+	readonly status?: string
+	/** When Money observed the notification. */
+	readonly observedTime?: string
+	/** 12-hour Apple response deadline. */
+	readonly deadlineTime?: string
+	/** Number of outbound Apple Send Consumption attempts started. */
+	readonly attemptCount?: number
+	/** Timestamp of the last outbound Apple Send Consumption attempt. */
+	readonly lastAttemptTime?: string
+	/** Timestamp when Apple accepted the consumption report (HTTP 202). */
+	readonly sentTime?: string
+	/** HTTP status code returned by Apple's consumption endpoint (202 when sent). */
+	readonly appleHttpStatus?: number
+	/** Last fail-closed refusal reason, when blocked before calling Apple. */
+	readonly lastRefusalReason?: string
+	/** Consent ledger event id evaluated for the dispatch, when present. */
+	readonly consentId?: string
 }
 
 /**
@@ -3264,6 +3391,7 @@ runtime.registerSchemas({
 		['currencyCode', 'currency_code'],
 	],
 	'sylphx.money.v1.GetStoreConnectionRequest': [],
+	'sylphx.money.v1.GetStoreConsumptionRequestRequest': [],
 	'sylphx.money.v1.GetStorePurchaseRequest': [],
 	'sylphx.money.v1.GetTestClockRequest': [],
 	'sylphx.money.v1.GetUsageInvoiceRequest': [],
@@ -3412,6 +3540,14 @@ runtime.registerSchemas({
 		['storeConnections', 'store_connections', 'sylphx.money.v1.StoreConnection'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.money.v1.ListStoreConsumptionRequestsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.money.v1.ListStoreConsumptionRequestsResponse': [
+		['storeConsumptionRequests', 'store_consumption_requests', 'sylphx.money.v1.StoreConsumptionRequest'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.money.v1.ListStorePurchasesRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -3542,6 +3678,18 @@ runtime.registerSchemas({
 	],
 	'sylphx.money.v1.ReleaseUsageInvoiceCollectionRequest': [],
 	'sylphx.money.v1.ReleaseUsageReservationRequest': [],
+	'sylphx.money.v1.ReportStorePurchaseUsageRequest': [
+		['consumptionRequest', 'consumption_request'],
+		['deliveryStatus', 'delivery_status'],
+		['sampleContentProvided', 'sample_content_provided'],
+		['consumptionPercentage', 'consumption_percentage'],
+		['refundPreference', 'refund_preference'],
+		['custodyAttestation', 'custody_attestation'],
+	],
+	'sylphx.money.v1.ReportStorePurchaseUsageResponse': [
+		['storeConsumptionRequest', 'store_consumption_request', 'sylphx.money.v1.StoreConsumptionRequest'],
+		['storePurchase', 'store_purchase', 'sylphx.money.v1.StorePurchase'],
+	],
 	'sylphx.money.v1.ResolveBankReceiptRequest': [],
 	'sylphx.money.v1.ResumeCustomerSubscriptionRequest': [],
 	'sylphx.money.v1.RetireLicenceKeyRequest': [],
@@ -3642,6 +3790,24 @@ runtime.registerSchemas({
 		['credentialSet', 'credential_set'],
 		['notificationUrl', 'notification_url'],
 		['serviceAccountEmail', 'service_account_email'],
+	],
+	'sylphx.money.v1.StoreConsumptionRequest': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['bundleId', 'bundle_id'],
+		['transactionId', 'transaction_id'],
+		['originalTransactionId', 'original_transaction_id'],
+		['notificationId', 'notification_id'],
+		['consumptionRequestReason', 'consumption_request_reason'],
+		['storePurchase', 'store_purchase'],
+		['subject', 'subject', 'sylphx.money.v1.Subject'],
+		['observedTime', 'observed_time'],
+		['deadlineTime', 'deadline_time'],
+		['attemptCount', 'attempt_count'],
+		['lastAttemptTime', 'last_attempt_time'],
+		['sentTime', 'sent_time'],
+		['appleHttpStatus', 'apple_http_status'],
+		['lastRefusalReason', 'last_refusal_reason'],
+		['consentId', 'consent_id'],
 	],
 	'sylphx.money.v1.StorePurchase': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3853,6 +4019,8 @@ export class MoneyApi {
 	readonly storeConnections: StoreConnectionsCollection
 	/** The `store_purchases` collection. */
 	readonly storePurchases: StorePurchasesCollection
+	/** The `store_consumption_requests` collection. */
+	readonly storeConsumptionRequests: StoreConsumptionRequestsCollection
 	/** The `customer_subscriptions` collection. */
 	readonly customerSubscriptions: CustomerSubscriptionsCollection
 	/** The `entitlement_grants` collection. */
@@ -3903,6 +4071,7 @@ export class MoneyApi {
 		this.checkoutPolicies = new CheckoutPoliciesCollection(client)
 		this.storeConnections = new StoreConnectionsCollection(client)
 		this.storePurchases = new StorePurchasesCollection(client)
+		this.storeConsumptionRequests = new StoreConsumptionRequestsCollection(client)
 		this.customerSubscriptions = new CustomerSubscriptionsCollection(client)
 		this.entitlementGrants = new EntitlementGrantsCollection(client)
 		this.testClocks = new TestClocksCollection(client)
@@ -4617,6 +4786,81 @@ export class StorePurchasesCollection {
 		for (;;) {
 			const page = await this.list(next)
 			yield* page.storePurchases ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Reports verified delivery and usage facts for an App Store purchase in
+	 * answer to an observed `CONSUMPTION_REQUEST`. Strictly fails closed (0
+	 * outbound Apple calls) unless Money's append-only buyer-authenticated
+	 * consent ledger holds an unwithdrawn `granted` decision for this purchase
+	 * or app.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/store_purchases/*}:reportUsage` · permission `billing:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async reportUsage(request: ReportStorePurchaseUsageRequest): Promise<ReportStorePurchaseUsageResponse> {
+		return this.client.call<ReportStorePurchaseUsageResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/store_purchases/*', 'name')}:reportUsage`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.money.v1.ReportStorePurchaseUsageRequest',
+			responseType: 'sylphx.money.v1.ReportStorePurchaseUsageResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `store_consumption_requests` of Sylphx Money: Resource type `money.sylphx.com/StoreConsumptionRequest`. */
+export class StoreConsumptionRequestsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets a captured store consumption request.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/store_consumption_requests/*}` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetStoreConsumptionRequestRequest): Promise<StoreConsumptionRequest> {
+		return this.client.call<StoreConsumptionRequest>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/store_consumption_requests/*', 'name')}`,
+			responseType: 'sylphx.money.v1.StoreConsumptionRequest',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists captured store consumption requests, newest first.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/store_consumption_requests` · permission `billing:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListStoreConsumptionRequestsRequest): Promise<ListStoreConsumptionRequestsResponse> {
+		return this.client.call<ListStoreConsumptionRequestsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/store_consumption_requests`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter },
+			responseType: 'sylphx.money.v1.ListStoreConsumptionRequestsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListStoreConsumptionRequestsRequest): AsyncGenerator<StoreConsumptionRequest> {
+		let next: ListStoreConsumptionRequestsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.storeConsumptionRequests ?? []
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}

@@ -87760,6 +87760,32 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "The request of GetStoreConsumptionRequest.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The name of the store consumption request to get.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/StoreConsumptionRequest",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.GetStoreConsumptionRequestRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of GetStorePurchase.",
       "fields": [
         {
@@ -90380,6 +90406,130 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "The request of ListStoreConsumptionRequests.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The parent to list in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/StoreConsumptionRequest",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "At most this many; default 50, clamped to 1000.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "`next_page_token` of the previous page.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "AIP-160 filter over `store`, `transaction_id`, `store_purchase`, `status`.",
+          "filterable": false,
+          "name": "filter",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ListStoreConsumptionRequestsRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The response of ListStoreConsumptionRequests.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The page.",
+          "filterable": false,
+          "name": "store_consumption_requests",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.StoreConsumptionRequest"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The token of the next page; empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ListStoreConsumptionRequestsResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of ListStorePurchases.",
       "fields": [
         {
@@ -92955,6 +93105,187 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "The request of ReportStorePurchaseUsage.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The store purchase to report usage for.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/StorePurchase",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional consumption request resource name when targeting a specific\ncaptured `CONSUMPTION_REQUEST`.",
+          "filterable": false,
+          "name": "consumption_request",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/StoreConsumptionRequest",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Apple `deliveryStatus`: `DELIVERED`, `UNDELIVERED_QUALITY_ISSUE`,\n`UNDELIVERED_WRONG_ITEM`, `UNDELIVERED_SERVER_OUTAGE`, or\n`UNDELIVERED_OTHER`.",
+          "filterable": false,
+          "name": "delivery_status",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Apple `sampleContentProvided`: whether a free sample or trial was offered.\nExplicit presence is required so an omitted value is never defaulted.",
+          "filterable": false,
+          "name": "sample_content_provided",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Apple `consumptionPercentage` in milliunits (0..=100000, where 25000 is\n25%). Required for non-subscription purchases (0 when undelivered) and\nomitted for auto-renewable subscriptions.",
+          "filterable": false,
+          "name": "consumption_percentage",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional Apple `refundPreference`: `DECLINE`, `GRANT_FULL`, or\n`GRANT_PRORATED`.",
+          "filterable": false,
+          "name": "refund_preference",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Non-empty attestation confirming the caller holds exclusive reporting\ncustody for this purchase (never a consent override).",
+          "filterable": false,
+          "name": "custody_attestation",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ReportStorePurchaseUsageRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "The response of ReportStorePurchaseUsage.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The updated store consumption request record.",
+          "filterable": false,
+          "name": "store_consumption_request",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.StoreConsumptionRequest"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The store purchase that was answered.",
+          "filterable": false,
+          "name": "store_purchase",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.StorePurchase"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ReportStorePurchaseUsageResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "Resolves held evidence without altering its original receipt.",
       "fields": [
         {
@@ -95351,6 +95682,412 @@
         }
       ],
       "name": "sylphx.money.v1.StoreConnectionStatus",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "A Store Consumption Request is an Apple App Store Server Notifications V2\n`CONSUMPTION_REQUEST` observed by Money, with its 12-hour deadline and\nimmutable dispatch status. Money never invents usage or consent facts and\nsends nothing to Apple without a verified buyer consent grant.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "`orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}`.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`scr_<cell><ulid>`; never reused.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Store name (`app_store`).",
+          "filterable": true,
+          "name": "store",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "App Store bundle identifier.",
+          "filterable": false,
+          "name": "bundle_id",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "`production` or `sandbox`.",
+          "filterable": false,
+          "name": "environment",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "App Store transaction identifier.",
+          "filterable": true,
+          "name": "transaction_id",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "App Store original transaction identifier.",
+          "filterable": false,
+          "name": "original_transaction_id",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Store notification UUID that opened this request.",
+          "filterable": false,
+          "name": "notification_id",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Apple's `consumptionRequestReason`, when present.",
+          "filterable": false,
+          "name": "consumption_request_reason",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Linked StorePurchase resource name, when verified in Money.",
+          "filterable": true,
+          "name": "store_purchase",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/StorePurchase",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Linked buyer subject, when known.",
+          "filterable": false,
+          "name": "subject",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.Subject"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Current state: `pending`, `consent_missing`, `consent_withdrawn`,\n`in_flight`, `sent`, `failed_retryable`, `failed_terminal`, or\n`expired`.",
+          "filterable": true,
+          "name": "status",
+          "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When Money observed the notification.",
+          "filterable": false,
+          "name": "observed_time",
+          "number": 20,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "12-hour Apple response deadline.",
+          "filterable": false,
+          "name": "deadline_time",
+          "number": 21,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Number of outbound Apple Send Consumption attempts started.",
+          "filterable": false,
+          "name": "attempt_count",
+          "number": 22,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Timestamp of the last outbound Apple Send Consumption attempt.",
+          "filterable": false,
+          "name": "last_attempt_time",
+          "number": 23,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Timestamp when Apple accepted the consumption report (HTTP 202).",
+          "filterable": false,
+          "name": "sent_time",
+          "number": 24,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "HTTP status code returned by Apple's consumption endpoint (202 when sent).",
+          "filterable": false,
+          "name": "apple_http_status",
+          "number": 25,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Last fail-closed refusal reason, when blocked before calling Apple.",
+          "filterable": false,
+          "name": "last_refusal_reason",
+          "number": 26,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Consent ledger event id evaluated for the dispatch, when present.",
+          "filterable": false,
+          "name": "consent_id",
+          "number": 27,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.StoreConsumptionRequest",
       "package": "sylphx.money.v1"
     },
     {
@@ -154350,6 +155087,28 @@
       "type": "money.sylphx.com/StoreConnection"
     },
     {
+      "collection": "store_consumption_requests",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "StoreConsumptionRequest",
+      "message": "sylphx.money.v1.StoreConsumptionRequest",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}",
+      "plural": "storeConsumptionRequests",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "money",
+      "shape": "record",
+      "singular": "storeConsumptionRequest",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "money.sylphx.com/StoreConsumptionRequest"
+    },
+    {
       "collection": "store_purchases",
       "controller": "",
       "deletion_protection": false,
@@ -178340,10 +179099,146 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Reports verified delivery and usage facts for an App Store purchase in\nanswer to an observed `CONSUMPTION_REQUEST`. Strictly fails closed (0\noutbound Apple calls) unless Money's append-only buyer-authenticated\nconsent ledger holds an unwithdrawn `granted` decision for this purchase\nor app.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "UNAVAILABLE",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/store_purchases/{store_purchase}",
+                    "pattern": "orgs/*/projects/*/envs/*/store_purchases/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/store_purchases/*}:reportUsage"
+              },
+              "id": "money.store_purchases.report_usage",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:write",
+              "proto": "sylphx.money.v1.MoneyService.ReportStorePurchaseUsage",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ReportStorePurchaseUsageRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ReportStorePurchaseUsageResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "report_usage"
             }
           ],
           "name": "store_purchases",
           "resource_type": "money.sylphx.com/StorePurchase"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Gets a captured store consumption request.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}",
+                    "pattern": "orgs/*/projects/*/envs/*/store_consumption_requests/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/store_consumption_requests/*}"
+              },
+              "id": "money.store_consumption_requests.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "billing:read",
+              "proto": "sylphx.money.v1.MoneyService.GetStoreConsumptionRequest",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.GetStoreConsumptionRequestRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.StoreConsumptionRequest",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists captured store consumption requests, newest first.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "filter"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/store_consumption_requests"
+              },
+              "id": "money.store_consumption_requests.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.money.v1.StoreConsumptionRequest",
+                "items_field": "store_consumption_requests"
+              },
+              "permission": "billing:read",
+              "proto": "sylphx.money.v1.MoneyService.ListStoreConsumptionRequests",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ListStoreConsumptionRequestsRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.ListStoreConsumptionRequestsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            }
+          ],
+          "name": "store_consumption_requests",
+          "resource_type": "money.sylphx.com/StoreConsumptionRequest"
         },
         {
           "methods": [

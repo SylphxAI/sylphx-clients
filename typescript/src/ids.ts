@@ -205,6 +205,8 @@ export const PREFIXES = [
 	{ prefix: 'psn', entity: 'PortalSession', service: 'money', collection: 'portal_sessions' },
 	{ prefix: 'scn', entity: 'StoreConnection', service: 'money', collection: 'store_connections' },
 	{ prefix: 'spu', entity: 'StorePurchase', service: 'money', collection: 'store_purchases' },
+	{ prefix: 'scr', entity: 'StoreConsumptionRequest', service: 'money', collection: 'store_consumption_requests' },
+	{ prefix: 'scc', entity: 'StoreConsumptionConsent', service: 'money', collection: null },
 	{ prefix: 'ures', entity: 'UsageReservation', service: 'money', collection: 'usage_reservations' },
 	{ prefix: 'uevt', entity: 'UsageEvent', service: 'money', collection: 'usage_events' },
 	{ prefix: 'cgrt', entity: 'CreditGrant', service: 'money', collection: 'credit_grants' },

@@ -20998,10 +20998,123 @@
               },
               "summary": "Lists store purchases, newest first.",
               "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "consumption_request",
+                  "flag": "--consumption-request",
+                  "summary": "Optional consumption request resource name when targeting a specific captured `CONSUMPTION_REQUEST`.",
+                  "type": "string"
+                },
+                {
+                  "field": "delivery_status",
+                  "flag": "--delivery-status",
+                  "required": true,
+                  "summary": "Apple `deliveryStatus`: `DELIVERED`, `UNDELIVERED_QUALITY_ISSUE`, `UNDELIVERED_WRONG_ITEM`, `UNDELIVERED_SERVER_OUTAGE`, or `UNDELIVERED_OTHER`.",
+                  "type": "string"
+                },
+                {
+                  "field": "sample_content_provided",
+                  "flag": "--sample-content-provided",
+                  "required": true,
+                  "summary": "Apple `sampleContentProvided`: whether a free sample or trial was offered. Explicit presence is required so an omitted value is never defaulted.",
+                  "type": "bool"
+                },
+                {
+                  "field": "consumption_percentage",
+                  "flag": "--consumption-percentage",
+                  "summary": "Apple `consumptionPercentage` in milliunits (0..=100000, where 25000 is 25%). Required for non-subscription purchases (0 when undelivered) and omitted for auto-renewable subscriptions.",
+                  "type": "int"
+                },
+                {
+                  "field": "refund_preference",
+                  "flag": "--refund-preference",
+                  "summary": "Optional Apple `refundPreference`: `DECLINE`, `GRANT_FULL`, or `GRANT_PRORATED`.",
+                  "type": "string"
+                },
+                {
+                  "field": "custody_attestation",
+                  "flag": "--custody-attestation",
+                  "required": true,
+                  "summary": "Non-empty attestation confirming the caller holds exclusive reporting custody for this purchase (never a consent override).",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/store_purchases/*}:reportUsage",
+              "method": "money.store_purchases.report_usage",
+              "permission": "billing:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/store_purchases/{store_purchase}"
+              },
+              "summary": "Reports verified delivery and usage facts for an App Store purchase in answer to an observed `CONSUMPTION_REQUEST`. Strictly fails closed (0 outbound Apple calls) unless Money's append-only buyer-authenticated consent ledger holds an unwithdrawn `granted` decision for this purchase or app.",
+              "verb": "report-usage"
             }
           ],
           "noun": "store-purchases",
           "resource_type": "money.sylphx.com/StorePurchase"
+        },
+        {
+          "collection": "store_consumption_requests",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/store_consumption_requests/*}",
+              "method": "money.store_consumption_requests.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}"
+              },
+              "summary": "Gets a captured store consumption request.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over `store`, `transaction_id`, `store_purchase`, `status`.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/store_consumption_requests",
+              "method": "money.store_consumption_requests.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists captured store consumption requests, newest first.",
+              "verb": "list"
+            }
+          ],
+          "noun": "store-consumption-requests",
+          "resource_type": "money.sylphx.com/StoreConsumptionRequest"
         },
         {
           "collection": "customer_subscriptions",

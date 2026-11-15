@@ -2157,6 +2157,17 @@ pub struct GetStoreConnectionRequest {
     pub name: String,
 }
 
+/// The request of GetStoreConsumptionRequest.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetStoreConsumptionRequestRequest {
+    /// The name of the store consumption request to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetStorePurchase.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3178,6 +3189,54 @@ pub struct ListStoreConnectionsResponse {
     pub next_page_token: String,
 }
 
+/// The request of ListStoreConsumptionRequests.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListStoreConsumptionRequestsRequest {
+    /// The parent to list in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// At most this many; default 50, clamped to 1000.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// AIP-160 filter over `store`, `transaction_id`, `store_purchase`, `status`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filter: String,
+}
+
+/// The response of ListStoreConsumptionRequests.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListStoreConsumptionRequestsResponse {
+    /// The page.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "storeConsumptionRequests"
+    )]
+    pub store_consumption_requests: Vec<StoreConsumptionRequest>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
 /// The request of ListStorePurchases.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -4159,6 +4218,93 @@ pub struct ReleaseUsageReservationRequest {
     pub name: String,
 }
 
+/// The request of ReportStorePurchaseUsage.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReportStorePurchaseUsageRequest {
+    /// The store purchase to report usage for.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Optional consumption request resource name when targeting a specific
+    /// captured `CONSUMPTION_REQUEST`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "consumptionRequest"
+    )]
+    pub consumption_request: String,
+    /// Apple `deliveryStatus`: `DELIVERED`, `UNDELIVERED_QUALITY_ISSUE`,
+    /// `UNDELIVERED_WRONG_ITEM`, `UNDELIVERED_SERVER_OUTAGE`, or
+    /// `UNDELIVERED_OTHER`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "deliveryStatus"
+    )]
+    pub delivery_status: String,
+    /// Apple `sampleContentProvided`: whether a free sample or trial was offered.
+    /// Explicit presence is required so an omitted value is never defaulted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "sampleContentProvided"
+    )]
+    pub sample_content_provided: Option<bool>,
+    /// Apple `consumptionPercentage` in milliunits (0..=100000, where 25000 is
+    /// 25%). Required for non-subscription purchases (0 when undelivered) and
+    /// omitted for auto-renewable subscriptions.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "consumptionPercentage"
+    )]
+    pub consumption_percentage: Option<i32>,
+    /// Optional Apple `refundPreference`: `DECLINE`, `GRANT_FULL`, or
+    /// `GRANT_PRORATED`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "refundPreference"
+    )]
+    pub refund_preference: String,
+    /// Non-empty attestation confirming the caller holds exclusive reporting
+    /// custody for this purchase (never a consent override).
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "custodyAttestation"
+    )]
+    pub custody_attestation: String,
+}
+
+/// The response of ReportStorePurchaseUsage.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReportStorePurchaseUsageResponse {
+    /// The updated store consumption request record.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "storeConsumptionRequest"
+    )]
+    pub store_consumption_request: Option<StoreConsumptionRequest>,
+    /// The store purchase that was answered.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "storePurchase"
+    )]
+    pub store_purchase: Option<StorePurchase>,
+}
+
 /// Resolves held evidence without altering its original receipt.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -5048,6 +5194,176 @@ pub struct StoreConnectionStatus {
         alias = "serviceAccountEmail"
     )]
     pub service_account_email: String,
+}
+
+/// A Store Consumption Request is an Apple App Store Server Notifications V2
+/// `CONSUMPTION_REQUEST` observed by Money, with its 12-hour deadline and
+/// immutable dispatch status. Money never invents usage or consent facts and
+/// sends nothing to Apple without a verified buyer consent grant.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct StoreConsumptionRequest {
+    /// `orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}`.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// `scr_<cell><ulid>`; never reused.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Store name (`app_store`).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub store: String,
+    /// App Store bundle identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bundleId"
+    )]
+    pub bundle_id: String,
+    /// `production` or `sandbox`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub environment: String,
+    /// App Store transaction identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "transactionId"
+    )]
+    pub transaction_id: String,
+    /// App Store original transaction identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "originalTransactionId"
+    )]
+    pub original_transaction_id: String,
+    /// Store notification UUID that opened this request.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "notificationId"
+    )]
+    pub notification_id: String,
+    /// Apple's `consumptionRequestReason`, when present.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "consumptionRequestReason"
+    )]
+    pub consumption_request_reason: String,
+    /// Linked StorePurchase resource name, when verified in Money.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "storePurchase"
+    )]
+    pub store_purchase: String,
+    /// Linked buyer subject, when known.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<Subject>,
+    /// Current state: `pending`, `consent_missing`, `consent_withdrawn`,
+    /// `in_flight`, `sent`, `failed_retryable`, `failed_terminal`, or
+    /// `expired`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+    /// When Money observed the notification.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "observedTime"
+    )]
+    pub observed_time: String,
+    /// 12-hour Apple response deadline.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "deadlineTime"
+    )]
+    pub deadline_time: String,
+    /// Number of outbound Apple Send Consumption attempts started.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "attemptCount"
+    )]
+    pub attempt_count: i32,
+    /// Timestamp of the last outbound Apple Send Consumption attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastAttemptTime"
+    )]
+    pub last_attempt_time: String,
+    /// Timestamp when Apple accepted the consumption report (HTTP 202).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sentTime"
+    )]
+    pub sent_time: String,
+    /// HTTP status code returned by Apple's consumption endpoint (202 when sent).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appleHttpStatus"
+    )]
+    pub apple_http_status: i32,
+    /// Last fail-closed refusal reason, when blocked before calling Apple.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastRefusalReason"
+    )]
+    pub last_refusal_reason: String,
+    /// Consent ledger event id evaluated for the dispatch, when present.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "consentId"
+    )]
+    pub consent_id: String,
 }
 
 /// A Store Purchase is one store transaction Money verified with the store and
@@ -6753,6 +7069,13 @@ impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
         }
     }
 
+    /// The `store_consumption_requests` collection.
+    pub fn store_consumption_requests(&self) -> StoreConsumptionRequestsCollection<'a, T> {
+        StoreConsumptionRequestsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `customer_subscriptions` collection.
     pub fn customer_subscriptions(&self) -> CustomerSubscriptionsCollection<'a, T> {
         CustomerSubscriptionsCollection {
@@ -8001,6 +8324,122 @@ impl<'a, T: crate::runtime::Transport> StorePurchasesCollection<'a, T> {
         loop {
             let page = self.list(request.clone()).await?;
             items.extend(page.store_purchases);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Reports verified delivery and usage facts for an App Store purchase in
+    /// answer to an observed `CONSUMPTION_REQUEST`. Strictly fails closed (0
+    /// outbound Apple calls) unless Money's append-only buyer-authenticated
+    /// consent ledger holds an unwithdrawn `granted` decision for this purchase
+    /// or app.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/store_purchases/*}:reportUsage` · permission `billing:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn report_usage(
+        &self,
+        request: ReportStorePurchaseUsageRequest,
+    ) -> Result<ReportStorePurchaseUsageResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:reportUsage",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/store_purchases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `store_consumption_requests` of Sylphx Money: Resource type `money.sylphx.com/StoreConsumptionRequest`.
+pub struct StoreConsumptionRequestsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> StoreConsumptionRequestsCollection<'a, T> {
+    /// Gets a captured store consumption request.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/store_consumption_requests/*}` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetStoreConsumptionRequestRequest,
+    ) -> Result<StoreConsumptionRequest, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/store_consumption_requests/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists captured store consumption requests, newest first.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/store_consumption_requests` · permission `billing:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListStoreConsumptionRequestsRequest,
+    ) -> Result<ListStoreConsumptionRequestsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/store_consumption_requests",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListStoreConsumptionRequestsRequest,
+    ) -> Result<Vec<StoreConsumptionRequest>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.store_consumption_requests);
             if page.next_page_token.is_empty() {
                 return Ok(items);
             }

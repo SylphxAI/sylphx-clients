@@ -675,6 +675,15 @@ pub const PSN: Prefix = Prefix::new("psn", "PortalSession", "money", Some("porta
 pub const SCN: Prefix = Prefix::new("scn", "StoreConnection", "money", Some("store_connections"));
 /// StorePurchase (`spu`, money).
 pub const SPU: Prefix = Prefix::new("spu", "StorePurchase", "money", Some("store_purchases"));
+/// StoreConsumptionRequest (`scr`, money).
+pub const SCR: Prefix = Prefix::new(
+    "scr",
+    "StoreConsumptionRequest",
+    "money",
+    Some("store_consumption_requests"),
+);
+/// StoreConsumptionConsent (`scc`, money).
+pub const SCC: Prefix = Prefix::new("scc", "StoreConsumptionConsent", "money", None);
 /// UsageReservation (`ures`, money).
 pub const URES: Prefix = Prefix::new(
     "ures",
@@ -809,7 +818,7 @@ pub const ALL: &[Prefix] = &[
     TASK, CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP,
     TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB,
     NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT,
-    LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, URES, UEVT, CGRT, UINV, USET, UTIER,
-    UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF, PEV,
-    CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
+    LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, SCR, SCC, URES, UEVT, CGRT, UINV, USET,
+    UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF,
+    PEV, CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
 ];

@@ -29296,6 +29296,141 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Reports verified delivery and usage facts for an App Store purchase in answer to an observed `CONSUMPTION_REQUEST`. Strictly fails closed (0 outbound Apple calls) unless Money's append-only buyer-authenticated consent ledger holds an unwithdrawn `granted` decision for this purchase or app."
+      },
+      "description": "Reports verified delivery and usage facts for an App Store purchase in\nanswer to an observed `CONSUMPTION_REQUEST`. Strictly fails closed (0\noutbound Apple calls) unless Money's append-only buyer-authenticated\nconsent ledger holds an unwithdrawn `granted` decision for this purchase\nor app.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/projects/*/envs/*/store_purchases/*}:reportUsage",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReportStorePurchaseUsage.",
+        "properties": {
+          "consumption_percentage": {
+            "description": "Apple `consumptionPercentage` in milliunits (0..=100000, where 25000 is\n25%). Required for non-subscription purchases (0 when undelivered) and\nomitted for auto-renewable subscriptions.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "consumption_request": {
+            "description": "Optional consumption request resource name when targeting a specific\ncaptured `CONSUMPTION_REQUEST`.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConsumptionRequest"
+          },
+          "custody_attestation": {
+            "description": "Non-empty attestation confirming the caller holds exclusive reporting\ncustody for this purchase (never a consent override).",
+            "type": "string"
+          },
+          "delivery_status": {
+            "description": "Apple `deliveryStatus`: `DELIVERED`, `UNDELIVERED_QUALITY_ISSUE`,\n`UNDELIVERED_WRONG_ITEM`, `UNDELIVERED_SERVER_OUTAGE`, or\n`UNDELIVERED_OTHER`.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The store purchase to report usage for.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StorePurchase"
+          },
+          "refund_preference": {
+            "description": "Optional Apple `refundPreference`: `DECLINE`, `GRANT_FULL`, or\n`GRANT_PRORATED`.",
+            "type": "string"
+          },
+          "sample_content_provided": {
+            "description": "Apple `sampleContentProvided`: whether a free sample or trial was offered.\nExplicit presence is required so an omitted value is never defaulted.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "delivery_status",
+          "sample_content_provided",
+          "custody_attestation"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_purchases.report_usage",
+      "permission": "billing:write",
+      "tool": "money_store_purchases_report_usage"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a captured store consumption request."
+      },
+      "description": "Gets a captured store consumption request.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/store_consumption_requests/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetStoreConsumptionRequest.",
+        "properties": {
+          "name": {
+            "description": "The name of the store consumption request to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConsumptionRequest"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_consumption_requests.get",
+      "permission": "billing:read",
+      "tool": "money_store_consumption_requests_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists captured store consumption requests, newest first."
+      },
+      "description": "Lists captured store consumption requests, newest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/store_consumption_requests",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListStoreConsumptionRequests.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over `store`, `transaction_id`, `store_purchase`, `status`.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "money.sylphx.com/StoreConsumptionRequest"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "money.store_consumption_requests.list",
+      "permission": "billing:read",
+      "tool": "money_store_consumption_requests_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,

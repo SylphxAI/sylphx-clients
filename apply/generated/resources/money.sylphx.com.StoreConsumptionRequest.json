@@ -1,0 +1,22 @@
+{
+  "collection": "store_consumption_requests",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "StoreConsumptionRequest",
+  "message": "sylphx.money.v1.StoreConsumptionRequest",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/store_consumption_requests/{store_consumption_request}",
+  "plural": "storeConsumptionRequests",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "money",
+  "shape": "record",
+  "singular": "storeConsumptionRequest",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "money.sylphx.com/StoreConsumptionRequest"
+}

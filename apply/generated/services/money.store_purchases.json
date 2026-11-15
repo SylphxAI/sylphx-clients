@@ -33,6 +33,13 @@
           },
           "id": "money.store_purchases.list",
           "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.store_purchases.report_usage",
+          "kind": "custom"
         }
       ],
       "resource_type": "money.sylphx.com/StorePurchase"
