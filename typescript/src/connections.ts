@@ -74,6 +74,34 @@ export interface BeginConnectionProviderRegistrationResponse {
 	expireTime?: string
 }
 
+/** The request of BeginOauth2Authorization. */
+export interface BeginOauth2AuthorizationRequest {
+	/** OAuth 2.0 ConnectionProvider resource name. */
+	name: string
+	/** Target Connection id to create or reauthorize on callback; server-assigned when empty. */
+	connectionId?: string
+	/** Optional HTTPS redirect destination after callback completion. */
+	postAuthorizeRedirectUri?: string
+	/** Optional scopes overriding the provider defaults. */
+	scopes?: string[]
+	/** Additional per-request query parameters appended to `authorize_url`. */
+	extraAuthorizeParams?: Record<string, string>
+	/** Optional non-secret metadata persisted onto the resulting Connection. */
+	providerMetadata?: Record<string, string>
+	/** Optional non-secret external account id recorded on creation. */
+	externalAccountId?: string
+}
+
+/** The response of BeginOauth2Authorization. */
+export interface BeginOauth2AuthorizationResponse {
+	/** Full authorization URL to open in a browser; carries a one-use expiring state. */
+	authorizationUrl?: string
+	/** Hosted callback URL handled by Sylphx Connections. */
+	callbackUrl?: string
+	/** When the authorization state expires (ten minutes after begin). */
+	expireTime?: string
+}
+
 /** The request of CompleteConnectionAuthorization. */
 export interface CompleteConnectionAuthorizationRequest {
 	/** User Connection being authorized. */
@@ -132,6 +160,8 @@ export interface ConnectionProviderSpec {
 	 * remains in the provider's organization and is never copied to a recipient.
 	 */
 	sharingGrants?: ProviderSharingGrant[]
+	/** A generic OAuth 2.0 client configuration. */
+	oauth2?: Oauth2Config
 }
 
 /** ConnectionProviderStatus is the observed state of a ConnectionProvider. */
@@ -140,10 +170,12 @@ export interface ConnectionProviderStatus {
 	readonly observedGeneration?: string
 	/** Ready, Reconciling, Stalled. */
 	readonly conditions?: common.Condition[]
-	/** The provider's plugin kind, for example `github_app`. */
+	/** The provider's plugin kind, for example `github_app` or `oauth2`. */
 	readonly kind?: string
 	/** How many active Connections the provider has. */
 	readonly connectionCount?: number
+	/** Whether an OAuth 2.0 client secret is stored in custody. */
+	readonly clientSecretConfigured?: boolean
 }
 
 /** ConnectionSpec is the caller-writable state of a Connection. */
@@ -166,6 +198,11 @@ export interface ConnectionSpec {
 	 * Connection name and version, for user actions only.
 	 */
 	githubUser?: GitHubUserConfig
+	/**
+	 * Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and
+	 * `github_user`. Requires an `oauth2` ConnectionProvider.
+	 */
+	oauth2?: Oauth2ConnectionConfig
 }
 
 /**
@@ -201,6 +238,20 @@ export interface ConnectionStatus {
 	 * Contains no device code or token. Use a fresh Idempotency-Key for each poll.
 	 */
 	readonly authorization?: GitHubUserAuthorization
+	/** Observed generic OAuth 2.0 authorization metadata; contains no token. */
+	readonly oauth2Authorization?: Oauth2Authorization
+}
+
+/** The request of CreateConnectionProvider. */
+export interface CreateConnectionProviderRequest {
+	/** The org to create in. */
+	parent: string
+	/** The connection provider to create; only spec and caller-writable metadata are read. */
+	connectionProvider: ConnectionProvider
+	/** The id of the new provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; server-assigned when empty. */
+	connectionProviderId?: string
+	/** Validate and return the result without writing anything. */
+	validateOnly?: boolean
 }
 
 /** The request of CreateConnection. */
@@ -338,6 +389,27 @@ export interface GitHubUserConfig {
 	login?: string
 }
 
+/** The request of ImportOauth2Credentials. */
+export interface ImportOauth2CredentialsRequest {
+	/**
+	 * Connection resource name (`orgs/{org}/connections/{connection}`). Creates the
+	 * Connection atomically when absent if `provider` is supplied.
+	 */
+	name: string
+	/** OAuth 2.0 ConnectionProvider resource name; required when creating a new Connection. */
+	provider?: string
+	/** Write-only refresh token sealed inside Broker custody and never returned. */
+	refreshToken: string
+	/** Optional write-only access token cached until `access_token_expire_time`. */
+	accessToken?: string
+	/** Expiry of the optional initial `access_token`. */
+	accessTokenExpireTime?: string
+	/** Optional non-secret external account id. */
+	externalAccountId?: string
+	/** Optional non-secret metadata merged into `spec.oauth2.provider_metadata`. */
+	providerMetadata?: Record<string, string>
+}
+
 /** The request of ListConnectionProviders. */
 export interface ListConnectionProvidersRequest {
 	/** The org to list in. */
@@ -380,6 +452,98 @@ export interface ListConnectionsResponse {
 	connections?: Connection[]
 	/** The token of the next page; empty on the last page. */
 	nextPageToken?: string
+}
+
+/** Observed state of a generic OAuth 2.0 Connection; never carries tokens. */
+export interface Oauth2Authorization {
+	/** Whether a sealed refresh token is stored in Broker custody. */
+	readonly refreshTokenConfigured?: boolean
+	/** When the cached access token expires, if one is present. */
+	readonly accessTokenExpireTime?: string
+	/** When the sealed credentials were last refreshed from the provider. */
+	readonly lastRefreshTime?: string
+	/** Whether the provider refused refresh and operator reauthorization is needed. */
+	readonly requiresReauthorization?: boolean
+	/** Non-secret failure reason when reauthorization is required. */
+	readonly refreshError?: string
+}
+
+/** Oauth2Config configures the generic OAuth 2.0 provider plugin. */
+export interface Oauth2Config {
+	/** Authorization endpoint HTTPS URL. */
+	authorizeUrl?: string
+	/** Authorization-code exchange endpoint HTTPS URL. */
+	tokenUrl?: string
+	/** Refresh endpoint HTTPS URL; defaults to `token_url` when empty. */
+	refreshUrl?: string
+	/** Provider-issued OAuth client identifier. */
+	clientId?: string
+	/** Write-only OAuth client secret sealed at rest and never returned. */
+	clientSecret?: string
+	/** Default OAuth scopes requested during authorization. */
+	scopes?: string[]
+	/**
+	 * Static query parameters appended to `authorize_url`. Reserved keys
+	 * (`state`, `redirect_uri`) are rejected.
+	 */
+	extraAuthorizeParams?: Record<string, string>
+	/**
+	 * Optional `redirect_uri` override sent on authorize and token requests;
+	 * defaults to the hosted callback URL.
+	 */
+	redirectUri?: string
+	/** HTTP transport for code exchange and refresh requests. */
+	tokenMethod?: Oauth2TokenMethod
+	/** How client credentials are sent to token and refresh endpoints. */
+	clientAuth?: Oauth2ClientAuth
+	/**
+	 * Query parameter carrying the authorization code on redirect callbacks;
+	 * defaults to `code`.
+	 */
+	authorizeCodeParam?: string
+	/**
+	 * Parameter key carrying the authorization code on token exchange requests;
+	 * defaults to `code`.
+	 */
+	tokenCodeParam?: string
+	/**
+	 * Grant type value sent during authorization-code exchange; defaults to
+	 * `authorization_code`.
+	 */
+	exchangeGrantType?: string
+	/**
+	 * Parameter key for `client_id` on token and refresh requests when not using
+	 * HTTP Basic authentication; defaults to `client_id`.
+	 */
+	clientIdParam?: string
+	/**
+	 * Parameter key for `client_secret` on token and refresh requests when not
+	 * using HTTP Basic authentication; defaults to `client_secret`.
+	 */
+	clientSecretParam?: string
+	/**
+	 * Non-secret query parameter keys copied from the redirect callback into
+	 * `Connection.spec.oauth2.provider_metadata`.
+	 */
+	callbackMetadataParams?: string[]
+	/** Optional HTTPS URL redirected to after hosted callback completion. */
+	postAuthorizeRedirectUri?: string
+	/**
+	 * Query parameter key for `client_id` in `authorize_url`; defaults to
+	 * `client_id`.
+	 */
+	authorizeClientIdParam?: string
+}
+
+/** Non-secret configuration for a generic OAuth 2.0 Connection. */
+export interface Oauth2ConnectionConfig {
+	/** Non-secret account identifier associated with the external authorization. */
+	externalAccountId?: string
+	/**
+	 * Non-secret provider metadata captured from callbacks or supplied by the
+	 * caller. Secret-bearing keys are rejected.
+	 */
+	providerMetadata?: Record<string, string>
 }
 
 /**
@@ -430,6 +594,12 @@ export type ConnectionState = 'pending' | 'active' | 'suspended' | 'removed' | (
 /** ExternalAccountKind is the kind of a third-party account. */
 export type ExternalAccountKind = 'user' | 'organization' | (string & {})
 
+/** How OAuth 2.0 client credentials are presented to token endpoints. */
+export type Oauth2ClientAuth = 'body_or_query' | 'basic' | (string & {})
+
+/** Protocol used by an OAuth 2.0 token or refresh endpoint. */
+export type Oauth2TokenMethod = 'form_post' | 'query_get' | (string & {})
+
 /** RepositorySelection is which repositories an installation covers. */
 export type RepositorySelection = 'all' | 'selected' | (string & {})
 
@@ -457,6 +627,18 @@ runtime.registerSchemas({
 		['registrationUrl', 'registration_url'],
 		['expireTime', 'expire_time'],
 	],
+	'sylphx.connections.v1.BeginOauth2AuthorizationRequest': [
+		['connectionId', 'connection_id'],
+		['postAuthorizeRedirectUri', 'post_authorize_redirect_uri'],
+		['extraAuthorizeParams', 'extra_authorize_params', undefined, 'map'],
+		['providerMetadata', 'provider_metadata', undefined, 'map'],
+		['externalAccountId', 'external_account_id'],
+	],
+	'sylphx.connections.v1.BeginOauth2AuthorizationResponse': [
+		['authorizationUrl', 'authorization_url'],
+		['callbackUrl', 'callback_url'],
+		['expireTime', 'expire_time'],
+	],
 	'sylphx.connections.v1.CompleteConnectionAuthorizationRequest': [
 		['authorizationId', 'authorization_id'],
 	],
@@ -473,16 +655,19 @@ runtime.registerSchemas({
 	'sylphx.connections.v1.ConnectionProviderSpec': [
 		['githubApp', 'github_app', 'sylphx.connections.v1.GitHubAppConfig'],
 		['sharingGrants', 'sharing_grants', 'sylphx.connections.v1.ProviderSharingGrant'],
+		['oauth2', 'oauth2', 'sylphx.connections.v1.Oauth2Config'],
 	],
 	'sylphx.connections.v1.ConnectionProviderStatus': [
 		['observedGeneration', 'observed_generation'],
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['connectionCount', 'connection_count'],
+		['clientSecretConfigured', 'client_secret_configured'],
 	],
 	'sylphx.connections.v1.ConnectionSpec': [
 		['externalId', 'external_id'],
 		['webPush', 'web_push', 'sylphx.connections.v1.WebPushConfig'],
 		['githubUser', 'github_user', 'sylphx.connections.v1.GitHubUserConfig'],
+		['oauth2', 'oauth2', 'sylphx.connections.v1.Oauth2ConnectionConfig'],
 	],
 	'sylphx.connections.v1.ConnectionStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -494,6 +679,12 @@ runtime.registerSchemas({
 		['suspendTime', 'suspend_time'],
 		['verifyTime', 'verify_time'],
 		['authorization', 'authorization', 'sylphx.connections.v1.GitHubUserAuthorization'],
+		['oauth2Authorization', 'oauth2_authorization', 'sylphx.connections.v1.Oauth2Authorization'],
+	],
+	'sylphx.connections.v1.CreateConnectionProviderRequest': [
+		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],
+		['connectionProviderId', 'connection_provider_id'],
+		['validateOnly', 'validate_only'],
 	],
 	'sylphx.connections.v1.CreateConnectionRequest': [
 		['connection', 'connection', 'sylphx.connections.v1.Connection'],
@@ -531,6 +722,13 @@ runtime.registerSchemas({
 		['nextPollTime', 'next_poll_time'],
 	],
 	'sylphx.connections.v1.GitHubUserConfig': [],
+	'sylphx.connections.v1.ImportOauth2CredentialsRequest': [
+		['refreshToken', 'refresh_token'],
+		['accessToken', 'access_token'],
+		['accessTokenExpireTime', 'access_token_expire_time'],
+		['externalAccountId', 'external_account_id'],
+		['providerMetadata', 'provider_metadata', undefined, 'map'],
+	],
 	'sylphx.connections.v1.ListConnectionProvidersRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -548,6 +746,36 @@ runtime.registerSchemas({
 	'sylphx.connections.v1.ListConnectionsResponse': [
 		['connections', 'connections', 'sylphx.connections.v1.Connection'],
 		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.connections.v1.Oauth2Authorization': [
+		['refreshTokenConfigured', 'refresh_token_configured'],
+		['accessTokenExpireTime', 'access_token_expire_time'],
+		['lastRefreshTime', 'last_refresh_time'],
+		['requiresReauthorization', 'requires_reauthorization'],
+		['refreshError', 'refresh_error'],
+	],
+	'sylphx.connections.v1.Oauth2Config': [
+		['authorizeUrl', 'authorize_url'],
+		['tokenUrl', 'token_url'],
+		['refreshUrl', 'refresh_url'],
+		['clientId', 'client_id'],
+		['clientSecret', 'client_secret'],
+		['extraAuthorizeParams', 'extra_authorize_params', undefined, 'map'],
+		['redirectUri', 'redirect_uri'],
+		['tokenMethod', 'token_method'],
+		['clientAuth', 'client_auth'],
+		['authorizeCodeParam', 'authorize_code_param'],
+		['tokenCodeParam', 'token_code_param'],
+		['exchangeGrantType', 'exchange_grant_type'],
+		['clientIdParam', 'client_id_param'],
+		['clientSecretParam', 'client_secret_param'],
+		['callbackMetadataParams', 'callback_metadata_params'],
+		['postAuthorizeRedirectUri', 'post_authorize_redirect_uri'],
+		['authorizeClientIdParam', 'authorize_client_id_param'],
+	],
+	'sylphx.connections.v1.Oauth2ConnectionConfig': [
+		['externalAccountId', 'external_account_id'],
+		['providerMetadata', 'provider_metadata', undefined, 'map'],
 	],
 	'sylphx.connections.v1.ProviderSharingGrant': [
 		['externalIds', 'external_ids'],
@@ -609,6 +837,45 @@ export class ConnectionProvidersCollection {
 			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.connections.v1.BeginConnectionProviderRegistrationRequest',
 			responseType: 'sylphx.connections.v1.BeginConnectionProviderRegistrationResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Creates a connection provider, such as an OAuth 2.0 client configuration.
+	 *
+	 * `POST /v1/{parent=orgs/*}/connection_providers` · permission `connections:admin` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async create(request: CreateConnectionProviderRequest): Promise<ConnectionProvider> {
+		return this.client.call<ConnectionProvider>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/connection_providers`,
+			query: { connection_provider_id: request.connectionProviderId, validate_only: request.validateOnly },
+			body: request.connectionProvider ?? {},
+			bodyType: 'sylphx.connections.v1.ConnectionProvider',
+			responseType: 'sylphx.connections.v1.ConnectionProvider',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Begins an expiring hosted OAuth 2.0 authorization ceremony for an OAuth 2.0
+	 * ConnectionProvider. Returns an authorization_url carrying an expiring
+	 * one-use state token handled by GET /v1/connections/oauth2:callback.
+	 *
+	 * `POST /v1/{name=orgs/*\/connection_providers/*}:beginOauth2Authorization` · permission `connections:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`.
+	 */
+	async beginOauth2Authorization(request: BeginOauth2AuthorizationRequest): Promise<BeginOauth2AuthorizationResponse> {
+		return this.client.call<BeginOauth2AuthorizationResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connection_providers/*', 'name')}:beginOauth2Authorization`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.connections.v1.BeginOauth2AuthorizationRequest',
+			responseType: 'sylphx.connections.v1.BeginOauth2AuthorizationResponse',
 			mutation: true,
 		})
 	}
@@ -803,6 +1070,26 @@ export class ConnectionsCollection {
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connections/*', 'name')}:completeAuthorization`,
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.connections.v1.CompleteConnectionAuthorizationRequest',
+			responseType: 'sylphx.common.v1.Operation',
+			mutation: true,
+		})
+		return new runtime.Operation<Connection>(this.client, operation, 'sylphx.connections.v1.Connection')
+	}
+
+	/**
+	 * Imports existing OAuth 2.0 credentials into sealed Broker custody for a
+	 * Connection without returning any secret token.
+	 *
+	 * `POST /v1/{name=orgs/*\/connections/*}:importOauth2Credentials` · permission `connections:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async importOauth2Credentials(request: ImportOauth2CredentialsRequest): Promise<runtime.Operation<Connection>> {
+		const operation = await this.client.call<common.Operation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connections/*', 'name')}:importOauth2Credentials`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.connections.v1.ImportOauth2CredentialsRequest',
 			responseType: 'sylphx.common.v1.Operation',
 			mutation: true,
 		})

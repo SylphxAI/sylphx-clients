@@ -39,8 +39,11 @@ export interface ExchangeReadTokenRequest {
 	 * policy's. Every resolved permission must be read-only.
 	 */
 	permissions?: Record<string, string>
-	/** The one repository this call needs, `owner/name`, one of the policy's. */
-	repositories: string[]
+	/**
+	 * The one repository this call needs, `owner/name`, one of the policy's;
+	 * leave empty for non-repository Connections such as OAuth 2.0.
+	 */
+	repositories?: string[]
 	/**
 	 * How long the credential should live, at most the policy's `max_ttl`.
 	 * A GitHub installation token always lives one hour: unset or `3600s`.
@@ -87,8 +90,11 @@ export interface ExchangeTokenRequest {
 	 * policy's.
 	 */
 	permissions?: Record<string, string>
-	/** The one repository this call needs, `owner/name`, one of the policy's. */
-	repositories: string[]
+	/**
+	 * The one repository this call needs, `owner/name`, one of the policy's;
+	 * leave empty for non-repository Connections such as OAuth 2.0.
+	 */
+	repositories?: string[]
 	/**
 	 * How long the credential should live, at most the policy's `max_ttl`.
 	 * A GitHub installation token always lives one hour: unset or `3600s`.
@@ -325,7 +331,8 @@ export interface TrustPolicy {
 export interface TrustPolicySpec {
 	/**
 	 * The Connection credentials are issued on:
-	 * An active GitHub installation or Web Push Connection in the same org.
+	 * An active GitHub installation, GitHub user, OAuth 2.0, or Web Push
+	 * Connection in the same org.
 	 */
 	connection?: string
 	/**
@@ -335,15 +342,17 @@ export interface TrustPolicySpec {
 	 */
 	subjects?: string[]
 	/**
-	 * Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,
+	 * Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the
+	 * GitHub permission ceiling,
 	 * for example `{"contents": "write", "pull_requests": "write"}`.
 	 * `administration` is read only; organization permissions are refused.
 	 * A policy with `actors` carries at most `contents` and `pull_requests`.
 	 */
 	permissions?: Record<string, string>
 	/**
-	 * Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`
-	 * entries, no wildcard, each owned by the Connection's account.
+	 * Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1
+	 * to 1000 exact `owner/name` entries, no wildcard, each owned by the
+	 * Connection's account.
 	 * One exchange covers exactly one repository.
 	 */
 	repositories?: string[]
@@ -351,7 +360,8 @@ export interface TrustPolicySpec {
 	credentialKind?: CredentialKind
 	/**
 	 * The longest a credential lives: GitHub default/maximum 3600s;
-	 * VAPID default/maximum 86400s. Positive whole seconds only for VAPID.
+	 * OAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry).
+	 * Positive whole seconds only for VAPID.
 	 */
 	maxTtl?: string
 	/**

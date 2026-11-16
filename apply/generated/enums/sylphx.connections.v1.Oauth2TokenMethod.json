@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.connections.v1.Oauth2TokenMethod",
+  "package": "sylphx.connections.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "OAUTH2_TOKEN_METHOD_FORM_POST",
+      "wire": "form_post"
+    },
+    {
+      "number": 2,
+      "proto_name": "OAUTH2_TOKEN_METHOD_QUERY_GET",
+      "wire": "query_get"
+    }
+  ]
+}

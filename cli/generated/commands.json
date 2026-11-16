@@ -8158,7 +8158,7 @@
                   "field": "trust_policy.spec.connection",
                   "flag": "--spec.connection",
                   "required": true,
-                  "summary": "The Connection credentials are issued on: An active GitHub installation or Web Push Connection in the same org.",
+                  "summary": "The Connection credentials are issued on: An active GitHub installation, GitHub user, OAuth 2.0, or Web Push Connection in the same org.",
                   "type": "string"
                 },
                 {
@@ -8173,14 +8173,14 @@
                   "field": "trust_policy.spec.permissions",
                   "flag": "--spec.permissions",
                   "repeated": true,
-                  "summary": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
+                  "summary": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
                   "type": "key=value"
                 },
                 {
                   "field": "trust_policy.spec.repositories",
                   "flag": "--spec.repositories",
                   "repeated": true,
-                  "summary": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
+                  "summary": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
                   "type": "string"
                 },
                 {
@@ -8198,7 +8198,7 @@
                 {
                   "field": "trust_policy.spec.max_ttl",
                   "flag": "--spec.max-ttl",
-                  "summary": "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
+                  "summary": "The longest a credential lives: GitHub default/maximum 3600s; OAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry). Positive whole seconds only for VAPID.",
                   "type": "duration"
                 },
                 {
@@ -8267,7 +8267,7 @@
                   "field": "trust_policy.spec.connection",
                   "flag": "--spec.connection",
                   "required": true,
-                  "summary": "The Connection credentials are issued on: An active GitHub installation or Web Push Connection in the same org.",
+                  "summary": "The Connection credentials are issued on: An active GitHub installation, GitHub user, OAuth 2.0, or Web Push Connection in the same org.",
                   "type": "string"
                 },
                 {
@@ -8282,14 +8282,14 @@
                   "field": "trust_policy.spec.permissions",
                   "flag": "--spec.permissions",
                   "repeated": true,
-                  "summary": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
+                  "summary": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`.",
                   "type": "key=value"
                 },
                 {
                   "field": "trust_policy.spec.repositories",
                   "flag": "--spec.repositories",
                   "repeated": true,
-                  "summary": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
+                  "summary": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository.",
                   "type": "string"
                 },
                 {
@@ -8307,7 +8307,7 @@
                 {
                   "field": "trust_policy.spec.max_ttl",
                   "flag": "--spec.max-ttl",
-                  "summary": "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
+                  "summary": "The longest a credential lives: GitHub default/maximum 3600s; OAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry). Positive whole seconds only for VAPID.",
                   "type": "duration"
                 },
                 {
@@ -8397,8 +8397,7 @@
                   "field": "repositories",
                   "flag": "--repositories",
                   "repeated": true,
-                  "required": true,
-                  "summary": "The one repository this call needs, `owner/name`, one of the policy's.",
+                  "summary": "The one repository this call needs, `owner/name`, one of the policy's; leave empty for non-repository Connections such as OAuth 2.0.",
                   "type": "string"
                 },
                 {
@@ -8434,8 +8433,7 @@
                   "field": "repositories",
                   "flag": "--repositories",
                   "repeated": true,
-                  "required": true,
-                  "summary": "The one repository this call needs, `owner/name`, one of the policy's.",
+                  "summary": "The one repository this call needs, `owner/name`, one of the policy's; leave empty for non-repository Connections such as OAuth 2.0.",
                   "type": "string"
                 },
                 {
@@ -10311,6 +10309,269 @@
               "effect": "write",
               "flags": [
                 {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "connection_provider.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "connection_provider.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.github_app.app_id",
+                  "flag": "--spec.github-app.app-id",
+                  "summary": "The App's numeric id.",
+                  "type": "int"
+                },
+                {
+                  "field": "connection_provider.spec.github_app.slug",
+                  "flag": "--spec.github-app.slug",
+                  "summary": "The App's slug, for example `sylphx`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.github_app.client_id",
+                  "flag": "--spec.github-app.client-id",
+                  "summary": "The App's OAuth client id.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.github_app.signing_key",
+                  "flag": "--spec.github-app.signing-key",
+                  "summary": "The imported, non-exportable SIGN Key (RS256) that signs App assertions; only the credential service may use it.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.github_app.webhook_secret",
+                  "flag": "--spec.github-app.webhook-secret",
+                  "summary": "The Secret holding the webhook secret that verifies deliveries.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.sharing_grants",
+                  "flag": "--spec.sharing-grants",
+                  "repeated": true,
+                  "summary": "Organizations allowed to use specific installations of this provider. Removing a grant prevents subsequent Broker exchanges. Signing custody remains in the provider's organization and is never copied to a recipient.",
+                  "type": "json"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.authorize_url",
+                  "flag": "--spec.oauth2.authorize-url",
+                  "summary": "Authorization endpoint HTTPS URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.token_url",
+                  "flag": "--spec.oauth2.token-url",
+                  "summary": "Authorization-code exchange endpoint HTTPS URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.refresh_url",
+                  "flag": "--spec.oauth2.refresh-url",
+                  "summary": "Refresh endpoint HTTPS URL; defaults to `token_url` when empty.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_id",
+                  "flag": "--spec.oauth2.client-id",
+                  "summary": "Provider-issued OAuth client identifier.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_secret",
+                  "flag": "--spec.oauth2.client-secret",
+                  "sensitive": true,
+                  "summary": "Write-only OAuth client secret sealed at rest and never returned.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.scopes",
+                  "flag": "--spec.oauth2.scopes",
+                  "repeated": true,
+                  "summary": "Default OAuth scopes requested during authorization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.extra_authorize_params",
+                  "flag": "--spec.oauth2.extra-authorize-params",
+                  "repeated": true,
+                  "summary": "Static query parameters appended to `authorize_url`. Reserved keys (`state`, `redirect_uri`) are rejected.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.redirect_uri",
+                  "flag": "--spec.oauth2.redirect-uri",
+                  "summary": "Optional `redirect_uri` override sent on authorize and token requests; defaults to the hosted callback URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.token_method",
+                  "flag": "--spec.oauth2.token-method",
+                  "summary": "HTTP transport for code exchange and refresh requests.",
+                  "type": "enum",
+                  "values": [
+                    "form_post",
+                    "query_get"
+                  ]
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_auth",
+                  "flag": "--spec.oauth2.client-auth",
+                  "summary": "How client credentials are sent to token and refresh endpoints.",
+                  "type": "enum",
+                  "values": [
+                    "body_or_query",
+                    "basic"
+                  ]
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.authorize_code_param",
+                  "flag": "--spec.oauth2.authorize-code-param",
+                  "summary": "Query parameter carrying the authorization code on redirect callbacks; defaults to `code`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.token_code_param",
+                  "flag": "--spec.oauth2.token-code-param",
+                  "summary": "Parameter key carrying the authorization code on token exchange requests; defaults to `code`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.exchange_grant_type",
+                  "flag": "--spec.oauth2.exchange-grant-type",
+                  "summary": "Grant type value sent during authorization-code exchange; defaults to `authorization_code`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_id_param",
+                  "flag": "--spec.oauth2.client-id-param",
+                  "summary": "Parameter key for `client_id` on token and refresh requests when not using HTTP Basic authentication; defaults to `client_id`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_secret_param",
+                  "flag": "--spec.oauth2.client-secret-param",
+                  "summary": "Parameter key for `client_secret` on token and refresh requests when not using HTTP Basic authentication; defaults to `client_secret`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.callback_metadata_params",
+                  "flag": "--spec.oauth2.callback-metadata-params",
+                  "repeated": true,
+                  "summary": "Non-secret query parameter keys copied from the redirect callback into `Connection.spec.oauth2.provider_metadata`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.post_authorize_redirect_uri",
+                  "flag": "--spec.oauth2.post-authorize-redirect-uri",
+                  "summary": "Optional HTTPS URL redirected to after hosted callback completion.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.authorize_client_id_param",
+                  "flag": "--spec.oauth2.authorize-client-id-param",
+                  "summary": "Query parameter key for `client_id` in `authorize_url`; defaults to `client_id`.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*}/connection_providers",
+              "method": "connections.connection_providers.create",
+              "permission": "connections:admin",
+              "positional": {
+                "arg": "ID",
+                "field": "connection_provider_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "connection_provider",
+              "summary": "Creates a connection provider, such as an OAuth 2.0 client configuration.",
+              "verb": "create"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "connection_id",
+                  "flag": "--connection-id",
+                  "summary": "Target Connection id to create or reauthorize on callback; server-assigned when empty.",
+                  "type": "string"
+                },
+                {
+                  "field": "post_authorize_redirect_uri",
+                  "flag": "--post-authorize-redirect-uri",
+                  "summary": "Optional HTTPS redirect destination after callback completion.",
+                  "type": "string"
+                },
+                {
+                  "field": "scopes",
+                  "flag": "--scopes",
+                  "repeated": true,
+                  "summary": "Optional scopes overriding the provider defaults.",
+                  "type": "string"
+                },
+                {
+                  "field": "extra_authorize_params",
+                  "flag": "--extra-authorize-params",
+                  "repeated": true,
+                  "summary": "Additional per-request query parameters appended to `authorize_url`.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "provider_metadata",
+                  "flag": "--provider-metadata",
+                  "repeated": true,
+                  "summary": "Optional non-secret metadata persisted onto the resulting Connection.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "external_account_id",
+                  "flag": "--external-account-id",
+                  "summary": "Optional non-secret external account id recorded on creation.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/connection_providers/*}:beginOauth2Authorization",
+              "method": "connections.connection_providers.begin_oauth2_authorization",
+              "permission": "connections:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/connection_providers/{connection_provider}"
+              },
+              "summary": "Begins an expiring hosted OAuth 2.0 authorization ceremony for an OAuth 2.0 ConnectionProvider. Returns an authorization_url carrying an expiring one-use state token handled by GET /v1/connections/oauth2:callback.",
+              "verb": "begin-oauth2-authorization"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
                   "field": "connection_provider_id",
                   "flag": "--connection-provider-id",
                   "required": true,
@@ -10454,6 +10715,126 @@
                   "repeated": true,
                   "summary": "Organizations allowed to use specific installations of this provider. Removing a grant prevents subsequent Broker exchanges. Signing custody remains in the provider's organization and is never copied to a recipient.",
                   "type": "json"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.authorize_url",
+                  "flag": "--spec.oauth2.authorize-url",
+                  "summary": "Authorization endpoint HTTPS URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.token_url",
+                  "flag": "--spec.oauth2.token-url",
+                  "summary": "Authorization-code exchange endpoint HTTPS URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.refresh_url",
+                  "flag": "--spec.oauth2.refresh-url",
+                  "summary": "Refresh endpoint HTTPS URL; defaults to `token_url` when empty.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_id",
+                  "flag": "--spec.oauth2.client-id",
+                  "summary": "Provider-issued OAuth client identifier.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_secret",
+                  "flag": "--spec.oauth2.client-secret",
+                  "sensitive": true,
+                  "summary": "Write-only OAuth client secret sealed at rest and never returned.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.scopes",
+                  "flag": "--spec.oauth2.scopes",
+                  "repeated": true,
+                  "summary": "Default OAuth scopes requested during authorization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.extra_authorize_params",
+                  "flag": "--spec.oauth2.extra-authorize-params",
+                  "repeated": true,
+                  "summary": "Static query parameters appended to `authorize_url`. Reserved keys (`state`, `redirect_uri`) are rejected.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.redirect_uri",
+                  "flag": "--spec.oauth2.redirect-uri",
+                  "summary": "Optional `redirect_uri` override sent on authorize and token requests; defaults to the hosted callback URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.token_method",
+                  "flag": "--spec.oauth2.token-method",
+                  "summary": "HTTP transport for code exchange and refresh requests.",
+                  "type": "enum",
+                  "values": [
+                    "form_post",
+                    "query_get"
+                  ]
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_auth",
+                  "flag": "--spec.oauth2.client-auth",
+                  "summary": "How client credentials are sent to token and refresh endpoints.",
+                  "type": "enum",
+                  "values": [
+                    "body_or_query",
+                    "basic"
+                  ]
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.authorize_code_param",
+                  "flag": "--spec.oauth2.authorize-code-param",
+                  "summary": "Query parameter carrying the authorization code on redirect callbacks; defaults to `code`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.token_code_param",
+                  "flag": "--spec.oauth2.token-code-param",
+                  "summary": "Parameter key carrying the authorization code on token exchange requests; defaults to `code`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.exchange_grant_type",
+                  "flag": "--spec.oauth2.exchange-grant-type",
+                  "summary": "Grant type value sent during authorization-code exchange; defaults to `authorization_code`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_id_param",
+                  "flag": "--spec.oauth2.client-id-param",
+                  "summary": "Parameter key for `client_id` on token and refresh requests when not using HTTP Basic authentication; defaults to `client_id`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.client_secret_param",
+                  "flag": "--spec.oauth2.client-secret-param",
+                  "summary": "Parameter key for `client_secret` on token and refresh requests when not using HTTP Basic authentication; defaults to `client_secret`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.callback_metadata_params",
+                  "flag": "--spec.oauth2.callback-metadata-params",
+                  "repeated": true,
+                  "summary": "Non-secret query parameter keys copied from the redirect callback into `Connection.spec.oauth2.provider_metadata`.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.post_authorize_redirect_uri",
+                  "flag": "--spec.oauth2.post-authorize-redirect-uri",
+                  "summary": "Optional HTTPS URL redirected to after hosted callback completion.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection_provider.spec.oauth2.authorize_client_id_param",
+                  "flag": "--spec.oauth2.authorize-client-id-param",
+                  "summary": "Query parameter key for `client_id` in `authorize_url`; defaults to `client_id`.",
+                  "type": "string"
                 },
                 {
                   "field": "validate_only",
@@ -10643,6 +11024,66 @@
               "effect": "write",
               "flags": [
                 {
+                  "field": "provider",
+                  "flag": "--provider",
+                  "summary": "OAuth 2.0 ConnectionProvider resource name; required when creating a new Connection.",
+                  "type": "string"
+                },
+                {
+                  "field": "refresh_token",
+                  "flag": "--refresh-token",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Write-only refresh token sealed inside Broker custody and never returned.",
+                  "type": "string"
+                },
+                {
+                  "field": "access_token",
+                  "flag": "--access-token",
+                  "sensitive": true,
+                  "summary": "Optional write-only access token cached until `access_token_expire_time`.",
+                  "type": "string"
+                },
+                {
+                  "field": "access_token_expire_time",
+                  "flag": "--access-token-expire-time",
+                  "summary": "Expiry of the optional initial `access_token`.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "external_account_id",
+                  "flag": "--external-account-id",
+                  "summary": "Optional non-secret external account id.",
+                  "type": "string"
+                },
+                {
+                  "field": "provider_metadata",
+                  "flag": "--provider-metadata",
+                  "repeated": true,
+                  "summary": "Optional non-secret metadata merged into `spec.oauth2.provider_metadata`.",
+                  "type": "key=value"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/connections/*}:importOauth2Credentials",
+              "method": "connections.connections.import_oauth2_credentials",
+              "permission": "connections:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/connections/{connection}"
+              },
+              "summary": "Imports existing OAuth 2.0 credentials into sealed Broker custody for a Connection without returning any secret token.",
+              "verb": "import-oauth2-credentials",
+              "waits": {
+                "default": true,
+                "skip_flag": "--no-wait"
+              }
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
                   "default_from_context": true,
                   "field": "parent",
                   "flag": "--parent",
@@ -10705,6 +11146,19 @@
                   "flag": "--spec.github-user.login",
                   "summary": "Expected verified GitHub login; never inferred from untrusted input alone.",
                   "type": "string"
+                },
+                {
+                  "field": "connection.spec.oauth2.external_account_id",
+                  "flag": "--spec.oauth2.external-account-id",
+                  "summary": "Non-secret account identifier associated with the external authorization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.oauth2.provider_metadata",
+                  "flag": "--spec.oauth2.provider-metadata",
+                  "repeated": true,
+                  "summary": "Non-secret provider metadata captured from callbacks or supplied by the caller. Secret-bearing keys are rejected.",
+                  "type": "key=value"
                 },
                 {
                   "field": "validate_only",
@@ -10776,6 +11230,19 @@
                   "flag": "--spec.github-user.login",
                   "summary": "Expected verified GitHub login; never inferred from untrusted input alone.",
                   "type": "string"
+                },
+                {
+                  "field": "connection.spec.oauth2.external_account_id",
+                  "flag": "--spec.oauth2.external-account-id",
+                  "summary": "Non-secret account identifier associated with the external authorization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.oauth2.provider_metadata",
+                  "flag": "--spec.oauth2.provider-metadata",
+                  "repeated": true,
+                  "summary": "Non-secret provider metadata captured from callbacks or supplied by the caller. Secret-bearing keys are rejected.",
+                  "type": "key=value"
                 },
                 {
                   "field": "validate_only",

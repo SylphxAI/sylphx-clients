@@ -179,12 +179,12 @@ func brokerGitHubActionBudget() []def.Field {
 // brokerTrustPolicySpec is `sylphx.broker.v1.TrustPolicySpec`.
 func brokerTrustPolicySpec() []def.Field {
 	return []def.Field{
-		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection credentials are issued on: An active GitHub installation or Web Push Connection in the same org."},
+		{Name: "connection", Kind: def.String, Flags: def.Required, Doc: "The Connection credentials are issued on: An active GitHub installation, GitHub user, OAuth 2.0, or Web Push Connection in the same org."},
 		{Name: "subjects", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "The Access principals allowed to exchange, `orgs/{org}/principals/{id}` in the policy's org: the caller's own principal, or the accountable principal of a delegated grant. 1 to 64."},
-		{Name: "permissions", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`."},
-		{Name: "repositories", Kind: def.String, Repeated: true, Doc: "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository."},
+		{Name: "permissions", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the GitHub permission ceiling, for example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`. `administration` is read only; organization permissions are refused. A policy with `actors` carries at most `contents` and `pull_requests`."},
+		{Name: "repositories", Kind: def.String, Repeated: true, Doc: "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1 to 1000 exact `owner/name` entries, no wildcard, each owned by the Connection's account. One exchange covers exactly one repository."},
 		{Name: "credential_kind", Kind: def.Enum, Values: []string{"access_token", "runner_registration", "vapid_assertion"}, Flags: def.Required, Doc: "What Broker issues: `access_token` or `vapid_assertion` on the wire."},
-		{Name: "max_ttl", Kind: def.Duration, Doc: "The longest a credential lives: GitHub default/maximum 3600s; VAPID default/maximum 86400s. Positive whole seconds only for VAPID."},
+		{Name: "max_ttl", Kind: def.Duration, Doc: "The longest a credential lives: GitHub default/maximum 3600s; OAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry). Positive whole seconds only for VAPID."},
 		{Name: "actors", Kind: def.String, Repeated: true, Doc: "The Agents a delegated grant may act for: an Agent name `orgs/{org}/projects/{project}/envs/{env}/agents/{agent}`, or every Agent of an environment, `.../envs/{env}/agents/*`. 0 to 64. When set, only a delegated grant whose actor matches may exchange; a grant with no actor is refused. When empty, any grant of a subject may exchange, delegated or not."},
 		{Name: "github_action_budget", Kind: def.Message, Msg: brokerGitHubActionBudget, Doc: "Required for GitHub user actions. Zero denies actions; ceilings are 80 per minute and 500 per hour. This policy budget does not replace GitHub limits."},
 	}
@@ -278,6 +278,7 @@ func connectionsConnectionProviderSpec() []def.Field {
 	return []def.Field{
 		{Name: "github_app", Kind: def.Message, Msg: connectionsGitHubAppConfig, Flags: def.Presence, Doc: "A GitHub App."},
 		{Name: "sharing_grants", Kind: def.Message, Msg: connectionsProviderSharingGrant, Repeated: true, Doc: "Organizations allowed to use specific installations of this provider. Removing a grant prevents subsequent Broker exchanges. Signing custody remains in the provider's organization and is never copied to a recipient."},
+		{Name: "oauth2", Kind: def.Message, Msg: connectionsOauth2Config, Flags: def.Presence, Doc: "A generic OAuth 2.0 client configuration."},
 	}
 }
 
@@ -286,8 +287,9 @@ func connectionsConnectionProviderStatus() []def.Field {
 	return []def.Field{
 		{Name: "observed_generation", Kind: def.Int64, Flags: def.OutputOnly, Doc: "The generation this status was computed from."},
 		{Name: "conditions", Kind: def.Message, Msg: commonCondition, Flags: def.OutputOnly, Repeated: true, Doc: "Ready, Reconciling, Stalled."},
-		{Name: "kind", Kind: def.String, Flags: def.OutputOnly, Doc: "The provider's plugin kind, for example `github_app`."},
+		{Name: "kind", Kind: def.String, Flags: def.OutputOnly, Doc: "The provider's plugin kind, for example `github_app` or `oauth2`."},
 		{Name: "connection_count", Kind: def.Int32, Flags: def.OutputOnly, Doc: "How many active Connections the provider has."},
+		{Name: "client_secret_configured", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether an OAuth 2.0 client secret is stored in custody."},
 	}
 }
 
@@ -298,6 +300,7 @@ func connectionsConnectionSpec() []def.Field {
 		{Name: "external_id", Kind: def.String, Flags: def.Immutable, Doc: "The provider's id of the installation, for example a GitHub App installation id. Unset for Web Push."},
 		{Name: "web_push", Kind: def.Message, Msg: connectionsWebPushConfig, Doc: "Web Push assertion configuration. Mutually exclusive with provider and external_id. The Connection kind cannot change after creation."},
 		{Name: "github_user", Kind: def.Message, Msg: connectionsGitHubUserConfig, Doc: "GitHub user authorization. Mutually exclusive with all other kinds. Device authorization keeps credentials sealed inside Broker, bound to the Connection name and version, for user actions only."},
+		{Name: "oauth2", Kind: def.Message, Msg: connectionsOauth2ConnectionConfig, Doc: "Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and `github_user`. Requires an `oauth2` ConnectionProvider."},
 	}
 }
 
@@ -315,6 +318,7 @@ func connectionsConnectionStatus() []def.Field {
 		{Name: "suspend_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the provider suspended the installation."},
 		{Name: "verify_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the status was last read back from the provider."},
 		{Name: "authorization", Kind: def.Message, Msg: connectionsGitHubUserAuthorization, Flags: def.OutputOnly, Doc: "Current device ceremony, present only while the Connection is authorizing. Contains no device code or token. Use a fresh Idempotency-Key for each poll."},
+		{Name: "oauth2_authorization", Kind: def.Message, Msg: connectionsOauth2Authorization, Flags: def.OutputOnly, Doc: "Observed generic OAuth 2.0 authorization metadata; contains no token."},
 	}
 }
 
@@ -354,6 +358,49 @@ func connectionsGitHubUserConfig() []def.Field {
 	return []def.Field{
 		{Name: "provider", Kind: def.String, Flags: def.Required, Doc: "App provider whose OAuth client issued the authorization."},
 		{Name: "login", Kind: def.String, Flags: def.Required, Doc: "Expected verified GitHub login; never inferred from untrusted input alone."},
+	}
+}
+
+// connectionsOauth2Authorization is `sylphx.connections.v1.Oauth2Authorization`.
+func connectionsOauth2Authorization() []def.Field {
+	return []def.Field{
+		{Name: "refresh_token_configured", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether a sealed refresh token is stored in Broker custody."},
+		{Name: "access_token_expire_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the cached access token expires, if one is present."},
+		{Name: "last_refresh_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the sealed credentials were last refreshed from the provider."},
+		{Name: "requires_reauthorization", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether the provider refused refresh and operator reauthorization is needed."},
+		{Name: "refresh_error", Kind: def.String, Flags: def.OutputOnly, Doc: "Non-secret failure reason when reauthorization is required."},
+	}
+}
+
+// connectionsOauth2Config is `sylphx.connections.v1.Oauth2Config`.
+func connectionsOauth2Config() []def.Field {
+	return []def.Field{
+		{Name: "authorize_url", Kind: def.String, Flags: def.Required, Doc: "Authorization endpoint HTTPS URL."},
+		{Name: "token_url", Kind: def.String, Flags: def.Required, Doc: "Authorization-code exchange endpoint HTTPS URL."},
+		{Name: "refresh_url", Kind: def.String, Doc: "Refresh endpoint HTTPS URL; defaults to `token_url` when empty."},
+		{Name: "client_id", Kind: def.String, Flags: def.Required, Doc: "Provider-issued OAuth client identifier."},
+		{Name: "client_secret", Kind: def.String, Flags: def.InputOnly | def.Sensitive, Doc: "Write-only OAuth client secret sealed at rest and never returned."},
+		{Name: "scopes", Kind: def.String, Repeated: true, Doc: "Default OAuth scopes requested during authorization."},
+		{Name: "extra_authorize_params", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Static query parameters appended to `authorize_url`. Reserved keys (`state`, `redirect_uri`) are rejected."},
+		{Name: "redirect_uri", Kind: def.String, Doc: "Optional `redirect_uri` override sent on authorize and token requests; defaults to the hosted callback URL."},
+		{Name: "token_method", Kind: def.Enum, Values: []string{"form_post", "query_get"}, Doc: "HTTP transport for code exchange and refresh requests."},
+		{Name: "client_auth", Kind: def.Enum, Values: []string{"body_or_query", "basic"}, Doc: "How client credentials are sent to token and refresh endpoints."},
+		{Name: "authorize_code_param", Kind: def.String, Doc: "Query parameter carrying the authorization code on redirect callbacks; defaults to `code`."},
+		{Name: "token_code_param", Kind: def.String, Doc: "Parameter key carrying the authorization code on token exchange requests; defaults to `code`."},
+		{Name: "exchange_grant_type", Kind: def.String, Doc: "Grant type value sent during authorization-code exchange; defaults to `authorization_code`."},
+		{Name: "client_id_param", Kind: def.String, Doc: "Parameter key for `client_id` on token and refresh requests when not using HTTP Basic authentication; defaults to `client_id`."},
+		{Name: "client_secret_param", Kind: def.String, Doc: "Parameter key for `client_secret` on token and refresh requests when not using HTTP Basic authentication; defaults to `client_secret`."},
+		{Name: "callback_metadata_params", Kind: def.String, Repeated: true, Doc: "Non-secret query parameter keys copied from the redirect callback into `Connection.spec.oauth2.provider_metadata`."},
+		{Name: "post_authorize_redirect_uri", Kind: def.String, Doc: "Optional HTTPS URL redirected to after hosted callback completion."},
+		{Name: "authorize_client_id_param", Kind: def.String, Doc: "Query parameter key for `client_id` in `authorize_url`; defaults to `client_id`."},
+	}
+}
+
+// connectionsOauth2ConnectionConfig is `sylphx.connections.v1.Oauth2ConnectionConfig`.
+func connectionsOauth2ConnectionConfig() []def.Field {
+	return []def.Field{
+		{Name: "external_account_id", Kind: def.String, Doc: "Non-secret account identifier associated with the external authorization."},
+		{Name: "provider_metadata", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Non-secret provider metadata captured from callbacks or supplied by the caller. Secret-bearing keys are rejected."},
 	}
 }
 

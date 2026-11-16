@@ -11,6 +11,23 @@
         },
         {
           "http": {
+            "query_params": [
+              "connection_provider_id",
+              "validate_only"
+            ]
+          },
+          "id": "connections.connection_providers.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "connections.connection_providers.begin_oauth2_authorization",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": []
           },
           "id": "connections.connection_providers.adopt",

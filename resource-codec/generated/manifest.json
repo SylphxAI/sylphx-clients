@@ -2351,6 +2351,44 @@
       ]
     },
     {
+      "doc": "How OAuth 2.0 client credentials are presented to token endpoints.",
+      "name": "sylphx.connections.v1.Oauth2ClientAuth",
+      "package": "sylphx.connections.v1",
+      "values": [
+        {
+          "doc": "Sent as form fields (POST) or query parameters (GET).",
+          "number": 1,
+          "proto_name": "OAUTH2_CLIENT_AUTH_BODY_OR_QUERY",
+          "wire": "body_or_query"
+        },
+        {
+          "doc": "Sent via HTTP Basic authentication (`client_id:client_secret`).",
+          "number": 2,
+          "proto_name": "OAUTH2_CLIENT_AUTH_BASIC",
+          "wire": "basic"
+        }
+      ]
+    },
+    {
+      "doc": "Protocol used by an OAuth 2.0 token or refresh endpoint.",
+      "name": "sylphx.connections.v1.Oauth2TokenMethod",
+      "package": "sylphx.connections.v1",
+      "values": [
+        {
+          "doc": "Standard RFC 6749 application/x-www-form-urlencoded POST.",
+          "number": 1,
+          "proto_name": "OAUTH2_TOKEN_METHOD_FORM_POST",
+          "wire": "form_post"
+        },
+        {
+          "doc": "HTTP GET with token parameters encoded in the query string.",
+          "number": 2,
+          "proto_name": "OAUTH2_TOKEN_METHOD_QUERY_GET",
+          "wire": "query_get"
+        }
+      ]
+    },
+    {
       "doc": "RepositorySelection is which repositories an installation covers.",
       "name": "sylphx.connections.v1.RepositorySelection",
       "package": "sylphx.connections.v1",
@@ -38694,10 +38732,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "The one repository this call needs, `owner/name`, one of the policy's.",
+          "doc": "The one repository this call needs, `owner/name`, one of the policy's;\nleave empty for non-repository Connections such as OAuth 2.0.",
           "filterable": false,
           "name": "repositories",
           "number": 4,
@@ -38926,10 +38964,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "The one repository this call needs, `owner/name`, one of the policy's.",
+          "doc": "The one repository this call needs, `owner/name`, one of the policy's;\nleave empty for non-repository Connections such as OAuth 2.0.",
           "filterable": false,
           "name": "repositories",
           "number": 4,
@@ -40249,7 +40287,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "The Connection credentials are issued on:\nAn active GitHub installation or Web Push Connection in the same org.",
+          "doc": "The Connection credentials are issued on:\nAn active GitHub installation, GitHub user, OAuth 2.0, or Web Push\nConnection in the same org.",
           "filterable": true,
           "name": "connection",
           "number": 1,
@@ -40287,7 +40325,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
+          "doc": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the\nGitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
           "filterable": false,
           "name": "permissions",
           "number": 3,
@@ -40309,7 +40347,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
+          "doc": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1\nto 1000 exact `owner/name` entries, no wildcard, each owned by the\nConnection's account.\nOne exchange covers exactly one repository.",
           "filterable": false,
           "name": "repositories",
           "number": 4,
@@ -40347,7 +40385,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
+          "doc": "The longest a credential lives: GitHub default/maximum 3600s;\nOAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry).\nPositive whole seconds only for VAPID.",
           "filterable": false,
           "name": "max_ttl",
           "number": 6,
@@ -46504,6 +46542,210 @@
       "package": "sylphx.connections.v1"
     },
     {
+      "doc": "The request of BeginOauth2Authorization.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "OAuth 2.0 ConnectionProvider resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/ConnectionProvider",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Target Connection id to create or reauthorize on callback; server-assigned when empty.",
+          "filterable": false,
+          "name": "connection_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional HTTPS redirect destination after callback completion.",
+          "filterable": false,
+          "name": "post_authorize_redirect_uri",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional scopes overriding the provider defaults.",
+          "filterable": false,
+          "name": "scopes",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Additional per-request query parameters appended to `authorize_url`.",
+          "filterable": false,
+          "name": "extra_authorize_params",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional non-secret metadata persisted onto the resulting Connection.",
+          "filterable": false,
+          "name": "provider_metadata",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional non-secret external account id recorded on creation.",
+          "filterable": false,
+          "name": "external_account_id",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.BeginOauth2AuthorizationRequest",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "The response of BeginOauth2Authorization.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Full authorization URL to open in a browser; carries a one-use expiring state.",
+          "filterable": false,
+          "name": "authorization_url",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Hosted callback URL handled by Sylphx Connections.",
+          "filterable": false,
+          "name": "callback_url",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "When the authorization state expires (ten minutes after begin).",
+          "filterable": false,
+          "name": "expire_time",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.BeginOauth2AuthorizationResponse",
+      "package": "sylphx.connections.v1"
+    },
+    {
       "doc": "The request of CompleteConnectionAuthorization.",
       "fields": [
         {
@@ -46792,6 +47034,25 @@
             "kind": "message",
             "name": "sylphx.connections.v1.ProviderSharingGrant"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A generic OAuth 2.0 client configuration.",
+          "filterable": false,
+          "name": "oauth2",
+          "number": 3,
+          "oneof": "config",
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.Oauth2Config"
+          }
         }
       ],
       "name": "sylphx.connections.v1.ConnectionProviderSpec",
@@ -46843,7 +47104,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "The provider's plugin kind, for example `github_app`.",
+          "doc": "The provider's plugin kind, for example `github_app` or `oauth2`.",
           "filterable": false,
           "name": "kind",
           "number": 10,
@@ -46874,6 +47135,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether an OAuth 2.0 client secret is stored in custody.",
+          "filterable": false,
+          "name": "client_secret_configured",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],
@@ -46959,6 +47239,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.connections.v1.GitHubUserConfig"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and\n`github_user`. Requires an `oauth2` ConnectionProvider.",
+          "filterable": false,
+          "name": "oauth2",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.Oauth2ConnectionConfig"
           }
         }
       ],
@@ -47179,9 +47478,111 @@
             "kind": "message",
             "name": "sylphx.connections.v1.GitHubUserAuthorization"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Observed generic OAuth 2.0 authorization metadata; contains no token.",
+          "filterable": false,
+          "name": "oauth2_authorization",
+          "number": 19,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.Oauth2Authorization"
+          }
         }
       ],
       "name": "sylphx.connections.v1.ConnectionStatus",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "The request of CreateConnectionProvider.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The org to create in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/ConnectionProvider",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The connection provider to create; only spec and caller-writable metadata are read.",
+          "filterable": false,
+          "name": "connection_provider",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.ConnectionProvider"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The id of the new provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; server-assigned when empty.",
+          "filterable": false,
+          "name": "connection_provider_id",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Validate and return the result without writing anything.",
+          "filterable": false,
+          "name": "validate_only",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.CreateConnectionProviderRequest",
       "package": "sylphx.connections.v1"
     },
     {
@@ -47950,6 +48351,151 @@
       "package": "sylphx.connections.v1"
     },
     {
+      "doc": "The request of ImportOauth2Credentials.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Connection resource name (`orgs/{org}/connections/{connection}`). Creates the\nConnection atomically when absent if `provider` is supplied.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/Connection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "OAuth 2.0 ConnectionProvider resource name; required when creating a new Connection.",
+          "filterable": false,
+          "name": "provider",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/ConnectionProvider",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED",
+            "INPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Write-only refresh token sealed inside Broker custody and never returned.",
+          "filterable": false,
+          "name": "refresh_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "INPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Optional write-only access token cached until `access_token_expire_time`.",
+          "filterable": false,
+          "name": "access_token",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Expiry of the optional initial `access_token`.",
+          "filterable": false,
+          "name": "access_token_expire_time",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional non-secret external account id.",
+          "filterable": false,
+          "name": "external_account_id",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional non-secret metadata merged into `spec.oauth2.provider_metadata`.",
+          "filterable": false,
+          "name": "provider_metadata",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.ImportOauth2CredentialsRequest",
+      "package": "sylphx.connections.v1"
+    },
+    {
       "doc": "The request of ListConnectionProviders.",
       "fields": [
         {
@@ -48233,6 +48779,509 @@
         }
       ],
       "name": "sylphx.connections.v1.ListConnectionsResponse",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "Observed state of a generic OAuth 2.0 Connection; never carries tokens.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether a sealed refresh token is stored in Broker custody.",
+          "filterable": false,
+          "name": "refresh_token_configured",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the cached access token expires, if one is present.",
+          "filterable": false,
+          "name": "access_token_expire_time",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the sealed credentials were last refreshed from the provider.",
+          "filterable": false,
+          "name": "last_refresh_time",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether the provider refused refresh and operator reauthorization is needed.",
+          "filterable": false,
+          "name": "requires_reauthorization",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Non-secret failure reason when reauthorization is required.",
+          "filterable": false,
+          "name": "refresh_error",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.Oauth2Authorization",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "Oauth2Config configures the generic OAuth 2.0 provider plugin.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Authorization endpoint HTTPS URL.",
+          "filterable": false,
+          "name": "authorize_url",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Authorization-code exchange endpoint HTTPS URL.",
+          "filterable": false,
+          "name": "token_url",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Refresh endpoint HTTPS URL; defaults to `token_url` when empty.",
+          "filterable": false,
+          "name": "refresh_url",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Provider-issued OAuth client identifier.",
+          "filterable": false,
+          "name": "client_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "INPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Write-only OAuth client secret sealed at rest and never returned.",
+          "filterable": false,
+          "name": "client_secret",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Default OAuth scopes requested during authorization.",
+          "filterable": false,
+          "name": "scopes",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Static query parameters appended to `authorize_url`. Reserved keys\n(`state`, `redirect_uri`) are rejected.",
+          "filterable": false,
+          "name": "extra_authorize_params",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional `redirect_uri` override sent on authorize and token requests;\ndefaults to the hosted callback URL.",
+          "filterable": false,
+          "name": "redirect_uri",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "HTTP transport for code exchange and refresh requests.",
+          "filterable": false,
+          "name": "token_method",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.connections.v1.Oauth2TokenMethod"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "How client credentials are sent to token and refresh endpoints.",
+          "filterable": false,
+          "name": "client_auth",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.connections.v1.Oauth2ClientAuth"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Query parameter carrying the authorization code on redirect callbacks;\ndefaults to `code`.",
+          "filterable": false,
+          "name": "authorize_code_param",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Parameter key carrying the authorization code on token exchange requests;\ndefaults to `code`.",
+          "filterable": false,
+          "name": "token_code_param",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Grant type value sent during authorization-code exchange; defaults to\n`authorization_code`.",
+          "filterable": false,
+          "name": "exchange_grant_type",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Parameter key for `client_id` on token and refresh requests when not using\nHTTP Basic authentication; defaults to `client_id`.",
+          "filterable": false,
+          "name": "client_id_param",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Parameter key for `client_secret` on token and refresh requests when not\nusing HTTP Basic authentication; defaults to `client_secret`.",
+          "filterable": false,
+          "name": "client_secret_param",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Non-secret query parameter keys copied from the redirect callback into\n`Connection.spec.oauth2.provider_metadata`.",
+          "filterable": false,
+          "name": "callback_metadata_params",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional HTTPS URL redirected to after hosted callback completion.",
+          "filterable": false,
+          "name": "post_authorize_redirect_uri",
+          "number": 17,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Query parameter key for `client_id` in `authorize_url`; defaults to\n`client_id`.",
+          "filterable": false,
+          "name": "authorize_client_id_param",
+          "number": 18,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.Oauth2Config",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "Non-secret configuration for a generic OAuth 2.0 Connection.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Non-secret account identifier associated with the external authorization.",
+          "filterable": false,
+          "name": "external_account_id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Non-secret provider metadata captured from callbacks or supplied by the\ncaller. Secret-bearing keys are rejected.",
+          "filterable": false,
+          "name": "provider_metadata",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.Oauth2ConnectionConfig",
       "package": "sylphx.connections.v1"
     },
     {
@@ -168044,6 +169093,94 @@
             {
               "cancellable": false,
               "cli_verb": "",
+              "doc": "Creates a connection provider, such as an OAuth 2.0 client configuration.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "UNKNOWN_FIELD",
+                "INVALID_FIELD",
+                "RESOURCE_ALREADY_EXISTS",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "connection_provider",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}",
+                    "pattern": "orgs/*"
+                  }
+                ],
+                "query_params": [
+                  "connection_provider_id",
+                  "validate_only"
+                ],
+                "template": "/v1/{parent=orgs/*}/connection_providers"
+              },
+              "id": "connections.connection_providers.create",
+              "kind": "create",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "connections:admin",
+              "proto": "sylphx.connections.v1.ConnectionsService.CreateConnectionProvider",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.connections.v1.CreateConnectionProviderRequest",
+              "resource_field": "connection_provider",
+              "response": "sylphx.connections.v1.ConnectionProvider",
+              "supports_validate_only": true,
+              "validate_only_unsupported": false,
+              "verb": "create"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Begins an expiring hosted OAuth 2.0 authorization ceremony for an OAuth 2.0\nConnectionProvider. Returns an authorization_url carrying an expiring\none-use state token handled by GET /v1/connections/oauth2:callback.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "RESOURCE_NOT_FOUND",
+                "RESOURCE_ALREADY_EXISTS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/connection_providers/{connection_provider}",
+                    "pattern": "orgs/*/connection_providers/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/connection_providers/*}:beginOauth2Authorization"
+              },
+              "id": "connections.connection_providers.begin_oauth2_authorization",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "connections:write",
+              "proto": "sylphx.connections.v1.ConnectionsService.BeginOauth2Authorization",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.connections.v1.BeginOauth2AuthorizationRequest",
+              "resource_field": null,
+              "response": "sylphx.connections.v1.BeginOauth2AuthorizationResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "begin_oauth2_authorization"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
               "doc": "Adopts an existing GitHub App whose non-exportable custody already exists.\nThe server observes public SPKI metadata and verifies signed GET /app before\natomically registering the SIGN Key and provider. No private key is accepted.",
               "effect": "write",
               "errors": [
@@ -168452,6 +169589,52 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "complete_authorization"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Imports existing OAuth 2.0 credentials into sealed Broker custody for a\nConnection without returning any secret token.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "RESOURCE_NOT_FOUND",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/connections/{connection}",
+                    "pattern": "orgs/*/connections/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/connections/*}:importOauth2Credentials"
+              },
+              "id": "connections.connections.import_oauth2_credentials",
+              "kind": "custom",
+              "lro": {
+                "metadata": "sylphx.common.v1.OperationProgress",
+                "response": "sylphx.connections.v1.Connection"
+              },
+              "mcp": "default",
+              "page": null,
+              "permission": "connections:write",
+              "proto": "sylphx.connections.v1.ConnectionsService.ImportOauth2Credentials",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.connections.v1.ImportOauth2CredentialsRequest",
+              "resource_field": null,
+              "response": "sylphx.common.v1.Operation",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "import_oauth2_credentials"
             },
             {
               "cancellable": false,

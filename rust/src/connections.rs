@@ -164,6 +164,82 @@ pub struct BeginConnectionProviderRegistrationResponse {
     pub expire_time: String,
 }
 
+/// The request of BeginOauth2Authorization.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginOauth2AuthorizationRequest {
+    /// OAuth 2.0 ConnectionProvider resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Target Connection id to create or reauthorize on callback; server-assigned when empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "connectionId"
+    )]
+    pub connection_id: String,
+    /// Optional HTTPS redirect destination after callback completion.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "postAuthorizeRedirectUri"
+    )]
+    pub post_authorize_redirect_uri: String,
+    /// Optional scopes overriding the provider defaults.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scopes: Vec<String>,
+    /// Additional per-request query parameters appended to `authorize_url`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "extraAuthorizeParams"
+    )]
+    pub extra_authorize_params: std::collections::BTreeMap<String, String>,
+    /// Optional non-secret metadata persisted onto the resulting Connection.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "providerMetadata"
+    )]
+    pub provider_metadata: std::collections::BTreeMap<String, String>,
+    /// Optional non-secret external account id recorded on creation.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "externalAccountId"
+    )]
+    pub external_account_id: String,
+}
+
+/// The response of BeginOauth2Authorization.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BeginOauth2AuthorizationResponse {
+    /// Full authorization URL to open in a browser; carries a one-use expiring state.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizationUrl"
+    )]
+    pub authorization_url: String,
+    /// Hosted callback URL handled by Sylphx Connections.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "callbackUrl"
+    )]
+    pub callback_url: String,
+    /// When the authorization state expires (ten minutes after begin).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+}
+
 /// The request of CompleteConnectionAuthorization.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -264,6 +340,9 @@ pub struct ConnectionProviderSpec {
         alias = "sharingGrants"
     )]
     pub sharing_grants: Vec<ProviderSharingGrant>,
+    /// A generic OAuth 2.0 client configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oauth2: Option<Oauth2Config>,
 }
 
 /// ConnectionProviderStatus is the observed state of a ConnectionProvider.
@@ -285,7 +364,7 @@ pub struct ConnectionProviderStatus {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conditions: Vec<crate::common::Condition>,
-    /// The provider's plugin kind, for example `github_app`.
+    /// The provider's plugin kind, for example `github_app` or `oauth2`.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -299,6 +378,15 @@ pub struct ConnectionProviderStatus {
         alias = "connectionCount"
     )]
     pub connection_count: i32,
+    /// Whether an OAuth 2.0 client secret is stored in custody.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientSecretConfigured"
+    )]
+    pub client_secret_configured: bool,
 }
 
 /// ConnectionSpec is the caller-writable state of a Connection.
@@ -329,6 +417,10 @@ pub struct ConnectionSpec {
     /// Connection name and version, for user actions only.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "githubUser")]
     pub github_user: Option<GitHubUserConfig>,
+    /// Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and
+    /// `github_user`. Requires an `oauth2` ConnectionProvider.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oauth2: Option<Oauth2ConnectionConfig>,
 }
 
 /// ConnectionStatus is the observed state of a Connection, as last read back
@@ -414,6 +506,49 @@ pub struct ConnectionStatus {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authorization: Option<GitHubUserAuthorization>,
+    /// Observed generic OAuth 2.0 authorization metadata; contains no token.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "oauth2Authorization"
+    )]
+    pub oauth2_authorization: Option<Oauth2Authorization>,
+}
+
+/// The request of CreateConnectionProvider.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateConnectionProviderRequest {
+    /// The org to create in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The connection provider to create; only spec and caller-writable metadata are read.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "connectionProvider"
+    )]
+    pub connection_provider: Option<ConnectionProvider>,
+    /// The id of the new provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; server-assigned when empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "connectionProviderId"
+    )]
+    pub connection_provider_id: String,
+    /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
 }
 
 /// The request of CreateConnection.
@@ -718,6 +853,60 @@ pub struct GitHubUserConfig {
     pub login: String,
 }
 
+/// The request of ImportOauth2Credentials.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ImportOauth2CredentialsRequest {
+    /// Connection resource name (`orgs/{org}/connections/{connection}`). Creates the
+    /// Connection atomically when absent if `provider` is supplied.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// OAuth 2.0 ConnectionProvider resource name; required when creating a new Connection.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub provider: String,
+    /// Write-only refresh token sealed inside Broker custody and never returned.
+    ///
+    /// Field behavior: `required`, `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "refreshToken"
+    )]
+    pub refresh_token: String,
+    /// Optional write-only access token cached until `access_token_expire_time`.
+    ///
+    /// Field behavior: `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accessToken"
+    )]
+    pub access_token: String,
+    /// Expiry of the optional initial `access_token`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accessTokenExpireTime"
+    )]
+    pub access_token_expire_time: String,
+    /// Optional non-secret external account id.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "externalAccountId"
+    )]
+    pub external_account_id: String,
+    /// Optional non-secret metadata merged into `spec.oauth2.provider_metadata`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "providerMetadata"
+    )]
+    pub provider_metadata: std::collections::BTreeMap<String, String>,
+}
+
 /// The request of ListConnectionProviders.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -822,6 +1011,219 @@ pub struct ListConnectionsResponse {
         alias = "nextPageToken"
     )]
     pub next_page_token: String,
+}
+
+/// Observed state of a generic OAuth 2.0 Connection; never carries tokens.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Oauth2Authorization {
+    /// Whether a sealed refresh token is stored in Broker custody.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "refreshTokenConfigured"
+    )]
+    pub refresh_token_configured: bool,
+    /// When the cached access token expires, if one is present.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "accessTokenExpireTime"
+    )]
+    pub access_token_expire_time: String,
+    /// When the sealed credentials were last refreshed from the provider.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastRefreshTime"
+    )]
+    pub last_refresh_time: String,
+    /// Whether the provider refused refresh and operator reauthorization is needed.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requiresReauthorization"
+    )]
+    pub requires_reauthorization: bool,
+    /// Non-secret failure reason when reauthorization is required.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "refreshError"
+    )]
+    pub refresh_error: String,
+}
+
+/// Oauth2Config configures the generic OAuth 2.0 provider plugin.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Oauth2Config {
+    /// Authorization endpoint HTTPS URL.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizeUrl"
+    )]
+    pub authorize_url: String,
+    /// Authorization-code exchange endpoint HTTPS URL.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tokenUrl"
+    )]
+    pub token_url: String,
+    /// Refresh endpoint HTTPS URL; defaults to `token_url` when empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "refreshUrl"
+    )]
+    pub refresh_url: String,
+    /// Provider-issued OAuth client identifier.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Write-only OAuth client secret sealed at rest and never returned.
+    ///
+    /// Field behavior: `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientSecret"
+    )]
+    pub client_secret: String,
+    /// Default OAuth scopes requested during authorization.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scopes: Vec<String>,
+    /// Static query parameters appended to `authorize_url`. Reserved keys
+    /// (`state`, `redirect_uri`) are rejected.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "extraAuthorizeParams"
+    )]
+    pub extra_authorize_params: std::collections::BTreeMap<String, String>,
+    /// Optional `redirect_uri` override sent on authorize and token requests;
+    /// defaults to the hosted callback URL.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "redirectUri"
+    )]
+    pub redirect_uri: String,
+    /// HTTP transport for code exchange and refresh requests.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "tokenMethod"
+    )]
+    pub token_method: Option<Oauth2TokenMethod>,
+    /// How client credentials are sent to token and refresh endpoints.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "clientAuth")]
+    pub client_auth: Option<Oauth2ClientAuth>,
+    /// Query parameter carrying the authorization code on redirect callbacks;
+    /// defaults to `code`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizeCodeParam"
+    )]
+    pub authorize_code_param: String,
+    /// Parameter key carrying the authorization code on token exchange requests;
+    /// defaults to `code`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "tokenCodeParam"
+    )]
+    pub token_code_param: String,
+    /// Grant type value sent during authorization-code exchange; defaults to
+    /// `authorization_code`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "exchangeGrantType"
+    )]
+    pub exchange_grant_type: String,
+    /// Parameter key for `client_id` on token and refresh requests when not using
+    /// HTTP Basic authentication; defaults to `client_id`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientIdParam"
+    )]
+    pub client_id_param: String,
+    /// Parameter key for `client_secret` on token and refresh requests when not
+    /// using HTTP Basic authentication; defaults to `client_secret`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientSecretParam"
+    )]
+    pub client_secret_param: String,
+    /// Non-secret query parameter keys copied from the redirect callback into
+    /// `Connection.spec.oauth2.provider_metadata`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "callbackMetadataParams"
+    )]
+    pub callback_metadata_params: Vec<String>,
+    /// Optional HTTPS URL redirected to after hosted callback completion.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "postAuthorizeRedirectUri"
+    )]
+    pub post_authorize_redirect_uri: String,
+    /// Query parameter key for `client_id` in `authorize_url`; defaults to
+    /// `client_id`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "authorizeClientIdParam"
+    )]
+    pub authorize_client_id_param: String,
+}
+
+/// Non-secret configuration for a generic OAuth 2.0 Connection.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Oauth2ConnectionConfig {
+    /// Non-secret account identifier associated with the external authorization.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "externalAccountId"
+    )]
+    pub external_account_id: String,
+    /// Non-secret provider metadata captured from callbacks or supplied by the
+    /// caller. Secret-bearing keys are rejected.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "providerMetadata"
+    )]
+    pub provider_metadata: std::collections::BTreeMap<String, String>,
 }
 
 /// ProviderSharingGrant lets a named organization use exact external
@@ -1022,6 +1424,108 @@ impl crate::runtime::QueryValue for ExternalAccountKind {
     }
 }
 
+/// How OAuth 2.0 client credentials are presented to token endpoints.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Oauth2ClientAuth {
+    /// Sent as form fields (POST) or query parameters (GET).
+    BodyOrQuery,
+    /// Sent via HTTP Basic authentication (`client_id:client_secret`).
+    Basic,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl Oauth2ClientAuth {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::BodyOrQuery => "body_or_query",
+            Self::Basic => "basic",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "body_or_query" => Self::BodyOrQuery,
+            "basic" => Self::Basic,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for Oauth2ClientAuth {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Oauth2ClientAuth {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for Oauth2ClientAuth {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Protocol used by an OAuth 2.0 token or refresh endpoint.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Oauth2TokenMethod {
+    /// Standard RFC 6749 application/x-www-form-urlencoded POST.
+    FormPost,
+    /// HTTP GET with token parameters encoded in the query string.
+    QueryGet,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl Oauth2TokenMethod {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::FormPost => "form_post",
+            Self::QueryGet => "query_get",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "form_post" => Self::FormPost,
+            "query_get" => Self::QueryGet,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for Oauth2TokenMethod {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Oauth2TokenMethod {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for Oauth2TokenMethod {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// RepositorySelection is which repositories an installation covers.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -1133,6 +1637,62 @@ impl<'a, T: crate::runtime::Transport> ConnectionProvidersCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Creates a connection provider, such as an OAuth 2.0 client configuration.
+    ///
+    /// `POST /v1/{parent=orgs/*}/connection_providers` · permission `connections:admin` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn create(
+        &self,
+        request: CreateConnectionProviderRequest,
+    ) -> Result<ConnectionProvider, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/connection_providers",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("connection_provider_id", &request.connection_provider_id);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.connection_provider)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Begins an expiring hosted OAuth 2.0 authorization ceremony for an OAuth 2.0
+    /// ConnectionProvider. Returns an authorization_url carrying an expiring
+    /// one-use state token handled by GET /v1/connections/oauth2:callback.
+    ///
+    /// `POST /v1/{name=orgs/*/connection_providers/*}:beginOauth2Authorization` · permission `connections:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `RESOURCE_ALREADY_EXISTS`.
+    pub async fn begin_oauth2_authorization(
+        &self,
+        request: BeginOauth2AuthorizationRequest,
+    ) -> Result<BeginOauth2AuthorizationResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:beginOauth2Authorization",
+            crate::runtime::path_param(&request.name, "orgs/*/connection_providers/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,
@@ -1428,6 +1988,34 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
     ) -> Result<crate::runtime::Operation<'a, T, Connection>, crate::runtime::Error> {
         let path = format!(
             "/v1/{}:completeAuthorization",
+            crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        let operation = self.client.call(http).await?;
+        Ok(crate::runtime::Operation::new(self.client, operation))
+    }
+
+    /// Imports existing OAuth 2.0 credentials into sealed Broker custody for a
+    /// Connection without returning any secret token.
+    ///
+    /// `POST /v1/{name=orgs/*/connections/*}:importOauth2Credentials` · permission `connections:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn import_oauth2_credentials(
+        &self,
+        request: ImportOauth2CredentialsRequest,
+    ) -> Result<crate::runtime::Operation<'a, T, Connection>, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:importOauth2Credentials",
             crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
         );
         let query = crate::runtime::Query::default();

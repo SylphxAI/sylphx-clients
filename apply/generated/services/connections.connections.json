@@ -37,6 +37,13 @@
         },
         {
           "http": {
+            "query_params": []
+          },
+          "id": "connections.connections.import_oauth2_credentials",
+          "kind": "custom"
+        },
+        {
+          "http": {
             "query_params": [
               "connection_id",
               "validate_only"

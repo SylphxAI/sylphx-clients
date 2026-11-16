@@ -12164,7 +12164,7 @@
                     "type": "array"
                   },
                   "connection": {
-                    "description": "The Connection credentials are issued on:\nAn active GitHub installation or Web Push Connection in the same org.",
+                    "description": "The Connection credentials are issued on:\nAn active GitHub installation, GitHub user, OAuth 2.0, or Web Push\nConnection in the same org.",
                     "type": "string",
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
@@ -12199,7 +12199,7 @@
                     "type": "object"
                   },
                   "max_ttl": {
-                    "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
+                    "description": "The longest a credential lives: GitHub default/maximum 3600s;\nOAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry).\nPositive whole seconds only for VAPID.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
@@ -12207,11 +12207,11 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
+                    "description": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the\nGitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
+                    "description": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1\nto 1000 exact `owner/name` entries, no wildcard, each owned by the\nConnection's account.\nOne exchange covers exactly one repository.",
                     "items": {
                       "type": "string"
                     },
@@ -12318,7 +12318,7 @@
                     "type": "array"
                   },
                   "connection": {
-                    "description": "The Connection credentials are issued on:\nAn active GitHub installation or Web Push Connection in the same org.",
+                    "description": "The Connection credentials are issued on:\nAn active GitHub installation, GitHub user, OAuth 2.0, or Web Push\nConnection in the same org.",
                     "type": "string",
                     "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
                   },
@@ -12353,7 +12353,7 @@
                     "type": "object"
                   },
                   "max_ttl": {
-                    "description": "The longest a credential lives: GitHub default/maximum 3600s;\nVAPID default/maximum 86400s. Positive whole seconds only for VAPID.",
+                    "description": "The longest a credential lives: GitHub default/maximum 3600s;\nOAuth 2.0 and VAPID default/maximum 86400s (capped by upstream expiry).\nPositive whole seconds only for VAPID.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
@@ -12361,11 +12361,11 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Empty for a VAPID assertion. Otherwise the GitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
+                    "description": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise the\nGitHub permission ceiling,\nfor example `{\"contents\": \"write\", \"pull_requests\": \"write\"}`.\n`administration` is read only; organization permissions are refused.\nA policy with `actors` carries at most `contents` and `pull_requests`.",
                     "type": "object"
                   },
                   "repositories": {
-                    "description": "Empty for a VAPID assertion. Otherwise 1 to 1000 exact `owner/name`\nentries, no wildcard, each owned by the Connection's account.\nOne exchange covers exactly one repository.",
+                    "description": "Empty for a VAPID assertion or generic OAuth 2.0 Connection. Otherwise 1\nto 1000 exact `owner/name` entries, no wildcard, each owned by the\nConnection's account.\nOne exchange covers exactly one repository.",
                     "items": {
                       "type": "string"
                     },
@@ -14695,6 +14695,322 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Creates a connection provider, such as an OAuth 2.0 client configuration."
+      },
+      "description": "Creates a connection provider, such as an OAuth 2.0 client configuration.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*}/connection_providers",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of CreateConnectionProvider.",
+        "properties": {
+          "connection_provider": {
+            "additionalProperties": false,
+            "description": "The connection provider to create; only spec and caller-writable metadata are read.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/connection_providers/{connection_provider}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "github_app": {
+                    "additionalProperties": false,
+                    "description": "A GitHub App.",
+                    "properties": {
+                      "app_id": {
+                        "description": "The App's numeric id.",
+                        "format": "int64",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "client_id": {
+                        "description": "The App's OAuth client id.",
+                        "type": "string"
+                      },
+                      "signing_key": {
+                        "description": "The imported, non-exportable SIGN Key (RS256) that signs App\nassertions; only the credential service may use it.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "keys.sylphx.com/Key"
+                      },
+                      "slug": {
+                        "description": "The App's slug, for example `sylphx`.",
+                        "type": "string"
+                      },
+                      "webhook_secret": {
+                        "description": "The Secret holding the webhook secret that verifies deliveries.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "secrets.sylphx.com/Secret"
+                      }
+                    },
+                    "required": [
+                      "app_id",
+                      "slug",
+                      "signing_key"
+                    ],
+                    "type": "object"
+                  },
+                  "oauth2": {
+                    "additionalProperties": false,
+                    "description": "A generic OAuth 2.0 client configuration.",
+                    "properties": {
+                      "authorize_client_id_param": {
+                        "description": "Query parameter key for `client_id` in `authorize_url`; defaults to\n`client_id`.",
+                        "type": "string"
+                      },
+                      "authorize_code_param": {
+                        "description": "Query parameter carrying the authorization code on redirect callbacks;\ndefaults to `code`.",
+                        "type": "string"
+                      },
+                      "authorize_url": {
+                        "description": "Authorization endpoint HTTPS URL.",
+                        "type": "string"
+                      },
+                      "callback_metadata_params": {
+                        "description": "Non-secret query parameter keys copied from the redirect callback into\n`Connection.spec.oauth2.provider_metadata`.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "client_auth": {
+                        "description": "How client credentials are sent to token and refresh endpoints.",
+                        "enum": [
+                          "body_or_query",
+                          "basic"
+                        ],
+                        "type": "string"
+                      },
+                      "client_id": {
+                        "description": "Provider-issued OAuth client identifier.",
+                        "type": "string"
+                      },
+                      "client_id_param": {
+                        "description": "Parameter key for `client_id` on token and refresh requests when not using\nHTTP Basic authentication; defaults to `client_id`.",
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "description": "Write-only OAuth client secret sealed at rest and never returned.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      },
+                      "client_secret_param": {
+                        "description": "Parameter key for `client_secret` on token and refresh requests when not\nusing HTTP Basic authentication; defaults to `client_secret`.",
+                        "type": "string"
+                      },
+                      "exchange_grant_type": {
+                        "description": "Grant type value sent during authorization-code exchange; defaults to\n`authorization_code`.",
+                        "type": "string"
+                      },
+                      "extra_authorize_params": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Static query parameters appended to `authorize_url`. Reserved keys\n(`state`, `redirect_uri`) are rejected.",
+                        "type": "object"
+                      },
+                      "post_authorize_redirect_uri": {
+                        "description": "Optional HTTPS URL redirected to after hosted callback completion.",
+                        "type": "string"
+                      },
+                      "redirect_uri": {
+                        "description": "Optional `redirect_uri` override sent on authorize and token requests;\ndefaults to the hosted callback URL.",
+                        "type": "string"
+                      },
+                      "refresh_url": {
+                        "description": "Refresh endpoint HTTPS URL; defaults to `token_url` when empty.",
+                        "type": "string"
+                      },
+                      "scopes": {
+                        "description": "Default OAuth scopes requested during authorization.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "token_code_param": {
+                        "description": "Parameter key carrying the authorization code on token exchange requests;\ndefaults to `code`.",
+                        "type": "string"
+                      },
+                      "token_method": {
+                        "description": "HTTP transport for code exchange and refresh requests.",
+                        "enum": [
+                          "form_post",
+                          "query_get"
+                        ],
+                        "type": "string"
+                      },
+                      "token_url": {
+                        "description": "Authorization-code exchange endpoint HTTPS URL.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "authorize_url",
+                      "token_url",
+                      "client_id"
+                    ],
+                    "type": "object"
+                  },
+                  "sharing_grants": {
+                    "description": "Organizations allowed to use specific installations of this provider.\nRemoving a grant prevents subsequent Broker exchanges. Signing custody\nremains in the provider's organization and is never copied to a recipient.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "ProviderSharingGrant lets a named organization use exact external\ninstallations through its own Connections and Broker permissions.",
+                      "properties": {
+                        "external_ids": {
+                          "description": "Exact provider installation ids. For GitHub these are canonical positive\ndecimal installation ids. An empty list grants nothing.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "organization": {
+                          "description": "The recipient, `orgs/{org}`; wildcards are not accepted.",
+                          "type": "string",
+                          "x-sylphx-resource-reference": "access.sylphx.com/Org"
+                        }
+                      },
+                      "required": [
+                        "organization",
+                        "external_ids"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "connection_provider_id": {
+            "description": "The id of the new provider, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; server-assigned when empty.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The org to create in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "connection_provider"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "connections.connection_providers.create",
+      "permission": "connections:admin",
+      "tool": "connections_connection_providers_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Begins an expiring hosted OAuth 2.0 authorization ceremony for an OAuth 2.0 ConnectionProvider. Returns an authorization_url carrying an expiring one-use state token handled by GET /v1/connections/oauth2:callback."
+      },
+      "description": "Begins an expiring hosted OAuth 2.0 authorization ceremony for an OAuth 2.0\nConnectionProvider. Returns an authorization_url carrying an expiring\none-use state token handled by GET /v1/connections/oauth2:callback.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/connection_providers/*}:beginOauth2Authorization",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of BeginOauth2Authorization.",
+        "properties": {
+          "connection_id": {
+            "description": "Target Connection id to create or reauthorize on callback; server-assigned when empty.",
+            "type": "string"
+          },
+          "external_account_id": {
+            "description": "Optional non-secret external account id recorded on creation.",
+            "type": "string"
+          },
+          "extra_authorize_params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Additional per-request query parameters appended to `authorize_url`.",
+            "type": "object"
+          },
+          "name": {
+            "description": "OAuth 2.0 ConnectionProvider resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "post_authorize_redirect_uri": {
+            "description": "Optional HTTPS redirect destination after callback completion.",
+            "type": "string"
+          },
+          "provider_metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional non-secret metadata persisted onto the resulting Connection.",
+            "type": "object"
+          },
+          "scopes": {
+            "description": "Optional scopes overriding the provider defaults.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "connections.connection_providers.begin_oauth2_authorization",
+      "permission": "connections:write",
+      "tool": "connections_connection_providers_begin_oauth2_authorization"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Adopts an existing GitHub App whose non-exportable custody already exists. The server observes public SPKI metadata and verifies signed GET /app before atomically registering the SIGN Key and provider. No private key is accepted."
       },
       "description": "Adopts an existing GitHub App whose non-exportable custody already exists.\nThe server observes public SPKI metadata and verifies signed GET /app before\natomically registering the SIGN Key and provider. No private key is accepted.",
@@ -14931,6 +15247,109 @@
                       "app_id",
                       "slug",
                       "signing_key"
+                    ],
+                    "type": "object"
+                  },
+                  "oauth2": {
+                    "additionalProperties": false,
+                    "description": "A generic OAuth 2.0 client configuration.",
+                    "properties": {
+                      "authorize_client_id_param": {
+                        "description": "Query parameter key for `client_id` in `authorize_url`; defaults to\n`client_id`.",
+                        "type": "string"
+                      },
+                      "authorize_code_param": {
+                        "description": "Query parameter carrying the authorization code on redirect callbacks;\ndefaults to `code`.",
+                        "type": "string"
+                      },
+                      "authorize_url": {
+                        "description": "Authorization endpoint HTTPS URL.",
+                        "type": "string"
+                      },
+                      "callback_metadata_params": {
+                        "description": "Non-secret query parameter keys copied from the redirect callback into\n`Connection.spec.oauth2.provider_metadata`.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "client_auth": {
+                        "description": "How client credentials are sent to token and refresh endpoints.",
+                        "enum": [
+                          "body_or_query",
+                          "basic"
+                        ],
+                        "type": "string"
+                      },
+                      "client_id": {
+                        "description": "Provider-issued OAuth client identifier.",
+                        "type": "string"
+                      },
+                      "client_id_param": {
+                        "description": "Parameter key for `client_id` on token and refresh requests when not using\nHTTP Basic authentication; defaults to `client_id`.",
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "description": "Write-only OAuth client secret sealed at rest and never returned.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-sylphx-sensitive": true
+                      },
+                      "client_secret_param": {
+                        "description": "Parameter key for `client_secret` on token and refresh requests when not\nusing HTTP Basic authentication; defaults to `client_secret`.",
+                        "type": "string"
+                      },
+                      "exchange_grant_type": {
+                        "description": "Grant type value sent during authorization-code exchange; defaults to\n`authorization_code`.",
+                        "type": "string"
+                      },
+                      "extra_authorize_params": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Static query parameters appended to `authorize_url`. Reserved keys\n(`state`, `redirect_uri`) are rejected.",
+                        "type": "object"
+                      },
+                      "post_authorize_redirect_uri": {
+                        "description": "Optional HTTPS URL redirected to after hosted callback completion.",
+                        "type": "string"
+                      },
+                      "redirect_uri": {
+                        "description": "Optional `redirect_uri` override sent on authorize and token requests;\ndefaults to the hosted callback URL.",
+                        "type": "string"
+                      },
+                      "refresh_url": {
+                        "description": "Refresh endpoint HTTPS URL; defaults to `token_url` when empty.",
+                        "type": "string"
+                      },
+                      "scopes": {
+                        "description": "Default OAuth scopes requested during authorization.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "token_code_param": {
+                        "description": "Parameter key carrying the authorization code on token exchange requests;\ndefaults to `code`.",
+                        "type": "string"
+                      },
+                      "token_method": {
+                        "description": "HTTP transport for code exchange and refresh requests.",
+                        "enum": [
+                          "form_post",
+                          "query_get"
+                        ],
+                        "type": "string"
+                      },
+                      "token_url": {
+                        "description": "Authorization-code exchange endpoint HTTPS URL.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "authorize_url",
+                      "token_url",
+                      "client_id"
                     ],
                     "type": "object"
                   },
@@ -15215,6 +15634,71 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Imports existing OAuth 2.0 credentials into sealed Broker custody for a Connection without returning any secret token."
+      },
+      "description": "Imports existing OAuth 2.0 credentials into sealed Broker custody for a\nConnection without returning any secret token.",
+      "effect": "write",
+      "http": "POST /v1/{name=orgs/*/connections/*}:importOauth2Credentials",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ImportOauth2Credentials.",
+        "properties": {
+          "access_token": {
+            "description": "Optional write-only access token cached until `access_token_expire_time`.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "access_token_expire_time": {
+            "description": "Expiry of the optional initial `access_token`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "external_account_id": {
+            "description": "Optional non-secret external account id.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Connection resource name (`orgs/{org}/connections/{connection}`). Creates the\nConnection atomically when absent if `provider` is supplied.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          },
+          "provider": {
+            "description": "OAuth 2.0 ConnectionProvider resource name; required when creating a new Connection.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+          },
+          "provider_metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional non-secret metadata merged into `spec.oauth2.provider_metadata`.",
+            "type": "object"
+          },
+          "refresh_token": {
+            "description": "Write-only refresh token sealed inside Broker custody and never returned.",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          }
+        },
+        "required": [
+          "name",
+          "refresh_token"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "connections.connections.import_oauth2_credentials",
+      "permission": "connections:write",
+      "tool": "connections_connections_import_oauth2_credentials"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Records an installation; the controller confirms it with the provider."
       },
       "description": "Records an installation; the controller confirms it with the provider.",
@@ -15284,6 +15768,24 @@
                       "provider",
                       "login"
                     ],
+                    "type": "object"
+                  },
+                  "oauth2": {
+                    "additionalProperties": false,
+                    "description": "Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and\n`github_user`. Requires an `oauth2` ConnectionProvider.",
+                    "properties": {
+                      "external_account_id": {
+                        "description": "Non-secret account identifier associated with the external authorization.",
+                        "type": "string"
+                      },
+                      "provider_metadata": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Non-secret provider metadata captured from callbacks or supplied by the\ncaller. Secret-bearing keys are rejected.",
+                        "type": "object"
+                      }
+                    },
                     "type": "object"
                   },
                   "provider": {
@@ -15421,6 +15923,24 @@
                       "provider",
                       "login"
                     ],
+                    "type": "object"
+                  },
+                  "oauth2": {
+                    "additionalProperties": false,
+                    "description": "Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and\n`github_user`. Requires an `oauth2` ConnectionProvider.",
+                    "properties": {
+                      "external_account_id": {
+                        "description": "Non-secret account identifier associated with the external authorization.",
+                        "type": "string"
+                      },
+                      "provider_metadata": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Non-secret provider metadata captured from callbacks or supplied by the\ncaller. Secret-bearing keys are rejected.",
+                        "type": "object"
+                      }
+                    },
                     "type": "object"
                   },
                   "provider": {

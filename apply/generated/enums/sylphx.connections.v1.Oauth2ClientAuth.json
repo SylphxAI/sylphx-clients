@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.connections.v1.Oauth2ClientAuth",
+  "package": "sylphx.connections.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "OAUTH2_CLIENT_AUTH_BODY_OR_QUERY",
+      "wire": "body_or_query"
+    },
+    {
+      "number": 2,
+      "proto_name": "OAUTH2_CLIENT_AUTH_BASIC",
+      "wire": "basic"
+    }
+  ]
+}
