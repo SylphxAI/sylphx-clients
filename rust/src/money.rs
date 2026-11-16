@@ -4017,6 +4017,42 @@ pub struct Product {
     /// consumable product and on a product with a recurring price.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub licence: Option<LicencePolicy>,
+    /// Exact App Store product id. Set together with `appstore_bundle_id`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appstoreSku"
+    )]
+    pub appstore_sku: String,
+    /// Exact Apple bundle id that scopes `appstore_sku`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appstoreBundleId"
+    )]
+    pub appstore_bundle_id: String,
+    /// Exact Google Play product id. Set together with `googleplay_package_name`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "googleplaySku"
+    )]
+    pub googleplay_sku: String,
+    /// Exact Google Play package name that scopes `googleplay_sku`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "googleplayPackageName"
+    )]
+    pub googleplay_package_name: String,
+    /// Additional exact store/app/product bindings for this same product.
+    /// A binding may repeat on this product, but never on another product.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "storeProductAliases"
+    )]
+    pub store_product_aliases: Vec<StoreProductAlias>,
 }
 
 /// Records statement evidence and confirms only an exact, timely, unambiguous payment.
@@ -5364,6 +5400,35 @@ pub struct StoreConsumptionRequest {
         alias = "consentId"
     )]
     pub consent_id: String,
+}
+
+/// One exact provider namespace: no inferred suffixes or cross-app fallback.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct StoreProductAlias {
+    /// app_store or google_play.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub store: String,
+    /// Verified bundle id (Apple) or package name (Google Play).
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appId"
+    )]
+    pub app_id: String,
+    /// Exact provider product id, not the catalog product key.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "productId"
+    )]
+    pub product_id: String,
 }
 
 /// A Store Purchase is one store transaction Money verified with the store and

@@ -92591,6 +92591,101 @@
             "kind": "message",
             "name": "sylphx.money.v1.LicencePolicy"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact App Store product id. Set together with `appstore_bundle_id`.",
+          "filterable": false,
+          "name": "appstore_sku",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact Apple bundle id that scopes `appstore_sku`.",
+          "filterable": false,
+          "name": "appstore_bundle_id",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact Google Play product id. Set together with `googleplay_package_name`.",
+          "filterable": false,
+          "name": "googleplay_sku",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact Google Play package name that scopes `googleplay_sku`.",
+          "filterable": false,
+          "name": "googleplay_package_name",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Additional exact store/app/product bindings for this same product.\nA binding may repeat on this product, but never on another product.",
+          "filterable": false,
+          "name": "store_product_aliases",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.StoreProductAlias"
+          }
         }
       ],
       "name": "sylphx.money.v1.Product",
@@ -96088,6 +96183,70 @@
         }
       ],
       "name": "sylphx.money.v1.StoreConsumptionRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "One exact provider namespace: no inferred suffixes or cross-app fallback.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "app_store or google_play.",
+          "filterable": false,
+          "name": "store",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Verified bundle id (Apple) or package name (Google Play).",
+          "filterable": false,
+          "name": "app_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact provider product id, not the catalog product key.",
+          "filterable": false,
+          "name": "product_id",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.StoreProductAlias",
       "package": "sylphx.money.v1"
     },
     {

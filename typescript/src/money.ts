@@ -1881,6 +1881,19 @@ export interface Product {
 	 * consumable product and on a product with a recurring price.
 	 */
 	licence?: LicencePolicy
+	/** Exact App Store product id. Set together with `appstore_bundle_id`. */
+	appstoreSku?: string
+	/** Exact Apple bundle id that scopes `appstore_sku`. */
+	appstoreBundleId?: string
+	/** Exact Google Play product id. Set together with `googleplay_package_name`. */
+	googleplaySku?: string
+	/** Exact Google Play package name that scopes `googleplay_sku`. */
+	googleplayPackageName?: string
+	/**
+	 * Additional exact store/app/product bindings for this same product.
+	 * A binding may repeat on this product, but never on another product.
+	 */
+	storeProductAliases?: StoreProductAlias[]
 }
 
 /** Records statement evidence and confirms only an exact, timely, unambiguous payment. */
@@ -2486,6 +2499,16 @@ export interface StoreConsumptionRequest {
 	readonly lastRefusalReason?: string
 	/** Consent ledger event id evaluated for the dispatch, when present. */
 	readonly consentId?: string
+}
+
+/** One exact provider namespace: no inferred suffixes or cross-app fallback. */
+export interface StoreProductAlias {
+	/** app_store or google_play. */
+	store?: string
+	/** Verified bundle id (Apple) or package name (Google Play). */
+	appId?: string
+	/** Exact provider product id, not the catalog product key. */
+	productId?: string
 }
 
 /**
@@ -3653,6 +3676,11 @@ runtime.registerSchemas({
 		['storeProductIds', 'store_product_ids', undefined, 'map'],
 		['grants', 'grants', undefined, 'map'],
 		['licence', 'licence', 'sylphx.money.v1.LicencePolicy'],
+		['appstoreSku', 'appstore_sku'],
+		['appstoreBundleId', 'appstore_bundle_id'],
+		['googleplaySku', 'googleplay_sku'],
+		['googleplayPackageName', 'googleplay_package_name'],
+		['storeProductAliases', 'store_product_aliases', 'sylphx.money.v1.StoreProductAlias'],
 	],
 	'sylphx.money.v1.RecordBankReceiptRequest': [
 		['checkoutSession', 'checkout_session'],
@@ -3808,6 +3836,10 @@ runtime.registerSchemas({
 		['appleHttpStatus', 'apple_http_status'],
 		['lastRefusalReason', 'last_refusal_reason'],
 		['consentId', 'consent_id'],
+	],
+	'sylphx.money.v1.StoreProductAlias': [
+		['appId', 'app_id'],
+		['productId', 'product_id'],
 	],
 	'sylphx.money.v1.StorePurchase': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],

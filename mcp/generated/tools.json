@@ -28243,6 +28243,14 @@
                       "additionalProperties": false,
                       "description": "A Product is one thing sold, with its prices and the features it grants.",
                       "properties": {
+                        "appstore_bundle_id": {
+                          "description": "Exact Apple bundle id that scopes `appstore_sku`.",
+                          "type": "string"
+                        },
+                        "appstore_sku": {
+                          "description": "Exact App Store product id. Set together with `appstore_bundle_id`.",
+                          "type": "string"
+                        },
                         "consumable": {
                           "description": "Whether one purchase is used up (a pack of game currency) rather than\nkept (an unlock or a subscription).",
                           "type": "boolean"
@@ -28261,6 +28269,14 @@
                           },
                           "description": "Feature grants: a feature key and, for a `limit` feature, the allowance as\na decimal string; `true` for a boolean feature.",
                           "type": "object"
+                        },
+                        "googleplay_package_name": {
+                          "description": "Exact Google Play package name that scopes `googleplay_sku`.",
+                          "type": "string"
+                        },
+                        "googleplay_sku": {
+                          "description": "Exact Google Play product id. Set together with `googleplay_package_name`.",
+                          "type": "string"
                         },
                         "grants": {
                           "additionalProperties": {
@@ -28389,6 +28405,34 @@
                             "required": [
                               "key",
                               "unit_amounts"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "store_product_aliases": {
+                          "description": "Additional exact store/app/product bindings for this same product.\nA binding may repeat on this product, but never on another product.",
+                          "items": {
+                            "additionalProperties": false,
+                            "description": "One exact provider namespace: no inferred suffixes or cross-app fallback.",
+                            "properties": {
+                              "app_id": {
+                                "description": "Verified bundle id (Apple) or package name (Google Play).",
+                                "type": "string"
+                              },
+                              "product_id": {
+                                "description": "Exact provider product id, not the catalog product key.",
+                                "type": "string"
+                              },
+                              "store": {
+                                "description": "app_store or google_play.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "store",
+                              "app_id",
+                              "product_id"
                             ],
                             "type": "object"
                           },
