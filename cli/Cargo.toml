@@ -16,11 +16,11 @@ name = "sylphx"
 path = "src/main.rs"
 
 [dependencies]
-sylphx = { path = "../rust", version = "0.3.19" }
-sylphx-resource-codec = { path = "../resource-codec", version = "0.1.15" }
-sylphx-apply = { path = "../apply", version = "0.1.15" }
+sylphx = { path = "../rust", version = "0.3.20" }
+sylphx-resource-codec = { path = "../resource-codec", version = "0.1.16" }
+sylphx-apply = { path = "../apply", version = "0.1.16" }
 sylphx-mcp = { path = "../mcp", version = "0.29.36" }
-sylphx-build-lease = { path = "../build-lease", version = "0.1.17" }
+sylphx-build-lease = { path = "../build-lease", version = "0.1.18" }
 base64 = "0.22"
 clap = { version = "4.5", features = ["string", "wrap_help"] }
 clap_complete = "4.5"
