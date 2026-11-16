@@ -103119,6 +103119,146 @@
       "package": "sylphx.network.v1"
     },
     {
+      "doc": "The request of AdoptSmsNumber.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The environment to bind the existing carrier number in.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "notify.sylphx.com/SmsNumber",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The binding id; server-assigned when empty.",
+          "filterable": false,
+          "name": "sms_number_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The carrier provider (\"telnyx\"). Defaults to \"telnyx\" when empty.",
+          "filterable": false,
+          "name": "provider",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Carrier phone number identifier to verify live before binding.",
+          "filterable": false,
+          "name": "provider_number_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Expected E.164 phone number; must match the carrier record.",
+          "filterable": false,
+          "name": "phone_number",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Expected carrier messaging profile id; must match and be active.",
+          "filterable": false,
+          "name": "messaging_profile_id",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Validate against the carrier and local state without writing a binding.",
+          "filterable": false,
+          "name": "validate_only",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.AdoptSmsNumberRequest",
+      "package": "sylphx.notify.v1"
+    },
+    {
       "doc": "Apply or reconcile the SAME operation after a lost response. Resupply a\ncurrent token with the same operation id and route; readback precedes retry.\nCredentials are removed before hashing/persistence. No unattended credential\nrefresh or background retry occurs; the provider continues executing calls.",
       "fields": [
         {
@@ -186935,6 +187075,53 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "create"
+            },
+            {
+              "backend_idempotency": true,
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Adopts an existing active carrier SMS number binding into one environment\nwithout purchasing a new number.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "UNKNOWN_FIELD",
+                "INVALID_FIELD",
+                "RESOURCE_ALREADY_EXISTS",
+                "RESOURCE_IN_USE",
+                "INVALID_STATE",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers:adopt"
+              },
+              "id": "notify.sms_numbers.adopt",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "notify:write",
+              "proto": "sylphx.notify.v1.NotifyService.AdoptSmsNumber",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.notify.v1.AdoptSmsNumberRequest",
+              "resource_field": null,
+              "response": "sylphx.notify.v1.SmsNumber",
+              "supports_validate_only": true,
+              "validate_only_unsupported": false,
+              "verb": "adopt"
             },
             {
               "cancellable": false,

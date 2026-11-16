@@ -3,6 +3,61 @@
 
 #![allow(clippy::all)]
 
+/// The request of AdoptSmsNumber.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AdoptSmsNumberRequest {
+    /// The environment to bind the existing carrier number in.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The binding id; server-assigned when empty.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "smsNumberId"
+    )]
+    pub sms_number_id: String,
+    /// The carrier provider ("telnyx"). Defaults to "telnyx" when empty.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub provider: String,
+    /// Carrier phone number identifier to verify live before binding.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerNumberId"
+    )]
+    pub provider_number_id: String,
+    /// Expected E.164 phone number; must match the carrier record.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "phoneNumber"
+    )]
+    pub phone_number: String,
+    /// Expected carrier messaging profile id; must match and be active.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "messagingProfileId"
+    )]
+    pub messaging_profile_id: String,
+    /// Validate against the carrier and local state without writing a binding.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
 /// Apply or reconcile the SAME operation after a lost response. Resupply a
 /// current token with the same operation id and route; readback precedes retry.
 /// Credentials are removed before hashing/persistence. No unattended credential
@@ -12280,6 +12335,33 @@ impl<'a, T: crate::runtime::Transport> SmsNumbersCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.sms_number)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Adopts an existing active carrier SMS number binding into one environment
+    /// without purchasing a new number.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers:adopt` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RESOURCE_IN_USE`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+    pub async fn adopt(
+        &self,
+        request: AdoptSmsNumberRequest,
+    ) -> Result<SmsNumber, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/sms_numbers:adopt",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

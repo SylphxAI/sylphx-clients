@@ -5,6 +5,24 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/** The request of AdoptSmsNumber. */
+export interface AdoptSmsNumberRequest {
+	/** The environment to bind the existing carrier number in. */
+	parent: string
+	/** The binding id; server-assigned when empty. */
+	smsNumberId?: string
+	/** The carrier provider ("telnyx"). Defaults to "telnyx" when empty. */
+	provider?: string
+	/** Carrier phone number identifier to verify live before binding. */
+	providerNumberId: string
+	/** Expected E.164 phone number; must match the carrier record. */
+	phoneNumber: string
+	/** Expected carrier messaging profile id; must match and be active. */
+	messagingProfileId: string
+	/** Validate against the carrier and local state without writing a binding. */
+	validateOnly?: boolean
+}
+
 /**
  * Apply or reconcile the SAME operation after a lost response. Resupply a
  * current token with the same operation id and route; readback precedes retry.
@@ -3395,6 +3413,13 @@ export type SupportTrackKind = 'issue' | 'action' | (string & {})
 export type SuppressionReason = 'bounce' | 'complaint' | 'carrier_opt_out' | 'unsubscribe' | 'uninstalled' | 'manual' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.notify.v1.AdoptSmsNumberRequest': [
+		['smsNumberId', 'sms_number_id'],
+		['providerNumberId', 'provider_number_id'],
+		['phoneNumber', 'phone_number'],
+		['messagingProfileId', 'messaging_profile_id'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.ApplyPhoneNumberRouteRequest': [
 		['operationId', 'operation_id'],
 		['voicemail', 'voicemail', 'sylphx.notify.v1.PhoneVoicemailRoute'],
@@ -6256,6 +6281,25 @@ export class SmsNumbersCollection {
 			query: { sms_number_id: request.smsNumberId },
 			body: request.smsNumber ?? {},
 			bodyType: 'sylphx.notify.v1.SmsNumber',
+			responseType: 'sylphx.notify.v1.SmsNumber',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Adopts an existing active carrier SMS number binding into one environment
+	 * without purchasing a new number.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/sms_numbers:adopt` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `RESOURCE_IN_USE`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
+	 */
+	async adopt(request: AdoptSmsNumberRequest): Promise<SmsNumber> {
+		return this.client.call<SmsNumber>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/sms_numbers:adopt`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.notify.v1.AdoptSmsNumberRequest',
 			responseType: 'sylphx.notify.v1.SmsNumber',
 			mutation: true,
 		})

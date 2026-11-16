@@ -6863,6 +6863,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'notify:write',
 	},
+	'notify.sms_numbers.adopt': {
+		id: 'notify.sms_numbers.adopt',
+		httpMethod: 'POST',
+		template: '/v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers:adopt',
+		pathParams: [['parent', 'orgs/*/projects/*/envs/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'notify:write',
+	},
 	'notify.sms_numbers.configure_voicemail': {
 		id: 'notify.sms_numbers.configure_voicemail',
 		httpMethod: 'POST',

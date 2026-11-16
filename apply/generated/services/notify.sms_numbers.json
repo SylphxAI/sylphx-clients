@@ -15,6 +15,13 @@
           "http": {
             "query_params": []
           },
+          "id": "notify.sms_numbers.adopt",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "notify.sms_numbers.get",
           "kind": "get"
         },

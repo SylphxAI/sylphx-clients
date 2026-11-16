@@ -33825,6 +33825,47 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.AdoptSmsNumberRequest": {
+        "description": "The request of AdoptSmsNumber.",
+        "properties": {
+          "messaging_profile_id": {
+            "description": "Expected carrier messaging profile id; must match and be active.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to bind the existing carrier number in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          },
+          "phone_number": {
+            "description": "Expected E.164 phone number; must match the carrier record.",
+            "type": "string"
+          },
+          "provider": {
+            "description": "The carrier provider (\"telnyx\"). Defaults to \"telnyx\" when empty.",
+            "type": "string"
+          },
+          "provider_number_id": {
+            "description": "Carrier phone number identifier to verify live before binding.",
+            "type": "string"
+          },
+          "sms_number_id": {
+            "description": "The binding id; server-assigned when empty.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate against the carrier and local state without writing a binding.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "provider_number_id",
+          "phone_number",
+          "messaging_profile_id"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.ApplyPhoneNumberRouteRequest": {
         "description": "Apply or reconcile the SAME operation after a lost response. Resupply a\ncurrent token with the same operation id and route; readback precedes retry.\nCredentials are removed before hashing/persistence. No unattended credential\nrefresh or background retry occurs; the provider continues executing calls.",
         "properties": {
@@ -122905,6 +122946,138 @@
           "UNAVAILABLE"
         ],
         "x-sylphx-method": "notify.sms_numbers.configure_voicemail",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/sms_numbers:adopt": {
+      "post": {
+        "description": "Adopts an existing active carrier SMS number binding into one environment\nwithout purchasing a new number.",
+        "operationId": "notify_sms_numbers_adopt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "messaging_profile_id": {
+                    "description": "Expected carrier messaging profile id; must match and be active.",
+                    "type": "string"
+                  },
+                  "phone_number": {
+                    "description": "Expected E.164 phone number; must match the carrier record.",
+                    "type": "string"
+                  },
+                  "provider": {
+                    "description": "The carrier provider (\"telnyx\"). Defaults to \"telnyx\" when empty.",
+                    "type": "string"
+                  },
+                  "provider_number_id": {
+                    "description": "Carrier phone number identifier to verify live before binding.",
+                    "type": "string"
+                  },
+                  "sms_number_id": {
+                    "description": "The binding id; server-assigned when empty.",
+                    "type": "string"
+                  },
+                  "validate_only": {
+                    "description": "Validate against the carrier and local state without writing a binding.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "provider_number_id",
+                  "phone_number",
+                  "messaging_profile_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.SmsNumber"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Adopts an existing active carrier SMS number binding into one environment without purchasing a new number.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "UNKNOWN_FIELD",
+          "INVALID_FIELD",
+          "RESOURCE_ALREADY_EXISTS",
+          "RESOURCE_IN_USE",
+          "INVALID_STATE",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.sms_numbers.adopt",
         "x-sylphx-permission": "notify:write",
         "x-sylphx-stage": "preview"
       }

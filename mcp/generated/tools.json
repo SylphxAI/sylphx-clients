@@ -39785,6 +39785,64 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Adopts an existing active carrier SMS number binding into one environment without purchasing a new number."
+      },
+      "description": "Adopts an existing active carrier SMS number binding into one environment\nwithout purchasing a new number.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers:adopt",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of AdoptSmsNumber.",
+        "properties": {
+          "messaging_profile_id": {
+            "description": "Expected carrier messaging profile id; must match and be active.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to bind the existing carrier number in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/SmsNumber"
+          },
+          "phone_number": {
+            "description": "Expected E.164 phone number; must match the carrier record.",
+            "type": "string"
+          },
+          "provider": {
+            "description": "The carrier provider (\"telnyx\"). Defaults to \"telnyx\" when empty.",
+            "type": "string"
+          },
+          "provider_number_id": {
+            "description": "Carrier phone number identifier to verify live before binding.",
+            "type": "string"
+          },
+          "sms_number_id": {
+            "description": "The binding id; server-assigned when empty.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate against the carrier and local state without writing a binding.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "provider_number_id",
+          "phone_number",
+          "messaging_profile_id"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.sms_numbers.adopt",
+      "permission": "notify:write",
+      "tool": "notify_sms_numbers_adopt"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,

@@ -28815,6 +28815,61 @@
               "verb": "create"
             },
             {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "sms_number_id",
+                  "flag": "--sms-number-id",
+                  "summary": "The binding id; server-assigned when empty.",
+                  "type": "string"
+                },
+                {
+                  "field": "provider",
+                  "flag": "--provider",
+                  "summary": "The carrier provider (\"telnyx\"). Defaults to \"telnyx\" when empty.",
+                  "type": "string"
+                },
+                {
+                  "field": "provider_number_id",
+                  "flag": "--provider-number-id",
+                  "required": true,
+                  "summary": "Carrier phone number identifier to verify live before binding.",
+                  "type": "string"
+                },
+                {
+                  "field": "phone_number",
+                  "flag": "--phone-number",
+                  "required": true,
+                  "summary": "Expected E.164 phone number; must match the carrier record.",
+                  "type": "string"
+                },
+                {
+                  "field": "messaging_profile_id",
+                  "flag": "--messaging-profile-id",
+                  "required": true,
+                  "summary": "Expected carrier messaging profile id; must match and be active.",
+                  "type": "string"
+                },
+                {
+                  "field": "validate_only",
+                  "flag": "--dry-run",
+                  "summary": "Validate and print the result without writing (validate_only).",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/sms_numbers:adopt",
+              "method": "notify.sms_numbers.adopt",
+              "permission": "notify:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Adopts an existing active carrier SMS number binding into one environment without purchasing a new number.",
+              "verb": "adopt"
+            },
+            {
               "effect": "read",
               "flags": [],
               "http": "GET /v1/{name=orgs/*/projects/*/envs/*/sms_numbers/*}",
