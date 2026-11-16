@@ -6,6 +6,24 @@
           "http": {
             "query_params": []
           },
+          "id": "auth.end_users.import",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": [
+              "batch_id",
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "auth.end_users.list_import_records",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "auth.end_users.get",
           "kind": "get"
         },

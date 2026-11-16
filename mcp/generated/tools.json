@@ -7680,257 +7680,218 @@
     {
       "annotations": {
         "destructiveHint": false,
-        "idempotentHint": true,
+        "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": true,
-        "title": "Gets an auth config."
+        "readOnlyHint": false,
+        "title": "Atomically admits an immutable bounded principal import batch."
       },
-      "description": "Gets an auth config.",
-      "effect": "read",
-      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}",
+      "description": "Atomically admits an immutable bounded principal import batch.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/end_users:import",
       "input_schema": {
         "additionalProperties": false,
-        "description": "The request of GetAuthConfig.",
+        "description": "The request of ImportEndUsers.\nSchema-v1 principal admission only. This is not an arbitrary source archive:\nsessions, shared rows, recovery keys and historical consent are not admitted.\nAn accepted batch is immutable and atomic. Retention is not verifier authority.",
         "properties": {
-          "name": {
-            "description": "The name of the auth config to get.",
+          "batch_id": {
+            "description": "Unique immutable batch identity within parent; lowercase run-id syntax.",
+            "type": "string"
+          },
+          "key_namespace": {
+            "description": "Namespace of the immutable source principal ID in each external_ids map.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to import into.",
             "type": "string",
-            "x-sylphx-resource-reference": "auth.sylphx.com/AuthConfig"
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          },
+          "schema_version": {
+            "description": "Schema version of the typed principal input; must be 1.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "users": {
+            "description": "1..100 principals. Duplicate source IDs are refused, never collapsed.",
+            "items": {
+              "additionalProperties": false,
+              "description": "Schema-v1 typed principal import payload.",
+              "properties": {
+                "create_time": {
+                  "description": "Original source creation timestamp for the imported end user.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "devices": {
+                  "description": "Device credentials bound to the end user.",
+                  "items": {
+                    "additionalProperties": false,
+                    "description": "Device credential admitted during schema-v1 principal import.",
+                    "properties": {
+                      "id": {
+                        "description": "Source device identifier unique to this device binding.",
+                        "type": "string"
+                      },
+                      "secret": {
+                        "description": "Optional device secret; missing invokes existing weak-device rules.",
+                        "type": "string",
+                        "x-sylphx-sensitive": true
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "display_name": {
+                  "description": "Optional human-readable display name for the end user.",
+                  "type": "string"
+                },
+                "email": {
+                  "description": "Optional email address for the imported end user.",
+                  "type": "string"
+                },
+                "email_verified": {
+                  "description": "Whether `email` was already verified in the source system.",
+                  "type": "boolean"
+                },
+                "external_ids": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Immutable source identifiers keyed by namespace; must contain the batch's `key_namespace`.",
+                  "type": "object"
+                },
+                "links": {
+                  "description": "Federated identity provider links held by the end user.",
+                  "items": {
+                    "additionalProperties": false,
+                    "description": "Federated link admitted during schema-v1 principal import.",
+                    "properties": {
+                      "issuer": {
+                        "description": "OIDC issuer URL identifying the external identity provider.",
+                        "type": "string"
+                      },
+                      "subject": {
+                        "description": "Subject identifier assigned by the issuer.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "issuer",
+                      "subject"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "password": {
+                  "additionalProperties": false,
+                  "description": "Optional existing password verifier for the end user.",
+                  "properties": {
+                    "format": {
+                      "description": "Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,\nbcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.",
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "Encoded password hash in the declared `format`.",
+                      "type": "string",
+                      "x-sylphx-sensitive": true
+                    }
+                  },
+                  "required": [
+                    "format",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "phone": {
+                  "description": "Optional E.164 phone number for the imported end user.",
+                  "type": "string"
+                },
+                "phone_verified": {
+                  "description": "Whether `phone` was already verified in the source system.",
+                  "type": "boolean"
+                },
+                "status": {
+                  "description": "Account state (`active` or `suspended`); unspecified values are refused.",
+                  "type": "string"
+                },
+                "totp_secret_base32": {
+                  "description": "Optional Base32-encoded TOTP secret for MFA enrollment.",
+                  "type": "string",
+                  "x-sylphx-sensitive": true
+                }
+              },
+              "required": [
+                "external_ids",
+                "status",
+                "create_time"
+              ],
+              "type": "object"
+            },
+            "type": "array"
           }
         },
         "required": [
-          "name"
+          "parent",
+          "schema_version",
+          "batch_id",
+          "key_namespace",
+          "users"
         ],
         "type": "object"
       },
       "long_running": false,
-      "method_id": "auth.auth_configs.get",
-      "permission": "auth:read",
-      "tool": "auth_auth_configs_get"
+      "method_id": "auth.end_users.import",
+      "permission": "auth:write",
+      "tool": "auth_end_users_import"
     },
     {
       "annotations": {
         "destructiveHint": false,
-        "idempotentHint": true,
+        "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Updates an auth config."
+        "readOnlyHint": true,
+        "title": "Returns an admitted import batch in canonical source_id order, including sensitive verifier input."
       },
-      "description": "Updates an auth config.",
-      "effect": "write",
-      "http": "PATCH /v1/{auth_config.name=orgs/*/projects/*/envs/*/auth_configs/*}",
+      "description": "Returns an admitted import batch in canonical source_id order, including sensitive verifier input.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/end_users:listImportRecords",
       "input_schema": {
         "additionalProperties": false,
-        "description": "The request of UpdateAuthConfig.",
+        "description": "The request of ListEndUserImportRecords.",
         "properties": {
-          "allow_missing": {
-            "description": "Create the auth config when it does not exist (declarative upsert).",
-            "type": "boolean"
-          },
-          "auth_config": {
-            "additionalProperties": false,
-            "description": "The auth config to update; `name` identifies it.",
-            "properties": {
-              "meta": {
-                "additionalProperties": false,
-                "description": "Resource metadata.",
-                "properties": {
-                  "annotations": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, unindexed annotations.",
-                    "type": "object"
-                  },
-                  "display_name": {
-                    "description": "Caller-writable human-readable name.",
-                    "type": "string"
-                  },
-                  "labels": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
-                    "type": "object"
-                  }
-                },
-                "type": "object"
-              },
-              "name": {
-                "description": "`orgs/{org}/projects/{project}/envs/{env}/auth_configs/{auth_config}`.",
-                "type": "string"
-              },
-              "spec": {
-                "additionalProperties": false,
-                "description": "Desired state.",
-                "properties": {
-                  "auth_methods": {
-                    "description": "Sign-in methods offered to end users.",
-                    "items": {
-                      "description": "A sign-in method or factor.",
-                      "enum": [
-                        "password",
-                        "magic_link",
-                        "email_otp",
-                        "passkey",
-                        "totp",
-                        "oidc",
-                        "saml",
-                        "device"
-                      ],
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "captcha_secret": {
-                    "description": "The CAPTCHA verifier secret, held in Sylphx Secrets; unset disables\nCAPTCHA.",
-                    "type": "string"
-                  },
-                  "lockout_enabled": {
-                    "description": "Progressive lockout by user and IP.",
-                    "type": "boolean"
-                  },
-                  "mail_sending_domain": {
-                    "description": "The Notify Sending Domain Auth mail is sent from; unset uses the Sylphx\ndefault.",
-                    "type": "string"
-                  },
-                  "mfa_required": {
-                    "description": "Require a second factor for every end user.",
-                    "type": "boolean"
-                  },
-                  "passkey_policy": {
-                    "additionalProperties": false,
-                    "description": "Passkey policy; unset enforces nothing.",
-                    "properties": {
-                      "aaguid_allowlist": {
-                        "description": "Allowed authenticator AAGUIDs; empty allows any.",
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      },
-                      "device_bound": {
-                        "description": "Refuse synced (multi-device) passkeys.",
-                        "type": "boolean"
-                      },
-                      "required": {
-                        "description": "Require a passkey for every end user.",
-                        "type": "boolean"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "portal": {
-                    "additionalProperties": false,
-                    "description": "Account Portal origin and branding.",
-                    "properties": {
-                      "custom_domain": {
-                        "description": "A verified Network Domain serving the portal; unset uses the default\norigin.",
-                        "type": "string"
-                      },
-                      "logo_uri": {
-                        "description": "An HTTPS logo URI.",
-                        "type": "string"
-                      },
-                      "primary_color": {
-                        "description": "The primary color, `#rrggbb`.",
-                        "type": "string"
-                      },
-                      "product_title": {
-                        "description": "The product name shown to end users.",
-                        "type": "string"
-                      },
-                      "sylphx_branding": {
-                        "description": "Show Sylphx branding.",
-                        "type": "boolean"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "session_policy": {
-                    "additionalProperties": false,
-                    "description": "Session limits.",
-                    "properties": {
-                      "absolute_timeout": {
-                        "description": "Revoke this long after sign-in regardless of use; default 90d.",
-                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
-                        "type": "string"
-                      },
-                      "fingerprint_binding": {
-                        "description": "Bind sessions to network and agent; a mismatch demands step-up.",
-                        "type": "boolean"
-                      },
-                      "idle_timeout": {
-                        "description": "Revoke after this long without use; default 30d.",
-                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
-                        "type": "string"
-                      },
-                      "max_concurrent_sessions": {
-                        "description": "Concurrent sessions per end user; excess sessions are revoked, oldest\nfirst. 0 is unlimited.",
-                        "format": "int32",
-                        "minimum": 0,
-                        "type": "integer"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "social_providers": {
-                    "description": "Social sign-in: one entry per provider Sylphx serves (`google`, `github`,\n`apple`), whether it is on, and whether end users can use it now. An\nupdate changes only the providers it lists; the others keep their state.\nWithout any change Google is on through Sylphx's shared client, when\nSylphx has one. The provider's credentials (the shared client, or your\nown client id and secret) are set with the instance's\n`sign-in-providers:put`: a client secret never passes through this\nresource.",
-                    "items": {
-                      "additionalProperties": false,
-                      "description": "One social sign-in provider of an environment's Auth.",
-                      "properties": {
-                        "enabled": {
-                          "description": "Whether the provider is offered. Turning one on needs credentials:\nSylphx's shared client for that provider, or your own.",
-                          "type": "boolean"
-                        },
-                        "provider": {
-                          "description": "The provider: `google`, `github` or `apple`.",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "provider"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
-                  },
-                  "test_email_pattern": {
-                    "description": "The address pattern of this environment's test accounts (a regular\nexpression over the whole lower-cased address); unset means the\nenvironment has none. It must end in `@` and one of the environment's\nDNS-verified customer-organization domains, escaped\n(`qa\\+[a-z0-9-]{1,40}@example\\.com`), and must not match\n`probe@example.com`; it is stored as `^(?:<local part>)@<domain>$`. An\nend user is a test account (`synthetic_time`) only when it signed up\nwith a matching address and proved that address by a link or code;\nchanging the pattern never makes an existing end user one.",
-                    "type": "string"
-                  },
-                  "user_sync_database": {
-                    "description": "A Sylphx Data database end users are synced into; unset disables sync.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            },
-            "required": [
-              "spec"
-            ],
-            "type": "object"
-          },
-          "update_mask": {
-            "description": "The fields to write; unset writes every populated field.",
+          "batch_id": {
+            "description": "The batch ID to read back.",
             "type": "string"
           },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
+          "page_size": {
+            "description": "At most this many records; default 50, clamped to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment that owns the batch.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
           }
         },
         "required": [
-          "auth_config"
+          "parent",
+          "batch_id"
         ],
         "type": "object"
       },
       "long_running": false,
-      "method_id": "auth.auth_configs.update",
-      "permission": "auth:write",
-      "tool": "auth_auth_configs_update"
+      "method_id": "auth.end_users.list_import_records",
+      "permission": "auth:read",
+      "tool": "auth_end_users_list_import_records"
     },
     {
       "annotations": {
@@ -8503,6 +8464,261 @@
       "method_id": "auth.end_users.find",
       "permission": "auth:read",
       "tool": "auth_end_users_find"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an auth config."
+      },
+      "description": "Gets an auth config.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetAuthConfig.",
+        "properties": {
+          "name": {
+            "description": "The name of the auth config to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/AuthConfig"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.auth_configs.get",
+      "permission": "auth:read",
+      "tool": "auth_auth_configs_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates an auth config."
+      },
+      "description": "Updates an auth config.",
+      "effect": "write",
+      "http": "PATCH /v1/{auth_config.name=orgs/*/projects/*/envs/*/auth_configs/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of UpdateAuthConfig.",
+        "properties": {
+          "allow_missing": {
+            "description": "Create the auth config when it does not exist (declarative upsert).",
+            "type": "boolean"
+          },
+          "auth_config": {
+            "additionalProperties": false,
+            "description": "The auth config to update; `name` identifies it.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "`orgs/{org}/projects/{project}/envs/{env}/auth_configs/{auth_config}`.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "auth_methods": {
+                    "description": "Sign-in methods offered to end users.",
+                    "items": {
+                      "description": "A sign-in method or factor.",
+                      "enum": [
+                        "password",
+                        "magic_link",
+                        "email_otp",
+                        "passkey",
+                        "totp",
+                        "oidc",
+                        "saml",
+                        "device"
+                      ],
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "captcha_secret": {
+                    "description": "The CAPTCHA verifier secret, held in Sylphx Secrets; unset disables\nCAPTCHA.",
+                    "type": "string"
+                  },
+                  "lockout_enabled": {
+                    "description": "Progressive lockout by user and IP.",
+                    "type": "boolean"
+                  },
+                  "mail_sending_domain": {
+                    "description": "The Notify Sending Domain Auth mail is sent from; unset uses the Sylphx\ndefault.",
+                    "type": "string"
+                  },
+                  "mfa_required": {
+                    "description": "Require a second factor for every end user.",
+                    "type": "boolean"
+                  },
+                  "passkey_policy": {
+                    "additionalProperties": false,
+                    "description": "Passkey policy; unset enforces nothing.",
+                    "properties": {
+                      "aaguid_allowlist": {
+                        "description": "Allowed authenticator AAGUIDs; empty allows any.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "device_bound": {
+                        "description": "Refuse synced (multi-device) passkeys.",
+                        "type": "boolean"
+                      },
+                      "required": {
+                        "description": "Require a passkey for every end user.",
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "portal": {
+                    "additionalProperties": false,
+                    "description": "Account Portal origin and branding.",
+                    "properties": {
+                      "custom_domain": {
+                        "description": "A verified Network Domain serving the portal; unset uses the default\norigin.",
+                        "type": "string"
+                      },
+                      "logo_uri": {
+                        "description": "An HTTPS logo URI.",
+                        "type": "string"
+                      },
+                      "primary_color": {
+                        "description": "The primary color, `#rrggbb`.",
+                        "type": "string"
+                      },
+                      "product_title": {
+                        "description": "The product name shown to end users.",
+                        "type": "string"
+                      },
+                      "sylphx_branding": {
+                        "description": "Show Sylphx branding.",
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "session_policy": {
+                    "additionalProperties": false,
+                    "description": "Session limits.",
+                    "properties": {
+                      "absolute_timeout": {
+                        "description": "Revoke this long after sign-in regardless of use; default 90d.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "fingerprint_binding": {
+                        "description": "Bind sessions to network and agent; a mismatch demands step-up.",
+                        "type": "boolean"
+                      },
+                      "idle_timeout": {
+                        "description": "Revoke after this long without use; default 30d.",
+                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+                        "type": "string"
+                      },
+                      "max_concurrent_sessions": {
+                        "description": "Concurrent sessions per end user; excess sessions are revoked, oldest\nfirst. 0 is unlimited.",
+                        "format": "int32",
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "social_providers": {
+                    "description": "Social sign-in: one entry per provider Sylphx serves (`google`, `github`,\n`apple`), whether it is on, and whether end users can use it now. An\nupdate changes only the providers it lists; the others keep their state.\nWithout any change Google is on through Sylphx's shared client, when\nSylphx has one. The provider's credentials (the shared client, or your\nown client id and secret) are set with the instance's\n`sign-in-providers:put`: a client secret never passes through this\nresource.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "One social sign-in provider of an environment's Auth.",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether the provider is offered. Turning one on needs credentials:\nSylphx's shared client for that provider, or your own.",
+                          "type": "boolean"
+                        },
+                        "provider": {
+                          "description": "The provider: `google`, `github` or `apple`.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "provider"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "test_email_pattern": {
+                    "description": "The address pattern of this environment's test accounts (a regular\nexpression over the whole lower-cased address); unset means the\nenvironment has none. It must end in `@` and one of the environment's\nDNS-verified customer-organization domains, escaped\n(`qa\\+[a-z0-9-]{1,40}@example\\.com`), and must not match\n`probe@example.com`; it is stored as `^(?:<local part>)@<domain>$`. An\nend user is a test account (`synthetic_time`) only when it signed up\nwith a matching address and proved that address by a link or code;\nchanging the pattern never makes an existing end user one.",
+                    "type": "string"
+                  },
+                  "user_sync_database": {
+                    "description": "A Sylphx Data database end users are synced into; unset disables sync.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to write; unset writes every populated field.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate and return the result without writing anything.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "auth_config"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "auth.auth_configs.update",
+      "permission": "auth:write",
+      "tool": "auth_auth_configs_update"
     },
     {
       "annotations": {

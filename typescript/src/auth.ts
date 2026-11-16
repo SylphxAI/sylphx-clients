@@ -431,6 +431,71 @@ export interface EndUser {
 	readonly syntheticTime?: string
 }
 
+/** Device credential admitted during schema-v1 principal import. */
+export interface EndUserImportDevice {
+	/** Source device identifier unique to this device binding. */
+	id?: string
+	/** Optional device secret; missing invokes existing weak-device rules. */
+	secret?: string
+}
+
+/** Schema-v1 typed principal import payload. */
+export interface EndUserImportInput {
+	/** Immutable source identifiers keyed by namespace; must contain the batch's `key_namespace`. */
+	externalIds?: Record<string, string>
+	/** Optional email address for the imported end user. */
+	email?: string
+	/** Whether `email` was already verified in the source system. */
+	emailVerified?: boolean
+	/** Optional E.164 phone number for the imported end user. */
+	phone?: string
+	/** Whether `phone` was already verified in the source system. */
+	phoneVerified?: boolean
+	/** Optional human-readable display name for the end user. */
+	displayName?: string
+	/** Account state (`active` or `suspended`); unspecified values are refused. */
+	status?: string
+	/** Original source creation timestamp for the imported end user. */
+	createTime?: string
+	/** Optional existing password verifier for the end user. */
+	password?: EndUserImportPassword
+	/** Federated identity provider links held by the end user. */
+	links?: EndUserImportLink[]
+	/** Device credentials bound to the end user. */
+	devices?: EndUserImportDevice[]
+	/** Optional Base32-encoded TOTP secret for MFA enrollment. */
+	totpSecretBase32?: string
+}
+
+/** Federated link admitted during schema-v1 principal import. */
+export interface EndUserImportLink {
+	/** OIDC issuer URL identifying the external identity provider. */
+	issuer?: string
+	/** Subject identifier assigned by the issuer. */
+	subject?: string
+}
+
+/** Existing password verifier admitted during schema-v1 principal import. */
+export interface EndUserImportPassword {
+	/**
+	 * Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,
+	 * bcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.
+	 */
+	format?: string
+	/** Encoded password hash in the declared `format`. */
+	value?: string
+}
+
+/** One decrypted record returned by ListEndUserImportRecords in canonical source_id order. */
+export interface EndUserImportRecord {
+	/** Canonical source ID within the batch's `key_namespace`. */
+	sourceId?: string
+	/** Admitted destination principal ID. */
+	principalId?: string
+	/** Exact canonical typed import input admitted for this principal. */
+	input?: EndUserImportInput
+}
+
 /** The request of FindEndUser. */
 export interface FindEndUserRequest {
 	/** The environment to look in. */
@@ -547,6 +612,33 @@ export interface Identity {
 }
 
 /**
+ * The request of ImportEndUsers.
+ * Schema-v1 principal admission only. This is not an arbitrary source archive:
+ * sessions, shared rows, recovery keys and historical consent are not admitted.
+ * An accepted batch is immutable and atomic. Retention is not verifier authority.
+ */
+export interface ImportEndUsersRequest {
+	/** The environment to import into. */
+	parent: string
+	/** Schema version of the typed principal input; must be 1. */
+	schemaVersion: number
+	/** Unique immutable batch identity within parent; lowercase run-id syntax. */
+	batchId: string
+	/** Namespace of the immutable source principal ID in each external_ids map. */
+	keyNamespace: string
+	/** 1..100 principals. Duplicate source IDs are refused, never collapsed. */
+	users: EndUserImportInput[]
+}
+
+/** The response of ImportEndUsers. */
+export interface ImportEndUsersResponse {
+	/** The admitted batch ID. */
+	batchId?: string
+	/** Number of principals admitted in the batch (1..100). */
+	importedCount?: number
+}
+
+/**
  * An Invitation asks one email address to join a customer organization with
  * roles. It is single-use and expires; accepting needs an end user whose
  * verified email is the invited address, and creates the membership.
@@ -624,6 +716,31 @@ export interface ListEmailDomainsResponse {
 	/** The page. */
 	emailDomains?: EmailDomain[]
 	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** The request of ListEndUserImportRecords. */
+export interface ListEndUserImportRecordsRequest {
+	/** The environment that owns the batch. */
+	parent: string
+	/** The batch ID to read back. */
+	batchId: string
+	/** At most this many records; default 50, clamped to 100. */
+	pageSize?: number
+	/** `next_page_token` of the previous page. */
+	pageToken?: string
+}
+
+/** The response of ListEndUserImportRecords. */
+export interface ListEndUserImportRecordsResponse {
+	/**
+	 * Admitted records in canonical source_id order.
+	 * Fails closed if any admitted principal was erased or ciphertext is unreadable.
+	 */
+	records?: EndUserImportRecord[]
+	/** The admitted batch ID. */
+	batchId?: string
+	/** Pass as `page_token` on the next call; empty at the end. */
 	nextPageToken?: string
 }
 
@@ -1370,6 +1487,25 @@ runtime.registerSchemas({
 		['externalIds', 'external_ids', undefined, 'map'],
 		['syntheticTime', 'synthetic_time'],
 	],
+	'sylphx.auth.v1.EndUserImportDevice': [],
+	'sylphx.auth.v1.EndUserImportInput': [
+		['externalIds', 'external_ids', undefined, 'map'],
+		['emailVerified', 'email_verified'],
+		['phoneVerified', 'phone_verified'],
+		['displayName', 'display_name'],
+		['createTime', 'create_time'],
+		['password', 'password', 'sylphx.auth.v1.EndUserImportPassword'],
+		['links', 'links', 'sylphx.auth.v1.EndUserImportLink'],
+		['devices', 'devices', 'sylphx.auth.v1.EndUserImportDevice'],
+		['totpSecretBase32', 'totp_secret_base32'],
+	],
+	'sylphx.auth.v1.EndUserImportLink': [],
+	'sylphx.auth.v1.EndUserImportPassword': [],
+	'sylphx.auth.v1.EndUserImportRecord': [
+		['sourceId', 'source_id'],
+		['principalId', 'principal_id'],
+		['input', 'input', 'sylphx.auth.v1.EndUserImportInput'],
+	],
 	'sylphx.auth.v1.FindEndUserRequest': [
 		['externalId', 'external_id'],
 	],
@@ -1391,6 +1527,16 @@ runtime.registerSchemas({
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['linkTime', 'link_time'],
 		['lastUseTime', 'last_use_time'],
+	],
+	'sylphx.auth.v1.ImportEndUsersRequest': [
+		['schemaVersion', 'schema_version'],
+		['batchId', 'batch_id'],
+		['keyNamespace', 'key_namespace'],
+		['users', 'users', 'sylphx.auth.v1.EndUserImportInput'],
+	],
+	'sylphx.auth.v1.ImportEndUsersResponse': [
+		['batchId', 'batch_id'],
+		['importedCount', 'imported_count'],
 	],
 	'sylphx.auth.v1.Invitation': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -1415,6 +1561,16 @@ runtime.registerSchemas({
 	],
 	'sylphx.auth.v1.ListEmailDomainsResponse': [
 		['emailDomains', 'email_domains', 'sylphx.auth.v1.EmailDomain'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.auth.v1.ListEndUserImportRecordsRequest': [
+		['batchId', 'batch_id'],
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.auth.v1.ListEndUserImportRecordsResponse': [
+		['records', 'records', 'sylphx.auth.v1.EndUserImportRecord'],
+		['batchId', 'batch_id'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.auth.v1.ListEndUsersRequest': [
@@ -1621,10 +1777,10 @@ runtime.registerSchemas({
  * Namespace of Sylphx Auth on `Sylphx`.
  */
 export class AuthApi {
-	/** The `auth_configs` collection. */
-	readonly authConfigs: AuthConfigsCollection
 	/** The `end_users` collection. */
 	readonly endUsers: EndUsersCollection
+	/** The `auth_configs` collection. */
+	readonly authConfigs: AuthConfigsCollection
 	/** The `sessions` collection. */
 	readonly sessions: SessionsCollection
 	/** The `identities` collection. */
@@ -1645,8 +1801,8 @@ export class AuthApi {
 	readonly oauthClients: OauthClientsCollection
 
 	constructor(client: runtime.Client) {
-		this.authConfigs = new AuthConfigsCollection(client)
 		this.endUsers = new EndUsersCollection(client)
+		this.authConfigs = new AuthConfigsCollection(client)
 		this.sessions = new SessionsCollection(client)
 		this.identities = new IdentitiesCollection(client)
 		this.customerOrganizations = new CustomerOrganizationsCollection(client)
@@ -1659,56 +1815,47 @@ export class AuthApi {
 	}
 }
 
-/** `auth_configs` of Sylphx Auth: Resource type `auth.sylphx.com/AuthConfig`. */
-export class AuthConfigsCollection {
-	private readonly client: runtime.Client
-
-	constructor(client: runtime.Client) {
-		this.client = client
-	}
-
-	/**
-	 * Gets an auth config.
-	 *
-	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/auth_configs/*}` · permission `auth:read` · effect `read`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
-	 */
-	async get(request: GetAuthConfigRequest): Promise<AuthConfig> {
-		return this.client.call<AuthConfig>({
-			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/auth_configs/*', 'name')}`,
-			responseType: 'sylphx.auth.v1.AuthConfig',
-			mutation: false,
-		})
-	}
-
-	/**
-	 * Updates an auth config.
-	 *
-	 * `PATCH /v1/{auth_config.name=orgs/*\/projects/*\/envs/*\/auth_configs/*}` · permission `auth:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
-	 */
-	async update(request: UpdateAuthConfigRequest): Promise<AuthConfig> {
-		return this.client.call<AuthConfig>({
-			method: 'PATCH',
-			path: `/v1/${runtime.pathParam(request.authConfig?.name, 'orgs/*/projects/*/envs/*/auth_configs/*', 'auth_config.name')}`,
-			query: { update_mask: request.updateMask, allow_missing: request.allowMissing, validate_only: request.validateOnly },
-			body: request.authConfig ?? {},
-			bodyType: 'sylphx.auth.v1.AuthConfig',
-			responseType: 'sylphx.auth.v1.AuthConfig',
-			mutation: true,
-		})
-	}
-}
-
 /** `end_users` of Sylphx Auth: Resource type `auth.sylphx.com/EndUser`. */
 export class EndUsersCollection {
 	private readonly client: runtime.Client
 
 	constructor(client: runtime.Client) {
 		this.client = client
+	}
+
+	/**
+	 * Atomically admits an immutable bounded principal import batch.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/end_users:import` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`.
+	 */
+	async import(request: ImportEndUsersRequest): Promise<ImportEndUsersResponse> {
+		return this.client.call<ImportEndUsersResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/end_users:import`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.auth.v1.ImportEndUsersRequest',
+			responseType: 'sylphx.auth.v1.ImportEndUsersResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Returns an admitted import batch in canonical source_id order, including sensitive verifier input.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/end_users:listImportRecords` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async listImportRecords(request: ListEndUserImportRecordsRequest): Promise<ListEndUserImportRecordsResponse> {
+		return this.client.call<ListEndUserImportRecordsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/end_users:listImportRecords`,
+			query: { batch_id: request.batchId, page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.auth.v1.ListEndUserImportRecordsResponse',
+			mutation: false,
+		})
 	}
 
 	/**
@@ -1919,6 +2066,50 @@ export class EndUsersCollection {
 			query: { namespace: request.namespace, external_id: request.externalId },
 			responseType: 'sylphx.auth.v1.FindEndUserResponse',
 			mutation: false,
+		})
+	}
+}
+
+/** `auth_configs` of Sylphx Auth: Resource type `auth.sylphx.com/AuthConfig`. */
+export class AuthConfigsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets an auth config.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/auth_configs/*}` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetAuthConfigRequest): Promise<AuthConfig> {
+		return this.client.call<AuthConfig>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/auth_configs/*', 'name')}`,
+			responseType: 'sylphx.auth.v1.AuthConfig',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Updates an auth config.
+	 *
+	 * `PATCH /v1/{auth_config.name=orgs/*\/projects/*\/envs/*\/auth_configs/*}` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async update(request: UpdateAuthConfigRequest): Promise<AuthConfig> {
+		return this.client.call<AuthConfig>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.authConfig?.name, 'orgs/*/projects/*/envs/*/auth_configs/*', 'auth_config.name')}`,
+			query: { update_mask: request.updateMask, allow_missing: request.allowMissing, validate_only: request.validateOnly },
+			body: request.authConfig ?? {},
+			bodyType: 'sylphx.auth.v1.AuthConfig',
+			responseType: 'sylphx.auth.v1.AuthConfig',
+			mutation: true,
 		})
 	}
 }

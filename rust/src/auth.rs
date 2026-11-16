@@ -920,6 +920,152 @@ pub struct EndUser {
     pub synthetic_time: String,
 }
 
+/// Device credential admitted during schema-v1 principal import.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct EndUserImportDevice {
+    /// Source device identifier unique to this device binding.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// Optional device secret; missing invokes existing weak-device rules.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secret: Option<String>,
+}
+
+/// Schema-v1 typed principal import payload.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct EndUserImportInput {
+    /// Immutable source identifiers keyed by namespace; must contain the batch's `key_namespace`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "externalIds"
+    )]
+    pub external_ids: std::collections::BTreeMap<String, String>,
+    /// Optional email address for the imported end user.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    /// Whether `email` was already verified in the source system.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "emailVerified"
+    )]
+    pub email_verified: bool,
+    /// Optional E.164 phone number for the imported end user.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+    /// Whether `phone` was already verified in the source system.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "phoneVerified"
+    )]
+    pub phone_verified: bool,
+    /// Optional human-readable display name for the end user.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "displayName"
+    )]
+    pub display_name: Option<String>,
+    /// Account state (`active` or `suspended`); unspecified values are refused.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub status: String,
+    /// Original source creation timestamp for the imported end user.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// Optional existing password verifier for the end user.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<EndUserImportPassword>,
+    /// Federated identity provider links held by the end user.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<EndUserImportLink>,
+    /// Device credentials bound to the end user.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub devices: Vec<EndUserImportDevice>,
+    /// Optional Base32-encoded TOTP secret for MFA enrollment.
+    ///
+    /// Field behavior: `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "totpSecretBase32"
+    )]
+    pub totp_secret_base32: Option<String>,
+}
+
+/// Federated link admitted during schema-v1 principal import.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct EndUserImportLink {
+    /// OIDC issuer URL identifying the external identity provider.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub issuer: String,
+    /// Subject identifier assigned by the issuer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub subject: String,
+}
+
+/// Existing password verifier admitted during schema-v1 principal import.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct EndUserImportPassword {
+    /// Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,
+    /// bcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub format: String,
+    /// Encoded password hash in the declared `format`.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub value: String,
+}
+
+/// One decrypted record returned by ListEndUserImportRecords in canonical source_id order.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct EndUserImportRecord {
+    /// Canonical source ID within the batch's `key_namespace`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceId"
+    )]
+    pub source_id: String,
+    /// Admitted destination principal ID.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "principalId"
+    )]
+    pub principal_id: String,
+    /// Exact canonical typed import input admitted for this principal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input: Option<EndUserImportInput>,
+}
+
 /// The request of FindEndUser.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1134,6 +1280,72 @@ pub struct Identity {
     pub last_use_time: String,
 }
 
+/// The request of ImportEndUsers.
+/// Schema-v1 principal admission only. This is not an arbitrary source archive:
+/// sessions, shared rows, recovery keys and historical consent are not admitted.
+/// An accepted batch is immutable and atomic. Retention is not verifier authority.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ImportEndUsersRequest {
+    /// The environment to import into.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Schema version of the typed principal input; must be 1.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "schemaVersion"
+    )]
+    pub schema_version: i32,
+    /// Unique immutable batch identity within parent; lowercase run-id syntax.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "batchId"
+    )]
+    pub batch_id: String,
+    /// Namespace of the immutable source principal ID in each external_ids map.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "keyNamespace"
+    )]
+    pub key_namespace: String,
+    /// 1..100 principals. Duplicate source IDs are refused, never collapsed.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<EndUserImportInput>,
+}
+
+/// The response of ImportEndUsers.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ImportEndUsersResponse {
+    /// The admitted batch ID.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "batchId"
+    )]
+    pub batch_id: String,
+    /// Number of principals admitted in the batch (1..100).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "importedCount"
+    )]
+    pub imported_count: i32,
+}
+
 /// An Invitation asks one email address to join a customer organization with
 /// roles. It is single-use and expires; accepting needs an end user whose
 /// verified email is the invited address, and creates the membership.
@@ -1313,6 +1525,64 @@ pub struct ListEmailDomainsResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "emailDomains")]
     pub email_domains: Vec<EmailDomain>,
     /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// The request of ListEndUserImportRecords.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListEndUserImportRecordsRequest {
+    /// The environment that owns the batch.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The batch ID to read back.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "batchId"
+    )]
+    pub batch_id: String,
+    /// At most this many records; default 50, clamped to 100.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// `next_page_token` of the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListEndUserImportRecords.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListEndUserImportRecordsResponse {
+    /// Admitted records in canonical source_id order.
+    /// Fails closed if any admitted principal was erased or ciphertext is unreadable.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub records: Vec<EndUserImportRecord>,
+    /// The admitted batch ID.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "batchId"
+    )]
+    pub batch_id: String,
+    /// Pass as `page_token` on the next call; empty at the end.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -3245,16 +3515,16 @@ pub struct AuthApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> AuthApi<'a, T> {
-    /// The `auth_configs` collection.
-    pub fn auth_configs(&self) -> AuthConfigsCollection<'a, T> {
-        AuthConfigsCollection {
+    /// The `end_users` collection.
+    pub fn end_users(&self) -> EndUsersCollection<'a, T> {
+        EndUsersCollection {
             client: self.client,
         }
     }
 
-    /// The `end_users` collection.
-    pub fn end_users(&self) -> EndUsersCollection<'a, T> {
-        EndUsersCollection {
+    /// The `auth_configs` collection.
+    pub fn auth_configs(&self) -> AuthConfigsCollection<'a, T> {
+        AuthConfigsCollection {
             client: self.client,
         }
     }
@@ -3323,30 +3593,55 @@ impl<'a, T: crate::runtime::Transport> AuthApi<'a, T> {
     }
 }
 
-/// `auth_configs` of Sylphx Auth: Resource type `auth.sylphx.com/AuthConfig`.
-pub struct AuthConfigsCollection<'a, T> {
+/// `end_users` of Sylphx Auth: Resource type `auth.sylphx.com/EndUser`.
+pub struct EndUsersCollection<'a, T> {
     client: &'a crate::runtime::Client<T>,
 }
 
-impl<'a, T: crate::runtime::Transport> AuthConfigsCollection<'a, T> {
-    /// Gets an auth config.
+impl<'a, T: crate::runtime::Transport> EndUsersCollection<'a, T> {
+    /// Atomically admits an immutable bounded principal import batch.
     ///
-    /// `GET /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}` · permission `auth:read` · effect `read`
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/end_users:import` · permission `auth:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
-    pub async fn get(
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_ALREADY_EXISTS`.
+    pub async fn import(
         &self,
-        request: GetAuthConfigRequest,
-    ) -> Result<AuthConfig, crate::runtime::Error> {
+        request: ImportEndUsersRequest,
+    ) -> Result<ImportEndUsersResponse, crate::runtime::Error> {
         let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/auth_configs/*",
-                "name"
-            )?
+            "/v1/{}/end_users:import",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
         );
         let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Returns an admitted import batch in canonical source_id order, including sensitive verifier input.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/end_users:listImportRecords` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list_import_records(
+        &self,
+        request: ListEndUserImportRecordsRequest,
+    ) -> Result<ListEndUserImportRecordsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/end_users:listImportRecords",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("batch_id", &request.batch_id);
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
         let http = crate::runtime::HttpRequest {
             method: "GET",
             path,
@@ -3359,50 +3654,6 @@ impl<'a, T: crate::runtime::Transport> AuthConfigsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Updates an auth config.
-    ///
-    /// `PATCH /v1/{auth_config.name=orgs/*/projects/*/envs/*/auth_configs/*}` · permission `auth:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
-    pub async fn update(
-        &self,
-        request: UpdateAuthConfigRequest,
-    ) -> Result<AuthConfig, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                request
-                    .auth_config
-                    .as_ref()
-                    .map(|v| v.name.as_str())
-                    .unwrap_or(""),
-                "orgs/*/projects/*/envs/*/auth_configs/*",
-                "auth_config.name"
-            )?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("update_mask", &request.update_mask);
-        query.push("allow_missing", &request.allow_missing);
-        query.push("validate_only", &request.validate_only);
-        let http = crate::runtime::HttpRequest {
-            method: "PATCH",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body(&request.auth_config)?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-}
-
-/// `end_users` of Sylphx Auth: Resource type `auth.sylphx.com/EndUser`.
-pub struct EndUsersCollection<'a, T> {
-    client: &'a crate::runtime::Client<T>,
-}
-
-impl<'a, T: crate::runtime::Transport> EndUsersCollection<'a, T> {
     /// Gets an end user.
     ///
     /// `GET /v1/{name=orgs/*/projects/*/envs/*/end_users/*}` · permission `auth:read` · effect `read`
@@ -3752,6 +4003,80 @@ impl<'a, T: crate::runtime::Transport> EndUsersCollection<'a, T> {
             query: query.0,
             body: None,
             mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `auth_configs` of Sylphx Auth: Resource type `auth.sylphx.com/AuthConfig`.
+pub struct AuthConfigsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> AuthConfigsCollection<'a, T> {
+    /// Gets an auth config.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetAuthConfigRequest,
+    ) -> Result<AuthConfig, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/auth_configs/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Updates an auth config.
+    ///
+    /// `PATCH /v1/{auth_config.name=orgs/*/projects/*/envs/*/auth_configs/*}` · permission `auth:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn update(
+        &self,
+        request: UpdateAuthConfigRequest,
+    ) -> Result<AuthConfig, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .auth_config
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/auth_configs/*",
+                "auth_config.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("allow_missing", &request.allow_missing);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.auth_config)?),
+            mutation: true,
             origin: None,
             effect_ids: false,
         };

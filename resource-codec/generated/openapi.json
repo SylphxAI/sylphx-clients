@@ -7859,6 +7859,149 @@
         },
         "type": "object"
       },
+      "sylphx.auth.v1.EndUserImportDevice": {
+        "description": "Device credential admitted during schema-v1 principal import.",
+        "properties": {
+          "id": {
+            "description": "Source device identifier unique to this device binding.",
+            "type": "string"
+          },
+          "secret": {
+            "description": "Optional device secret; missing invokes existing weak-device rules.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.EndUserImportInput": {
+        "description": "Schema-v1 typed principal import payload.",
+        "properties": {
+          "create_time": {
+            "description": "Original source creation timestamp for the imported end user.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "devices": {
+            "description": "Device credentials bound to the end user.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportDevice"
+            },
+            "type": "array"
+          },
+          "display_name": {
+            "description": "Optional human-readable display name for the end user.",
+            "type": "string"
+          },
+          "email": {
+            "description": "Optional email address for the imported end user.",
+            "type": "string"
+          },
+          "email_verified": {
+            "description": "Whether `email` was already verified in the source system.",
+            "type": "boolean"
+          },
+          "external_ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Immutable source identifiers keyed by namespace; must contain the batch's `key_namespace`.",
+            "type": "object"
+          },
+          "links": {
+            "description": "Federated identity provider links held by the end user.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportLink"
+            },
+            "type": "array"
+          },
+          "password": {
+            "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportPassword",
+            "description": "Optional existing password verifier for the end user."
+          },
+          "phone": {
+            "description": "Optional E.164 phone number for the imported end user.",
+            "type": "string"
+          },
+          "phone_verified": {
+            "description": "Whether `phone` was already verified in the source system.",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Account state (`active` or `suspended`); unspecified values are refused.",
+            "type": "string"
+          },
+          "totp_secret_base32": {
+            "description": "Optional Base32-encoded TOTP secret for MFA enrollment.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "required": [
+          "external_ids",
+          "status",
+          "create_time"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.EndUserImportLink": {
+        "description": "Federated link admitted during schema-v1 principal import.",
+        "properties": {
+          "issuer": {
+            "description": "OIDC issuer URL identifying the external identity provider.",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Subject identifier assigned by the issuer.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuer",
+          "subject"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.EndUserImportPassword": {
+        "description": "Existing password verifier admitted during schema-v1 principal import.",
+        "properties": {
+          "format": {
+            "description": "Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,\nbcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.",
+            "type": "string"
+          },
+          "value": {
+            "description": "Encoded password hash in the declared `format`.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "required": [
+          "format",
+          "value"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.EndUserImportRecord": {
+        "description": "One decrypted record returned by ListEndUserImportRecords in canonical source_id order.",
+        "properties": {
+          "input": {
+            "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportInput",
+            "description": "Exact canonical typed import input admitted for this principal."
+          },
+          "principal_id": {
+            "description": "Admitted destination principal ID.",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "Canonical source ID within the batch's `key_namespace`.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.auth.v1.EndUserState": {
         "description": "The lifecycle state of an end user.",
         "enum": [
@@ -8123,6 +8266,59 @@
         ],
         "type": "string"
       },
+      "sylphx.auth.v1.ImportEndUsersRequest": {
+        "description": "The request of ImportEndUsers.\nSchema-v1 principal admission only. This is not an arbitrary source archive:\nsessions, shared rows, recovery keys and historical consent are not admitted.\nAn accepted batch is immutable and atomic. Retention is not verifier authority.",
+        "properties": {
+          "batch_id": {
+            "description": "Unique immutable batch identity within parent; lowercase run-id syntax.",
+            "type": "string"
+          },
+          "key_namespace": {
+            "description": "Namespace of the immutable source principal ID in each external_ids map.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to import into.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          },
+          "schema_version": {
+            "description": "Schema version of the typed principal input; must be 1.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "users": {
+            "description": "1..100 principals. Duplicate source IDs are refused, never collapsed.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "parent",
+          "schema_version",
+          "batch_id",
+          "key_namespace",
+          "users"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.ImportEndUsersResponse": {
+        "description": "The response of ImportEndUsers.",
+        "properties": {
+          "batch_id": {
+            "description": "The admitted batch ID.",
+            "type": "string"
+          },
+          "imported_count": {
+            "description": "Number of principals admitted in the batch (1..100).",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.auth.v1.Invitation": {
         "description": "An Invitation asks one email address to join a customer organization with\nroles. It is single-use and expires; accepting needs an end user whose\nverified email is the invited address, and creates the membership.",
         "properties": {
@@ -8301,6 +8497,55 @@
           "next_page_token": {
             "description": "The token of the next page; empty on the last page.",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.auth.v1.ListEndUserImportRecordsRequest": {
+        "description": "The request of ListEndUserImportRecords.",
+        "properties": {
+          "batch_id": {
+            "description": "The batch ID to read back.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many records; default 50, clamped to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment that owns the batch.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/EndUser"
+          }
+        },
+        "required": [
+          "parent",
+          "batch_id"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.ListEndUserImportRecordsResponse": {
+        "description": "The response of ListEndUserImportRecords.",
+        "properties": {
+          "batch_id": {
+            "description": "The admitted batch ID.",
+            "type": "string"
+          },
+          "next_page_token": {
+            "description": "Pass as `page_token` on the next call; empty at the end.",
+            "type": "string"
+          },
+          "records": {
+            "description": "Admitted records in canonical source_id order.\nFails closed if any admitted principal was erased or ciphertext is unreadable.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportRecord"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -85736,6 +85981,230 @@
           "RESOURCE_NOT_FOUND"
         ],
         "x-sylphx-method": "auth.end_users.find",
+        "x-sylphx-permission": "auth:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/end_users:import": {
+      "post": {
+        "description": "Atomically admits an immutable bounded principal import batch.",
+        "operationId": "auth_end_users_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "batch_id": {
+                    "description": "Unique immutable batch identity within parent; lowercase run-id syntax.",
+                    "type": "string"
+                  },
+                  "key_namespace": {
+                    "description": "Namespace of the immutable source principal ID in each external_ids map.",
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "description": "Schema version of the typed principal input; must be 1.",
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "users": {
+                    "description": "1..100 principals. Duplicate source IDs are refused, never collapsed.",
+                    "items": {
+                      "$ref": "#/components/schemas/sylphx.auth.v1.EndUserImportInput"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "batch_id",
+                  "key_namespace",
+                  "users"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.ImportEndUsersResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Atomically admits an immutable bounded principal import batch.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_ALREADY_EXISTS"
+        ],
+        "x-sylphx-method": "auth.end_users.import",
+        "x-sylphx-permission": "auth:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/end_users:listImportRecords": {
+      "get": {
+        "description": "Returns an admitted import batch in canonical source_id order, including sensitive verifier input.",
+        "operationId": "auth_end_users_list_import_records",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The batch ID to read back.",
+            "in": "query",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many records; default 50, clamped to 100.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_page_token` of the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.ListEndUserImportRecordsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Returns an admitted import batch in canonical source_id order, including sensitive verifier input.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_NOT_FOUND",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "auth.end_users.list_import_records",
         "x-sylphx-permission": "auth:read",
         "x-sylphx-stage": "preview"
       }
