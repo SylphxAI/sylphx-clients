@@ -511,6 +511,11 @@
             "description": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
             "type": "string"
           },
+          "synthetic_ttl": {
+            "description": "Marks the project synthetic (a test, proof, probe or fixture) and how\nlong it lives: whole hours in seconds, from 3600s to 2592000s (30 days),\nfor example 86400s for a day. Once that has passed, the\nproject is retired: marked pending deletion for a recovery window, then\ndeleted only if it is quiet and holds no unbacked data. Unset is an\nordinary project, which never expires.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "type": "string"
+          },
           "validate_only": {
             "description": "Validate and return the result without writing anything.",
             "type": "boolean"
@@ -55795,6 +55800,11 @@
           },
           "region": {
             "description": "The region the project lives in for its whole life. A region that cannot\ntake new projects is refused, never replaced. Unset uses the default region.",
+            "type": "string"
+          },
+          "synthetic_ttl": {
+            "description": "Marks the project synthetic (a test, proof, probe or fixture) and how\nlong it lives: whole hours in seconds, from 3600s to 2592000s (30 days),\nfor example 86400s for a day. Once that has passed, the\nproject is retired: marked pending deletion for a recovery window, then\ndeleted only if it is quiet and holds no unbacked data. Unset is an\nordinary project, which never expires.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
           "validate_only": {

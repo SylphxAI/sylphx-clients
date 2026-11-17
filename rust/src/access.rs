@@ -263,6 +263,18 @@ pub struct CreateProjectRequest {
     /// take new projects is refused, never replaced. Unset uses the default region.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub region: String,
+    /// Marks the project synthetic (a test, proof, probe or fixture) and how
+    /// long it lives: whole hours in seconds, from 3600s to 2592000s (30 days),
+    /// for example 86400s for a day. Once that has passed, the
+    /// project is retired: marked pending deletion for a recovery window, then
+    /// deleted only if it is quiet and holds no unbacked data. Unset is an
+    /// ordinary project, which never expires.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "syntheticTtl"
+    )]
+    pub synthetic_ttl: String,
 }
 
 /// The request of DeleteApiKey.
@@ -1881,6 +1893,7 @@ impl<'a, T: crate::runtime::Transport> ProjectsCollection<'a, T> {
         let mut query = crate::runtime::Query::default();
         query.push("validate_only", &request.validate_only);
         query.push("region", &request.region);
+        query.push("synthetic_ttl", &request.synthetic_ttl);
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,

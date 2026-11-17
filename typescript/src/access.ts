@@ -126,6 +126,15 @@ export interface CreateProjectRequest {
 	 * take new projects is refused, never replaced. Unset uses the default region.
 	 */
 	region?: string
+	/**
+	 * Marks the project synthetic (a test, proof, probe or fixture) and how
+	 * long it lives: whole hours in seconds, from 3600s to 2592000s (30 days),
+	 * for example 86400s for a day. Once that has passed, the
+	 * project is retired: marked pending deletion for a recovery window, then
+	 * deleted only if it is quiet and holds no unbacked data. Unset is an
+	 * ordinary project, which never expires.
+	 */
+	syntheticTtl?: string
 }
 
 /** The request of DeleteApiKey. */
@@ -652,6 +661,7 @@ runtime.registerSchemas({
 	'sylphx.access.v1.CreateProjectRequest': [
 		['project', 'project', 'sylphx.access.v1.Project'],
 		['validateOnly', 'validate_only'],
+		['syntheticTtl', 'synthetic_ttl'],
 	],
 	'sylphx.access.v1.DeleteApiKeyRequest': [
 		['validateOnly', 'validate_only'],
@@ -1030,7 +1040,7 @@ export class ProjectsCollection {
 		return this.client.call<Project>({
 			method: 'POST',
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/projects`,
-			query: { validate_only: request.validateOnly, region: request.region },
+			query: { validate_only: request.validateOnly, region: request.region, synthetic_ttl: request.syntheticTtl },
 			body: request.project ?? {},
 			bodyType: 'sylphx.access.v1.Project',
 			responseType: 'sylphx.access.v1.Project',

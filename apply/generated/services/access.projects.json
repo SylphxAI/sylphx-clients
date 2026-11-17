@@ -25,7 +25,8 @@
           "http": {
             "query_params": [
               "validate_only",
-              "region"
+              "region",
+              "synthetic_ttl"
             ]
           },
           "id": "access.projects.create",

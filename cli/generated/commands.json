@@ -364,6 +364,12 @@
                   "flag": "--region",
                   "summary": "The region the project lives in for its whole life. A region that cannot take new projects is refused, never replaced. Unset uses the default region.",
                   "type": "string"
+                },
+                {
+                  "field": "synthetic_ttl",
+                  "flag": "--synthetic-ttl",
+                  "summary": "Marks the project synthetic (a test, proof, probe or fixture) and how long it lives: whole hours in seconds, from 3600s to 2592000s (30 days), for example 86400s for a day. Once that has passed, the project is retired: marked pending deletion for a recovery window, then deleted only if it is quiet and holds no unbacked data. Unset is an ordinary project, which never expires.",
+                  "type": "duration"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*}/projects",
