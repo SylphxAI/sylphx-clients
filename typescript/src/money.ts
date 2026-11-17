@@ -535,6 +535,23 @@ export interface CheckoutSession {
 	readonly processorSubscriptionId?: string
 	/** Mirrored CustomerSubscription resource name, when mode is `subscription`. */
 	readonly customerSubscription?: string
+	/** Whether this checkout was created without an account. Remains true after claim. */
+	readonly guest?: boolean
+	/** Whether its guest ownership has been bound to an account. False is explicit. */
+	readonly claimed?: boolean
+	/** The end-user id that claimed this checkout; empty before claim. */
+	readonly claimedBy?: string
+	/** When ownership was claimed. The wire name preserves the served claim API. */
+	readonly claimedAt?: string
+	/** Possession proof used for the claim: claim_secret or verified_email. */
+	readonly claimMethod?: string
+	/**
+	 * Browser possession proof, returned only by create and its authorized retry
+	 * while active. Never returned by get, list, or claim; never stored in plaintext.
+	 */
+	readonly claimSecret?: string
+	/** When the browser possession proof expires. The existing wire name is retained. */
+	readonly claimSecretExpiresAt?: string
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -3338,6 +3355,11 @@ runtime.registerSchemas({
 		['processorInvoiceId', 'processor_invoice_id'],
 		['processorSubscriptionId', 'processor_subscription_id'],
 		['customerSubscription', 'customer_subscription'],
+		['claimedBy', 'claimed_by'],
+		['claimedAt', 'claimed_at'],
+		['claimMethod', 'claim_method'],
+		['claimSecret', 'claim_secret'],
+		['claimSecretExpiresAt', 'claim_secret_expires_at'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],

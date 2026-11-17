@@ -28252,6 +28252,39 @@
             "type": "string",
             "x-sylphx-immutable": true
           },
+          "claim_method": {
+            "description": "Possession proof used for the claim: claim_secret or verified_email.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "claim_secret": {
+            "description": "Browser possession proof, returned only by create and its authorized retry\nwhile active. Never returned by get, list, or claim; never stored in plaintext.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "claim_secret_expires_at": {
+            "description": "When the browser possession proof expires. The existing wire name is retained.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "claimed": {
+            "description": "Whether its guest ownership has been bound to an account. False is explicit.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "claimed_at": {
+            "description": "When ownership was claimed. The wire name preserves the served claim API.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "claimed_by": {
+            "description": "The end-user id that claimed this checkout; empty before claim.",
+            "readOnly": true,
+            "type": "string"
+          },
           "consent": {
             "$ref": "#/components/schemas/sylphx.money.v1.CheckoutConsent",
             "description": "The consent the buyer gave, recorded once the processor reports it.",
@@ -28287,6 +28320,11 @@
             "format": "date-time",
             "readOnly": true,
             "type": "string"
+          },
+          "guest": {
+            "description": "Whether this checkout was created without an account. Remains true after claim.",
+            "readOnly": true,
+            "type": "boolean"
           },
           "line_items": {
             "description": "What is bought: catalog prices by lookup key. One recurring price makes a\nsubscription; one-time prices make an order.",

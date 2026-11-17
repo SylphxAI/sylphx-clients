@@ -1185,6 +1185,62 @@ pub struct CheckoutSession {
         alias = "customerSubscription"
     )]
     pub customer_subscription: String,
+    /// Whether this checkout was created without an account. Remains true after claim.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guest: Option<bool>,
+    /// Whether its guest ownership has been bound to an account. False is explicit.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claimed: Option<bool>,
+    /// The end-user id that claimed this checkout; empty before claim.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "claimedBy"
+    )]
+    pub claimed_by: String,
+    /// When ownership was claimed. The wire name preserves the served claim API.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "claimedAt"
+    )]
+    pub claimed_at: String,
+    /// Possession proof used for the claim: claim_secret or verified_email.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "claimMethod"
+    )]
+    pub claim_method: String,
+    /// Browser possession proof, returned only by create and its authorized retry
+    /// while active. Never returned by get, list, or claim; never stored in plaintext.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "claimSecret"
+    )]
+    pub claim_secret: String,
+    /// When the browser possession proof expires. The existing wire name is retained.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "claimSecretExpiresAt"
+    )]
+    pub claim_secret_expires_at: String,
 }
 
 /// The request of ClientVerifyStorePurchase.
