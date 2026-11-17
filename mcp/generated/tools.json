@@ -31249,6 +31249,12 @@
             "additionalProperties": false,
             "description": "The portal session to create; only caller-writable fields are read.",
             "properties": {
+              "customer_subscription": {
+                "description": "Optional owned Stripe subscription whose processor customer opens the portal.\nOmitted: use the subject's original customer binding.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "money.sylphx.com/CustomerSubscription"
+              },
               "meta": {
                 "additionalProperties": false,
                 "description": "Resource metadata.",

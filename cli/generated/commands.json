@@ -22459,6 +22459,12 @@
                   "required": true,
                   "summary": "Where the portal's back link goes. HTTPS only.",
                   "type": "string"
+                },
+                {
+                  "field": "portal_session.customer_subscription",
+                  "flag": "--customer-subscription",
+                  "summary": "Optional owned Stripe subscription whose processor customer opens the portal. Omitted: use the subject's original customer binding.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/portal_sessions",

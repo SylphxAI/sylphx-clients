@@ -30729,6 +30729,12 @@
       "sylphx.money.v1.PortalSession": {
         "description": "A Portal Session is a hosted page where a subject manages its\nsubscriptions, payment method, and invoices.",
         "properties": {
+          "customer_subscription": {
+            "description": "Optional owned Stripe subscription whose processor customer opens the portal.\nOmitted: use the subject's original customer binding.",
+            "type": "string",
+            "x-sylphx-immutable": true,
+            "x-sylphx-resource-reference": "money.sylphx.com/CustomerSubscription"
+          },
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
             "description": "Resource metadata."

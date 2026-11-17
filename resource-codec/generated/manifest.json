@@ -93575,6 +93575,26 @@
         },
         {
           "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "Optional owned Stripe subscription whose processor customer opens the portal.\nOmitted: use the subject's original customer binding.",
+          "filterable": false,
+          "name": "customer_subscription",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "money.sylphx.com/CustomerSubscription",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",

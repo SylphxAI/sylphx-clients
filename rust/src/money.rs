@@ -3736,6 +3736,16 @@ pub struct PortalSession {
         alias = "returnUrl"
     )]
     pub return_url: String,
+    /// Optional owned Stripe subscription whose processor customer opens the portal.
+    /// Omitted: use the subject's original customer binding.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "customerSubscription"
+    )]
+    pub customer_subscription: String,
     /// The hosted page; valid for a few minutes.
     ///
     /// Field behavior: `output_only`.

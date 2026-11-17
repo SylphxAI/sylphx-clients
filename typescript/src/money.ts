@@ -1744,6 +1744,11 @@ export interface PortalSession {
 	subject?: Subject
 	/** Where the portal's back link goes. HTTPS only. */
 	returnUrl?: string
+	/**
+	 * Optional owned Stripe subscription whose processor customer opens the portal.
+	 * Omitted: use the subject's original customer binding.
+	 */
+	customerSubscription?: string
 	/** The hosted page; valid for a few minutes. */
 	readonly url?: string
 }
@@ -3645,6 +3650,7 @@ runtime.registerSchemas({
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
 		['returnUrl', 'return_url'],
+		['customerSubscription', 'customer_subscription'],
 	],
 	'sylphx.money.v1.Price': [
 		['recurringInterval', 'recurring_interval'],

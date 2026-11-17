@@ -94,6 +94,25 @@
     },
     {
       "behaviors": [
+        "OPTIONAL",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "customer_subscription",
+      "number": 12,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "money.sylphx.com/CustomerSubscription",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
         "OUTPUT_ONLY"
       ],
       "cli_flag": "",
