@@ -239,6 +239,13 @@ export interface CatalogSpec {
 	 * personal data: the public catalog exposes this field.
 	 */
 	applicationData?: Record<string, unknown>
+	/**
+	 * How an end user's checkout currency is chosen. Wallets and the ledger hold
+	 * every currency in every mode; this governs only what an end user is
+	 * charged in. Unset means `CURRENCY_MODE_MULTI_CURRENCY`. Any other mode
+	 * needs a `default_currency` on every active price.
+	 */
+	currencyMode?: CurrencyMode
 }
 
 /** CatalogStatus is the observed state of a Catalog. */
@@ -3164,6 +3171,12 @@ export interface VerifyStorePurchaseResponse {
 	transferred?: boolean
 }
 
+/**
+ * CurrencyMode is how an end user's checkout currency is chosen. A merchant's
+ * own server, with a secret key, always chooses the currency itself.
+ */
+export type CurrencyMode = 'multi_currency' | 'country_locked' | 'single_asset' | (string & {})
+
 /** FeatureKind is how a feature is granted. */
 export type FeatureKind = 'boolean' | 'limit' | (string & {})
 
@@ -3246,6 +3259,7 @@ runtime.registerSchemas({
 		['clientGrantTtl', 'client_grant_ttl'],
 		['refundClawBack', 'refund_claw_back'],
 		['applicationData', 'application_data', undefined, 'json'],
+		['currencyMode', 'currency_mode'],
 	],
 	'sylphx.money.v1.CatalogStatus': [
 		['observedGeneration', 'observed_generation'],

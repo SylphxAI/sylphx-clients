@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.money.v1.CurrencyMode",
+  "package": "sylphx.money.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "CURRENCY_MODE_MULTI_CURRENCY",
+      "wire": "multi_currency"
+    },
+    {
+      "number": 2,
+      "proto_name": "CURRENCY_MODE_COUNTRY_LOCKED",
+      "wire": "country_locked"
+    },
+    {
+      "number": 3,
+      "proto_name": "CURRENCY_MODE_SINGLE_ASSET",
+      "wire": "single_asset"
+    }
+  ]
+}

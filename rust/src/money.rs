@@ -545,6 +545,16 @@ pub struct CatalogSpec {
         alias = "applicationData"
     )]
     pub application_data: Option<serde_json::Value>,
+    /// How an end user's checkout currency is chosen. Wallets and the ledger hold
+    /// every currency in every mode; this governs only what an end user is
+    /// charged in. Unset means `CURRENCY_MODE_MULTI_CURRENCY`. Any other mode
+    /// needs a `default_currency` on every active price.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "currencyMode"
+    )]
+    pub currency_mode: Option<CurrencyMode>,
 }
 
 /// CatalogStatus is the observed state of a Catalog.
@@ -6999,6 +7009,66 @@ pub struct VerifyStorePurchaseResponse {
     /// to the caller (restore). Always false until restore transfer is served.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub transferred: bool,
+}
+
+/// CurrencyMode is how an end user's checkout currency is chosen. A merchant's
+/// own server, with a secret key, always chooses the currency itself.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum CurrencyMode {
+    /// The buyer may pay in any currency every line's price lists.
+    MultiCurrency,
+    /// The buyer pays in the currency of their verified country when every
+    /// line's price lists it, otherwise in the prices' shared `default_currency`.
+    /// A requested `currency_code` that differs is refused, and a buyer without
+    /// a verified country pays in the default currency.
+    CountryLocked,
+    /// Charged as `CURRENCY_MODE_COUNTRY_LOCKED`; each price's grants credit the
+    /// one asset the storefront sells (for example `CREDITS`).
+    SingleAsset,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl CurrencyMode {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::MultiCurrency => "multi_currency",
+            Self::CountryLocked => "country_locked",
+            Self::SingleAsset => "single_asset",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "multi_currency" => Self::MultiCurrency,
+            "country_locked" => Self::CountryLocked,
+            "single_asset" => Self::SingleAsset,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for CurrencyMode {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CurrencyMode {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for CurrencyMode {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
 }
 
 /// FeatureKind is how a feature is granted.

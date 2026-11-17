@@ -27888,6 +27888,10 @@
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
+          "currency_mode": {
+            "$ref": "#/components/schemas/sylphx.money.v1.CurrencyMode",
+            "description": "How an end user's checkout currency is chosen. Wallets and the ledger hold\nevery currency in every mode; this governs only what an end user is\ncharged in. Unset means `CURRENCY_MODE_MULTI_CURRENCY`. Any other mode\nneeds a `default_currency` on every active price."
+          },
           "features": {
             "description": "What an entitlement can grant.",
             "items": {
@@ -28780,6 +28784,15 @@
           "collection_mode"
         ],
         "type": "object"
+      },
+      "sylphx.money.v1.CurrencyMode": {
+        "description": "CurrencyMode is how an end user's checkout currency is chosen. A merchant's\nown server, with a secret key, always chooses the currency itself.",
+        "enum": [
+          "multi_currency",
+          "country_locked",
+          "single_asset"
+        ],
+        "type": "string"
       },
       "sylphx.money.v1.CustomerSubscription": {
         "description": "A Customer Subscription is a subject's recurring purchase, mirrored from\nthe processor after Money read it back. Money writes it; a caller changes it\nonly through `:cancel` and `:resume`.",

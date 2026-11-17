@@ -3616,6 +3616,31 @@
       ]
     },
     {
+      "doc": "CurrencyMode is how an end user's checkout currency is chosen. A merchant's\nown server, with a secret key, always chooses the currency itself.",
+      "name": "sylphx.money.v1.CurrencyMode",
+      "package": "sylphx.money.v1",
+      "values": [
+        {
+          "doc": "The buyer may pay in any currency every line's price lists.",
+          "number": 1,
+          "proto_name": "CURRENCY_MODE_MULTI_CURRENCY",
+          "wire": "multi_currency"
+        },
+        {
+          "doc": "The buyer pays in the currency of their verified country when every\nline's price lists it, otherwise in the prices' shared `default_currency`.\nA requested `currency_code` that differs is refused, and a buyer without\na verified country pays in the default currency.",
+          "number": 2,
+          "proto_name": "CURRENCY_MODE_COUNTRY_LOCKED",
+          "wire": "country_locked"
+        },
+        {
+          "doc": "Charged as `CURRENCY_MODE_COUNTRY_LOCKED`; each price's grants credit the\none asset the storefront sells (for example `CREDITS`).",
+          "number": 3,
+          "proto_name": "CURRENCY_MODE_SINGLE_ASSET",
+          "wire": "single_asset"
+        }
+      ]
+    },
+    {
       "doc": "FeatureKind is how a feature is granted.",
       "name": "sylphx.money.v1.FeatureKind",
       "package": "sylphx.money.v1",
@@ -85386,6 +85411,25 @@
           "type": {
             "kind": "well_known",
             "wkt": "struct"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "How an end user's checkout currency is chosen. Wallets and the ledger hold\nevery currency in every mode; this governs only what an end user is\ncharged in. Unset means `CURRENCY_MODE_MULTI_CURRENCY`. Any other mode\nneeds a `default_currency` on every active price.",
+          "filterable": false,
+          "name": "currency_mode",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.money.v1.CurrencyMode"
           }
         }
       ],

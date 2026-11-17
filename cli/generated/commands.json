@@ -20872,6 +20872,17 @@
                   "type": "json"
                 },
                 {
+                  "field": "catalog.spec.currency_mode",
+                  "flag": "--spec.currency-mode",
+                  "summary": "How an end user's checkout currency is chosen. Wallets and the ledger hold every currency in every mode; this governs only what an end user is charged in. Unset means `CURRENCY_MODE_MULTI_CURRENCY`. Any other mode needs a `default_currency` on every active price.",
+                  "type": "enum",
+                  "values": [
+                    "multi_currency",
+                    "country_locked",
+                    "single_asset"
+                  ]
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the catalog when it does not exist (declarative upsert).",
