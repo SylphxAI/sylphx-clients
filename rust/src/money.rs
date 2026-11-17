@@ -555,6 +555,15 @@ pub struct CatalogSpec {
         alias = "currencyMode"
     )]
     pub currency_mode: Option<CurrencyMode>,
+    /// In `CURRENCY_MODE_COUNTRY_LOCKED`, the days an end user waits after their
+    /// home currency was bound before a payment from another country may move it.
+    /// The old home currency's wallet must also be empty. Unset means 90.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rehomeCooldownDays"
+    )]
+    pub rehome_cooldown_days: Option<i32>,
 }
 
 /// CatalogStatus is the observed state of a Catalog.

@@ -246,6 +246,12 @@ export interface CatalogSpec {
 	 * needs a `default_currency` on every active price.
 	 */
 	currencyMode?: CurrencyMode
+	/**
+	 * In `CURRENCY_MODE_COUNTRY_LOCKED`, the days an end user waits after their
+	 * home currency was bound before a payment from another country may move it.
+	 * The old home currency's wallet must also be empty. Unset means 90.
+	 */
+	rehomeCooldownDays?: number
 }
 
 /** CatalogStatus is the observed state of a Catalog. */
@@ -3277,6 +3283,7 @@ runtime.registerSchemas({
 		['refundClawBack', 'refund_claw_back'],
 		['applicationData', 'application_data', undefined, 'json'],
 		['currencyMode', 'currency_mode'],
+		['rehomeCooldownDays', 'rehome_cooldown_days'],
 	],
 	'sylphx.money.v1.CatalogStatus': [
 		['observedGeneration', 'observed_generation'],

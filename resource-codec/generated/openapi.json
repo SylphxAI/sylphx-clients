@@ -27909,6 +27909,13 @@
           "refund_claw_back": {
             "description": "Whether a delivered one-time purchase whose money the store or processor\ntakes back (a refund, a void, a chargeback) gives back its goods: its\nentitlements end, and the refund event asks the app to take back the\nassets it granted, up to what the subject still holds. Applies once the\nproject is enabled for take-backs, to refunds dated from then on; unset\nthen means on.",
             "type": "boolean"
+          },
+          "rehome_cooldown_days": {
+            "description": "In `CURRENCY_MODE_COUNTRY_LOCKED`, the days an end user waits after their\nhome currency was bound before a payment from another country may move it.\nThe old home currency's wallet must also be empty. Unset means 90.",
+            "format": "int32",
+            "maximum": 3650,
+            "minimum": 0,
+            "type": "integer"
           }
         },
         "type": "object"
