@@ -447,7 +447,7 @@ mod tests {
 
     fn es256() -> (p256::ecdsa::SigningKey, Jwk) {
         let sk = p256::ecdsa::SigningKey::from_slice(&[7u8; 32]).unwrap();
-        let pt = sk.verifying_key().to_encoded_point(false);
+        let pt = sk.verifying_key().to_sec1_point(false);
         let jwk = Jwk {
             kid: "k1".into(),
             kty: "EC".into(),
