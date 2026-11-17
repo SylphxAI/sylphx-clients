@@ -4,8 +4,9 @@ export interface ContinueSignInOptions {
 	productName: string
 	notice?: string
 	next: string
-	termsUrl: string
-	privacyUrl: string
+	/** Linked in the consent line when set; omitted or `null` shows no link. */
+	termsUrl?: string | null
+	privacyUrl?: string | null
 	providers?: readonly { id: string; name: string; href: string }[]
 	endpoints: {
 		begin: string
