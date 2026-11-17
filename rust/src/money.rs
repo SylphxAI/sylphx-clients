@@ -1087,7 +1087,7 @@ pub struct CheckoutSession {
         alias = "amountTotal"
     )]
     pub amount_total: Option<i64>,
-    /// `unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles.
+    /// `unpaid`, `paid`, `no_payment_required`, or `revoked`; empty before settlement.
     ///
     /// Field behavior: `output_only`.
     #[serde(
@@ -1128,6 +1128,53 @@ pub struct CheckoutSession {
         alias = "bankTransfer"
     )]
     pub bank_transfer: Option<BankTransferInstructions>,
+    /// Tax collected on the checkout session in minor units, when reported.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "amountTax"
+    )]
+    pub amount_tax: Option<i64>,
+    /// Discount applied to the checkout session in minor units, when reported.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "amountDiscount"
+    )]
+    pub amount_discount: Option<i64>,
+    /// Processor invoice id created by this checkout (typically for subscriptions).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "processorInvoiceId"
+    )]
+    pub processor_invoice_id: String,
+    /// Processor subscription id created by this checkout, when mode is `subscription`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "processorSubscriptionId"
+    )]
+    pub processor_subscription_id: String,
+    /// Mirrored CustomerSubscription resource name, when mode is `subscription`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "customerSubscription"
+    )]
+    pub customer_subscription: String,
 }
 
 /// The request of ClientVerifyStorePurchase.
@@ -1698,6 +1745,53 @@ pub struct CustomerSubscription {
         alias = "billingCountryCode"
     )]
     pub billing_country_code: String,
+    /// Upper-case ISO 4217 currency of the latest settled payment, empty when unknown.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "currencyCode"
+    )]
+    pub currency_code: String,
+    /// Minor-unit amount collected on the latest paid invoice, when reported.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "latestPaidAmountMinor"
+    )]
+    pub latest_paid_amount_minor: Option<i64>,
+    /// Processor invoice id of the latest paid subscription charge, empty when none.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "latestInvoiceId"
+    )]
+    pub latest_invoice_id: String,
+    /// Processor payment id (for example Stripe `pi_…`) of the latest paid charge,
+    /// or store transaction id when reported; empty when none.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "latestPaymentId"
+    )]
+    pub latest_payment_id: String,
+    /// Timestamp of the latest settled subscription payment, when reported.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastPaidTime"
+    )]
+    pub last_paid_time: String,
 }
 
 /// The request of DeleteRevenueSource.

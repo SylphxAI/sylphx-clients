@@ -28200,6 +28200,18 @@
             "type": "boolean",
             "x-sylphx-immutable": true
           },
+          "amount_discount": {
+            "description": "Discount applied to the checkout session in minor units, when reported.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "amount_tax": {
+            "description": "Tax collected on the checkout session in minor units, when reported.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
           "amount_total": {
             "description": "The processor's current total in minor units, when it has reported one.",
             "format": "int64",
@@ -28248,6 +28260,11 @@
           },
           "customer_email": {
             "description": "The buyer's email address, once the hosted checkout has collected it.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "customer_subscription": {
+            "description": "Mirrored CustomerSubscription resource name, when mode is `subscription`.",
             "readOnly": true,
             "type": "string"
           },
@@ -28302,7 +28319,12 @@
             "x-sylphx-immutable": true
           },
           "payment_status": {
-            "description": "`unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles.",
+            "description": "`unpaid`, `paid`, `no_payment_required`, or `revoked`; empty before settlement.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processor_invoice_id": {
+            "description": "Processor invoice id created by this checkout (typically for subscriptions).",
             "readOnly": true,
             "type": "string"
           },
@@ -28313,6 +28335,11 @@
           },
           "processor_session_id": {
             "description": "The processor's session id.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processor_subscription_id": {
+            "description": "Processor subscription id created by this checkout, when mode is `subscription`.",
             "readOnly": true,
             "type": "string"
           },
@@ -28762,6 +28789,11 @@
             "readOnly": true,
             "type": "boolean"
           },
+          "currency_code": {
+            "description": "Upper-case ISO 4217 currency of the latest settled payment, empty when unknown.",
+            "readOnly": true,
+            "type": "string"
+          },
           "current_period_end_time": {
             "description": "The end of the paid period.",
             "format": "date-time",
@@ -28775,6 +28807,28 @@
             },
             "readOnly": true,
             "type": "array"
+          },
+          "last_paid_time": {
+            "description": "Timestamp of the latest settled subscription payment, when reported.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "latest_invoice_id": {
+            "description": "Processor invoice id of the latest paid subscription charge, empty when none.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "latest_paid_amount_minor": {
+            "description": "Minor-unit amount collected on the latest paid invoice, when reported.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "latest_payment_id": {
+            "description": "Processor payment id (for example Stripe `pi_…`) of the latest paid charge,\nor store transaction id when reported; empty when none.",
+            "readOnly": true,
+            "type": "string"
           },
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",

@@ -508,7 +508,7 @@ export interface CheckoutSession {
 	readonly shippingAddress?: ShippingAddress
 	/** The processor's current total in minor units, when it has reported one. */
 	readonly amountTotal?: string
-	/** `unpaid`, `paid`, or `revoked`; empty until a one-time checkout settles. */
+	/** `unpaid`, `paid`, `no_payment_required`, or `revoked`; empty before settlement. */
 	readonly paymentStatus?: string
 	/** The processor's live/test mode, once the session has reported it. */
 	readonly livemode?: boolean
@@ -518,6 +518,16 @@ export interface CheckoutSession {
 	paymentMethod?: string
 	/** Frozen beneficiary, amount, reference and bank-issued FPS QR instructions. */
 	readonly bankTransfer?: BankTransferInstructions
+	/** Tax collected on the checkout session in minor units, when reported. */
+	readonly amountTax?: string
+	/** Discount applied to the checkout session in minor units, when reported. */
+	readonly amountDiscount?: string
+	/** Processor invoice id created by this checkout (typically for subscriptions). */
+	readonly processorInvoiceId?: string
+	/** Processor subscription id created by this checkout, when mode is `subscription`. */
+	readonly processorSubscriptionId?: string
+	/** Mirrored CustomerSubscription resource name, when mode is `subscription`. */
+	readonly customerSubscription?: string
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -771,6 +781,19 @@ export interface CustomerSubscription {
 	 * or customer change. Empty when unknown, and for store subscriptions.
 	 */
 	readonly billingCountryCode?: string
+	/** Upper-case ISO 4217 currency of the latest settled payment, empty when unknown. */
+	readonly currencyCode?: string
+	/** Minor-unit amount collected on the latest paid invoice, when reported. */
+	readonly latestPaidAmountMinor?: string
+	/** Processor invoice id of the latest paid subscription charge, empty when none. */
+	readonly latestInvoiceId?: string
+	/**
+	 * Processor payment id (for example Stripe `pi_…`) of the latest paid charge,
+	 * or store transaction id when reported; empty when none.
+	 */
+	readonly latestPaymentId?: string
+	/** Timestamp of the latest settled subscription payment, when reported. */
+	readonly lastPaidTime?: string
 }
 
 /** The request of DeleteRevenueSource. */
@@ -3296,6 +3319,11 @@ runtime.registerSchemas({
 		['processorPaymentId', 'processor_payment_id'],
 		['paymentMethod', 'payment_method'],
 		['bankTransfer', 'bank_transfer', 'sylphx.money.v1.BankTransferInstructions'],
+		['amountTax', 'amount_tax'],
+		['amountDiscount', 'amount_discount'],
+		['processorInvoiceId', 'processor_invoice_id'],
+		['processorSubscriptionId', 'processor_subscription_id'],
+		['customerSubscription', 'customer_subscription'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -3372,6 +3400,11 @@ runtime.registerSchemas({
 		['trialEndTime', 'trial_end_time'],
 		['metadata', 'metadata', undefined, 'json'],
 		['billingCountryCode', 'billing_country_code'],
+		['currencyCode', 'currency_code'],
+		['latestPaidAmountMinor', 'latest_paid_amount_minor'],
+		['latestInvoiceId', 'latest_invoice_id'],
+		['latestPaymentId', 'latest_payment_id'],
+		['lastPaidTime', 'last_paid_time'],
 	],
 	'sylphx.money.v1.DeleteRevenueSourceRequest': [
 		['validateOnly', 'validate_only'],
