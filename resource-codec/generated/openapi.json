@@ -31132,6 +31132,10 @@
             },
             "description": "Store product ids that sell this product, by store (`app_store`,\n`google_play`).",
             "type": "object"
+          },
+          "stored_value": {
+            "description": "A stored-value top-up: each paid unit credits the buyer's Money wallet in\nthe currency its checkout was charged in, with the price's unit amount in\nthat currency (a £8.00 top-up credits 800 GBP minor units). One-time\nprices only and no `grants`; its checkout needs a currency when it starts\n(a `currency_code`, a locking `currency_mode`, or the price's\n`default_currency`) and refuses promotion codes, so the credit is the\nprice paid.",
+            "type": "boolean"
           }
         },
         "required": [

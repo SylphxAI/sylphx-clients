@@ -4232,6 +4232,19 @@ pub struct Product {
         alias = "storeProductAliases"
     )]
     pub store_product_aliases: Vec<StoreProductAlias>,
+    /// A stored-value top-up: each paid unit credits the buyer's Money wallet in
+    /// the currency its checkout was charged in, with the price's unit amount in
+    /// that currency (a £8.00 top-up credits 800 GBP minor units). One-time
+    /// prices only and no `grants`; its checkout needs a currency when it starts
+    /// (a `currency_code`, a locking `currency_mode`, or the price's
+    /// `default_currency`) and refuses promotion codes, so the credit is the
+    /// price paid.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "storedValue"
+    )]
+    pub stored_value: bool,
 }
 
 /// Records statement evidence and confirms only an exact, timely, unambiguous payment.

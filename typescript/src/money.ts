@@ -1952,6 +1952,16 @@ export interface Product {
 	 * A binding may repeat on this product, but never on another product.
 	 */
 	storeProductAliases?: StoreProductAlias[]
+	/**
+	 * A stored-value top-up: each paid unit credits the buyer's Money wallet in
+	 * the currency its checkout was charged in, with the price's unit amount in
+	 * that currency (a £8.00 top-up credits 800 GBP minor units). One-time
+	 * prices only and no `grants`; its checkout needs a currency when it starts
+	 * (a `currency_code`, a locking `currency_mode`, or the price's
+	 * `default_currency`) and refuses promotion codes, so the credit is the
+	 * price paid.
+	 */
+	storedValue?: boolean
 }
 
 /** Records statement evidence and confirms only an exact, timely, unambiguous payment. */
@@ -3763,6 +3773,7 @@ runtime.registerSchemas({
 		['googleplaySku', 'googleplay_sku'],
 		['googleplayPackageName', 'googleplay_package_name'],
 		['storeProductAliases', 'store_product_aliases', 'sylphx.money.v1.StoreProductAlias'],
+		['storedValue', 'stored_value'],
 	],
 	'sylphx.money.v1.RecordBankReceiptRequest': [
 		['checkoutSession', 'checkout_session'],
