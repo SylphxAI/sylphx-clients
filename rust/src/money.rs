@@ -4125,6 +4125,16 @@ pub struct Price {
     /// Localized pricing intent. Unset to author `unit_amounts` directly.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "fxPricing")]
     pub fx_pricing: Option<FxPricing>,
+    /// Feature grants overriding the product for this price.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub features: std::collections::BTreeMap<String, String>,
+    /// Overrides the product cadence. Unset inherits the product cadence.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "grantCadence"
+    )]
+    pub grant_cadence: String,
 }
 
 /// A stored Stripe hint. No payload, customer details, credential or raw error
@@ -4372,6 +4382,13 @@ pub struct Product {
         alias = "storedValue"
     )]
     pub stored_value: bool,
+    /// Default wallet grant cadence for recurring prices: billing_period or monthly.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "grantCadence"
+    )]
+    pub grant_cadence: String,
 }
 
 /// Records statement evidence and confirms only an exact, timely, unambiguous payment.

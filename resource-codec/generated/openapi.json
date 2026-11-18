@@ -31006,9 +31006,20 @@
             "description": "The processor's base currency: an upper-case ISO 4217 code that is a key of\n`unit_amounts`. Unset uses the first currency in code order. Changing it\ncreates a new processor price under the same lookup key, because the base\ncurrency is immutable there.",
             "type": "string"
           },
+          "features": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Feature grants overriding the product for this price.",
+            "type": "object"
+          },
           "fx_pricing": {
             "$ref": "#/components/schemas/sylphx.money.v1.FxPricing",
             "description": "Localized pricing intent. Unset to author `unit_amounts` directly."
+          },
+          "grant_cadence": {
+            "description": "Overrides the product cadence. Unset inherits the product cadence.",
+            "type": "string"
           },
           "introductory_unit_amounts": {
             "additionalProperties": {
@@ -31207,6 +31218,10 @@
           },
           "googleplay_sku": {
             "description": "Exact Google Play product id. Set together with `googleplay_package_name`.",
+            "type": "string"
+          },
+          "grant_cadence": {
+            "description": "Default wallet grant cadence for recurring prices: billing_period or monthly.",
             "type": "string"
           },
           "grants": {

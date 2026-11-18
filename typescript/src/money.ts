@@ -1909,6 +1909,10 @@ export interface Price {
 	introductoryUnitAmounts?: Record<string, string>
 	/** Localized pricing intent. Unset to author `unit_amounts` directly. */
 	fxPricing?: FxPricing
+	/** Feature grants overriding the product for this price. */
+	features?: Record<string, string>
+	/** Overrides the product cadence. Unset inherits the product cadence. */
+	grantCadence?: string
 }
 
 /**
@@ -2024,6 +2028,8 @@ export interface Product {
 	 * price paid.
 	 */
 	storedValue?: boolean
+	/** Default wallet grant cadence for recurring prices: billing_period or monthly. */
+	grantCadence?: string
 }
 
 /** Records statement evidence and confirms only an exact, timely, unambiguous payment. */
@@ -3830,6 +3836,8 @@ runtime.registerSchemas({
 		['defaultCurrency', 'default_currency'],
 		['introductoryUnitAmounts', 'introductory_unit_amounts', undefined, 'map'],
 		['fxPricing', 'fx_pricing', 'sylphx.money.v1.FxPricing'],
+		['features', 'features', undefined, 'map'],
+		['grantCadence', 'grant_cadence'],
 	],
 	'sylphx.money.v1.ProcessorEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3858,6 +3866,7 @@ runtime.registerSchemas({
 		['googleplayPackageName', 'googleplay_package_name'],
 		['storeProductAliases', 'store_product_aliases', 'sylphx.money.v1.StoreProductAlias'],
 		['storedValue', 'stored_value'],
+		['grantCadence', 'grant_cadence'],
 	],
 	'sylphx.money.v1.RecordBankReceiptRequest': [
 		['checkoutSession', 'checkout_session'],
