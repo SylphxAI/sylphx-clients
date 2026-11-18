@@ -60,6 +60,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.99.0
+          components: rustfmt, clippy
 
       # Canonical golden fixtures travel with clients/contracts/fixtures, so
       # cloud and the standalone mirror execute the same integration targets.
@@ -169,7 +170,12 @@ jobs:
       - name: Every workflow is valid YAML
         run: |
           set -euo pipefail
-          python3 -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))['name'])" .github/workflows/*.yml
+          venv="$RUNNER_TEMP/client-workflow-yaml"
+          python3 -m venv "$venv"
+          "$venv/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: PyYAML==6.0.3
+          for workflow in .github/workflows/*.yml; do
+            "$venv/bin/python" -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))['name'])" "$workflow"
+          done
 
   # The one check the mirror's default branch marks required. It runs on the
   # reserved control pool and names every lane's result.
