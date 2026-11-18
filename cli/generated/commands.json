@@ -20925,7 +20925,20 @@
             },
             {
               "effect": "write",
-              "flags": [],
+              "flags": [
+                {
+                  "field": "dry_run",
+                  "flag": "--dry-run",
+                  "summary": "Observe Stripe and return a plan without updating Stripe or Money.",
+                  "type": "bool"
+                },
+                {
+                  "field": "plan_fingerprint",
+                  "flag": "--plan-fingerprint",
+                  "summary": "If set on apply, refuse the entire operation if the plan no longer matches.",
+                  "type": "string"
+                }
+              ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/price_catalogs/*}:sync",
               "method": "money.price_catalogs.sync",
               "permission": "billing:write",

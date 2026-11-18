@@ -85565,9 +85565,200 @@
               "scalar": "string"
             }
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The observed diff, present only in a dry-run SyncCatalog response.",
+          "filterable": false,
+          "name": "sync_plan",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CatalogSyncPlan"
+          }
         }
       ],
       "name": "sylphx.money.v1.CatalogStatus",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "CatalogSyncChange describes a managed product or price that needs to change.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Catalog product key.",
+          "filterable": false,
+          "name": "product_key",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Catalog price key, unset for product changes.",
+          "filterable": false,
+          "name": "price_key",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "One of create_product, update_product, create_price, replace_price, archive_price.",
+          "filterable": false,
+          "name": "action",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Observed Stripe object ID, unset for creations.",
+          "filterable": false,
+          "name": "processor_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Existing minor-unit amounts by ISO currency, for price changes.",
+          "filterable": false,
+          "name": "observed_unit_amounts",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Desired minor-unit amounts by ISO currency, unset for archival and product changes.",
+          "filterable": false,
+          "name": "desired_unit_amounts",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CatalogSyncChange",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "CatalogSyncPlan reports pending outward changes to the connected Stripe account.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Opaque precondition for applying this exact plan with SyncCatalog.",
+          "filterable": false,
+          "name": "fingerprint",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Pending changes in deterministic apply order. Empty means already matched.",
+          "filterable": false,
+          "name": "changes",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CatalogSyncChange"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CatalogSyncPlan",
       "package": "sylphx.money.v1"
     },
     {
@@ -99060,6 +99251,44 @@
           "optional": false,
           "repeated": false,
           "resource_reference": "money.sylphx.com/PriceCatalog",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Observe Stripe and return a plan without updating Stripe or Money.",
+          "filterable": false,
+          "name": "dry_run",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "If set on apply, refuse the entire operation if the plan no longer matches.",
+          "filterable": false,
+          "name": "plan_fingerprint",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
           "sensitive": false,
           "type": {
             "kind": "scalar",

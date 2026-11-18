@@ -27952,9 +27952,75 @@
             "readOnly": true,
             "type": "object"
           },
+          "sync_plan": {
+            "$ref": "#/components/schemas/sylphx.money.v1.CatalogSyncPlan",
+            "description": "The observed diff, present only in a dry-run SyncCatalog response.",
+            "readOnly": true
+          },
           "sync_time": {
             "description": "When the processor last matched the spec.",
             "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.CatalogSyncChange": {
+        "description": "CatalogSyncChange describes a managed product or price that needs to change.",
+        "properties": {
+          "action": {
+            "description": "One of create_product, update_product, create_price, replace_price, archive_price.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "desired_unit_amounts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Desired minor-unit amounts by ISO currency, unset for archival and product changes.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "observed_unit_amounts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Existing minor-unit amounts by ISO currency, for price changes.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "price_key": {
+            "description": "Catalog price key, unset for product changes.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processor_id": {
+            "description": "Observed Stripe object ID, unset for creations.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "product_key": {
+            "description": "Catalog product key.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.CatalogSyncPlan": {
+        "description": "CatalogSyncPlan reports pending outward changes to the connected Stripe account.",
+        "properties": {
+          "changes": {
+            "description": "Pending changes in deterministic apply order. Empty means already matched.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.money.v1.CatalogSyncChange"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "fingerprint": {
+            "description": "Opaque precondition for applying this exact plan with SyncCatalog.",
             "readOnly": true,
             "type": "string"
           }
@@ -32468,10 +32534,18 @@
       "sylphx.money.v1.SyncCatalogRequest": {
         "description": "The request of SyncCatalog.",
         "properties": {
+          "dry_run": {
+            "description": "Observe Stripe and return a plan without updating Stripe or Money.",
+            "type": "boolean"
+          },
           "name": {
             "description": "The catalog to push.",
             "type": "string",
             "x-sylphx-resource-reference": "money.sylphx.com/PriceCatalog"
+          },
+          "plan_fingerprint": {
+            "description": "If set on apply, refuse the entire operation if the plan no longer matches.",
+            "type": "string"
           }
         },
         "required": [
@@ -109260,7 +109334,16 @@
           "content": {
             "application/json": {
               "schema": {
-                "properties": {},
+                "properties": {
+                  "dry_run": {
+                    "description": "Observe Stripe and return a plan without updating Stripe or Money.",
+                    "type": "boolean"
+                  },
+                  "plan_fingerprint": {
+                    "description": "If set on apply, refuse the entire operation if the plan no longer matches.",
+                    "type": "string"
+                  }
+                },
                 "type": "object"
               }
             }

@@ -29305,10 +29305,18 @@
         "additionalProperties": false,
         "description": "The request of SyncCatalog.",
         "properties": {
+          "dry_run": {
+            "description": "Observe Stripe and return a plan without updating Stripe or Money.",
+            "type": "boolean"
+          },
           "name": {
             "description": "The catalog to push.",
             "type": "string",
             "x-sylphx-resource-reference": "money.sylphx.com/PriceCatalog"
+          },
+          "plan_fingerprint": {
+            "description": "If set on apply, refuse the entire operation if the plan no longer matches.",
+            "type": "string"
           }
         },
         "required": [

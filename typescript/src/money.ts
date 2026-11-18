@@ -270,6 +270,32 @@ export interface CatalogStatus {
 	readonly syncTime?: string
 	/** The processor object behind each price, by lookup key. */
 	readonly processorPriceIds?: Record<string, string>
+	/** The observed diff, present only in a dry-run SyncCatalog response. */
+	readonly syncPlan?: CatalogSyncPlan
+}
+
+/** CatalogSyncChange describes a managed product or price that needs to change. */
+export interface CatalogSyncChange {
+	/** Catalog product key. */
+	readonly productKey?: string
+	/** Catalog price key, unset for product changes. */
+	readonly priceKey?: string
+	/** One of create_product, update_product, create_price, replace_price, archive_price. */
+	readonly action?: string
+	/** Observed Stripe object ID, unset for creations. */
+	readonly processorId?: string
+	/** Existing minor-unit amounts by ISO currency, for price changes. */
+	readonly observedUnitAmounts?: Record<string, string>
+	/** Desired minor-unit amounts by ISO currency, unset for archival and product changes. */
+	readonly desiredUnitAmounts?: Record<string, string>
+}
+
+/** CatalogSyncPlan reports pending outward changes to the connected Stripe account. */
+export interface CatalogSyncPlan {
+	/** Opaque precondition for applying this exact plan with SyncCatalog. */
+	readonly fingerprint?: string
+	/** Pending changes in deterministic apply order. Empty means already matched. */
+	readonly changes?: CatalogSyncChange[]
 }
 
 /** The request of ChangeCustomerSubscriptionPlan. */
@@ -2693,6 +2719,10 @@ export interface Subject {
 export interface SyncCatalogRequest {
 	/** The catalog to push. */
 	name: string
+	/** Observe Stripe and return a plan without updating Stripe or Money. */
+	dryRun?: boolean
+	/** If set on apply, refuse the entire operation if the plan no longer matches. */
+	planFingerprint?: string
 }
 
 /**
@@ -3337,6 +3367,17 @@ runtime.registerSchemas({
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['syncTime', 'sync_time'],
 		['processorPriceIds', 'processor_price_ids', undefined, 'map'],
+		['syncPlan', 'sync_plan', 'sylphx.money.v1.CatalogSyncPlan'],
+	],
+	'sylphx.money.v1.CatalogSyncChange': [
+		['productKey', 'product_key'],
+		['priceKey', 'price_key'],
+		['processorId', 'processor_id'],
+		['observedUnitAmounts', 'observed_unit_amounts', undefined, 'map'],
+		['desiredUnitAmounts', 'desired_unit_amounts', undefined, 'map'],
+	],
+	'sylphx.money.v1.CatalogSyncPlan': [
+		['changes', 'changes', 'sylphx.money.v1.CatalogSyncChange'],
 	],
 	'sylphx.money.v1.ChangeCustomerSubscriptionPlanRequest': [
 		['prorationBehavior', 'proration_behavior'],
@@ -3996,7 +4037,10 @@ runtime.registerSchemas({
 		['endUser', 'end_user'],
 		['customerOrganization', 'customer_organization'],
 	],
-	'sylphx.money.v1.SyncCatalogRequest': [],
+	'sylphx.money.v1.SyncCatalogRequest': [
+		['dryRun', 'dry_run'],
+		['planFingerprint', 'plan_fingerprint'],
+	],
 	'sylphx.money.v1.TaxThresholdStatus': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['regionCode', 'region_code'],

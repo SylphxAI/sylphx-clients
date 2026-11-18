@@ -612,6 +612,83 @@ pub struct CatalogStatus {
         alias = "processorPriceIds"
     )]
     pub processor_price_ids: std::collections::BTreeMap<String, String>,
+    /// The observed diff, present only in a dry-run SyncCatalog response.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "syncPlan")]
+    pub sync_plan: Option<CatalogSyncPlan>,
+}
+
+/// CatalogSyncChange describes a managed product or price that needs to change.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CatalogSyncChange {
+    /// Catalog product key.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "productKey"
+    )]
+    pub product_key: String,
+    /// Catalog price key, unset for product changes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "priceKey"
+    )]
+    pub price_key: String,
+    /// One of create_product, update_product, create_price, replace_price, archive_price.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub action: String,
+    /// Observed Stripe object ID, unset for creations.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "processorId"
+    )]
+    pub processor_id: String,
+    /// Existing minor-unit amounts by ISO currency, for price changes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "observedUnitAmounts"
+    )]
+    pub observed_unit_amounts: std::collections::BTreeMap<String, String>,
+    /// Desired minor-unit amounts by ISO currency, unset for archival and product changes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "desiredUnitAmounts"
+    )]
+    pub desired_unit_amounts: std::collections::BTreeMap<String, String>,
+}
+
+/// CatalogSyncPlan reports pending outward changes to the connected Stripe account.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CatalogSyncPlan {
+    /// Opaque precondition for applying this exact plan with SyncCatalog.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub fingerprint: String,
+    /// Pending changes in deterministic apply order. Empty means already matched.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub changes: Vec<CatalogSyncChange>,
 }
 
 /// The request of ChangeCustomerSubscriptionPlan.
@@ -5859,6 +5936,20 @@ pub struct SyncCatalogRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+    /// Observe Stripe and return a plan without updating Stripe or Money.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dryRun"
+    )]
+    pub dry_run: bool,
+    /// If set on apply, refuse the entire operation if the plan no longer matches.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "planFingerprint"
+    )]
+    pub plan_fingerprint: String,
 }
 
 /// A Tax Threshold Status is where the environment's consumer (B2C) paid
