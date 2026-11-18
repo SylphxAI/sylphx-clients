@@ -12,7 +12,7 @@ repository = "https://github.com/SylphxAI/sylphx-clients"
 
 [dependencies]
 sylphx = { path = "../rust", version = "0.3.25" }
-base64 = "0.22"
+base64 = "0.23.1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "time"] }
