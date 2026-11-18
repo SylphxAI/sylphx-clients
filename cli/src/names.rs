@@ -235,21 +235,6 @@ fn checked_name<'a>(
         })
 }
 
-/// Stable across invocations, so a lost create reply cannot duplicate a
-/// first-use target. Access namespaces replay keys by org and principal.
-struct BootstrapTransport<'a> {
-    inner: &'a sylphx::HttpTransport,
-    headers: [(String, String); 1],
-}
-
-impl sylphx::runtime::Transport for BootstrapTransport<'_> {
-    async fn send(
-        &self,
-        request: sylphx::runtime::HttpRequest,
-    ) -> Result<sylphx::runtime::HttpResponse, sylphx::Error> {
-        self.inner.send_with_headers(request, &self.headers).await
-    }
-}
 async fn discover_or_create(
     client: &Client,
     collection: &str,
@@ -270,10 +255,12 @@ async fn discover_or_create(
         "cli-bootstrap:{:x}",
         sha2::Sha256::digest(format!("{parent}/{collection}/{slug}"))
     );
-    let creator = Client::new(BootstrapTransport {
-        inner: client.transport(),
-        headers: [("Idempotency-Key".into(), key)],
-    });
+    // Stable across invocations, so a lost create reply cannot duplicate a
+    // first-use target. Access namespaces replay keys by org and principal.
+    let creator = Client::new(crate::transport::IdempotencyTransport::new(
+        client.transport(),
+        key,
+    ));
     let created = creator
         .invoke(
             &format!("access.{collection}.create"),

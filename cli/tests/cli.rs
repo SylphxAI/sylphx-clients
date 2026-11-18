@@ -897,8 +897,166 @@ async fn a_link_file_in_another_shape_never_shadows_the_key_scope() {
     );
 }
 
+fn idempotency_keys(request: &Seen) -> Vec<&str> {
+    request
+        .head
+        .lines()
+        .filter_map(|line| line.split_once(':'))
+        .filter(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"))
+        .map(|(_, value)| value.trim())
+        .collect()
+}
+
+fn assert_automatic_idempotency(request: &Seen) {
+    let keys = idempotency_keys(request);
+    assert_eq!(keys.len(), 1, "one effective replay key: {keys:?}");
+    let key = keys[0];
+    assert_eq!(key.len(), 36, "UUIDv7: {key}");
+    for (i, byte) in key.bytes().enumerate() {
+        if [8, 13, 18, 23].contains(&i) {
+            assert_eq!(byte, b'-', "UUIDv7: {key}");
+        } else {
+            assert!(byte.is_ascii_hexdigit(), "UUIDv7: {key}");
+        }
+    }
+    assert_eq!(&key[14..15], "7", "UUIDv7: {key}");
+    assert!(matches!(key.as_bytes()[19], b'8' | b'9' | b'a' | b'b'));
+}
+
 #[tokio::test(flavor = "multi_thread")]
-async fn create_takes_the_id_and_the_linked_env_and_waits() {
+async fn entitlement_grant_idempotency_uses_resolved_explicit_id() {
+    for from_file in [false, true] {
+        let grant = json!({"subject": {"end_user": "test_user"}, "feature": "pro",
+                           "campaign": "support", "reason": "recovery", "approval_ref": "case-1"});
+        let response = json!({"name": format!("{ENV}/entitlement_grants/manual-grant"),
+                              "subject": grant["subject"], "feature": "pro"});
+        let (url, log) = serve(vec![(200, response.clone()), (200, response.clone())]).await;
+        let sb = Sandbox::new(if from_file {
+            "grant-key-file"
+        } else {
+            "grant-key-positional"
+        });
+        let file = sb.dir.join("grant.json");
+        std::fs::write(
+            &file,
+            json!({"entitlement_grant_id": "manual-grant", "entitlement_grant": grant}).to_string(),
+        )
+        .unwrap();
+        let mut args = vec!["money", "entitlement-grants", "create"];
+        if from_file {
+            args.extend(["--from-file", file.to_str().unwrap()]);
+        } else {
+            args.extend([
+                "manual-grant",
+                "--subject.end-user",
+                "test_user",
+                "--feature",
+                "pro",
+                "--campaign",
+                "support",
+                "--reason",
+                "recovery",
+                "--approval-ref",
+                "case-1",
+            ]);
+        }
+        args.extend(["-o", "json"]);
+        // A second invocation must reuse the grant key, not generate a fresh UUID.
+        for _ in 0..2 {
+            let out = run(&sb, &url, &args).await;
+            assert_success(&out);
+            assert_eq!(
+                serde_json::from_slice::<Value>(&out.stdout).unwrap(),
+                response
+            );
+        }
+        let seen = log.lock();
+        assert_eq!(seen.len(), 2);
+        for request in seen.iter() {
+            assert_eq!(
+                request.line,
+                format!(
+                    "POST /v1/{ENV}/entitlement_grants?entitlement_grant_id=manual-grant HTTP/1.1"
+                )
+            );
+            assert_eq!(idempotency_keys(request), vec!["manual-grant"]);
+            assert_eq!(serde_json::from_str::<Value>(&request.body).unwrap(), grant);
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn entitlement_grant_idempotency_preserves_server_refusal() {
+    let (url, log) = serve(vec![(
+        403,
+        json!({"error": {"code": "PERMISSION_DENIED",
+        "message": "subject_not_synthetic"}}),
+    )])
+    .await;
+    let sb = Sandbox::new("grant-key-refused");
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "money",
+            "entitlement-grants",
+            "create",
+            "manual-grant",
+            "--subject.end-user",
+            "test_user",
+            "--feature",
+            "pro",
+        ],
+    )
+    .await;
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("subject_not_synthetic"));
+    let seen = log.lock();
+    assert_eq!(seen.len(), 1, "a refused create must not be repeated");
+    assert_eq!(idempotency_keys(&seen[0]), vec!["manual-grant"]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn entitlement_grant_idempotency_without_id_keeps_automatic_key() {
+    let response = json!({"name": format!("{ENV}/entitlement_grants/assigned")});
+    let (url, log) = serve(vec![(200, response.clone())]).await;
+    let sb = Sandbox::new("grant-key-omitted");
+    let out = run(
+        &sb,
+        &url,
+        &[
+            "money",
+            "entitlement-grants",
+            "create",
+            "--subject.end-user",
+            "test_user",
+            "--feature",
+            "pro",
+            "-o",
+            "json",
+        ],
+    )
+    .await;
+    assert_success(&out);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&out.stdout).unwrap(),
+        response
+    );
+    let seen = log.lock();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(
+        seen[0].line,
+        format!("POST /v1/{ENV}/entitlement_grants HTTP/1.1")
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(&seen[0].body).unwrap(),
+        json!({"subject": {"end_user": "test_user"}, "feature": "pro"})
+    );
+    assert_automatic_idempotency(&seen[0]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn create_takes_the_id_and_the_linked_env_and_waits_with_automatic_idempotency() {
     let db = json!({"name": format!("{ENV}/databases/main"), "spec": {"compute_units": 2}});
     let (url, log) = serve(vec![
         (200, json!({"name": format!("{ENV}/operations/op_1"), "done": false})),
@@ -941,10 +1099,8 @@ async fn create_takes_the_id_and_the_linked_env_and_waits() {
         serde_json::from_str::<Value>(&log[0].body).unwrap(),
         json!({"spec": {"compute_units": 2}})
     );
-    assert!(log[0]
-        .head
-        .to_ascii_lowercase()
-        .contains("idempotency-key:"));
+    assert_automatic_idempotency(&log[0]);
+    assert_ne!(idempotency_keys(&log[0]), vec!["main"]);
     assert!(log[1]
         .line
         .starts_with(&format!("POST /v1/{ENV}/operations/op_1:wait?timeout=60s ")));

@@ -21,6 +21,7 @@ mod output;
 mod porcelain;
 mod release_cmd;
 mod token;
+mod transport;
 mod tree;
 mod work_runner;
 
@@ -1368,9 +1369,20 @@ async fn generated(
         }
         return Ok(());
     }
-    let mut result = client
-        .invoke(&method.method, Value::Object(args.clone()))
-        .await?;
+    // Manual grants use their caller-chosen ID as the replay key. Scope this
+    // contract to the grant create call; other mutations keep SDK-generated keys.
+    let grant_id = (method.method == "money.entitlement_grants.create")
+        .then(|| args.get("entitlement_grant_id").and_then(Value::as_str))
+        .flatten();
+    let mut result = if let Some(id) = grant_id {
+        Client::new(transport::IdempotencyTransport::new(client.transport(), id))
+            .invoke(&method.method, Value::Object(args.clone()))
+            .await?
+    } else {
+        client
+            .invoke(&method.method, Value::Object(args.clone()))
+            .await?
+    };
     // Use the authority's resolved spec, not client guesses about defaults.
     // Keep stdout machine-readable for --output json/yaml consumers.
     if method.method == "sandboxes.leases.create" {
