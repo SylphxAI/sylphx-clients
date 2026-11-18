@@ -479,7 +479,8 @@ export interface EndUserImportLink {
 export interface EndUserImportPassword {
 	/**
 	 * Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,
-	 * bcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.
+	 * bcrypt, scrypt, better-auth-scrypt, argon2 or pbkdf2. Never inferred from
+	 * the value.
 	 */
 	format?: string
 	/** Encoded password hash in the declared `format`. */

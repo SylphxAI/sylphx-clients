@@ -1031,7 +1031,8 @@ pub struct EndUserImportLink {
 #[non_exhaustive]
 pub struct EndUserImportPassword {
     /// Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,
-    /// bcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.
+    /// bcrypt, scrypt, better-auth-scrypt, argon2 or pbkdf2. Never inferred from
+    /// the value.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]

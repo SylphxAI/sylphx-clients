@@ -29078,7 +29078,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,\nbcrypt, scrypt, argon2 or pbkdf2. Never inferred from the value.",
+          "doc": "Explicit existing verifier scheme: aspnet-identity-v2, aspnet-identity-v3,\nbcrypt, scrypt, better-auth-scrypt, argon2 or pbkdf2. Never inferred from\nthe value.",
           "filterable": false,
           "name": "format",
           "number": 1,
