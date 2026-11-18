@@ -179,6 +179,24 @@
           "scalar": "string"
         }
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "fx_pricing",
+      "number": 10,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.money.v1.FxPricing"
+      }
     }
   ],
   "name": "sylphx.money.v1.Price",

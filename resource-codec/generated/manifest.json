@@ -85457,6 +85457,28 @@
               "minimum": 0
             }
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact FX snapshot used by opted-in prices: target major units per USD,\nas positive decimal strings with at most 18 fractional places. USD is\nalways 1 and can be omitted. Money does not fetch rates during a write.",
+          "filterable": false,
+          "name": "fx_rates_per_usd",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
         }
       ],
       "name": "sylphx.money.v1.CatalogSpec",
@@ -89327,6 +89349,98 @@
         }
       ],
       "name": "sylphx.money.v1.Feature",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "FxPricing opts a price into Money's retail tier policy. Stored-value\nproducts use top-up tiers; other recurring and one-time prices use retail\ntiers. Currency amounts are always expressed in ISO minor units.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Positive base anchor, in USD minor units (cents), as a decimal integer.",
+          "filterable": false,
+          "name": "usd_minor",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The exact set of currencies to publish, including USD only if listed.\nEvery non-USD currency needs a rate unless it has an exact override.",
+          "filterable": false,
+          "name": "currencies",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exact positive minor-unit amounts, by listed currency. Bypass snapping\nand hysteresis for these currencies.",
+          "filterable": false,
+          "name": "overrides",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "How far conversion must cross the next tier boundary before changing a\nprior Money-generated tier, in basis points of that prior amount. Unset\nmeans 500 (5%); 0 disables hysteresis.",
+          "filterable": false,
+          "name": "deadband_bps",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          },
+          "validation": {
+            "int32": {
+              "maximum": 10000,
+              "minimum": 0
+            }
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.FxPricing",
       "package": "sylphx.money.v1"
     },
     {
@@ -94098,7 +94212,7 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "Unit amount per ISO 4217 currency code in upper case, as a decimal string\nof minor units, for example `{\"USD\": \"499\", \"GBP\": \"399\"}`. The processor's\nbase currency is `default_currency` when set, else the first currency in\ncode order.",
+          "doc": "Unit amount per ISO 4217 currency code in upper case, as a decimal string\nof minor units, for example `{\"USD\": \"499\", \"GBP\": \"399\"}`. The processor's\nbase currency is `default_currency` when set, else the first currency in\ncode order.\nRequired for a price without `fx_pricing`. For an opted-in price Money\nignores this field on input and returns the materialized amounts here.",
           "filterable": false,
           "name": "unit_amounts",
           "number": 4,
@@ -94217,6 +94331,25 @@
               "kind": "scalar",
               "scalar": "string"
             }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Localized pricing intent. Unset to author `unit_amounts` directly.",
+          "filterable": false,
+          "name": "fx_pricing",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.FxPricing"
           }
         }
       ],

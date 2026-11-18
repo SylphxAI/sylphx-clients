@@ -564,6 +564,15 @@ pub struct CatalogSpec {
         alias = "rehomeCooldownDays"
     )]
     pub rehome_cooldown_days: Option<i32>,
+    /// Exact FX snapshot used by opted-in prices: target major units per USD,
+    /// as positive decimal strings with at most 18 fractional places. USD is
+    /// always 1 and can be omitted. Money does not fetch rates during a write.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "fxRatesPerUsd"
+    )]
+    pub fx_rates_per_usd: std::collections::BTreeMap<String, String>,
 }
 
 /// CatalogStatus is the observed state of a Catalog.
@@ -2096,6 +2105,42 @@ pub struct Feature {
         alias = "displayName"
     )]
     pub display_name: String,
+}
+
+/// FxPricing opts a price into Money's retail tier policy. Stored-value
+/// products use top-up tiers; other recurring and one-time prices use retail
+/// tiers. Currency amounts are always expressed in ISO minor units.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct FxPricing {
+    /// Positive base anchor, in USD minor units (cents), as a decimal integer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "usdMinor"
+    )]
+    pub usd_minor: String,
+    /// The exact set of currencies to publish, including USD only if listed.
+    /// Every non-USD currency needs a rate unless it has an exact override.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub currencies: Vec<String>,
+    /// Exact positive minor-unit amounts, by listed currency. Bypass snapping
+    /// and hysteresis for these currencies.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub overrides: std::collections::BTreeMap<String, String>,
+    /// How far conversion must cross the next tier boundary before changing a
+    /// prior Money-generated tier, in basis points of that prior amount. Unset
+    /// means 500 (5%); 0 disables hysteresis.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "deadbandBps"
+    )]
+    pub deadband_bps: Option<i32>,
 }
 
 /// The request of GenerateLicenceKey.
@@ -3950,6 +3995,8 @@ pub struct Price {
     /// of minor units, for example `{"USD": "499", "GBP": "399"}`. The processor's
     /// base currency is `default_currency` when set, else the first currency in
     /// code order.
+    /// Required for a price without `fx_pricing`. For an opted-in price Money
+    /// ignores this field on input and returns the materialized amounts here.
     ///
     /// Field behavior: `required`.
     #[serde(
@@ -3998,6 +4045,9 @@ pub struct Price {
         alias = "introductoryUnitAmounts"
     )]
     pub introductory_unit_amounts: std::collections::BTreeMap<String, String>,
+    /// Localized pricing intent. Unset to author `unit_amounts` directly.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fxPricing")]
+    pub fx_pricing: Option<FxPricing>,
 }
 
 /// A stored Stripe hint. No payload, customer details, credential or raw error

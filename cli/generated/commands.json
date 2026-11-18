@@ -20889,6 +20889,13 @@
                   "type": "int"
                 },
                 {
+                  "field": "catalog.spec.fx_rates_per_usd",
+                  "flag": "--spec.fx-rates-per-usd",
+                  "repeated": true,
+                  "summary": "Exact FX snapshot used by opted-in prices: target major units per USD, as positive decimal strings with at most 18 fractional places. USD is always 1 and can be omitted. Money does not fetch rates during a write.",
+                  "type": "key=value"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the catalog when it does not exist (declarative upsert).",

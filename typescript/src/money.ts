@@ -252,6 +252,12 @@ export interface CatalogSpec {
 	 * The old home currency's wallet must also be empty. Unset means 90.
 	 */
 	rehomeCooldownDays?: number
+	/**
+	 * Exact FX snapshot used by opted-in prices: target major units per USD,
+	 * as positive decimal strings with at most 18 fractional places. USD is
+	 * always 1 and can be omitted. Money does not fetch rates during a write.
+	 */
+	fxRatesPerUsd?: Record<string, string>
 }
 
 /** CatalogStatus is the observed state of a Catalog. */
@@ -952,6 +958,32 @@ export interface Feature {
 	kind?: FeatureKind
 	/** Shown to people. */
 	displayName?: string
+}
+
+/**
+ * FxPricing opts a price into Money's retail tier policy. Stored-value
+ * products use top-up tiers; other recurring and one-time prices use retail
+ * tiers. Currency amounts are always expressed in ISO minor units.
+ */
+export interface FxPricing {
+	/** Positive base anchor, in USD minor units (cents), as a decimal integer. */
+	usdMinor?: string
+	/**
+	 * The exact set of currencies to publish, including USD only if listed.
+	 * Every non-USD currency needs a rate unless it has an exact override.
+	 */
+	currencies?: string[]
+	/**
+	 * Exact positive minor-unit amounts, by listed currency. Bypass snapping
+	 * and hysteresis for these currencies.
+	 */
+	overrides?: Record<string, string>
+	/**
+	 * How far conversion must cross the next tier boundary before changing a
+	 * prior Money-generated tier, in basis points of that prior amount. Unset
+	 * means 500 (5%); 0 disables hysteresis.
+	 */
+	deadbandBps?: number
 }
 
 /** The request of GenerateLicenceKey. */
@@ -1822,6 +1854,8 @@ export interface Price {
 	 * of minor units, for example `{"USD": "499", "GBP": "399"}`. The processor's
 	 * base currency is `default_currency` when set, else the first currency in
 	 * code order.
+	 * Required for a price without `fx_pricing`. For an opted-in price Money
+	 * ignores this field on input and returns the materialized amounts here.
 	 */
 	unitAmounts?: Record<string, string>
 	/** `inclusive` (the amount includes tax) or `exclusive`. */
@@ -1847,6 +1881,8 @@ export interface Price {
 	 * Store introductory offers are configured and enforced by the store.
 	 */
 	introductoryUnitAmounts?: Record<string, string>
+	/** Localized pricing intent. Unset to author `unit_amounts` directly. */
+	fxPricing?: FxPricing
 }
 
 /**
@@ -3294,6 +3330,7 @@ runtime.registerSchemas({
 		['applicationData', 'application_data', undefined, 'json'],
 		['currencyMode', 'currency_mode'],
 		['rehomeCooldownDays', 'rehome_cooldown_days'],
+		['fxRatesPerUsd', 'fx_rates_per_usd', undefined, 'map'],
 	],
 	'sylphx.money.v1.CatalogStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -3480,6 +3517,11 @@ runtime.registerSchemas({
 	'sylphx.money.v1.ExpireCheckoutSessionRequest': [],
 	'sylphx.money.v1.Feature': [
 		['displayName', 'display_name'],
+	],
+	'sylphx.money.v1.FxPricing': [
+		['usdMinor', 'usd_minor'],
+		['overrides', 'overrides', undefined, 'map'],
+		['deadbandBps', 'deadband_bps'],
 	],
 	'sylphx.money.v1.GenerateLicenceKeyRequest': [
 		['licenceKeyId', 'licence_key_id'],
@@ -3746,6 +3788,7 @@ runtime.registerSchemas({
 		['trialDays', 'trial_days'],
 		['defaultCurrency', 'default_currency'],
 		['introductoryUnitAmounts', 'introductory_unit_amounts', undefined, 'map'],
+		['fxPricing', 'fx_pricing', 'sylphx.money.v1.FxPricing'],
 	],
 	'sylphx.money.v1.ProcessorEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
