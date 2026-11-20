@@ -36,6 +36,26 @@ if [ "${SYLPHX_REGISTRY_EPHEMERAL:-0}" = 1 ] && [ -n "${SYLPHX_NPM_MIRROR:-}${SY
   }
   trap sylphx_restore_registry 0
 fi
+_sd_update_managed_registry() {
+  _sd_u_file=$1
+  _sd_u_marker=$2
+  _sd_u_value=$3
+  _sd_u_tmp=$_sd_u_file.sylphx.$$
+  _sd_u_seen=0
+  while IFS= read -r _sd_u_line || [ -n "$_sd_u_line" ]; do
+    if [ "$_sd_u_seen" = 1 ]; then
+      case "$_sd_u_line" in
+        registry=*) printf 'registry=%s\n' "$_sd_u_value" ;;
+        *) printf '%s\n' "$_sd_u_line" ;;
+      esac
+      _sd_u_seen=0
+    else
+      printf '%s\n' "$_sd_u_line"
+      [ "$_sd_u_line" = "$_sd_u_marker" ] && _sd_u_seen=1
+    fi
+  done < "$_sd_u_file" > "$_sd_u_tmp" && mv "$_sd_u_tmp" "$_sd_u_file" || { rm -f "$_sd_u_tmp"; return 1; }
+  unset _sd_u_file _sd_u_marker _sd_u_value _sd_u_tmp _sd_u_seen _sd_u_line
+}
 sylphx_registry_defaults() {
   _sd_home=${HOME:-/home/user}
   _sd_config=${XDG_CONFIG_HOME:-$_sd_home/.config}
@@ -51,6 +71,8 @@ sylphx_registry_defaults() {
       fi
       if ! grep -Eiq '^[[:space:]]*registry[[:space:]]*=' "$_sd_npm" 2>/dev/null; then
         printf '\n# sylphx-managed npm registry\nregistry=%s\n' "$SYLPHX_NPM_MIRROR" >> "$_sd_npm" || return
+      elif grep -q '^# sylphx-managed npm registry$' "$_sd_npm" 2>/dev/null && ! grep -Fxq "registry=$SYLPHX_NPM_MIRROR" "$_sd_npm" 2>/dev/null; then
+        _sd_update_managed_registry "$_sd_npm" "# sylphx-managed npm registry" "$SYLPHX_NPM_MIRROR" || return
       fi
     fi
     # Bun reads user npmrc before project npmrc and global/project bunfig.
@@ -60,9 +82,13 @@ sylphx_registry_defaults() {
     # With no XDG, this file also belongs to npm. Do not shadow its explicit
     # global registry by creating a higher-priority HOME/.npmrc default.
     if [ "$_sd_bun" = "$_sd_home/.npmrc" ] && grep -Eiq '^[[:space:]]*registry[[:space:]]*=' "$_sd_npm" 2>/dev/null && { ! grep -q '^# sylphx-managed npm registry$' "$_sd_npm" || ! grep -Fxq "registry=$SYLPHX_NPM_MIRROR" "$_sd_npm"; }; then _sd_bun_allowed=0; fi
-    if [ "$_sd_bun_allowed" = 1 ] && [ "${NPM_CONFIG_REGISTRY+x}${npm_config_registry+x}${BUN_CONFIG_REGISTRY+x}" = "" ] && ! grep -Eiq '^[[:space:]]*registry[[:space:]]*=' "$_sd_bun" 2>/dev/null; then
-      mkdir -p "$(dirname "$_sd_bun")" || return
-      printf '\n# sylphx-managed bun npm registry\nregistry=%s\n' "$SYLPHX_NPM_MIRROR" >> "$_sd_bun" || return
+    if [ "$_sd_bun_allowed" = 1 ] && [ "${NPM_CONFIG_REGISTRY+x}${npm_config_registry+x}${BUN_CONFIG_REGISTRY+x}" = "" ]; then
+      if ! grep -Eiq '^[[:space:]]*registry[[:space:]]*=' "$_sd_bun" 2>/dev/null; then
+        mkdir -p "$(dirname "$_sd_bun")" || return
+        printf '\n# sylphx-managed bun npm registry\nregistry=%s\n' "$SYLPHX_NPM_MIRROR" >> "$_sd_bun" || return
+      elif grep -q '^# sylphx-managed bun npm registry$' "$_sd_bun" 2>/dev/null && ! grep -Fxq "registry=$SYLPHX_NPM_MIRROR" "$_sd_bun" 2>/dev/null; then
+        _sd_update_managed_registry "$_sd_bun" "# sylphx-managed bun npm registry" "$SYLPHX_NPM_MIRROR" || return
+      fi
     fi
   fi
   if [ -n "${SYLPHX_GOPROXY:-}" ] && [ "${GOPROXY+x}" = "" ]; then
