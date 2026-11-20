@@ -43038,7 +43038,7 @@
         "readOnlyHint": true,
         "title": "Gets a rollout."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a rollout.",
+      "description": "Gets a rollout.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/rollouts/*}",
       "input_schema": {
@@ -43059,7 +43059,6 @@
       "long_running": false,
       "method_id": "release.rollouts.get",
       "permission": "release:read",
-      "served": false,
       "tool": "release_rollouts_get"
     },
     {
@@ -43070,7 +43069,7 @@
         "readOnlyHint": true,
         "title": "Lists rollouts in an environment."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists rollouts in an environment.",
+      "description": "Lists rollouts in an environment.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/rollouts",
       "input_schema": {
@@ -43108,7 +43107,6 @@
       "long_running": false,
       "method_id": "release.rollouts.list",
       "permission": "release:read",
-      "served": false,
       "tool": "release_rollouts_list"
     },
     {

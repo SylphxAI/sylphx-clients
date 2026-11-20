@@ -114487,7 +114487,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/rollouts": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists rollouts in an environment.",
+        "description": "Lists rollouts in an environment.",
         "operationId": "release_rollouts_list",
         "parameters": [
           {
@@ -114592,13 +114592,12 @@
         ],
         "x-sylphx-method": "release.rollouts.list",
         "x-sylphx-permission": "release:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/rollouts/{rollout}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a rollout.",
+        "description": "Gets a rollout.",
         "operationId": "release_rollouts_get",
         "parameters": [
           {
@@ -114673,7 +114672,6 @@
         ],
         "x-sylphx-method": "release.rollouts.get",
         "x-sylphx-permission": "release:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

@@ -185414,7 +185414,6 @@
               "request": "sylphx.release.v1.GetRolloutRequest",
               "resource_field": null,
               "response": "sylphx.release.v1.Rollout",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -185463,7 +185462,6 @@
               "request": "sylphx.release.v1.ListRolloutsRequest",
               "resource_field": null,
               "response": "sylphx.release.v1.ListRolloutsResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
