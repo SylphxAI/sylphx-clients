@@ -469,32 +469,29 @@ async fn skill_load_rejects_mutable_agent_reference() {
 }
 
 #[tokio::test]
-async fn knowledge_search_uses_generated_recall_with_citations() {
-    let s = server(vec![(
-        200,
-        json!({"context":{"citations":[{"episode":"readable"}]}}),
-    )]);
+async fn retired_knowledge_search_is_refused_when_service_unserved() {
+    let s = server(vec![]);
     let r = call(&s,"tools/call",json!({"name":"knowledge_search","arguments":{
         "parent":"orgs/o/projects/p/envs/e","query":"customer preference","max_hops":0,"max_facts":2}})).await;
-    assert_eq!(r["result"]["isError"], false);
-    assert_eq!(
-        r["result"]["structuredContent"]["context"]["citations"][0]["episode"],
-        "readable"
-    );
+    assert_eq!(r["result"]["isError"], true);
+    assert!(r["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("not served"));
 }
 
 #[tokio::test]
-async fn remote_knowledge_tools_are_read_only() {
+async fn remote_mode_hides_retired_knowledge_tools_and_keeps_skill_load() {
     let s = Server::remote(None::<Client<Recorder>>);
     let names: Vec<Value> = s
         .tools()
         .into_iter()
         .map(|tool| tool["name"].clone())
         .collect();
-    assert!(names.contains(&json!("knowledge_search")));
-    assert!(names.contains(&json!("knowledge_recall")));
-    assert!(names.contains(&json!("skill_load")));
+    assert!(!names.contains(&json!("knowledge_search")));
+    assert!(!names.contains(&json!("knowledge_recall")));
     assert!(!names.contains(&json!("knowledge_remember")));
+    assert!(names.contains(&json!("skill_load")));
     assert!(!names.contains(&json!("project_bootstrap_unclaimed")));
 }
 

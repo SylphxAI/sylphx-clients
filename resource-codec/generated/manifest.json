@@ -173176,6 +173176,7 @@
       "proto_services": [
         "sylphx.knowledge.v1.KnowledgeService"
       ],
+      "served": false,
       "stage": "preview"
     },
     {

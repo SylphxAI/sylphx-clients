@@ -85069,7 +85069,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities": {
       "get": {
-        "description": "Lists the entities the caller may see. The filter is limited to\n`entity_type` and `lifecycle`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists the entities the caller may see. The filter is limited to\n`entity_type` and `lifecycle`.",
         "operationId": "knowledge_entities_list",
         "parameters": [
           {
@@ -85165,10 +85165,11 @@
         ],
         "x-sylphx-method": "knowledge.entities.list",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates an entity in a space. An entity whose external id already\nnames one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which\nnames it; use Update with `allow_missing` to upsert.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates an entity in a space. An entity whose external id already\nnames one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which\nnames it; use Update with `allow_missing` to upsert.",
         "operationId": "knowledge_entities_create",
         "parameters": [
           {
@@ -85281,12 +85282,13 @@
         ],
         "x-sylphx-method": "knowledge.entities.create",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities/{entity}": {
       "delete": {
-        "description": "Deletes an entity and every fact about it. With `force` it is a\ndata-rights erasure: the episodes the person wrote are deleted too, with\ntheir search and embedding entries.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes an entity and every fact about it. With `force` it is a\ndata-rights erasure: the episodes the person wrote are deleted too, with\ntheir search and embedding entries.",
         "operationId": "knowledge_entities_delete",
         "parameters": [
           {
@@ -85409,10 +85411,11 @@
         ],
         "x-sylphx-method": "knowledge.entities.delete",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets an entity.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an entity.",
         "operationId": "knowledge_entities_get",
         "parameters": [
           {
@@ -85487,10 +85490,11 @@
         ],
         "x-sylphx-method": "knowledge.entities.get",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates an entity. With `allow_missing` it is the structured upsert\n(`upsert_entity`): an entity matched by `external_ids` is updated,\notherwise one is created.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates an entity. With `allow_missing` it is the structured upsert\n(`upsert_entity`): an entity matched by `external_ids` is updated,\notherwise one is created.",
         "operationId": "knowledge_entities_update",
         "parameters": [
           {
@@ -85620,12 +85624,13 @@
         ],
         "x-sylphx-method": "knowledge.entities.update",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities/{entity}:merge": {
       "post": {
-        "description": "Merges other entities into this one: their facts and external ids\nresolve to it. The merge is recorded and reversible with `:split`; it is\nnever a silent rewrite.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nMerges other entities into this one: their facts and external ids\nresolve to it. The merge is recorded and reversible with `:split`; it is\nnever a silent rewrite.",
         "operationId": "knowledge_entities_merge",
         "parameters": [
           {
@@ -85743,12 +85748,13 @@
         ],
         "x-sylphx-method": "knowledge.entities.merge",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities/{entity}:profile": {
       "post": {
-        "description": "Returns one entity's profile in one call (`entity`): the entity, its\ncurrent facts in both directions, the entities they name and the recent\nepisodes about it, trimmed to what the caller may see. A read with a\nrequest body.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReturns one entity's profile in one call (`entity`): the entity, its\ncurrent facts in both directions, the entities they name and the recent\nepisodes about it, trimmed to what the caller may see. A read with a\nrequest body.",
         "operationId": "knowledge_entities_profile",
         "parameters": [
           {
@@ -85852,12 +85858,13 @@
         ],
         "x-sylphx-method": "knowledge.entities.profile",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities/{entity}:split": {
       "post": {
-        "description": "Splits a merged entity back out of this one, with the facts and\nexternal ids it brought.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nSplits a merged entity back out of this one, with the facts and\nexternal ids it brought.",
         "operationId": "knowledge_entities_split",
         "parameters": [
           {
@@ -85968,12 +85975,13 @@
         ],
         "x-sylphx-method": "knowledge.entities.split",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities:ask": {
       "post": {
-        "description": "Answers a question through Sylphx AI (`ask`), from a context pack built\nonly from records the caller may see, with citations to its episodes.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nAnswers a question through Sylphx AI (`ask`), from a context pack built\nonly from records the caller may see, with citations to its episodes.",
         "operationId": "knowledge_entities_ask",
         "parameters": [
           {
@@ -86092,12 +86100,13 @@
         ],
         "x-sylphx-method": "knowledge.entities.ask",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/entities:recall": {
       "post": {
-        "description": "Searches the graph (`recall`): hybrid lexical and semantic search over\nepisodes and facts, fused by reciprocal rank, then at most two hops of\nexpansion from the top entities. Returns a context pack with citations,\nbuilt only from records the caller may see.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nSearches the graph (`recall`): hybrid lexical and semantic search over\nepisodes and facts, fused by reciprocal rank, then at most two hops of\nexpansion from the top entities. Returns a context pack with citations,\nbuilt only from records the caller may see.",
         "operationId": "knowledge_entities_recall",
         "parameters": [
           {
@@ -86231,6 +86240,7 @@
         ],
         "x-sylphx-method": "knowledge.entities.recall",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -92147,7 +92157,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/knowledge_schemas": {
       "get": {
-        "description": "Lists knowledge schemas.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists knowledge schemas.",
         "operationId": "knowledge_knowledge_schemas_list",
         "parameters": [
           {
@@ -92252,10 +92262,11 @@
         ],
         "x-sylphx-method": "knowledge.knowledge_schemas.list",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates a knowledge schema.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a knowledge schema.",
         "operationId": "knowledge_knowledge_schemas_create",
         "parameters": [
           {
@@ -92367,12 +92378,13 @@
         ],
         "x-sylphx-method": "knowledge.knowledge_schemas.create",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/knowledge_schemas/{knowledge_schema}": {
       "delete": {
-        "description": "Deletes a knowledge schema. A schema a space still accepts is refused\nwith `RESOURCE_IN_USE`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a knowledge schema. A schema a space still accepts is refused\nwith `RESOURCE_IN_USE`.",
         "operationId": "knowledge_knowledge_schemas_delete",
         "parameters": [
           {
@@ -92487,10 +92499,11 @@
         ],
         "x-sylphx-method": "knowledge.knowledge_schemas.delete",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets a knowledge schema.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a knowledge schema.",
         "operationId": "knowledge_knowledge_schemas_get",
         "parameters": [
           {
@@ -92565,10 +92578,11 @@
         ],
         "x-sylphx-method": "knowledge.knowledge_schemas.get",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates a knowledge schema. An accepted update publishes a new\nrevision; a change that would invalidate existing records is refused\nwith `INVALID_FIELD`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a knowledge schema. An accepted update publishes a new\nrevision; a change that would invalidate existing records is refused\nwith `INVALID_FIELD`.",
         "operationId": "knowledge_knowledge_schemas_update",
         "parameters": [
           {
@@ -92698,6 +92712,7 @@
         ],
         "x-sylphx-method": "knowledge.knowledge_schemas.update",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -123121,7 +123136,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces": {
       "get": {
-        "description": "Lists spaces.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists spaces.",
         "operationId": "knowledge_spaces_list",
         "parameters": [
           {
@@ -123226,10 +123241,11 @@
         ],
         "x-sylphx-method": "knowledge.spaces.list",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates a space.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a space.",
         "operationId": "knowledge_spaces_create",
         "parameters": [
           {
@@ -123341,12 +123357,13 @@
         ],
         "x-sylphx-method": "knowledge.spaces.create",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces/{space}": {
       "delete": {
-        "description": "Deletes a space. A space that still holds records is refused with\n`INVALID_STATE` unless `force` is set, which deletes its episodes and\nfacts too.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a space. A space that still holds records is refused with\n`INVALID_STATE` unless `force` is set, which deletes its episodes and\nfacts too.",
         "operationId": "knowledge_spaces_delete",
         "parameters": [
           {
@@ -123473,10 +123490,11 @@
         ],
         "x-sylphx-method": "knowledge.spaces.delete",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets a space.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a space.",
         "operationId": "knowledge_spaces_get",
         "parameters": [
           {
@@ -123551,10 +123569,11 @@
         ],
         "x-sylphx-method": "knowledge.spaces.get",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates a space.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a space.",
         "operationId": "knowledge_spaces_update",
         "parameters": [
           {
@@ -123684,12 +123703,13 @@
         ],
         "x-sylphx-method": "knowledge.spaces.update",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/episodes": {
       "get": {
-        "description": "Lists a space's episodes, newest first. The filter is limited to\n`kind` and `extraction`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists a space's episodes, newest first. The filter is limited to\n`kind` and `extraction`.",
         "operationId": "knowledge_episodes_list",
         "parameters": [
           {
@@ -123793,10 +123813,11 @@
         ],
         "x-sylphx-method": "knowledge.episodes.list",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Records an episode and returns at once (`remember`); extraction reads\nit afterwards.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRecords an episode and returns at once (`remember`); extraction reads\nit afterwards.",
         "operationId": "knowledge_episodes_create",
         "parameters": [
           {
@@ -123934,12 +123955,13 @@
         ],
         "x-sylphx-method": "knowledge.episodes.create",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/episodes/{episode}": {
       "delete": {
-        "description": "Deletes an episode, the facts that cite only it, and its search and\nembedding entries; facts that also cite other episodes are re-scored.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes an episode, the facts that cite only it, and its search and\nembedding entries; facts that also cite other episodes are re-scored.",
         "operationId": "knowledge_episodes_delete",
         "parameters": [
           {
@@ -124061,10 +124083,11 @@
         ],
         "x-sylphx-method": "knowledge.episodes.delete",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets an episode.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an episode.",
         "operationId": "knowledge_episodes_get",
         "parameters": [
           {
@@ -124147,12 +124170,13 @@
         ],
         "x-sylphx-method": "knowledge.episodes.get",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/relations": {
       "get": {
-        "description": "Lists a space's facts. The filter is limited to `subject`, `predicate`,\n`object` and `provenance.channel`; superseded facts are listed only with\n`show_superseded`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists a space's facts. The filter is limited to `subject`, `predicate`,\n`object` and `provenance.channel`; superseded facts are listed only with\n`show_superseded`.",
         "operationId": "knowledge_relations_list",
         "parameters": [
           {
@@ -124275,10 +124299,11 @@
         ],
         "x-sylphx-method": "knowledge.relations.list",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Records a fact in a space (`relate`). A fact that contradicts a current\none with the same subject and a single-valued predicate closes the older\nfact; nothing is overwritten.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRecords a fact in a space (`relate`). A fact that contradicts a current\none with the same subject and a single-valued predicate closes the older\nfact; nothing is overwritten.",
         "operationId": "knowledge_relations_create",
         "parameters": [
           {
@@ -124399,12 +124424,13 @@
         ],
         "x-sylphx-method": "knowledge.relations.create",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/relations/{relation}": {
       "delete": {
-        "description": "Deletes a fact. Deletion is for data that must go; a fact that stopped\nbeing true is closed with `:close`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a fact. Deletion is for data that must go; a fact that stopped\nbeing true is closed with `:close`.",
         "operationId": "knowledge_relations_delete",
         "parameters": [
           {
@@ -124526,10 +124552,11 @@
         ],
         "x-sylphx-method": "knowledge.relations.delete",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets a relation.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a relation.",
         "operationId": "knowledge_relations_get",
         "parameters": [
           {
@@ -124612,12 +124639,13 @@
         ],
         "x-sylphx-method": "knowledge.relations.get",
         "x-sylphx-permission": "knowledge:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/relations/{relation}:close": {
       "post": {
-        "description": "Closes a fact (`close_fact`): it stopped holding in the world at\n`valid_end_time`. The fact stays readable for questions about the time\nbefore the close.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCloses a fact (`close_fact`): it stopped holding in the world at\n`valid_end_time`. The fact stays readable for questions about the time\nbefore the close.",
         "operationId": "knowledge_relations_close",
         "parameters": [
           {
@@ -124738,6 +124766,7 @@
         ],
         "x-sylphx-method": "knowledge.relations.close",
         "x-sylphx-permission": "knowledge:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

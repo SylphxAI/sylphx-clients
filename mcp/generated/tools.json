@@ -24882,7 +24882,7 @@
         "readOnlyHint": true,
         "title": "Gets a space."
       },
-      "description": "Gets a space.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a space.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/spaces/*}",
       "input_schema": {
@@ -24903,6 +24903,7 @@
       "long_running": false,
       "method_id": "knowledge.spaces.get",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_spaces_get"
     },
     {
@@ -24913,7 +24914,7 @@
         "readOnlyHint": true,
         "title": "Lists spaces."
       },
-      "description": "Lists spaces.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists spaces.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/spaces",
       "input_schema": {
@@ -24951,6 +24952,7 @@
       "long_running": false,
       "method_id": "knowledge.spaces.list",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_spaces_list"
     },
     {
@@ -24961,7 +24963,7 @@
         "readOnlyHint": false,
         "title": "Creates a space."
       },
-      "description": "Creates a space.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a space.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/spaces",
       "input_schema": {
@@ -25101,6 +25103,7 @@
       "long_running": false,
       "method_id": "knowledge.spaces.create",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_spaces_create"
     },
     {
@@ -25111,7 +25114,7 @@
         "readOnlyHint": false,
         "title": "Updates a space."
       },
-      "description": "Updates a space.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a space.",
       "effect": "write",
       "http": "PATCH /v1/{space.name=orgs/*/projects/*/envs/*/spaces/*}",
       "input_schema": {
@@ -25249,6 +25252,7 @@
       "long_running": false,
       "method_id": "knowledge.spaces.update",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_spaces_update"
     },
     {
@@ -25259,7 +25263,7 @@
         "readOnlyHint": false,
         "title": "Deletes a space. A space that still holds records is refused with `INVALID_STATE` unless `force` is set, which deletes its episodes and facts too."
       },
-      "description": "Deletes a space. A space that still holds records is refused with\n`INVALID_STATE` unless `force` is set, which deletes its episodes and\nfacts too.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a space. A space that still holds records is refused with\n`INVALID_STATE` unless `force` is set, which deletes its episodes and\nfacts too.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/spaces/*}",
       "input_schema": {
@@ -25302,6 +25306,7 @@
       "long_running": false,
       "method_id": "knowledge.spaces.delete",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_spaces_delete"
     },
     {
@@ -25312,7 +25317,7 @@
         "readOnlyHint": true,
         "title": "Gets a knowledge schema."
       },
-      "description": "Gets a knowledge schema.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a knowledge schema.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/knowledge_schemas/*}",
       "input_schema": {
@@ -25333,6 +25338,7 @@
       "long_running": false,
       "method_id": "knowledge.knowledge_schemas.get",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_knowledge_schemas_get"
     },
     {
@@ -25343,7 +25349,7 @@
         "readOnlyHint": true,
         "title": "Lists knowledge schemas."
       },
-      "description": "Lists knowledge schemas.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists knowledge schemas.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/knowledge_schemas",
       "input_schema": {
@@ -25381,6 +25387,7 @@
       "long_running": false,
       "method_id": "knowledge.knowledge_schemas.list",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_knowledge_schemas_list"
     },
     {
@@ -25391,7 +25398,7 @@
         "readOnlyHint": false,
         "title": "Creates a knowledge schema."
       },
-      "description": "Creates a knowledge schema.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates a knowledge schema.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/knowledge_schemas",
       "input_schema": {
@@ -25537,6 +25544,7 @@
       "long_running": false,
       "method_id": "knowledge.knowledge_schemas.create",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_knowledge_schemas_create"
     },
     {
@@ -25547,7 +25555,7 @@
         "readOnlyHint": false,
         "title": "Updates a knowledge schema. An accepted update publishes a new revision; a change that would invalidate existing records is refused with `INVALID_FIELD`."
       },
-      "description": "Updates a knowledge schema. An accepted update publishes a new\nrevision; a change that would invalidate existing records is refused\nwith `INVALID_FIELD`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates a knowledge schema. An accepted update publishes a new\nrevision; a change that would invalidate existing records is refused\nwith `INVALID_FIELD`.",
       "effect": "write",
       "http": "PATCH /v1/{knowledge_schema.name=orgs/*/projects/*/envs/*/knowledge_schemas/*}",
       "input_schema": {
@@ -25691,6 +25699,7 @@
       "long_running": false,
       "method_id": "knowledge.knowledge_schemas.update",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_knowledge_schemas_update"
     },
     {
@@ -25701,7 +25710,7 @@
         "readOnlyHint": false,
         "title": "Deletes a knowledge schema. A schema a space still accepts is refused with `RESOURCE_IN_USE`."
       },
-      "description": "Deletes a knowledge schema. A schema a space still accepts is refused\nwith `RESOURCE_IN_USE`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a knowledge schema. A schema a space still accepts is refused\nwith `RESOURCE_IN_USE`.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/knowledge_schemas/*}",
       "input_schema": {
@@ -25740,6 +25749,7 @@
       "long_running": false,
       "method_id": "knowledge.knowledge_schemas.delete",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_knowledge_schemas_delete"
     },
     {
@@ -25750,7 +25760,7 @@
         "readOnlyHint": true,
         "title": "Gets an episode."
       },
-      "description": "Gets an episode.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an episode.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/spaces/*/episodes/*}",
       "input_schema": {
@@ -25771,6 +25781,7 @@
       "long_running": false,
       "method_id": "knowledge.episodes.get",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_episodes_get"
     },
     {
@@ -25781,7 +25792,7 @@
         "readOnlyHint": true,
         "title": "Lists a space's episodes, newest first. The filter is limited to `kind` and `extraction`."
       },
-      "description": "Lists a space's episodes, newest first. The filter is limited to\n`kind` and `extraction`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a space's episodes, newest first. The filter is limited to\n`kind` and `extraction`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/episodes",
       "input_schema": {
@@ -25815,6 +25826,7 @@
       "long_running": false,
       "method_id": "knowledge.episodes.list",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_episodes_list"
     },
     {
@@ -25825,7 +25837,7 @@
         "readOnlyHint": false,
         "title": "Records an episode and returns at once (`remember`); extraction reads it afterwards."
       },
-      "description": "Records an episode and returns at once (`remember`); extraction reads\nit afterwards.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records an episode and returns at once (`remember`); extraction reads\nit afterwards.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/episodes",
       "input_schema": {
@@ -25974,6 +25986,7 @@
       "long_running": false,
       "method_id": "knowledge.episodes.create",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_remember"
     },
     {
@@ -25984,7 +25997,7 @@
         "readOnlyHint": false,
         "title": "Deletes an episode, the facts that cite only it, and its search and embedding entries; facts that also cite other episodes are re-scored."
       },
-      "description": "Deletes an episode, the facts that cite only it, and its search and\nembedding entries; facts that also cite other episodes are re-scored.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an episode, the facts that cite only it, and its search and\nembedding entries; facts that also cite other episodes are re-scored.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/spaces/*/episodes/*}",
       "input_schema": {
@@ -26023,6 +26036,7 @@
       "long_running": false,
       "method_id": "knowledge.episodes.delete",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_episodes_delete"
     },
     {
@@ -26033,7 +26047,7 @@
         "readOnlyHint": true,
         "title": "Gets an entity."
       },
-      "description": "Gets an entity.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an entity.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/entities/*}",
       "input_schema": {
@@ -26054,6 +26068,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.get",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_entities_get"
     },
     {
@@ -26064,7 +26079,7 @@
         "readOnlyHint": true,
         "title": "Lists the entities the caller may see. The filter is limited to `entity_type` and `lifecycle`."
       },
-      "description": "Lists the entities the caller may see. The filter is limited to\n`entity_type` and `lifecycle`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists the entities the caller may see. The filter is limited to\n`entity_type` and `lifecycle`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/entities",
       "input_schema": {
@@ -26098,6 +26113,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.list",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_entities_list"
     },
     {
@@ -26108,7 +26124,7 @@
         "readOnlyHint": false,
         "title": "Creates an entity in a space. An entity whose external id already names one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which names it; use Update with `allow_missing` to upsert."
       },
-      "description": "Creates an entity in a space. An entity whose external id already\nnames one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which\nnames it; use Update with `allow_missing` to upsert.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Creates an entity in a space. An entity whose external id already\nnames one in the graph is refused with `RESOURCE_ALREADY_EXISTS`, which\nnames it; use Update with `allow_missing` to upsert.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entities",
       "input_schema": {
@@ -26228,6 +26244,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.create",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_entities_create"
     },
     {
@@ -26238,7 +26255,7 @@
         "readOnlyHint": false,
         "title": "Updates an entity. With `allow_missing` it is the structured upsert (`upsert_entity`): an entity matched by `external_ids` is updated, otherwise one is created."
       },
-      "description": "Updates an entity. With `allow_missing` it is the structured upsert\n(`upsert_entity`): an entity matched by `external_ids` is updated,\notherwise one is created.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Updates an entity. With `allow_missing` it is the structured upsert\n(`upsert_entity`): an entity matched by `external_ids` is updated,\notherwise one is created.",
       "effect": "write",
       "http": "PATCH /v1/{entity.name=orgs/*/projects/*/envs/*/entities/*}",
       "input_schema": {
@@ -26356,6 +26373,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.update",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_entities_update"
     },
     {
@@ -26366,7 +26384,7 @@
         "readOnlyHint": false,
         "title": "Deletes an entity and every fact about it. With `force` it is a data-rights erasure: the episodes the person wrote are deleted too, with their search and embedding entries."
       },
-      "description": "Deletes an entity and every fact about it. With `force` it is a\ndata-rights erasure: the episodes the person wrote are deleted too, with\ntheir search and embedding entries.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes an entity and every fact about it. With `force` it is a\ndata-rights erasure: the episodes the person wrote are deleted too, with\ntheir search and embedding entries.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/entities/*}",
       "input_schema": {
@@ -26409,6 +26427,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.delete",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_entities_delete"
     },
     {
@@ -26419,7 +26438,7 @@
         "readOnlyHint": false,
         "title": "Merges other entities into this one: their facts and external ids resolve to it. The merge is recorded and reversible with `:split`; it is never a silent rewrite."
       },
-      "description": "Merges other entities into this one: their facts and external ids\nresolve to it. The merge is recorded and reversible with `:split`; it is\nnever a silent rewrite.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Merges other entities into this one: their facts and external ids\nresolve to it. The merge is recorded and reversible with `:split`; it is\nnever a silent rewrite.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/entities/*}:merge",
       "input_schema": {
@@ -26453,6 +26472,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.merge",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_entities_merge"
     },
     {
@@ -26463,7 +26483,7 @@
         "readOnlyHint": false,
         "title": "Splits a merged entity back out of this one, with the facts and external ids it brought."
       },
-      "description": "Splits a merged entity back out of this one, with the facts and\nexternal ids it brought.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Splits a merged entity back out of this one, with the facts and\nexternal ids it brought.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/entities/*}:split",
       "input_schema": {
@@ -26490,6 +26510,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.split",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_entities_split"
     },
     {
@@ -26500,7 +26521,7 @@
         "readOnlyHint": true,
         "title": "Returns one entity's profile in one call (`entity`): the entity, its current facts in both directions, the entities they name and the recent episodes about it, trimmed to what the caller may see. A read with a request body."
       },
-      "description": "Returns one entity's profile in one call (`entity`): the entity, its\ncurrent facts in both directions, the entities they name and the recent\nepisodes about it, trimmed to what the caller may see. A read with a\nrequest body.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Returns one entity's profile in one call (`entity`): the entity, its\ncurrent facts in both directions, the entities they name and the recent\nepisodes about it, trimmed to what the caller may see. A read with a\nrequest body.",
       "effect": "read",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/entities/*}:profile",
       "input_schema": {
@@ -26531,6 +26552,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.profile",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_entity"
     },
     {
@@ -26541,7 +26563,7 @@
         "readOnlyHint": true,
         "title": "Searches the graph (`recall`): hybrid lexical and semantic search over episodes and facts, fused by reciprocal rank, then at most two hops of expansion from the top entities. Returns a context pack with citations, built only from records the caller may see."
       },
-      "description": "Searches the graph (`recall`): hybrid lexical and semantic search over\nepisodes and facts, fused by reciprocal rank, then at most two hops of\nexpansion from the top entities. Returns a context pack with citations,\nbuilt only from records the caller may see.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Searches the graph (`recall`): hybrid lexical and semantic search over\nepisodes and facts, fused by reciprocal rank, then at most two hops of\nexpansion from the top entities. Returns a context pack with citations,\nbuilt only from records the caller may see.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:recall",
       "input_schema": {
@@ -26599,6 +26621,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.recall",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_recall"
     },
     {
@@ -26609,7 +26632,7 @@
         "readOnlyHint": true,
         "title": "Answers a question through Sylphx AI (`ask`), from a context pack built only from records the caller may see, with citations to its episodes."
       },
-      "description": "Answers a question through Sylphx AI (`ask`), from a context pack built\nonly from records the caller may see, with citations to its episodes.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Answers a question through Sylphx AI (`ask`), from a context pack built\nonly from records the caller may see, with citations to its episodes.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/entities:ask",
       "input_schema": {
@@ -26648,6 +26671,7 @@
       "long_running": false,
       "method_id": "knowledge.entities.ask",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_ask"
     },
     {
@@ -26658,7 +26682,7 @@
         "readOnlyHint": true,
         "title": "Gets a relation."
       },
-      "description": "Gets a relation.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a relation.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/spaces/*/relations/*}",
       "input_schema": {
@@ -26679,6 +26703,7 @@
       "long_running": false,
       "method_id": "knowledge.relations.get",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_relations_get"
     },
     {
@@ -26689,7 +26714,7 @@
         "readOnlyHint": true,
         "title": "Lists a space's facts. The filter is limited to `subject`, `predicate`, `object` and `provenance.channel`; superseded facts are listed only with `show_superseded`."
       },
-      "description": "Lists a space's facts. The filter is limited to `subject`, `predicate`,\n`object` and `provenance.channel`; superseded facts are listed only with\n`show_superseded`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists a space's facts. The filter is limited to `subject`, `predicate`,\n`object` and `provenance.channel`; superseded facts are listed only with\n`show_superseded`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/relations",
       "input_schema": {
@@ -26732,6 +26757,7 @@
       "long_running": false,
       "method_id": "knowledge.relations.list",
       "permission": "knowledge:read",
+      "served": false,
       "tool": "knowledge_relations_list"
     },
     {
@@ -26742,7 +26768,7 @@
         "readOnlyHint": false,
         "title": "Records a fact in a space (`relate`). A fact that contradicts a current one with the same subject and a single-valued predicate closes the older fact; nothing is overwritten."
       },
-      "description": "Records a fact in a space (`relate`). A fact that contradicts a current\none with the same subject and a single-valued predicate closes the older\nfact; nothing is overwritten.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Records a fact in a space (`relate`). A fact that contradicts a current\none with the same subject and a single-valued predicate closes the older\nfact; nothing is overwritten.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/spaces/*}/relations",
       "input_schema": {
@@ -26851,6 +26877,7 @@
       "long_running": false,
       "method_id": "knowledge.relations.create",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_relate"
     },
     {
@@ -26861,7 +26888,7 @@
         "readOnlyHint": false,
         "title": "Deletes a fact. Deletion is for data that must go; a fact that stopped being true is closed with `:close`."
       },
-      "description": "Deletes a fact. Deletion is for data that must go; a fact that stopped\nbeing true is closed with `:close`.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Deletes a fact. Deletion is for data that must go; a fact that stopped\nbeing true is closed with `:close`.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/spaces/*/relations/*}",
       "input_schema": {
@@ -26900,6 +26927,7 @@
       "long_running": false,
       "method_id": "knowledge.relations.delete",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_relations_delete"
     },
     {
@@ -26910,7 +26938,7 @@
         "readOnlyHint": false,
         "title": "Closes a fact (`close_fact`): it stopped holding in the world at `valid_end_time`. The fact stays readable for questions about the time before the close."
       },
-      "description": "Closes a fact (`close_fact`): it stopped holding in the world at\n`valid_end_time`. The fact stays readable for questions about the time\nbefore the close.",
+      "description": "Not available yet (answers 501 UNIMPLEMENTED). Closes a fact (`close_fact`): it stopped holding in the world at\n`valid_end_time`. The fact stays readable for questions about the time\nbefore the close.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/spaces/*/relations/*}:close",
       "input_schema": {
@@ -26940,6 +26968,7 @@
       "long_running": false,
       "method_id": "knowledge.relations.close",
       "permission": "knowledge:write",
+      "served": false,
       "tool": "knowledge_close_fact"
     },
     {
@@ -53258,225 +53287,6 @@
       },
       "name": "data_databases_create",
       "x-sylphx-method": "data.databases.create"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": false,
-        "readOnlyHint": false,
-        "title": "Records an episode and returns at once (`remember`); extraction reads it afterwards."
-      },
-      "description": "Records an episode and returns at once (`remember`); extraction reads\nit afterwards.",
-      "inputSchema": {
-        "additionalProperties": false,
-        "description": "The request of CreateEpisode.",
-        "properties": {
-          "episode": {
-            "additionalProperties": false,
-            "description": "The episode to create; only caller-writable fields are read.",
-            "properties": {
-              "data": {
-                "additionalProperties": true,
-                "description": "Structured content, for a caller that already knows the shape (an\nimported row, a form).",
-                "type": "object"
-              },
-              "entities": {
-                "description": "The entities the caller says the episode is about, as resource names;\nextraction adds the ones it finds. At most 50.",
-                "items": {
-                  "type": "string"
-                },
-                "type": "array",
-                "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
-              },
-              "kind": {
-                "description": "What the episode is.",
-                "enum": [
-                  "note",
-                  "message",
-                  "step_result",
-                  "document_chunk",
-                  "imported_row",
-                  "structured"
-                ],
-                "type": "string"
-              },
-              "meta": {
-                "additionalProperties": false,
-                "description": "Resource metadata.",
-                "properties": {
-                  "annotations": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, unindexed annotations.",
-                    "type": "object"
-                  },
-                  "display_name": {
-                    "description": "Caller-writable human-readable name.",
-                    "type": "string"
-                  },
-                  "labels": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
-                    "type": "object"
-                  }
-                },
-                "type": "object"
-              },
-              "name": {
-                "description": "`orgs/{org}/projects/{project}/envs/{env}/spaces/{space}/episodes/{episode}`.",
-                "type": "string"
-              },
-              "occur_time": {
-                "description": "When it happened in the world; default the time it was recorded.",
-                "format": "date-time",
-                "type": "string"
-              },
-              "provenance": {
-                "additionalProperties": false,
-                "description": "Where it came from and who wrote it.",
-                "properties": {
-                  "method": {
-                    "description": "How the content was produced; default `SOURCE_METHOD_STATED`. Only the\nservice writes `SOURCE_METHOD_EXTRACTED`.",
-                    "enum": [
-                      "stated",
-                      "extracted",
-                      "imported"
-                    ],
-                    "type": "string"
-                  },
-                  "references": {
-                    "description": "References to where the content came from: a run and step, a work item,\na message, a URL. At most 20.",
-                    "items": {
-                      "additionalProperties": false,
-                      "description": "A SourceRef points at where a record's content came from.",
-                      "properties": {
-                        "label": {
-                          "description": "A short label to show with a citation.",
-                          "type": "string"
-                        },
-                        "pinned_version": {
-                          "description": "Immutable version of the source observed when this claim was recorded.",
-                          "type": "string"
-                        },
-                        "uri": {
-                          "description": "A URI: a URL, or a URN of a platform record such as a Workflows run step.",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "uri"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
-                  }
-                },
-                "type": "object"
-              },
-              "text": {
-                "description": "The text as written, at most 64 KiB. An episode has `text`, `data`, or\nboth.",
-                "type": "string"
-              }
-            },
-            "required": [
-              "kind"
-            ],
-            "type": "object"
-          },
-          "episode_id": {
-            "description": "The episode id, the final name segment; the server assigns one when\nempty.",
-            "type": "string"
-          },
-          "parent": {
-            "description": "The parent to create in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "knowledge.sylphx.com/Episode"
-          },
-          "skip_extraction": {
-            "description": "Record the episode without extraction, for content that is already\nstructured or must not be read by a model.",
-            "type": "boolean"
-          },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "parent",
-          "episode"
-        ],
-        "type": "object"
-      },
-      "name": "knowledge_remember",
-      "x-sylphx-method": "knowledge.episodes.create"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": false,
-        "openWorldHint": false,
-        "readOnlyHint": true,
-        "title": "Searches the graph (`recall`): hybrid lexical and semantic search over episodes and facts, fused by reciprocal rank, then at most two hops of expansion from the top entities. Returns a context pack with citations, built only from records the caller may see."
-      },
-      "description": "Searches the graph (`recall`): hybrid lexical and semantic search over\nepisodes and facts, fused by reciprocal rank, then at most two hops of\nexpansion from the top entities. Returns a context pack with citations,\nbuilt only from records the caller may see.",
-      "inputSchema": {
-        "additionalProperties": false,
-        "description": "The request of RecallEntities.",
-        "properties": {
-          "entity_types": {
-            "description": "Only entities of these types; default every type.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "max_facts": {
-            "description": "At most this many facts in the pack; default 30, clamped to 200.",
-            "format": "int32",
-            "type": "integer"
-          },
-          "max_hops": {
-            "description": "How many hops to expand from the top entities, 0 to 2; default 2.",
-            "format": "int32",
-            "maximum": 2,
-            "minimum": 0,
-            "type": "integer"
-          },
-          "parent": {
-            "description": "The environment whose graph to search.",
-            "type": "string",
-            "x-sylphx-resource-reference": "knowledge.sylphx.com/Entity"
-          },
-          "query": {
-            "description": "What to recall, in natural language; 1 to 4000 characters.",
-            "type": "string"
-          },
-          "spaces": {
-            "description": "The spaces to search, as resource names; default every space the caller\nmay read. At most 50.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "x-sylphx-resource-reference": "knowledge.sylphx.com/Space"
-          },
-          "valid_time": {
-            "description": "Recall the graph as it was valid at this time; default now.",
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "parent",
-          "query"
-        ],
-        "type": "object"
-      },
-      "name": "knowledge_recall",
-      "x-sylphx-method": "knowledge.entities.recall"
     },
     {
       "annotations": {
