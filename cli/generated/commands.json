@@ -7347,6 +7347,130 @@
     {
       "collections": [
         {
+          "collection": "meters",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=meters/*}",
+              "method": "billing.meters.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "meters/{meter}"
+              },
+              "summary": "Gets a meter.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over labels and filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/meters",
+              "method": "billing.meters.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": null,
+              "summary": "Lists meters. Anonymous-readable: the pricing page renders from it.",
+              "verb": "list"
+            }
+          ],
+          "noun": "meters",
+          "resource_type": "billing.sylphx.com/Meter"
+        },
+        {
+          "collection": "plans",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=plans/*}",
+              "method": "billing.plans.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "plans/{plan}"
+              },
+              "summary": "Gets a plan.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over labels and filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/plans",
+              "method": "billing.plans.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": null,
+              "summary": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+              "verb": "list"
+            }
+          ],
+          "noun": "plans",
+          "resource_type": "billing.sylphx.com/Plan"
+        }
+      ],
+      "commands": [],
+      "display_name": "Sylphx Billing",
+      "noun": "billing",
+      "stage": "preview"
+    },
+    {
+      "collections": [
+        {
           "collection": "trust_policies",
           "commands": [
             {

@@ -686,9 +686,26 @@ mod tests {
             .collect();
         assert!(all_methods.contains(&"agents.agent_sessions.decide_approval"));
         assert!(!all_methods.contains(&"notify.support_cases.create"));
+        for method in [
+            "billing.plans.list",
+            "billing.plans.get",
+            "billing.meters.list",
+            "billing.meters.get",
+        ] {
+            assert!(
+                all_methods.contains(&method),
+                "expected served CLI method: {method}"
+            );
+        }
+        for method in ["billing.billing_accounts.get", "billing.invoices.list"] {
+            assert!(
+                !all_methods.contains(&method),
+                "expected unserved CLI method omitted: {method}"
+            );
+        }
         assert!(!tree.services.iter().any(|s| matches!(
             s.noun.as_str(),
-            "analytics" | "billing" | "entitlement" | "network" | "realtime" | "runners"
+            "analytics" | "entitlement" | "network" | "realtime" | "runners"
         )));
     }
 

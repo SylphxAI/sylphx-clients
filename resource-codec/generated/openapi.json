@@ -52603,7 +52603,7 @@
     },
     "/v1/meters": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists meters. Anonymous-readable: the pricing page renders from it.",
+        "description": "Lists meters. Anonymous-readable: the pricing page renders from it.",
         "operationId": "billing_meters_list",
         "parameters": [
           {
@@ -52685,13 +52685,12 @@
         "x-sylphx-method": "billing.meters.list",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-publishable-ok": true,
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/meters/{meter}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a meter.",
+        "description": "Gets a meter.",
         "operationId": "billing_meters_get",
         "parameters": [
           {
@@ -52743,7 +52742,6 @@
         "x-sylphx-method": "billing.meters.get",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-publishable-ok": true,
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -139272,7 +139270,7 @@
     },
     "/v1/plans": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+        "description": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
         "operationId": "billing_plans_list",
         "parameters": [
           {
@@ -139354,13 +139352,12 @@
         "x-sylphx-method": "billing.plans.list",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-publishable-ok": true,
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/plans/{plan}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a plan.",
+        "description": "Gets a plan.",
         "operationId": "billing_plans_get",
         "parameters": [
           {
@@ -139412,7 +139409,6 @@
         "x-sylphx-method": "billing.plans.get",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-publishable-ok": true,
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

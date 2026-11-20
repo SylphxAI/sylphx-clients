@@ -11233,7 +11233,7 @@
         "readOnlyHint": true,
         "title": "Gets a meter."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a meter.",
+      "description": "Gets a meter.",
       "effect": "read",
       "http": "GET /v1/{name=meters/*}",
       "input_schema": {
@@ -11254,7 +11254,6 @@
       "long_running": false,
       "method_id": "billing.meters.get",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_meters_get"
     },
     {
@@ -11265,7 +11264,7 @@
         "readOnlyHint": true,
         "title": "Lists meters. Anonymous-readable: the pricing page renders from it."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists meters. Anonymous-readable: the pricing page renders from it.",
+      "description": "Lists meters. Anonymous-readable: the pricing page renders from it.",
       "effect": "read",
       "http": "GET /v1/meters",
       "input_schema": {
@@ -11295,7 +11294,6 @@
       "long_running": false,
       "method_id": "billing.meters.list",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_meters_list"
     },
     {
@@ -11306,7 +11304,7 @@
         "readOnlyHint": true,
         "title": "Gets a plan."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a plan.",
+      "description": "Gets a plan.",
       "effect": "read",
       "http": "GET /v1/{name=plans/*}",
       "input_schema": {
@@ -11327,7 +11325,6 @@
       "long_running": false,
       "method_id": "billing.plans.get",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_plans_get"
     },
     {
@@ -11338,7 +11335,7 @@
         "readOnlyHint": true,
         "title": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+      "description": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
       "effect": "read",
       "http": "GET /v1/plans",
       "input_schema": {
@@ -11368,7 +11365,6 @@
       "long_running": false,
       "method_id": "billing.plans.list",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_plans_list"
     },
     {
