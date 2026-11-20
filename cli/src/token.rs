@@ -291,8 +291,7 @@ pub async fn token(
             } else {
                 format!(
                     "this login may not grant {scope} ({}); ask an org admin for a role that \
-                     includes it, then run `sylphx login` again (a per-scope step-up login is \
-                     not available yet)",
+                     includes it, then run `sylphx login` again",
                     line(&e)
                 )
             })

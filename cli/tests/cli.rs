@@ -2476,6 +2476,27 @@ async fn token_names_the_scope_a_login_may_not_grant() {
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(err.contains("hosting:deploy"), "{err}");
     assert_eq!(err.trim().lines().count(), 1, "{err}");
+
+    let (url, _log) = serve(vec![
+        (200, whoami_reply()),
+        (403, json!({"code": "PERMISSION_DENIED", "status": 403, "retryable": false, "detail": "the caller cannot grant hosting:deploy"})),
+    ])
+    .await;
+    let sb = Sandbox::new("token-denied-stored");
+    store_org_keys(&sb, &url, &[("org_a", "acme", "sylphx_sk_org_a")], "org_a");
+    let out = run_stored(&sb, &url, &["token", "--scope", "hosting:deploy"]).await;
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("hosting:deploy") && err.contains("run `sylphx login` again"),
+        "{err}"
+    );
+    assert!(
+        !err.to_ascii_lowercase().contains("not available yet"),
+        "{err}"
+    );
+    assert_eq!(err.trim().lines().count(), 1, "{err}");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -5732,8 +5753,15 @@ async fn ambiguous_defaults_fail_and_list_the_choices_without_mutating() {
         (
             200,
             projects_page(vec![
-                project_row("orgs/org_a/projects/prj_1", "web"),
-                project_row("orgs/org_a/projects/prj_2", "api"),
+                json!({
+                    "name": "orgs/org_a/projects/prj_1",
+                    "meta": {"display_name": "Web Frontend"},
+                    "spec": {"slug": "web"}
+                }),
+                json!({
+                    "name": "orgs/org_a/projects/prj_2",
+                    "spec": {"slug": "api", "name": "Core API"}
+                }),
             ]),
         ),
     ])
@@ -5745,8 +5773,15 @@ async fn ambiguous_defaults_fail_and_list_the_choices_without_mutating() {
     assert!(!out.status.success());
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(
-        err.contains("web (prj_1)") && err.contains("api (prj_2)") && err.contains("choose"),
+        err.contains("web (Web Frontend, prj_1)")
+            && err.contains("api (Core API, prj_2)")
+            && err.contains("choose")
+            && err.contains("run `sylphx link --project <slug> --env <env>`, set SYLPHX_ENVIRONMENT, or pass the explicit parent path"),
         "{err}"
+    );
+    assert!(
+        !err.contains("--project / --env"),
+        "must not recommend nonexistent global flags: {err}"
     );
     let seen = log.lock().clone();
     assert_eq!(seen.len(), 2, "no create is attempted on ambiguity");
@@ -5778,11 +5813,81 @@ async fn ambiguous_defaults_fail_and_list_the_choices_without_mutating() {
     assert!(!out.status.success());
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(
-        err.contains("env_1") && err.contains("env_2") && err.contains("choose"),
+        err.contains("staging (env_1)")
+            && err.contains("development (env_2)")
+            && err.contains("choose")
+            && err.contains("run `sylphx link --project <slug> --env <env>`, set SYLPHX_ENVIRONMENT, or pass the explicit parent path"),
         "{err}"
     );
+    assert!(!err.contains("--project / --env"), "{err}");
     assert_eq!(log.lock().len(), 3);
     assert!(!sb.dir.join(".sylphx/project.json").exists());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn access_projects_list_renders_human_readable_slug_and_display_name() {
+    let projects = json!({
+        "projects": [
+            {
+                "name": "orgs/org_a/projects/prj_fs01web",
+                "meta": {"display_name": "Web Console", "create_time": "2020-01-01T00:00:00Z"},
+                "spec": {"slug": "web"}
+            },
+            {
+                "name": "orgs/org_a/projects/prj_fs01api",
+                "spec": {"slug": "api", "name": "Billing API"}
+            },
+            {
+                "name": "orgs/org_a/projects/prj_fs01worker",
+                "spec": {"slug": "worker"}
+            }
+        ],
+        "next_page_token": ""
+    });
+    let (url, log) = serve(vec![(200, projects.clone()), (200, projects)]).await;
+    let sb = Sandbox::new("access-projects-list-table");
+
+    let out = run(&sb, &url, &["access", "projects", "list"]).await;
+    assert_success(&out);
+    let table = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = table.lines().collect();
+    assert_eq!(lines.len(), 4, "{table}");
+    assert!(
+        lines[0].starts_with("SLUG")
+            && lines[0].contains("DISPLAY NAME")
+            && lines[0].contains("NAME")
+            && lines[0].ends_with("AGE"),
+        "{table}"
+    );
+    assert!(
+        lines[1].starts_with("web")
+            && lines[1].contains("Web Console")
+            && lines[1].contains("orgs/org_a/projects/prj_fs01web"),
+        "{table}"
+    );
+    assert!(
+        lines[2].starts_with("api")
+            && lines[2].contains("Billing API")
+            && lines[2].contains("orgs/org_a/projects/prj_fs01api"),
+        "{table}"
+    );
+    assert!(
+        lines[3].starts_with("worker")
+            && lines[3].contains("  - ")
+            && lines[3].contains("orgs/org_a/projects/prj_fs01worker"),
+        "{table}"
+    );
+
+    let out_names = run(&sb, &url, &["access", "projects", "list", "-o", "name"]).await;
+    assert_success(&out_names);
+    assert_eq!(
+        String::from_utf8_lossy(&out_names.stdout).trim(),
+        "orgs/org_a/projects/prj_fs01web\norgs/org_a/projects/prj_fs01api\norgs/org_a/projects/prj_fs01worker"
+    );
+
+    let seen = log.lock();
+    assert_eq!(seen.len(), 2);
+    assert!(seen[0].line.starts_with("GET /v1/orgs/org_a/projects "));
 }
 
 /// An explicit full environment name resolves the target and skips discovery

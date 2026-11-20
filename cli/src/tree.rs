@@ -160,9 +160,6 @@ pub fn method_command(m: &MethodCmd) -> Command {
     if about.is_empty() {
         about = m.method.clone();
     }
-    if !m.served {
-        about = format!("Not available yet (answers 501 UNIMPLEMENTED). {about}");
-    }
     let mut cmd = Command::new(m.verb.clone())
         .about(about)
         .after_help(format!(
@@ -215,22 +212,20 @@ fn value_name(f: &FlagSpec) -> String {
     }
 }
 
-/// `sylphx <service> …` for every service in the tree. `hand_written` names
-/// the `(service, word)` pairs the binary mounts itself (`build run`): a
+/// `sylphx <service> …` for every served service in the tree. `hand_written`
+/// names the `(service, word)` pairs the binary mounts itself (`build run`): a
 /// short command starting with that word gives way to it.
 pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Command> {
     tree.services
         .iter()
-        .map(|s| {
-            let mut about = s.display_name.clone();
-            if !s.served {
-                about.push_str(" - not available yet");
-            }
+        .filter(|s| s.served)
+        .filter_map(|s| {
+            let has_hand_written = hand_written.iter().any(|(svc, _)| *svc == s.noun.as_str());
             let mut cmd = Command::new(s.noun.clone())
-                .about(about)
+                .about(s.display_name.clone())
                 .subcommand_required(true)
                 .arg_required_else_help(true);
-            for m in &s.commands {
+            for m in s.commands.iter().filter(|m| m.served) {
                 if !hand_written.contains(&(s.noun.as_str(), m.verb.as_str())) {
                     cmd = cmd.subcommand(method_command(m));
                 }
@@ -238,12 +233,13 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
             let short: Vec<(Vec<&str>, &MethodCmd)> = s
                 .porcelain
                 .iter()
+                .filter(|p| p.command.served)
                 .map(|p| (p.words(), &p.command))
                 .filter(|(w, _)| !hand_written.contains(&(s.noun.as_str(), w[0])))
                 .collect();
             for c in &s.collections {
                 if c.collapsed {
-                    for m in &c.commands {
+                    for m in c.commands.iter().filter(|m| m.served) {
                         if hand_written.contains(&(s.noun.as_str(), m.verb.as_str()))
                             || short
                                 .iter()
@@ -255,16 +251,22 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
                     }
                     continue;
                 }
+                let served_methods: Vec<&MethodCmd> =
+                    c.commands.iter().filter(|m| m.served).collect();
+                if served_methods.is_empty() {
+                    continue;
+                }
                 let mut cc = Command::new(c.noun.clone())
                     .about(format!("`{}`: {}", c.collection, c.resource_type))
                     .subcommand_required(true)
                     .arg_required_else_help(true);
-                for m in &c.commands {
+                for m in served_methods {
                     cc = cc.subcommand(method_command(m));
                 }
                 cmd = cmd.subcommand(cc);
             }
-            mount(cmd, &short)
+            let cmd = mount(cmd, &short);
+            (cmd.has_subcommands() || has_hand_written).then_some(cmd)
         })
         .collect()
 }
@@ -295,18 +297,21 @@ fn mount(mut cmd: Command, items: &[(Vec<&str>, &MethodCmd)]) -> Command {
     cmd
 }
 
-/// Finds the method a generated command line selects.
+/// Finds the served method a generated command line selects.
 pub fn find<'t>(
     tree: &'t Tree,
     service: &str,
     matches: &ArgMatches,
 ) -> Option<(&'t MethodCmd, ArgMatches)> {
-    let s = tree.services.iter().find(|s| s.noun == service)?;
+    let s = tree
+        .services
+        .iter()
+        .find(|s| s.served && s.noun == service)?;
     let (sub, sub_m) = matches.subcommand()?;
-    if let Some(m) = s.commands.iter().find(|m| m.verb == sub) {
+    if let Some(m) = s.commands.iter().find(|m| m.served && m.verb == sub) {
         return Some((m, sub_m.clone()));
     }
-    for p in &s.porcelain {
+    for p in s.porcelain.iter().filter(|p| p.command.served) {
         let words = p.words();
         if words[0] != sub {
             continue;
@@ -331,7 +336,7 @@ pub fn find<'t>(
         .iter()
         .filter(|c| c.collapsed)
         .flat_map(|c| &c.commands)
-        .find(|m| m.verb == sub)
+        .find(|m| m.served && m.verb == sub)
     {
         return Some((m, sub_m.clone()));
     }
@@ -340,7 +345,7 @@ pub fn find<'t>(
         .iter()
         .find(|c| !c.collapsed && c.noun == sub)?;
     let (verb, verb_m) = sub_m.subcommand()?;
-    let m = c.commands.iter().find(|m| m.verb == verb)?;
+    let m = c.commands.iter().find(|m| m.served && m.verb == verb)?;
     Some((m, verb_m.clone()))
 }
 
@@ -808,5 +813,194 @@ mod tests {
         assert!(build.find_subcommand("cache").is_none());
         assert!(build.find_subcommand("image").is_some());
         assert!(build.find_subcommand("caches").is_some());
+    }
+
+    fn stub_method(verb: &str, method: &str, served: bool) -> MethodCmd {
+        MethodCmd {
+            verb: verb.into(),
+            method: method.into(),
+            summary: format!("Summary for {method}"),
+            served,
+            http: "GET /v1/demo".into(),
+            effect: "read".into(),
+            positional: None,
+            flags: vec![],
+            waits: None,
+            update_mask: None,
+            sends_etag: false,
+            paginates: false,
+            resource_field_name: None,
+        }
+    }
+
+    #[test]
+    fn unserved_services_and_methods_are_omitted_and_rejected() {
+        let tree = Tree {
+            services: vec![
+                ServiceCmd {
+                    noun: "vapor".into(),
+                    display_name: "Vaporware".into(),
+                    served: false,
+                    commands: vec![stub_method("ping", "vapor.ping", true)],
+                    collections: vec![CollectionCmd {
+                        noun: "items".into(),
+                        collection: "items".into(),
+                        resource_type: "vapor.sylphx.com/Item".into(),
+                        collapsed: false,
+                        commands: vec![stub_method("list", "vapor.items.list", true)],
+                    }],
+                    porcelain: vec![PorcelainCmd {
+                        path: vec!["quick".into()],
+                        command: stub_method("run", "vapor.items.run", true),
+                    }],
+                },
+                ServiceCmd {
+                    noun: "demo".into(),
+                    display_name: "Demo".into(),
+                    served: true,
+                    commands: vec![
+                        stub_method("live", "demo.live", true),
+                        stub_method("stub", "demo.stub", false),
+                    ],
+                    collections: vec![
+                        CollectionCmd {
+                            noun: "widgets".into(),
+                            collection: "widgets".into(),
+                            resource_type: "demo.sylphx.com/Widget".into(),
+                            collapsed: false,
+                            commands: vec![
+                                stub_method("list", "demo.widgets.list", true),
+                                stub_method("create", "demo.widgets.create", false),
+                            ],
+                        },
+                        CollectionCmd {
+                            noun: "ghosts".into(),
+                            collection: "ghosts".into(),
+                            resource_type: "demo.sylphx.com/Ghost".into(),
+                            collapsed: false,
+                            commands: vec![stub_method("list", "demo.ghosts.list", false)],
+                        },
+                        CollectionCmd {
+                            noun: "demo".into(),
+                            collection: "demos".into(),
+                            resource_type: "demo.sylphx.com/Demo".into(),
+                            collapsed: true,
+                            commands: vec![
+                                stub_method("get", "demo.demos.get", true),
+                                stub_method("purge", "demo.demos.purge", false),
+                            ],
+                        },
+                    ],
+                    porcelain: vec![
+                        PorcelainCmd {
+                            path: vec!["shortcut".into()],
+                            command: stub_method("go", "demo.widgets.go", true),
+                        },
+                        PorcelainCmd {
+                            path: vec!["dead".into()],
+                            command: stub_method("end", "demo.widgets.end", false),
+                        },
+                    ],
+                },
+                ServiceCmd {
+                    noun: "empty".into(),
+                    display_name: "Empty".into(),
+                    served: true,
+                    commands: vec![stub_method("gone", "empty.gone", false)],
+                    collections: vec![CollectionCmd {
+                        noun: "things".into(),
+                        collection: "things".into(),
+                        resource_type: "empty.sylphx.com/Thing".into(),
+                        collapsed: false,
+                        commands: vec![stub_method("list", "empty.things.list", false)],
+                    }],
+                    porcelain: vec![PorcelainCmd {
+                        path: vec![],
+                        command: stub_method("nope", "empty.nope", false),
+                    }],
+                },
+            ],
+        };
+
+        let mut root_cmd = Command::new("sylphx");
+        for s in service_commands(&tree, &[]) {
+            root_cmd = root_cmd.subcommand(s);
+        }
+        root_cmd.clone().debug_assert();
+
+        // Unserved and filtered-empty services are omitted.
+        assert!(root_cmd.find_subcommand("vapor").is_none());
+        assert!(root_cmd.find_subcommand("empty").is_none());
+
+        // A filtered-empty served service stays mounted only if a hand-written
+        // subcommand owns it.
+        let with_hand_written = service_commands(&tree, &[("empty", "custom")]);
+        assert!(with_hand_written.iter().any(|c| c.get_name() == "empty"));
+        assert!(!with_hand_written.iter().any(|c| c.get_name() == "vapor"));
+
+        // Served service mounts only served methods, porcelain, and non-empty collections.
+        let demo = root_cmd.find_subcommand("demo").expect("demo");
+        assert!(demo.find_subcommand("live").is_some());
+        assert!(demo.find_subcommand("stub").is_none());
+        assert!(demo.find_subcommand("get").is_some());
+        assert!(demo.find_subcommand("purge").is_none());
+        assert!(demo.find_subcommand("ghosts").is_none());
+        assert!(demo.find_subcommand("dead").is_none());
+        assert!(demo
+            .find_subcommand("shortcut")
+            .and_then(|c| c.find_subcommand("go"))
+            .is_some());
+        let widgets = demo.find_subcommand("widgets").expect("widgets");
+        assert!(widgets.find_subcommand("list").is_some());
+        assert!(widgets.find_subcommand("create").is_none());
+
+        // `find` rejects every unserved service, method, collection method, and porcelain entry
+        // even against a synthetic clap match tree.
+        let synthetic_matches = |argv: &[&str]| -> ArgMatches {
+            let mut leaf = Command::new(argv[argv.len() - 1].to_string());
+            for seg in argv[1..argv.len() - 1].iter().rev() {
+                leaf = Command::new((*seg).to_string()).subcommand(leaf);
+            }
+            Command::new(argv[0].to_string())
+                .subcommand(leaf)
+                .try_get_matches_from(argv)
+                .unwrap()
+        };
+
+        for (service, argv) in [
+            ("vapor", &["vapor", "ping"][..]),
+            ("vapor", &["vapor", "items", "list"][..]),
+            ("vapor", &["vapor", "quick", "run"][..]),
+            ("demo", &["demo", "stub"][..]),
+            ("demo", &["demo", "widgets", "create"][..]),
+            ("demo", &["demo", "ghosts", "list"][..]),
+            ("demo", &["demo", "purge"][..]),
+            ("demo", &["demo", "dead", "end"][..]),
+        ] {
+            let m = synthetic_matches(argv);
+            assert!(
+                find(&tree, service, &m).is_none(),
+                "find must reject unserved {argv:?}"
+            );
+        }
+
+        // Served paths resolve cleanly.
+        for (argv, expected) in [
+            (&["demo", "live"][..], "demo.live"),
+            (&["demo", "widgets", "list"][..], "demo.widgets.list"),
+            (&["demo", "get"][..], "demo.demos.get"),
+            (&["demo", "shortcut", "go"][..], "demo.widgets.go"),
+        ] {
+            let m = synthetic_matches(argv);
+            let (found, _) = find(&tree, "demo", &m).expect("served method");
+            assert_eq!(found.method, expected);
+        }
+
+        // No dead "Not available yet" copy remains on method commands.
+        let help = method_command(&stub_method("stub", "demo.stub", false))
+            .render_long_help()
+            .to_string();
+        assert!(!help.to_ascii_lowercase().contains("not available yet"));
+        assert!(!help.contains("501 UNIMPLEMENTED"));
     }
 }

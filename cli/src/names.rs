@@ -17,6 +17,10 @@ fn is_id(segment: &str, kind: &str) -> bool {
         .is_some_and(|rest| rest.starts_with('_'))
 }
 
+fn non_empty_str(v: &serde_json::Value) -> Option<&str> {
+    v.as_str().map(str::trim).filter(|s| !s.is_empty())
+}
+
 fn format_choice(
     row: &serde_json::Value,
     parent: &str,
@@ -24,15 +28,11 @@ fn format_choice(
 ) -> Result<String, Failure> {
     let full = checked_name(row, parent, collection)?;
     let id = full.rsplit('/').next().unwrap_or(full);
-    let slug = row["spec"]["slug"]
-        .as_str()
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
-    let display = row["spec"]["display_name"]
-        .as_str()
-        .or_else(|| row["display_name"].as_str())
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
+    let slug = non_empty_str(&row["spec"]["slug"]);
+    let display = non_empty_str(&row["meta"]["display_name"])
+        .or_else(|| non_empty_str(&row["spec"]["name"]))
+        .or_else(|| non_empty_str(&row["spec"]["display_name"]))
+        .or_else(|| non_empty_str(&row["display_name"]));
     Ok(match (slug, display) {
         (Some(s), Some(d)) if d != s => format!("{s} ({d}, {id})"),
         (Some(s), _) => format!("{s} ({id})"),
@@ -342,7 +342,7 @@ fn choose(
         .map(|r| format_choice(r, parent, collection))
         .collect::<Result<Vec<_>, _>>()?;
     Err(Failure::Usage(format!(
-        "choose a target under {parent}; pass --project / --env or run `sylphx link --project … --env …` (choices: {})",
+        "choose a target under {parent}; run `sylphx link --project <slug> --env <env>`, set SYLPHX_ENVIRONMENT, or pass the explicit parent path (choices: {})",
         format_bounded_list(&choices, collection)
     )))
 }
@@ -370,9 +370,11 @@ mod tests {
             .map(|i| {
                 json!({
                     "name": format!("{parent}/projects/prj_fs01{:04}", i),
+                    "meta": {
+                        "display_name": format!("App {i}"),
+                    },
                     "spec": {
                         "slug": format!("app-{i}"),
-                        "display_name": format!("App {i}"),
                     }
                 })
             })
@@ -389,6 +391,14 @@ mod tests {
             "{msg}"
         );
         assert!(
+            msg.contains("run `sylphx link --project <slug> --env <env>`, set SYLPHX_ENVIRONMENT, or pass the explicit parent path"),
+            "{msg}"
+        );
+        assert!(
+            !msg.contains("--project / --env"),
+            "must not suggest nonexistent global flags: {msg}"
+        );
+        assert!(
             !msg.contains("orgs/org_fs01test/projects/"),
             "must not dump full org/project path per entry: {msg}"
         );
@@ -396,6 +406,76 @@ mod tests {
             msg.len() < 1024,
             "capped choice error must stay compact (<1 KiB), got {} bytes",
             msg.len()
+        );
+    }
+
+    #[test]
+    fn format_choice_resolves_project_wire_display_names() {
+        let parent = "orgs/org_fs01test";
+        let meta_wins = json!({
+            "name": format!("{parent}/projects/prj_1"),
+            "meta": {"display_name": "Console Web"},
+            "spec": {"slug": "web", "name": "Ignored Spec Name", "display_name": "Ignored Legacy"}
+        });
+        assert_eq!(
+            format_choice(&meta_wins, parent, "projects").unwrap(),
+            "web (Console Web, prj_1)"
+        );
+
+        let spec_name = json!({
+            "name": format!("{parent}/projects/prj_2"),
+            "meta": {"display_name": "   "},
+            "spec": {"slug": "billing", "name": "Billing Service"}
+        });
+        assert_eq!(
+            format_choice(&spec_name, parent, "projects").unwrap(),
+            "billing (Billing Service, prj_2)"
+        );
+
+        let spec_display_name = json!({
+            "name": format!("{parent}/projects/prj_3"),
+            "spec": {"slug": "worker", "display_name": "Background Worker"}
+        });
+        assert_eq!(
+            format_choice(&spec_display_name, parent, "projects").unwrap(),
+            "worker (Background Worker, prj_3)"
+        );
+
+        let top_level = json!({
+            "name": format!("{parent}/projects/prj_4"),
+            "display_name": "Top Level",
+            "spec": {"slug": "top"}
+        });
+        assert_eq!(
+            format_choice(&top_level, parent, "projects").unwrap(),
+            "top (Top Level, prj_4)"
+        );
+
+        let duplicate_slug = json!({
+            "name": format!("{parent}/projects/prj_5"),
+            "meta": {"display_name": "web"},
+            "spec": {"slug": "web"}
+        });
+        assert_eq!(
+            format_choice(&duplicate_slug, parent, "projects").unwrap(),
+            "web (prj_5)"
+        );
+
+        let no_slug = json!({
+            "name": format!("{parent}/projects/prj_6"),
+            "meta": {"display_name": "Unnamed Slug"}
+        });
+        assert_eq!(
+            format_choice(&no_slug, parent, "projects").unwrap(),
+            "Unnamed Slug (prj_6)"
+        );
+
+        let bare_id = json!({
+            "name": format!("{parent}/projects/prj_7")
+        });
+        assert_eq!(
+            format_choice(&bare_id, parent, "projects").unwrap(),
+            "prj_7"
         );
     }
 

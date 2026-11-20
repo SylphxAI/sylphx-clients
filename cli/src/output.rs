@@ -56,6 +56,10 @@ pub fn render(v: &Value, format: Format) -> String {
         },
         Format::Table => match list_items(v) {
             Some(items) if is_secret_list(items) => secrets_table(items),
+            Some(items) if is_project_list(items) || is_org_list(items) => {
+                named_resource_table(items)
+            }
+            Some(items) if is_env_list(items) => envs_table(items),
             Some(items) => table(items),
             None => serde_yaml_ng::to_string(v)
                 .unwrap_or_default()
@@ -210,6 +214,138 @@ fn secrets_table(items: &[Value]) -> String {
     out
 }
 
+fn non_empty_str(v: &Value) -> Option<&str> {
+    v.as_str().map(str::trim).filter(|s| !s.is_empty())
+}
+
+fn matches_name_pattern(item: &Value, expected: &[Option<&str>]) -> bool {
+    let Some(name) = item.get("name").and_then(Value::as_str) else {
+        return false;
+    };
+    let mut segs = name.split('/');
+    for want in expected {
+        let Some(seg) = segs.next() else {
+            return false;
+        };
+        match want {
+            Some(lit) if seg != *lit => return false,
+            None if seg.is_empty() => return false,
+            _ => {}
+        }
+    }
+    segs.next().is_none()
+}
+
+fn is_org_list(items: &[Value]) -> bool {
+    !items.is_empty()
+        && items.iter().all(|i| {
+            matches_name_pattern(i, &[Some("orgs"), None])
+                && i.get("spec").is_some_and(Value::is_object)
+        })
+}
+
+fn is_project_list(items: &[Value]) -> bool {
+    !items.is_empty()
+        && items.iter().all(|i| {
+            matches_name_pattern(i, &[Some("orgs"), None, Some("projects"), None])
+                && i.get("spec").is_some_and(Value::is_object)
+        })
+}
+
+fn is_env_list(items: &[Value]) -> bool {
+    !items.is_empty()
+        && items.iter().all(|i| {
+            matches_name_pattern(
+                i,
+                &[
+                    Some("orgs"),
+                    None,
+                    Some("projects"),
+                    None,
+                    Some("envs"),
+                    None,
+                ],
+            ) && i.get("spec").is_some_and(Value::is_object)
+        })
+}
+
+fn display_name(item: &Value) -> &str {
+    non_empty_str(&item["meta"]["display_name"])
+        .or_else(|| non_empty_str(&item["spec"]["name"]))
+        .or_else(|| non_empty_str(&item["spec"]["display_name"]))
+        .unwrap_or("-")
+}
+
+fn format_columns<const N: usize>(headers: [&str; N], rows: &[[String; N]]) -> String {
+    let mut widths = [0usize; N];
+    for col in 0..N {
+        widths[col] = rows
+            .iter()
+            .map(|r| r[col].chars().count())
+            .max()
+            .unwrap_or(0)
+            .max(headers[col].chars().count());
+    }
+    let write_row = |cells: &[&str; N]| -> String {
+        let mut line = String::new();
+        for (col, cell) in cells.iter().enumerate() {
+            if col > 0 {
+                line.push_str("  ");
+            }
+            if col + 1 == N {
+                line.push_str(cell);
+            } else {
+                let w = widths[col];
+                line.push_str(&format!("{cell:<w$}"));
+            }
+        }
+        line
+    };
+    let mut out = write_row(&headers);
+    for r in rows {
+        out.push('\n');
+        let refs = std::array::from_fn(|i| r[i].as_str());
+        out.push_str(&write_row(&refs));
+    }
+    out
+}
+
+fn named_resource_table(items: &[Value]) -> String {
+    let rows: Vec<[String; 4]> = items
+        .iter()
+        .map(|i| {
+            [
+                non_empty_str(&i["spec"]["slug"]).unwrap_or("-").to_string(),
+                display_name(i).to_string(),
+                i.get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("-")
+                    .to_string(),
+                age(i),
+            ]
+        })
+        .collect();
+    format_columns(["SLUG", "DISPLAY NAME", "NAME", "AGE"], &rows)
+}
+
+fn envs_table(items: &[Value]) -> String {
+    let rows: Vec<[String; 4]> = items
+        .iter()
+        .map(|i| {
+            [
+                non_empty_str(&i["spec"]["slug"]).unwrap_or("-").to_string(),
+                non_empty_str(&i["spec"]["mode"]).unwrap_or("-").to_string(),
+                i.get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("-")
+                    .to_string(),
+                age(i),
+            ]
+        })
+        .collect();
+    format_columns(["SLUG", "MODE", "NAME", "AGE"], &rows)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,6 +400,170 @@ mod tests {
         // Other collections keep the generic table.
         let other = json!({"databases": [{"name": "orgs/o/projects/p/envs/e/databases/main"}]});
         assert!(render(&other, Format::Table).contains("READY"));
+    }
+
+    #[test]
+    fn project_list_renders_slug_display_name_name_and_age() {
+        let v = json!({"projects": [
+            {
+                "name": "orgs/org_1/projects/prj_web",
+                "meta": {"display_name": "Web Console", "create_time": "2020-01-01T00:00:00Z"},
+                "spec": {"slug": "web", "name": "Ignored Spec Name"}
+            },
+            {
+                "name": "orgs/org_1/projects/prj_api",
+                "meta": {"display_name": "  "},
+                "spec": {"slug": "api", "name": "Billing API"}
+            },
+            {
+                "name": "orgs/org_1/projects/prj_legacy",
+                "spec": {"slug": "legacy", "display_name": "Legacy App"}
+            },
+            {
+                "name": "orgs/org_1/projects/prj_bare",
+                "spec": {"slug": "bare"}
+            }
+        ], "next_page_token": ""});
+        let t = render(&v, Format::Table);
+        let lines: Vec<&str> = t.lines().collect();
+        assert_eq!(lines.len(), 5, "{t}");
+        assert!(
+            lines[0].starts_with("SLUG")
+                && lines[0].contains("DISPLAY NAME")
+                && lines[0].contains("NAME")
+                && lines[0].ends_with("AGE"),
+            "{t}"
+        );
+        assert!(
+            lines[1].starts_with("web")
+                && lines[1].contains("Web Console")
+                && lines[1].contains("orgs/org_1/projects/prj_web")
+                && lines[1].ends_with('d'),
+            "{t}"
+        );
+        assert!(
+            lines[2].starts_with("api")
+                && lines[2].contains("Billing API")
+                && lines[2].contains("orgs/org_1/projects/prj_api")
+                && lines[2].ends_with('-'),
+            "{t}"
+        );
+        assert!(
+            lines[3].starts_with("legacy")
+                && lines[3].contains("Legacy App")
+                && lines[3].contains("orgs/org_1/projects/prj_legacy"),
+            "{t}"
+        );
+        assert!(
+            lines[4].starts_with("bare")
+                && lines[4].contains("  - ")
+                && lines[4].contains("orgs/org_1/projects/prj_bare"),
+            "{t}"
+        );
+        assert_eq!(
+            render(&v, Format::Name),
+            "orgs/org_1/projects/prj_web\norgs/org_1/projects/prj_api\norgs/org_1/projects/prj_legacy\norgs/org_1/projects/prj_bare"
+        );
+        assert!(serde_json::from_str::<Value>(&render(&v, Format::Json)).is_ok());
+    }
+
+    #[test]
+    fn env_list_renders_slug_mode_name_and_age() {
+        let v = json!({"envs": [
+            {
+                "name": "orgs/org_1/projects/prj_1/envs/env_prod",
+                "meta": {"create_time": "2020-01-01T00:00:00Z"},
+                "spec": {"slug": "production", "mode": "live"}
+            },
+            {
+                "name": "orgs/org_1/projects/prj_1/envs/env_dev",
+                "spec": {"slug": "development", "mode": "test"}
+            },
+            {
+                "name": "orgs/org_1/projects/prj_1/envs/env_blank",
+                "spec": {"slug": "sandbox"}
+            }
+        ], "next_page_token": ""});
+        let t = render(&v, Format::Table);
+        let lines: Vec<&str> = t.lines().collect();
+        assert_eq!(lines.len(), 4, "{t}");
+        assert!(
+            lines[0].starts_with("SLUG")
+                && lines[0].contains("MODE")
+                && lines[0].contains("NAME")
+                && lines[0].ends_with("AGE"),
+            "{t}"
+        );
+        assert!(
+            lines[1].starts_with("production")
+                && lines[1].contains("live")
+                && lines[1].contains("orgs/org_1/projects/prj_1/envs/env_prod")
+                && lines[1].ends_with('d'),
+            "{t}"
+        );
+        assert!(
+            lines[2].starts_with("development")
+                && lines[2].contains("test")
+                && lines[2].contains("orgs/org_1/projects/prj_1/envs/env_dev")
+                && lines[2].ends_with('-'),
+            "{t}"
+        );
+        assert!(
+            lines[3].starts_with("sandbox")
+                && lines[3].contains("  - ")
+                && lines[3].contains("orgs/org_1/projects/prj_1/envs/env_blank"),
+            "{t}"
+        );
+        assert_eq!(
+            render(&v, Format::Name),
+            "orgs/org_1/projects/prj_1/envs/env_prod\norgs/org_1/projects/prj_1/envs/env_dev\norgs/org_1/projects/prj_1/envs/env_blank"
+        );
+    }
+
+    #[test]
+    fn org_list_renders_slug_display_name_name_and_age() {
+        let v = json!({"orgs": [
+            {
+                "name": "orgs/org_acme",
+                "meta": {"display_name": "Acme Corp", "create_time": "2020-01-01T00:00:00Z"},
+                "spec": {"slug": "acme"}
+            },
+            {
+                "name": "orgs/org_beta",
+                "spec": {"slug": "beta"}
+            }
+        ], "next_page_token": ""});
+        let t = render(&v, Format::Table);
+        let lines: Vec<&str> = t.lines().collect();
+        assert_eq!(lines.len(), 3, "{t}");
+        assert!(
+            lines[0].starts_with("SLUG")
+                && lines[0].contains("DISPLAY NAME")
+                && lines[0].contains("NAME")
+                && lines[0].ends_with("AGE"),
+            "{t}"
+        );
+        assert!(
+            lines[1].starts_with("acme")
+                && lines[1].contains("Acme Corp")
+                && lines[1].contains("orgs/org_acme")
+                && lines[1].ends_with('d'),
+            "{t}"
+        );
+        assert!(
+            lines[2].starts_with("beta")
+                && lines[2].contains("  - ")
+                && lines[2].contains("orgs/org_beta")
+                && lines[2].ends_with('-'),
+            "{t}"
+        );
+        assert_eq!(render(&v, Format::Name), "orgs/org_acme\norgs/org_beta");
+
+        // Deeper org-scoped resources keep the generic table.
+        let keys = json!({"api_keys": [
+            {"name": "orgs/org_acme/api_keys/key_1", "spec": {"label": "ci"}}
+        ]});
+        assert!(render(&keys, Format::Table).contains("READY"));
     }
 
     #[test]
