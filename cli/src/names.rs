@@ -9,10 +9,50 @@ use sylphx::Client;
 
 use crate::Failure;
 
+const MAX_DISPLAYED_CHOICES: usize = 10;
+
 fn is_id(segment: &str, kind: &str) -> bool {
     segment
         .strip_prefix(kind)
         .is_some_and(|rest| rest.starts_with('_'))
+}
+
+fn format_choice(
+    row: &serde_json::Value,
+    parent: &str,
+    collection: &str,
+) -> Result<String, Failure> {
+    let full = checked_name(row, parent, collection)?;
+    let id = full.rsplit('/').next().unwrap_or(full);
+    let slug = row["spec"]["slug"]
+        .as_str()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let display = row["spec"]["display_name"]
+        .as_str()
+        .or_else(|| row["display_name"].as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    Ok(match (slug, display) {
+        (Some(s), Some(d)) if d != s => format!("{s} ({d}, {id})"),
+        (Some(s), _) => format!("{s} ({id})"),
+        (None, Some(d)) => format!("{d} ({id})"),
+        (None, None) => id.to_string(),
+    })
+}
+
+fn format_bounded_list(items: &[String], collection: &str) -> String {
+    if items.is_empty() {
+        return "none".to_string();
+    }
+    if items.len() <= MAX_DISPLAYED_CHOICES {
+        return items.join(", ");
+    }
+    let more = items.len() - MAX_DISPLAYED_CHOICES;
+    format!(
+        "{}, … (+{more} more; run `sylphx access {collection} list`)",
+        items[..MAX_DISPLAYED_CHOICES].join(", ")
+    )
 }
 
 async fn pick(
@@ -30,17 +70,13 @@ async fn pick(
     match found.and_then(|r| r["name"].as_str()) {
         Some(n) => Ok(n.to_string()),
         None => {
-            let known: Vec<&str> = rows
+            let known: Vec<String> = rows
                 .iter()
-                .filter_map(|r| r["spec"]["slug"].as_str())
-                .collect();
+                .map(|r| format_choice(r, parent, items))
+                .collect::<Result<Vec<_>, _>>()?;
             Err(Failure::Usage(format!(
                 "no {what} `{want}` under {parent} (known: {})",
-                if known.is_empty() {
-                    "none".to_string()
-                } else {
-                    known.join(", ")
-                }
+                format_bounded_list(&known, items)
             )))
         }
     }
@@ -303,11 +339,11 @@ fn choose(
     }
     let choices = rows
         .iter()
-        .map(|r| checked_name(r, parent, collection))
+        .map(|r| format_choice(r, parent, collection))
         .collect::<Result<Vec<_>, _>>()?;
     Err(Failure::Usage(format!(
-        "choose a target under {parent}; run sylphx link --project … --env … (choices: {})",
-        choices.join(", ")
+        "choose a target under {parent}; pass --project / --env or run `sylphx link --project … --env …` (choices: {})",
+        format_bounded_list(&choices, collection)
     )))
 }
 
@@ -325,5 +361,60 @@ mod tests {
     fn ids_are_recognized_by_prefix() {
         assert!(is_id("prj_fs01abc", "prj"));
         assert!(!is_id("web", "prj"));
+    }
+
+    #[test]
+    fn choose_formats_human_readable_slugs_and_caps_large_lists() {
+        let parent = "orgs/org_fs01test";
+        let rows: Vec<serde_json::Value> = (0..150)
+            .map(|i| {
+                json!({
+                    "name": format!("{parent}/projects/prj_fs01{:04}", i),
+                    "spec": {
+                        "slug": format!("app-{i}"),
+                        "display_name": format!("App {i}"),
+                    }
+                })
+            })
+            .collect();
+        let err = choose(&rows, parent, "projects", "default").unwrap_err();
+        let Failure::Usage(msg) = err else {
+            panic!("expected usage error, got {err:?}");
+        };
+        assert!(msg.contains("app-0 (App 0, prj_fs010000)"), "{msg}");
+        assert!(msg.contains("app-9 (App 9, prj_fs010009)"), "{msg}");
+        assert!(!msg.contains("app-10 "), "must cap at 10 choices: {msg}");
+        assert!(
+            msg.contains("+140 more; run `sylphx access projects list`"),
+            "{msg}"
+        );
+        assert!(
+            !msg.contains("orgs/org_fs01test/projects/"),
+            "must not dump full org/project path per entry: {msg}"
+        );
+        assert!(
+            msg.len() < 1024,
+            "capped choice error must stay compact (<1 KiB), got {} bytes",
+            msg.len()
+        );
+    }
+
+    #[test]
+    fn choose_still_validates_every_row_outside_display_cap() {
+        let parent = "orgs/org_fs01test";
+        let mut rows: Vec<serde_json::Value> = (0..12)
+            .map(|i| {
+                json!({
+                    "name": format!("{parent}/projects/prj_fs01{:04}", i),
+                    "spec": {"slug": format!("app-{i}")}
+                })
+            })
+            .collect();
+        rows.push(json!({
+            "name": "orgs/org_other/projects/prj_leak",
+            "spec": {"slug": "evil"}
+        }));
+        let err = choose(&rows, parent, "projects", "default").unwrap_err();
+        assert!(matches!(err, Failure::Refused(_)), "got {err:?}");
     }
 }

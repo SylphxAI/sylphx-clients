@@ -5580,9 +5580,7 @@ async fn ambiguous_defaults_fail_and_list_the_choices_without_mutating() {
     assert!(!out.status.success());
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(
-        err.contains("orgs/org_a/projects/prj_1")
-            && err.contains("orgs/org_a/projects/prj_2")
-            && err.contains("choose"),
+        err.contains("web (prj_1)") && err.contains("api (prj_2)") && err.contains("choose"),
         "{err}"
     );
     let seen = log.lock().clone();
