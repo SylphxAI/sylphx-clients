@@ -27,13 +27,9 @@
  * transport failure is `AuthNetworkError`.
  *
  * TODO(auth/client-api-contract): this client is hand-written from the Auth
- * service source. When Identity's official contract and served OpenAPI list
- * every `/v1/client` route (branch `auth/client-api-contract`; source
- * identity.proto -> identity-contract-build ->
- * services/auth/generated/product-contract.bundle.json, the client-API
- * OpenAPI, and docs/services/auth/client-api*.md; due 2026-10-10), add a
- * drift test that fails when a route, field or error code here differs from
- * it, then delete /scratch/web-lead/auth-client-contract.md.
+ * service source. When Auth's canonical contract (`contracts/sylphx/auth/v1/`)
+ * and served OpenAPI list every `/v1/client` route, add a drift test that fails
+ * when a route, field or error code here differs from it.
  */
 
 export type AuthClientErrorCode =
