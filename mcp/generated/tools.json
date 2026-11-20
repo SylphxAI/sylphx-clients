@@ -4784,7 +4784,7 @@
         "readOnlyHint": false,
         "title": "Answers a tool call waiting for approval; the turn continues."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Answers a tool call waiting for approval; the turn continues.",
+      "description": "Answers a tool call waiting for approval; the turn continues.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agent_sessions/*}:decideApproval",
       "input_schema": {
@@ -4827,7 +4827,6 @@
       "long_running": false,
       "method_id": "agents.agent_sessions.decide_approval",
       "permission": "agents:sessions",
-      "served": false,
       "tool": "agents_agent_sessions_decide_approval"
     },
     {

@@ -162202,7 +162202,6 @@
               "request": "sylphx.agents.v1.DecideAgentSessionApprovalRequest",
               "resource_field": null,
               "response": "sylphx.agents.v1.SessionEvent",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "decide_approval"

@@ -66732,7 +66732,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}:decideApproval": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nAnswers a tool call waiting for approval; the turn continues.",
+        "description": "Answers a tool call waiting for approval; the turn continues.",
         "operationId": "agents_agent_sessions_decide_approval",
         "parameters": [
           {
@@ -66855,7 +66855,6 @@
         ],
         "x-sylphx-method": "agents.agent_sessions.decide_approval",
         "x-sylphx-permission": "agents:sessions",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

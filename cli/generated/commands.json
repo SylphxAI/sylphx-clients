@@ -2767,7 +2767,6 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/agent_sessions/{agent_session}"
               },
-              "served": false,
               "summary": "Answers a tool call waiting for approval; the turn continues.",
               "verb": "decide-approval"
             },
