@@ -157745,6 +157745,7 @@
       "proto_services": [
         "sylphx.assets.v1.AssetsService"
       ],
+      "served": false,
       "stage": "preview"
     },
     {
@@ -173931,6 +173932,7 @@
       "proto_services": [
         "sylphx.localization.v1.LocalizationService"
       ],
+      "served": false,
       "stage": "preview"
     },
     {

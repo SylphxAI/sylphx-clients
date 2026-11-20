@@ -68427,7 +68427,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets": {
       "get": {
-        "description": "Lists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists assets. The filter is limited to `kind`, `state`, and\n`review_state`.",
         "operationId": "assets_assets_list",
         "parameters": [
           {
@@ -68523,12 +68523,13 @@
         ],
         "x-sylphx-method": "assets.assets.list",
         "x-sylphx-permission": "assets:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets/{asset}": {
       "get": {
-        "description": "Gets an asset.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an asset.",
         "operationId": "assets_assets_get",
         "parameters": [
           {
@@ -68603,12 +68604,13 @@
         ],
         "x-sylphx-method": "assets.assets.get",
         "x-sylphx-permission": "assets:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets/{asset}:approveVariant": {
       "post": {
-        "description": "Approves one variant and records who approved it.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nApproves one variant and records who approved it.",
         "operationId": "assets_assets_approve_variant",
         "parameters": [
           {
@@ -68717,12 +68719,13 @@
         ],
         "x-sylphx-method": "assets.assets.approve_variant",
         "x-sylphx-permission": "assets:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets/{asset}:rejectVariant": {
       "post": {
-        "description": "Rejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRejects one variant. Its slot is freed and the next `:generate` fills it;\nthe rejected file keeps serving at its URL.",
         "operationId": "assets_assets_reject_variant",
         "parameters": [
           {
@@ -68831,12 +68834,13 @@
         ],
         "x-sylphx-method": "assets.assets.reject_variant",
         "x-sylphx-permission": "assets:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets/{asset}:retireVariant": {
       "post": {
-        "description": "Retires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRetires one variant. Its URL answers 404 from then on and its slot is\nfreed.",
         "operationId": "assets_assets_retire_variant",
         "parameters": [
           {
@@ -68950,12 +68954,13 @@
         ],
         "x-sylphx-method": "assets.assets.retire_variant",
         "x-sylphx-permission": "assets:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets:export": {
       "get": {
-        "description": "Exports every servable variant in the environment as one flat, paged\nmanifest, independent of the keys the code declares. Rejected and retired\nvariants are left out unless `filter` asks for their `review_state`. The\nlast page carries a digest a client checks to know it holds the whole set.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nExports every servable variant in the environment as one flat, paged\nmanifest, independent of the keys the code declares. Rejected and retired\nvariants are left out unless `filter` asks for their `review_state`. The\nlast page carries a digest a client checks to know it holds the whole set.",
         "operationId": "assets_assets_export",
         "parameters": [
           {
@@ -69051,12 +69056,13 @@
         ],
         "x-sylphx-method": "assets.assets.export",
         "x-sylphx-permission": "assets:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets:generate": {
       "post": {
-        "description": "Records the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRecords the recipes as assets and generates the variants that are\nmissing. Each call is idempotent and works within a bounded time; call\nagain until `pending` is 0.",
         "operationId": "assets_assets_generate",
         "parameters": [
           {
@@ -69172,12 +69178,13 @@
         ],
         "x-sylphx-method": "assets.assets.generate",
         "x-sylphx-permission": "assets:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/assets:lock": {
       "post": {
-        "description": "Returns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReturns the `assets.lock` entries and canonical text for the keys the call\nnames, and only those. A read with a request body, like a query.",
         "operationId": "assets_assets_lock",
         "parameters": [
           {
@@ -69269,6 +69276,7 @@
         ],
         "x-sylphx-method": "assets.assets.lock",
         "x-sylphx-permission": "assets:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -71870,7 +71878,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs": {
       "get": {
-        "description": "Lists catalogs.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists catalogs.",
         "operationId": "localization_catalogs_list",
         "parameters": [
           {
@@ -71975,10 +71983,11 @@
         ],
         "x-sylphx-method": "localization.catalogs.list",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates a catalog.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a catalog.",
         "operationId": "localization_catalogs_create",
         "parameters": [
           {
@@ -72090,12 +72099,13 @@
         ],
         "x-sylphx-method": "localization.catalogs.create",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}": {
       "delete": {
-        "description": "Deletes a catalog.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a catalog.",
         "operationId": "localization_catalogs_delete",
         "parameters": [
           {
@@ -72222,10 +72232,11 @@
         ],
         "x-sylphx-method": "localization.catalogs.delete",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets a catalog.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a catalog.",
         "operationId": "localization_catalogs_get",
         "parameters": [
           {
@@ -72300,10 +72311,11 @@
         ],
         "x-sylphx-method": "localization.catalogs.get",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates a catalog.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a catalog.",
         "operationId": "localization_catalogs_update",
         "parameters": [
           {
@@ -72433,12 +72445,13 @@
         ],
         "x-sylphx-method": "localization.catalogs.update",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}/entries": {
       "get": {
-        "description": "Lists catalog entries. The filter is limited to `state`, `locale`, and\n`qa_state`.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists catalog entries. The filter is limited to `state`, `locale`, and\n`qa_state`.",
         "operationId": "localization_entries_list",
         "parameters": [
           {
@@ -72542,12 +72555,13 @@
         ],
         "x-sylphx-method": "localization.entries.list",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}/entries/{entry}": {
       "get": {
-        "description": "Gets a catalog entry.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a catalog entry.",
         "operationId": "localization_entries_get",
         "parameters": [
           {
@@ -72630,12 +72644,13 @@
         ],
         "x-sylphx-method": "localization.entries.get",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}/entries/{entry}:pinTranslation": {
       "post": {
-        "description": "Sets the text of one locale as a human override that AI never overwrites.\nQA runs on the text first; a text with a QA error is rejected with\n`INVALID_FIELD`, and the problem lists the findings.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nSets the text of one locale as a human override that AI never overwrites.\nQA runs on the text first; a text with a QA error is rejected with\n`INVALID_FIELD`, and the problem lists the findings.",
         "operationId": "localization_entries_pin_translation",
         "parameters": [
           {
@@ -72757,12 +72772,13 @@
         ],
         "x-sylphx-method": "localization.entries.pin_translation",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}/entries/{entry}:unpinTranslation": {
       "post": {
-        "description": "Removes the human override of one locale; the next sync may translate it\nagain.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nRemoves the human override of one locale; the next sync may translate it\nagain.",
         "operationId": "localization_entries_unpin_translation",
         "parameters": [
           {
@@ -72879,12 +72895,13 @@
         ],
         "x-sylphx-method": "localization.entries.unpin_translation",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}:export": {
       "post": {
-        "description": "Returns the catalog's files per locale in the requested format, with the QA\nreport. A read with a request body, like a query.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReturns the catalog's files per locale in the requested format, with the QA\nreport. A read with a request body, like a query.",
         "operationId": "localization_catalogs_export",
         "parameters": [
           {
@@ -72996,12 +73013,13 @@
         ],
         "x-sylphx-method": "localization.catalogs.export",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/catalogs/{catalog}:sync": {
       "post": {
-        "description": "Reads the source files and the committed translations into the catalog,\nthen translates what is new or stale. Each call is idempotent and works\nwithin a bounded time; call again until `pending` is 0.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nReads the source files and the committed translations into the catalog,\nthen translates what is new or stale. Each call is idempotent and works\nwithin a bounded time; call again until `pending` is 0.",
         "operationId": "localization_catalogs_sync",
         "parameters": [
           {
@@ -73137,6 +73155,7 @@
         ],
         "x-sylphx-method": "localization.catalogs.sync",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -87969,7 +87988,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/glossaries": {
       "get": {
-        "description": "Lists glossarys.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists glossarys.",
         "operationId": "localization_glossaries_list",
         "parameters": [
           {
@@ -88074,10 +88093,11 @@
         ],
         "x-sylphx-method": "localization.glossaries.list",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates a glossary.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a glossary.",
         "operationId": "localization_glossaries_create",
         "parameters": [
           {
@@ -88189,12 +88209,13 @@
         ],
         "x-sylphx-method": "localization.glossaries.create",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/glossaries/{glossary}": {
       "delete": {
-        "description": "Deletes a glossary.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nDeletes a glossary.",
         "operationId": "localization_glossaries_delete",
         "parameters": [
           {
@@ -88308,10 +88329,11 @@
         ],
         "x-sylphx-method": "localization.glossaries.delete",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Gets a glossary.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a glossary.",
         "operationId": "localization_glossaries_get",
         "parameters": [
           {
@@ -88386,10 +88408,11 @@
         ],
         "x-sylphx-method": "localization.glossaries.get",
         "x-sylphx-permission": "localization:read",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
-        "description": "Updates a glossary.",
+        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a glossary.",
         "operationId": "localization_glossaries_update",
         "parameters": [
           {
@@ -88519,6 +88542,7 @@
         ],
         "x-sylphx-method": "localization.glossaries.update",
         "x-sylphx-permission": "localization:write",
+        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
