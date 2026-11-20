@@ -49,7 +49,8 @@ pub const PROTOCOL_VERSIONS: &[&str] = &[
 ];
 
 const INSTRUCTIONS: &str = "Sylphx is one API for every Sylphx service. Call access_whoami \
-first to learn your org, project, and env. Resource names are full paths such as \
+first to learn your org, project, and env — or call project_bootstrap_unclaimed to start \
+a temporary unclaimed project with zero prior credentials. Resource names are full paths such as \
 orgs/{org}/projects/{project}/envs/{env}/databases/{id}. Use sylphx_search_methods to find a \
 method, sylphx_describe_method for its input schema, and sylphx_call to call it; destructive \
 methods need confirm: true.";
@@ -161,9 +162,11 @@ impl Catalog {
 }
 
 /// One MCP server over a Sylphx client. Without a client (no credentials),
-/// search and describe still work and every call explains how to sign in.
+/// search, describe, and unclaimed-project bootstrap still work, and
+/// authenticated calls explain how to sign in.
 pub struct Server<T> {
     client: Option<Client<T>>,
+    anonymous: Option<Client<T>>,
     shared: Arc<Catalog>,
     mode: Mode,
     docs: Option<docs::DocsIndex>,
@@ -211,10 +214,19 @@ impl<T: Transport> Server<T> {
     pub fn with_catalog(client: Option<Client<T>>, shared: Arc<Catalog>, mode: Mode) -> Self {
         Self {
             client,
+            anonymous: None,
             shared,
             mode,
             docs: None,
         }
+    }
+
+    /// Attaches an unauthenticated client for zero-credential bootstrap tools
+    /// (`project_bootstrap_unclaimed`), allowing local agents to start before
+    /// signing in.
+    pub fn with_anonymous(mut self, client: Client<T>) -> Self {
+        self.anonymous = Some(client);
+        self
     }
 
     /// Adds the read-only docs tools (`docs_search`, `docs_read`) over a
@@ -230,6 +242,9 @@ impl<T: Transport> Server<T> {
             Mode::Local => self.shared.local_tools.clone(),
             Mode::RemoteReadOnly => self.shared.remote_tools.clone(),
         };
+        if self.mode == Mode::Local {
+            tools.push(unclaimed_project_bootstrap_tool());
+        }
         if self.docs.is_some() {
             tools.extend(docs_tools());
         }
@@ -317,6 +332,7 @@ impl<T: Transport> Server<T> {
         match name {
             "docs_search" | "docs_read" => Ok(self.call_docs(name, &args).await),
             "knowledge_search" | "skill_load" => Ok(self.call_agent_knowledge(name, args).await),
+            "project_bootstrap_unclaimed" => Ok(self.call_project_bootstrap_unclaimed(&args).await),
             "sylphx_search_methods" => {
                 let query = args
                     .get("query")
@@ -363,6 +379,63 @@ impl<T: Transport> Server<T> {
                     .unwrap_or(false);
                 Ok(self.call_method(&id, Value::Object(args), confirm).await)
             }
+        }
+    }
+
+    /// `project_bootstrap_unclaimed`: zero-credential bootstrap of an unclaimed
+    /// project (`POST /v1/unclaimed-projects`), local stdio mode only.
+    async fn call_project_bootstrap_unclaimed(&self, args: &Map<String, Value>) -> Value {
+        if self.mode != Mode::Local {
+            return tool_error(
+                "project_bootstrap_unclaimed is only available in local MCP sessions",
+            );
+        }
+        if args.keys().any(|k| k != "name" && k != "services") {
+            return tool_error(
+                "project_bootstrap_unclaimed only accepts optional `name` and `services`",
+            );
+        }
+        let mut body = Map::new();
+        if let Some(name) = args.get("name") {
+            let Some(s) = name.as_str().map(str::trim).filter(|s| !s.is_empty()) else {
+                return tool_error("`name` must be a non-empty string");
+            };
+            body.insert("name".into(), json!(s));
+        }
+        if let Some(services) = args.get("services") {
+            let Some(arr) = services.as_array() else {
+                return tool_error("`services` must be an array of service names");
+            };
+            let mut list = Vec::with_capacity(arr.len());
+            for item in arr {
+                let Some(s) = item.as_str().map(str::trim).filter(|s| !s.is_empty()) else {
+                    return tool_error("every entry in `services` must be a non-empty string");
+                };
+                list.push(s.to_string());
+            }
+            if !list.is_empty() {
+                body.insert("services".into(), json!(list));
+            }
+        }
+        let Some(client) = self.anonymous.as_ref().or(self.client.as_ref()) else {
+            return tool_error(
+                "no HTTP transport configured for unclaimed project bootstrap; run `sylphx init --unclaimed` or restart `sylphx mcp`",
+            );
+        };
+        match client
+            .call::<Value>(HttpRequest {
+                method: "POST",
+                path: "/v1/unclaimed-projects".into(),
+                query: vec![],
+                body: Some(Value::Object(body)),
+                mutation: true,
+                origin: None,
+                effect_ids: false,
+            })
+            .await
+        {
+            Ok(v) => tool_ok(v),
+            Err(e) => error_result(e),
         }
     }
 
@@ -566,6 +639,37 @@ fn settled(op: Value) -> Value {
         }
         _ => op,
     }
+}
+
+/// The zero-credential unclaimed project bootstrap tool (`POST /v1/unclaimed-projects`).
+fn unclaimed_project_bootstrap_tool() -> Value {
+    json!({
+        "name": "project_bootstrap_unclaimed",
+        "title": "Bootstrap an unclaimed project",
+        "description": "Create a temporary unclaimed Sylphx project with zero prior credentials (POST /v1/unclaimed-projects). Returns the project, environment, temporary secret/publishable keys, expiry, and a claim_url to hand to a human to claim ownership.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Optional project name or slug."
+                },
+                "services": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Optional list of services to enable (defaults to hosting, build, data, auth)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "annotations": {
+            "title": "Bootstrap an unclaimed project",
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": false
+        }
+    })
 }
 
 /// The docs tools' definitions (read-only, closed-world).

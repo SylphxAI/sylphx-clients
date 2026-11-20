@@ -4,14 +4,14 @@
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use sylphx::{Client, HttpTransport};
 
-/// `~/.config/sylphx/credentials.json` (mode 0600): where the key is, not the
-/// key. The key lives in the OS keychain (macOS Keychain, Secret Service /
-/// libsecret, Windows Credential Manager). A machine with no keychain keeps it
-/// in this file only in a directory the caller chose (`SYLPHX_CONFIG_DIR`) or
-/// with `sylphx login --store-file`, and `sylphx login` says so.
+/// `~/.config/sylphx/credentials.json` (mode 0600): where credentials are kept.
+/// Keys live in the OS keychain (macOS Keychain, Secret Service / libsecret,
+/// Windows Credential Manager) when available, and gracefully fall back to this
+/// `0600` file in headless/SSH/CI/container environments (or when `--store-file`
+/// is passed). `SYLPHX_CONFIG_DIR` or `XDG_CONFIG_HOME` chooses the directory.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Credentials {
     /// Set only when no keychain was available (`store = "file"`).
@@ -95,6 +95,8 @@ pub fn use_org(slug: &str) -> Result<(), String> {
 }
 
 /// Merge every approved organization without discarding other stored logins.
+/// Uses the OS keychain when available unless `store_file` is requested,
+/// falling back gracefully to the `0600` credentials file on headless hosts.
 pub fn store_keys(
     base_url: Option<String>,
     keys: &[crate::auth::IssuedKey],
@@ -102,15 +104,11 @@ pub fn store_keys(
 ) -> Result<(PathBuf, bool), String> {
     let mut c = load_credentials();
     c.base_url = base_url.or(c.base_url);
-    let mut all_keychain = true;
+    let mut all_keychain = !store_file;
     for key in keys {
-        let in_keychain = org_entry(c.base_url.as_deref(), &key.org_id)
-            .is_some_and(|e| e.set_password(&key.api_key).is_ok());
-        if !in_keychain && !file_store_allowed(store_file) {
-            return Err(
-                "the OS keychain refused a key; use --store-file or SYLPHX_CONFIG_DIR".into(),
-            );
-        }
+        let in_keychain = !store_file
+            && org_entry(c.base_url.as_deref(), &key.org_id)
+                .is_some_and(|e| e.set_password(&key.api_key).is_ok());
         all_keychain &= in_keychain;
         let credential = OrgCredential {
             id: key.org_id.clone(),
@@ -130,6 +128,46 @@ pub fn store_keys(
         c.active_org = keys.first().map(|k| k.org_id.clone());
     }
     Ok((save_credentials(&c)?, all_keychain))
+}
+
+/// Store one organization-scoped key (e.g., an unclaimed project bootstrap key)
+/// without discarding sibling organization logins.
+pub fn store_org_key(
+    base_url: Option<String>,
+    org: &str,
+    slug: &str,
+    key_name: &str,
+    key: &str,
+    device_issued: bool,
+    store_file: bool,
+) -> Result<(PathBuf, bool), String> {
+    let mut c = load_credentials();
+    c.base_url = base_url.or(c.base_url);
+    let id = org_id(org).to_string();
+    let slug = if slug.is_empty() {
+        id.clone()
+    } else {
+        slug.to_string()
+    };
+    let in_keychain = !store_file
+        && org_entry(c.base_url.as_deref(), &id).is_some_and(|e| e.set_password(key).is_ok());
+    let credential = OrgCredential {
+        id: id.clone(),
+        slug,
+        key_name: key_name.to_string(),
+        device_issued,
+        store: if in_keychain { "keychain" } else { "file" }.into(),
+        api_key: (!in_keychain).then(|| key.to_string()),
+    };
+    if let Some(existing) = c.orgs.iter_mut().find(|o| o.id == id) {
+        *existing = credential;
+    } else {
+        c.orgs.push(credential);
+    }
+    if c.active_org.is_none() {
+        c.active_org = Some(id);
+    }
+    Ok((save_credentials(&c)?, in_keychain))
 }
 
 /// Forget just one org; a selected logout must not erase sibling credentials.
@@ -178,32 +216,20 @@ fn keychain_usable(base_url: Option<&str>) -> bool {
         .is_some_and(|e| matches!(e.get_password(), Ok(_) | Err(keyring::Error::NoEntry)))
 }
 
-/// Where a key may be kept without a keychain: a directory the caller chose
-/// (`SYLPHX_CONFIG_DIR`), or the default one only when asked (`--store-file`).
-/// The default `~/.config/sylphx` is shared by every process of the user, so a
-/// key written there silently becomes every session's identity.
-pub fn file_store_allowed(store_file: bool) -> bool {
-    store_file || std::env::var_os("SYLPHX_CONFIG_DIR").is_some_and(|d| !d.is_empty())
-}
-
-/// Checks, before any key is read or issued, that `sylphx login` can keep it.
+/// Checks, before any key is read or issued, that credentials can be saved
+/// either in the OS keychain or in the `0600` credentials file fallback.
 pub fn check_key_store(base_url: Option<&str>, store_file: bool) -> Result<(), String> {
-    if keychain_usable(base_url) || file_store_allowed(store_file) {
+    if (!store_file && keychain_usable(base_url)) || credentials_path().is_some() {
         return Ok(());
     }
-    let dir = config_dir()
-        .map(|d| d.display().to_string())
-        .unwrap_or_else(|| "~/.config/sylphx".into());
-    Err(format!(
-        "no OS keychain here, and a key saved in the shared default {dir} would become \
-         the identity of every process of this user. Choose one: give the key per process \
-         (SYLPHX_API_KEY), keep this login's key in its own directory \
-         (SYLPHX_CONFIG_DIR=<dir> sylphx login), or save it in {dir} anyway (--store-file)"
-    ))
+    Err(
+        "no OS keychain and no config directory: set SYLPHX_CONFIG_DIR, XDG_CONFIG_HOME, or HOME"
+            .into(),
+    )
 }
 
-/// Stores `key` in the keychain, else (no keychain) in the 0600 file where
-/// `file_store_allowed`; `check_key_store` refuses the rest up front.
+/// Stores `key` in the OS keychain when available (unless `store_file` is set),
+/// falling back gracefully to the `0600` credentials file on headless hosts.
 pub fn store_key(
     base_url: Option<String>,
     key: &str,
@@ -212,14 +238,10 @@ pub fn store_key(
 ) -> Result<(PathBuf, bool), String> {
     let mut creds = load_credentials();
     let base_url = base_url.or(creds.base_url.clone());
-    let in_keychain = keychain_entry(base_url.as_deref())
-        .map(|e| e.set_password(key).is_ok())
-        .unwrap_or(false);
-    if !in_keychain && !file_store_allowed(store_file) {
-        return Err(check_key_store(base_url.as_deref(), store_file)
-            .err()
-            .unwrap_or_else(|| "the OS keychain refused the key".into()));
-    }
+    let in_keychain = !store_file
+        && keychain_entry(base_url.as_deref())
+            .map(|e| e.set_password(key).is_ok())
+            .unwrap_or(false);
     creds.api_key = (!in_keychain).then(|| key.to_string());
     creds.base_url = base_url.or(creds.base_url);
     creds.store = Some(if in_keychain { "keychain" } else { "file" }.into());
@@ -358,13 +380,14 @@ pub fn save_credentials(c: &Credentials) -> Result<PathBuf, String> {
 #[cfg(unix)]
 pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
-    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
         .mode(0o600)
         .open(path)?;
+    f.set_permissions(std::fs::Permissions::from_mode(0o600))?;
     f.write_all(bytes)
 }
 
@@ -541,6 +564,87 @@ pub fn resolve(
         base_url,
         explicit,
     })
+}
+
+/// Local credential and linked-context summary for `sylphx whoami --offline`
+/// (never contacts the API and never includes plaintext secret keys).
+/// Returns `None` when no credentials are configured.
+pub fn describe_local(
+    api_key: Option<String>,
+    base_url: Option<String>,
+    org: Option<&str>,
+) -> Option<Value> {
+    let from_flag = api_key.is_some();
+    let resolved = resolve(api_key, base_url, org)?;
+    let stored = load_credentials();
+    let link = std::env::current_dir()
+        .ok()
+        .and_then(|cwd| default_link(&cwd).ok().flatten());
+    let selected = if resolved.explicit
+        || stored.orgs.is_empty()
+        || (org.is_none() && stored.active_org.is_none() && stored.store.is_some())
+    {
+        None
+    } else {
+        selected_org(&stored, org.or_else(|| link.as_ref().and_then(|l| l.at(1))))
+    };
+    let source = if from_flag {
+        "flag"
+    } else if resolved.explicit {
+        "env"
+    } else if let Some(selected) = selected {
+        selected.store.as_str()
+    } else {
+        stored.store.as_deref().unwrap_or("file")
+    };
+    let orgs: Vec<Value> = stored
+        .orgs
+        .iter()
+        .map(|o| {
+            json!({
+                "id": o.id,
+                "slug": o.slug,
+                "store": o.store,
+                "device_issued": o.device_issued,
+            })
+        })
+        .collect();
+    let mut out = serde_json::Map::new();
+    out.insert("verified".into(), json!(false));
+    out.insert("offline".into(), json!(true));
+    out.insert("source".into(), json!(source));
+    out.insert(
+        "base_url".into(),
+        json!(crate::auth::api_root(resolved.base_url.as_deref())),
+    );
+    if let Some(selected) = selected {
+        out.insert("org".into(), json!(format!("orgs/{}", selected.id)));
+        out.insert("org_slug".into(), json!(selected.slug));
+        if !selected.key_name.is_empty() {
+            out.insert("api_key".into(), json!(selected.key_name));
+        }
+    } else if let Some(active) = &stored.active_org {
+        out.insert("active_org".into(), json!(active));
+    }
+    if !orgs.is_empty() {
+        out.insert("orgs".into(), json!(orgs));
+    }
+    if let Some(l) = &link {
+        out.insert("link".into(), json!(l));
+    }
+    if let Some(p) = credentials_path() {
+        out.insert("credentials_path".into(), json!(p.display().to_string()));
+    }
+    Some(Value::Object(out))
+}
+
+/// An unauthenticated HTTP client for anonymous bootstrap endpoints such as
+/// `POST /v1/unclaimed-projects`.
+pub fn anonymous_client(base_url: Option<String>) -> Result<Client, String> {
+    let stored = load_credentials();
+    let root = crate::auth::api_root(base_url.as_deref().or(stored.base_url.as_deref()));
+    let b = HttpTransport::builder().base_url(root);
+    Ok(Client::new(b.build().map_err(|e| e.to_string())?))
 }
 
 /// A client for a resolved credential.

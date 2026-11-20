@@ -84,8 +84,23 @@ pub struct IssuedKey {
 
 pub struct Issued {
     pub keys: Vec<IssuedKey>,
-    /// How long after issue Access expects the keys to verify (capped at 10 s).
-    pub active_after: Duration,
+}
+
+/// An unclaimed agent project created without credentials (`POST /v1/unclaimed-projects`).
+#[derive(Debug, Clone)]
+pub struct UnclaimedProject {
+    pub id: String,
+    pub org: String,
+    pub project: String,
+    pub project_slug: String,
+    pub environment: String,
+    pub key: String,
+    pub publishable_key: String,
+    pub expires_at: String,
+    pub claim_url: String,
+    pub claim_expires_at: String,
+    pub services: Vec<String>,
+    pub next: String,
 }
 
 fn error_code(v: &Value) -> &str {
@@ -175,12 +190,7 @@ pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, Stri
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()?;
-            return Ok(Issued {
-                keys,
-                active_after: Duration::from_millis(
-                    v["active_after_ms"].as_u64().unwrap_or(0).min(10_000),
-                ),
-            });
+            return Ok(Issued { keys });
         }
         match error_code(&v) {
             "authorization_pending" => {}
@@ -190,6 +200,82 @@ pub async fn device_login(api: &str, org: Option<String>) -> Result<Issued, Stri
             other => return Err(format!("device token rejected ({other})")),
         }
     }
+}
+
+/// `sylphx init --unclaimed`: create an unclaimed project with no prior
+/// credentials (`POST /v1/unclaimed-projects`).
+pub async fn create_unclaimed_project(
+    api: &str,
+    name: Option<&str>,
+    services: Option<&[String]>,
+) -> Result<UnclaimedProject, String> {
+    let mut body = serde_json::Map::new();
+    if let Some(name) = name.map(str::trim).filter(|n| !n.is_empty()) {
+        body.insert("name".into(), json!(name));
+    }
+    if let Some(services) = services.filter(|s| !s.is_empty()) {
+        body.insert("services".into(), json!(services));
+    }
+    let r = http()?
+        .post(format!("{api}/v1/unclaimed-projects"))
+        .header(
+            "sylphx-client",
+            concat!("sylphx-cli/", env!("CARGO_PKG_VERSION")),
+        )
+        .json(&Value::Object(body))
+        .send()
+        .await
+        .map_err(|e| format!("unclaimed project bootstrap: {e}"))?;
+    let status = r.status();
+    let v: Value = r.json().await.unwrap_or(Value::Null);
+    if !status.is_success() {
+        let detail = v["message"]
+            .as_str()
+            .or_else(|| v["detail"].as_str())
+            .filter(|s| !s.is_empty());
+        return Err(match detail {
+            Some(msg) => format!(
+                "unclaimed project creation failed ({}, HTTP {}): {msg}",
+                error_code(&v),
+                status.as_u16()
+            ),
+            None => format!(
+                "unclaimed project creation failed ({}, HTTP {})",
+                error_code(&v),
+                status.as_u16()
+            ),
+        });
+    }
+    let req_str = |k: &str| -> Result<String, String> {
+        v[k].as_str()
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| format!("unclaimed project answer missing `{k}`"))
+    };
+    let opt_str = |k: &str| -> String { v[k].as_str().unwrap_or_default().to_string() };
+    let services = v["services"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(UnclaimedProject {
+        id: req_str("id")?,
+        org: req_str("org")?,
+        project: req_str("project")?,
+        project_slug: opt_str("project_slug"),
+        environment: req_str("environment")?,
+        key: req_str("key")?,
+        publishable_key: opt_str("publishable_key"),
+        expires_at: opt_str("expires_at"),
+        claim_url: req_str("claim_url")?,
+        claim_expires_at: opt_str("claim_expires_at"),
+        services,
+        next: opt_str("next"),
+    })
 }
 
 /// `sylphx logout`: the key revokes itself (best effort; the local copy is

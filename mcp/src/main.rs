@@ -7,8 +7,10 @@
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let client = sylphx::Client::from_env().ok();
-    sylphx_mcp::serve_stdio(
-        sylphx_mcp::Server::new(client).with_docs(sylphx_mcp::docs::DocsIndex::from_env()),
-    )
-    .await
+    let mut server =
+        sylphx_mcp::Server::new(client).with_docs(sylphx_mcp::docs::DocsIndex::from_env());
+    if let Ok(transport) = sylphx::HttpTransport::builder().build() {
+        server = server.with_anonymous(sylphx::Client::new(transport));
+    }
+    sylphx_mcp::serve_stdio(server).await
 }

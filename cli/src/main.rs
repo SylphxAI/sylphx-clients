@@ -3,7 +3,7 @@
 //! `sylphx <service> <collection> <verb> [NAME|PARENT|ID] [--flags]` is
 //! generated from the one schema (`generated/commands.json`) and calls the
 //! generated Rust SDK; the porcelain (`login`, `logout`, `whoami`, `link`,
-//! `api`, `devices`, `deploy`, `status`, `rollback`, `build run`, `build cache env`, `events listen`, `work runner`, `mcp`, `completion`) is hand-written on the
+//! `init`, `api`, `devices`, `deploy`, `status`, `rollback`, `build run`, `build cache env`, `events listen`, `mcp`, `completion`) is hand-written on the
 //! same SDK.
 
 mod apply;
@@ -16,6 +16,7 @@ mod devices;
 mod docs_cmd;
 mod enable;
 mod events_listen;
+mod invoke;
 mod names;
 mod output;
 mod porcelain;
@@ -23,16 +24,16 @@ mod release_cmd;
 mod token;
 mod transport;
 mod tree;
-mod work_runner;
 
-use std::io::{IsTerminal, Read, Write};
+use std::io::{IsTerminal, Read};
 use std::process::ExitCode;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 use sylphx::{Client, Error, HttpRequest};
 
 use context::Link;
+use invoke::confirm;
 
 use output::Format;
 use tree::{MethodCmd, Tree};
@@ -136,7 +137,7 @@ fn cli(tree: &Tree) -> Command {
                     Arg::new("store-file")
                         .long("store-file")
                         .action(ArgAction::SetTrue)
-                        .help("With no OS keychain, save the key in the default config directory's credentials.json (0600), shared by every process of this user; SYLPHX_CONFIG_DIR picks another directory"),
+                        .help("Save the key in credentials.json (mode 0600) instead of the OS keychain; automatic fallback when no keychain is available"),
                 ),
         )
         .subcommand(
@@ -170,12 +171,59 @@ fn cli(tree: &Tree) -> Command {
                 ),
         )
         .subcommand(
-            Command::new("whoami").about("Show the caller: principal, org, project, env, scopes"),
+            Command::new("whoami")
+                .about("Show the verified caller: principal, org, project, env, scopes")
+                .arg(
+                    Arg::new("offline")
+                        .long("offline")
+                        .action(ArgAction::SetTrue)
+                        .help("Show local credential and linked-context metadata without contacting the API"),
+                ),
         )
         .subcommand(
             Command::new("link")
-                .visible_alias("init")
                 .about("Link this directory to an org, project, and env (.sylphx/project.json)")
+                .arg(
+                    Arg::new("project")
+                        .long("project")
+                        .value_name("NAME")
+                        .help("orgs/{org}/projects/{project}"),
+                )
+                .arg(
+                    Arg::new("env")
+                        .long("env")
+                        .value_name("NAME")
+                        .help("orgs/{org}/projects/{project}/envs/{env}"),
+                ),
+        )
+        .subcommand(
+            Command::new("init")
+                .about("Link this directory or bootstrap a zero-credential unclaimed project (--unclaimed)")
+                .arg(
+                    Arg::new("unclaimed")
+                        .long("unclaimed")
+                        .action(ArgAction::SetTrue)
+                        .help("Create a temporary unclaimed project with no prior login, link this directory, and store its key"),
+                )
+                .arg(
+                    Arg::new("name")
+                        .long("name")
+                        .value_name("NAME")
+                        .help("Optional project name/slug for --unclaimed"),
+                )
+                .arg(
+                    Arg::new("services")
+                        .long("services")
+                        .value_name("SERVICE")
+                        .action(ArgAction::Append)
+                        .help("Services to enable on an unclaimed project (comma-separated or repeatable)"),
+                )
+                .arg(
+                    Arg::new("store-file")
+                        .long("store-file")
+                        .action(ArgAction::SetTrue)
+                        .help("Save the unclaimed project key in credentials.json (mode 0600) instead of the OS keychain"),
+                )
                 .arg(
                     Arg::new("project")
                         .long("project")
@@ -240,7 +288,6 @@ fn cli(tree: &Tree) -> Command {
         .subcommand(devices::command())
         .subcommands(release_cmd::commands())
         .subcommand(porcelain::command())
-        .subcommand(work_runner::command())
         .subcommand(
             Command::new("completion")
                 .about("Print a shell completion script")
@@ -319,7 +366,7 @@ async fn main() -> ExitCode {
 }
 
 #[derive(Debug)]
-enum Failure {
+pub(crate) enum Failure {
     Usage(String),
     /// A local schema refusal, before any request can be submitted.
     Input(sylphx_resource_codec::problem::ApiError),
@@ -506,7 +553,32 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             Ok(())
         }
         "whoami" => {
+            if sub.get_flag("offline") {
+                let Some(local) = context::describe_local(api_key.clone(), base_url.clone(), org)
+                else {
+                    return Err(Failure::Usage(
+                        "not signed in; run `sylphx login` or set SYLPHX_API_KEY".into(),
+                    ));
+                };
+                println!(
+                    "{}",
+                    output::render(
+                        &local,
+                        if format == Format::Table {
+                            Format::Yaml
+                        } else {
+                            format
+                        }
+                    )
+                );
+                return Ok(());
+            }
             let me = client().await?.invoke("access.whoami", json!({})).await?;
+            if !verified_whoami(&me) {
+                return Err(Failure::Refused(
+                    "whoami response contained no verified caller identity".into(),
+                ));
+            }
             println!(
                 "{}",
                 output::render(
@@ -521,6 +593,13 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             Ok(())
         }
         "link" => link(&client().await?, sub).await,
+        "init" => {
+            if sub.get_flag("unclaimed") {
+                init_unclaimed(base_url.clone(), sub, format).await
+            } else {
+                link(&client().await?, sub).await
+            }
+        }
         "devices" => devices::run(&client().await?, sub).await,
         "deploy" | "status" | "rollback" => {
             release_cmd::run(
@@ -534,7 +613,6 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             )
             .await
         }
-        "work" => work_runner::run(api_key.clone(), org, sub, format == Format::Json).await,
         "api" => {
             let method = sub.get_one::<String>("method").expect("required").clone();
             let path = sub.get_one::<String>("path").expect("required").clone();
@@ -605,11 +683,14 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
         }
         "mcp" => {
             let c = context::client(api_key.clone(), base_url.clone(), org).await?;
-            sylphx_mcp::serve_stdio(
-                sylphx_mcp::Server::new(c).with_docs(sylphx_mcp::docs::DocsIndex::from_env()),
-            )
-            .await
-            .map_err(|e| Failure::Usage(e.to_string()))
+            let mut server =
+                sylphx_mcp::Server::new(c).with_docs(sylphx_mcp::docs::DocsIndex::from_env());
+            if let Ok(anon) = context::anonymous_client(base_url.clone()) {
+                server = server.with_anonymous(anon);
+            }
+            sylphx_mcp::serve_stdio(server)
+                .await
+                .map_err(|e| Failure::Usage(e.to_string()))
         }
         porcelain::COMMAND => {
             let manifest = porcelain::manifest(&cli(tree), tree);
@@ -672,7 +753,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             ) {
                 return compute_schedules(api_key, base_url, org, method, &mm, format).await;
             }
-            generated(&client().await?, method, &mm, m, format).await
+            invoke::generated(&client().await?, method, &mm, m, format).await
         }
     }
 }
@@ -887,28 +968,25 @@ async fn login(
         api_key
     };
     let issued_here = key.is_none();
-    let (keys, active_after) = match key {
+    let keys = match key {
         Some(k) if k.is_empty() => return Err(Failure::Usage("no key on stdin".into())),
         Some(k) => {
             if !k.starts_with("sylphx_sk_") && !k.starts_with("sylphx_pk_") {
                 eprintln!("warning: an Access key starts with sylphx_sk_ (secret) or sylphx_pk_ (publishable)");
             }
-            (
-                vec![auth::IssuedKey {
-                    api_key: k,
-                    org_id: String::new(),
-                    org_slug: String::new(),
-                    key_name: String::new(),
-                }],
-                std::time::Duration::ZERO,
-            )
+            vec![auth::IssuedKey {
+                api_key: k,
+                org_id: String::new(),
+                org_slug: String::new(),
+                key_name: String::new(),
+            }]
         }
         None => {
             let issued = auth::device_login(&auth::api_root(base_url.as_deref()), org).await?;
             for key in &issued.keys {
                 eprintln!("Approved in {}.", key.org_slug);
             }
-            (issued.keys, issued.active_after)
+            issued.keys
         }
     };
     // Device-issued keys must survive temporary verification failures. Supplied
@@ -918,9 +996,6 @@ async fn login(
     } else {
         None
     };
-    if !no_verify {
-        tokio::time::sleep(active_after).await;
-    }
     let mut principal = None;
     let mut unconfirmed = false;
     if !no_verify {
@@ -1016,6 +1091,115 @@ fn transient_whoami(e: &Error) -> bool {
     }
 }
 
+fn verified_whoami(me: &Value) -> bool {
+    let non_empty = |v: &Value| v.as_str().is_some_and(|s| !s.trim().is_empty());
+    non_empty(&me["principal"])
+        || non_empty(&me["org"])
+        || non_empty(&me["email"])
+        || non_empty(&me["user"]["email"])
+        || non_empty(&me["api_key"])
+        || non_empty(&me["subject"])
+}
+
+async fn init_unclaimed(
+    base_url: Option<String>,
+    sub: &ArgMatches,
+    format: Format,
+) -> Result<(), Failure> {
+    let store_file = sub.get_flag("store-file");
+    let effective_base = base_url.or_else(|| context::load_credentials().base_url);
+    context::check_key_store(effective_base.as_deref(), store_file).map_err(Failure::Usage)?;
+    let name = sub.get_one::<String>("name").map(String::as_str);
+    let services: Option<Vec<String>> = sub.get_many::<String>("services").map(|vals| {
+        vals.flat_map(|s| s.split(','))
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .collect()
+    });
+    let created = auth::create_unclaimed_project(
+        &auth::api_root(effective_base.as_deref()),
+        name,
+        services.as_deref(),
+    )
+    .await
+    .map_err(Failure::Refused)?;
+    let (cred_path, in_keychain) = context::store_org_key(
+        effective_base,
+        &created.org,
+        &created.project_slug,
+        "",
+        &created.key,
+        false,
+        store_file,
+    )?;
+    let dir = std::env::current_dir().map_err(|e| e.to_string())?;
+    let link = Link {
+        org: created.org.clone(),
+        project: created.project.clone(),
+        env: created.environment.clone(),
+    };
+    let link_path = context::write_link(&dir, &link)?;
+    if !in_keychain {
+        eprintln!(
+            "note: no OS keychain here; credentials are in {} (mode 0600)",
+            cred_path.display()
+        );
+    }
+    match format {
+        Format::Json | Format::Yaml => {
+            let summary = json!({
+                "id": created.id,
+                "org": created.org,
+                "project": created.project,
+                "project_slug": created.project_slug,
+                "environment": created.environment,
+                "publishable_key": created.publishable_key,
+                "expires_at": created.expires_at,
+                "claim_url": created.claim_url,
+                "claim_expires_at": created.claim_expires_at,
+                "services": created.services,
+                "link": link_path.display().to_string(),
+                "credentials_store": if in_keychain { "keychain" } else { "file" },
+                "credentials_path": cred_path.display().to_string(),
+                "next": created.next,
+            });
+            println!("{}", output::render(&summary, format));
+        }
+        Format::Name => {
+            println!("{}", created.project);
+        }
+        Format::Table => {
+            println!(
+                "Created unclaimed project {} ({}).",
+                created.project, created.project_slug
+            );
+            println!("Environment: {}", created.environment);
+            if created.claim_expires_at.is_empty() {
+                println!("Claim URL:   {}", created.claim_url);
+            } else {
+                println!(
+                    "Claim URL:   {} (expires {})",
+                    created.claim_url, created.claim_expires_at
+                );
+            }
+            if !created.expires_at.is_empty() {
+                println!("Expires:     {}", created.expires_at);
+            }
+            println!("Linked {} to {}.", dir.display(), link_path.display());
+            println!(
+                "Credentials stored in {}.",
+                if in_keychain {
+                    "the OS keychain".to_string()
+                } else {
+                    cred_path.display().to_string()
+                }
+            );
+        }
+    }
+    Ok(())
+}
+
 async fn link(client: &Client, sub: &ArgMatches) -> Result<(), Failure> {
     let me = client.invoke("access.whoami", json!({})).await?;
     let mine = Link::from_whoami(&me);
@@ -1090,14 +1274,14 @@ fn read_json_arg(s: &str) -> Result<Value, String> {
 
 /// Defaults: process override, nearest link, then credential scope completed
 /// through public Access discovery/provisioning on first use.
-struct Defaults<'c> {
-    client: &'c Client,
-    link: Option<Link>,
-    org: Option<String>,
+pub(crate) struct Defaults<'c> {
+    pub(crate) client: &'c Client,
+    pub(crate) link: Option<Link>,
+    pub(crate) org: Option<String>,
 }
 
 impl Defaults<'_> {
-    async fn at(&mut self, pattern: &str) -> Result<String, Failure> {
+    pub(crate) async fn at(&mut self, pattern: &str) -> Result<String, Failure> {
         let level = tree::context_level(pattern).ok_or_else(|| {
             Failure::Usage(format!("give the parent explicitly (it matches {pattern})"))
         })?;
@@ -1158,7 +1342,7 @@ impl Defaults<'_> {
     }
 
     /// A full name from a full name or a bare id below the default parent.
-    async fn name(&mut self, value: &str, pattern: &str) -> Result<String, Failure> {
+    pub(crate) async fn name(&mut self, value: &str, pattern: &str) -> Result<String, Failure> {
         if value.starts_with("orgs/") {
             // A full name may carry project and environment slugs.
             return names::resolve(self.client, value).await;
@@ -1170,401 +1354,4 @@ impl Defaults<'_> {
             .ok_or_else(|| Failure::Usage(format!("`{value}` must be a full name ({pattern})")))?;
         Ok(format!("{}/{collection}/{value}", self.at(&parent).await?))
     }
-}
-
-/// A singleton's name: its parent and its literal segment; any other
-/// PARENT is the name as is.
-fn singleton_name(parent: String, suffix: Option<&str>) -> String {
-    match suffix {
-        Some(s) => format!("{parent}/{s}"),
-        None => parent,
-    }
-}
-
-/// Compare numeric flags using their protobuf value, not their JSON spelling.
-fn same_field_value(existing: &Value, value: &Value, ty: &str) -> bool {
-    if existing == value {
-        return true;
-    }
-    match ty {
-        "number" => existing
-            .as_f64()
-            .zip(value.as_f64())
-            .is_some_and(|(a, b)| a == b),
-        "int" => existing.as_str().is_some_and(|s| {
-            s.parse::<i64>()
-                .ok()
-                .zip(value.as_i64())
-                .is_some_and(|(a, b)| a == b)
-                || s.parse::<u64>()
-                    .ok()
-                    .zip(value.as_u64())
-                    .is_some_and(|(a, b)| a == b)
-        }),
-        _ => false,
-    }
-}
-
-async fn generated(
-    client: &Client,
-    method: &MethodCmd,
-    mm: &ArgMatches,
-    root: &ArgMatches,
-    format: Format,
-) -> Result<(), Failure> {
-    let mut args = match root.get_one::<String>("from-file") {
-        Some(path) => {
-            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-            let v: Value = if path.ends_with(".json") {
-                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?
-            } else {
-                serde_yaml_ng::from_str(&text).map_err(|e| format!("{path}: {e}"))?
-            };
-            match v {
-                Value::Object(o) => o,
-                _ => {
-                    return Err(Failure::Usage(format!(
-                        "{path}: the request must be an object"
-                    )))
-                }
-            }
-        }
-        None => Map::new(),
-    };
-    // Files contain the whole method request, not its HTTP resource body.
-    // Validate before resolving defaults (which can contact the API), so a
-    // misplaced field can never disappear while the SDK shapes that body.
-    if method.method == "sandboxes.leases.create" && root.get_one::<String>("from-file").is_some() {
-        let ix = sylphx_resource_codec::ir::Index::embedded();
-        if let Some((request, _)) = ix.methods.iter().find(|(m, _)| m.id == method.method) {
-            sylphx_resource_codec::schema::validate_field_names(
-                &ix,
-                &request.request,
-                &Value::Object(args.clone()),
-                "",
-                sylphx_resource_codec::schema::FieldNames::Canonical,
-            )
-            .map_err(Failure::Input)?;
-        }
-    }
-    let file_args = Value::Object(args.clone());
-    let (values, mask) = tree::flag_values(method, mm)?;
-    for (field, value) in &values {
-        if let Some(existing) = tree::get_path(&file_args, field) {
-            let flag = method
-                .flags
-                .iter()
-                .find(|f| &f.field == field)
-                .expect("flag field");
-            if !same_field_value(existing, value, &flag.r#type) {
-                let detail = if flag.sensitive {
-                    ": values redacted".to_string()
-                } else {
-                    format!(": file value {existing}, flag value {value}")
-                };
-                return Err(Failure::Usage(format!(
-                    "{} conflicts with --from-file at {field}{detail}",
-                    flag.flag
-                )));
-            }
-        }
-    }
-    let mut defaults = Defaults {
-        client,
-        link: None,
-        org: root.get_one::<String>("org").cloned(),
-    };
-
-    if let Some(p) = &method.positional {
-        let given = mm.get_one::<String>("__positional").cloned();
-        let value = match (p.arg.as_str(), given) {
-            ("ID", v) => v,
-            ("PARENT", Some(v)) => Some(singleton_name(
-                names::resolve(client, &v).await?,
-                p.suffix.as_deref(),
-            )),
-            ("PARENT", None)
-                if tree::get_path(&Value::Object(args.clone()), &p.field).is_none() =>
-            {
-                Some(singleton_name(
-                    defaults
-                        .at(p.pattern.as_deref().unwrap_or_default())
-                        .await?,
-                    p.suffix.as_deref(),
-                ))
-            }
-            (_, Some(v)) => Some(
-                defaults
-                    .name(&v, p.pattern.as_deref().unwrap_or_default())
-                    .await?,
-            ),
-            _ => None,
-        };
-        if let Some(v) = value {
-            let value = Value::String(v);
-            if let Some(existing) = tree::get_path(&file_args, &p.field) {
-                if existing != &value {
-                    return Err(Failure::Usage(format!(
-                        "{} conflicts with --from-file at {}: file value {existing}, positional value {value}",
-                        p.arg, p.field
-                    )));
-                }
-            }
-            tree::set_path(&mut args, &p.field, value);
-        }
-    }
-    for (field, value) in values {
-        tree::set_path(&mut args, &field, value);
-    }
-    // `--parent` defaults from context.
-    for f in method.flags.iter().filter(|f| f.default_from_context) {
-        if tree::get_path(&Value::Object(args.clone()), &f.field).is_none() {
-            let v = defaults
-                .at(f.pattern.as_deref().unwrap_or_default())
-                .await?;
-            tree::set_path(&mut args, &f.field, Value::String(v));
-        }
-    }
-    // A file is a full request: preserve its explicit mask, or its unmasked
-    // update semantics. Only flags-only updates derive a mask from flags.
-    if method.is_update()
-        && root.get_one::<String>("from-file").is_none()
-        && !mask.is_empty()
-        && !args.contains_key("update_mask")
-    {
-        args.insert("update_mask".into(), Value::String(mask.join(",")));
-    }
-    let missing = tree::missing_required(method, &Value::Object(args.clone()));
-    if !missing.is_empty() {
-        return Err(Failure::Usage(format!(
-            "missing required flags: {}",
-            missing.join(", ")
-        )));
-    }
-
-    // Updates and deletes send the etag they read (§3.5), unless one is given.
-    if method.sends_etag || method.flags.iter().any(|f| f.field == "etag") {
-        etag(client, method, &mut args).await?;
-    }
-
-    if method.effect == "destructive" && !root.get_flag("yes") {
-        let snapshot = Value::Object(args.clone());
-        let target = method
-            .positional
-            .as_ref()
-            .and_then(|p| tree::get_path(&snapshot, &p.field))
-            .and_then(Value::as_str)
-            .unwrap_or(&method.method)
-            .to_string();
-        confirm(&format!("{} {target}?", method.verb))?;
-    }
-
-    if sylphx::methods::method(&method.method).is_some_and(|spec| spec.server_streaming) {
-        use futures_util::StreamExt;
-        let mut stream = client
-            .invoke_stream(&method.method, Value::Object(args))
-            .await?;
-        while let Some(event) = stream.next().await {
-            println!("{}", output::render(&event?, format));
-        }
-        return Ok(());
-    }
-    // Manual grants use their caller-chosen ID as the replay key. Scope this
-    // contract to the grant create call; other mutations keep SDK-generated keys.
-    let grant_id = (method.method == "money.entitlement_grants.create")
-        .then(|| args.get("entitlement_grant_id").and_then(Value::as_str))
-        .flatten();
-    let mut result = if let Some(id) = grant_id {
-        Client::new(transport::IdempotencyTransport::new(client.transport(), id))
-            .invoke(&method.method, Value::Object(args.clone()))
-            .await?
-    } else {
-        client
-            .invoke(&method.method, Value::Object(args.clone()))
-            .await?
-    };
-    // Use the authority's resolved spec, not client guesses about defaults.
-    // Keep stdout machine-readable for --output json/yaml consumers.
-    if method.method == "sandboxes.leases.create" {
-        if let Some(spec) = result.get("spec") {
-            eprintln!(
-                "Resolved lease spec: kind={} image={} size={} ttl={}",
-                spec.get("kind")
-                    .and_then(Value::as_str)
-                    .unwrap_or("unknown"),
-                spec.get("image")
-                    .and_then(Value::as_str)
-                    .unwrap_or("unknown"),
-                spec.get("shape")
-                    .and_then(Value::as_str)
-                    .unwrap_or("unknown"),
-                spec.get("ttl").and_then(Value::as_str).unwrap_or("unknown"),
-            );
-        }
-    }
-    if method.paginates && root.get_flag("all") {
-        result = follow_pages(client, method, args, result).await?;
-    }
-    if method.long_running() && !root.get_flag("no-wait") && result.get("validate_only").is_none() {
-        result = wait(client, result).await?;
-    }
-    let text = output::render(&result, format);
-    if !text.is_empty() {
-        println!("{text}");
-    }
-    Ok(())
-}
-
-/// Reads the Resource first and sends its etag with the write.
-async fn etag(
-    client: &Client,
-    method: &MethodCmd,
-    args: &mut Map<String, Value>,
-) -> Result<(), Failure> {
-    let Some(get) = method
-        .method
-        .rsplit_once('.')
-        .map(|(c, _)| format!("{c}.get"))
-    else {
-        return Ok(());
-    };
-    let (name_field, etag_path) = match method.resource_field() {
-        Some(r) if method.is_update() => (format!("{r}.name"), format!("{r}.meta.etag")),
-        _ => ("name".to_string(), "etag".to_string()),
-    };
-    let current = Value::Object(args.clone());
-    if tree::get_path(&current, &etag_path).is_some() || sylphx::methods::method(&get).is_none() {
-        return Ok(());
-    }
-    let Some(name) = tree::get_path(&current, &name_field)
-        .and_then(Value::as_str)
-        .map(str::to_string)
-    else {
-        return Ok(());
-    };
-    match client.invoke(&get, json!({ "name": name })).await {
-        Ok(r) => {
-            if let Some(e) = r
-                .get("meta")
-                .and_then(|m| m.get("etag"))
-                .and_then(Value::as_str)
-            {
-                tree::set_path(args, &etag_path, Value::String(e.to_string()));
-            }
-            Ok(())
-        }
-        // An upsert of a missing Resource has no etag to send.
-        Err(Error::Api { status: 404, .. }) => Ok(()),
-        Err(e) => Err(e.into()),
-    }
-}
-
-fn confirm(prompt: &str) -> Result<(), Failure> {
-    if !std::io::stdin().is_terminal() {
-        return Err(Failure::Usage(format!(
-            "{prompt} This is destructive: pass --yes to confirm"
-        )));
-    }
-    eprint!("{prompt} [y/N] ");
-    std::io::stderr().flush().ok();
-    let mut line = String::new();
-    std::io::stdin()
-        .read_line(&mut line)
-        .map_err(|e| e.to_string())?;
-    if matches!(line.trim(), "y" | "Y" | "yes") {
-        Ok(())
-    } else {
-        Err(Failure::Usage("aborted".into()))
-    }
-}
-
-async fn follow_pages(
-    client: &Client,
-    method: &MethodCmd,
-    mut args: Map<String, Value>,
-    first: Value,
-) -> Result<Value, Failure> {
-    let key = first
-        .as_object()
-        .and_then(|o| {
-            o.iter()
-                .find(|(k, v)| k.as_str() != "next_page_token" && v.is_array())
-        })
-        .map(|(k, _)| k.clone());
-    let Some(key) = key else {
-        return Ok(first);
-    };
-    let mut items = first[&key].as_array().cloned().unwrap_or_default();
-    let mut token = first["next_page_token"]
-        .as_str()
-        .unwrap_or_default()
-        .to_string();
-    while !token.is_empty() {
-        args.insert("page_token".into(), Value::String(token));
-        let page = client
-            .invoke(&method.method, Value::Object(args.clone()))
-            .await?;
-        items.extend(page[&key].as_array().cloned().unwrap_or_default());
-        token = page["next_page_token"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-    }
-    Ok(json!({ key: items }))
-}
-
-/// Waits for an Operation (spec §3.9) and returns its settled Resource.
-async fn wait(client: &Client, mut op: Value) -> Result<Value, Failure> {
-    let Some(name) = op.get("name").and_then(Value::as_str).map(str::to_string) else {
-        return Ok(op);
-    };
-    if !name.contains("/operations/") {
-        return Ok(op);
-    }
-    let tty = std::io::stderr().is_terminal();
-    while op.get("done") != Some(&Value::Bool(true)) {
-        if tty {
-            let msg = op
-                .get("progress")
-                .and_then(|p| p.get("message"))
-                .and_then(Value::as_str)
-                .unwrap_or("waiting");
-            eprint!("\r{msg}…");
-        }
-        op = client
-            .call(HttpRequest {
-                method: "POST",
-                path: format!("/v1/{name}:wait"),
-                query: vec![("timeout".into(), "60s".into())],
-                body: Some(json!({})),
-                mutation: false,
-                origin: None,
-                effect_ids: false,
-            })
-            .await?;
-    }
-    if tty {
-        eprint!("\r");
-    }
-    if let Some(err) = op.get("error").filter(|e| !e.is_null()) {
-        let problem: sylphx::common::ProblemDetails =
-            serde_json::from_value(err.clone()).map_err(|e| Failure::Usage(e.to_string()))?;
-        return Err(Failure::Api(Error::Api {
-            code: sylphx::common::ErrorCode::from_wire(&problem.code),
-            status: problem.status.max(0) as u16,
-            retryable: problem.retryable,
-            effect: problem.effect.clone(),
-            detail: problem.detail.clone(),
-            request_id: None,
-            problem: Box::new(problem),
-        }));
-    }
-    Ok(match op.get("response") {
-        Some(Value::Object(r)) => {
-            let mut r = r.clone();
-            r.remove("@type");
-            Value::Object(r)
-        }
-        _ => op,
-    })
 }

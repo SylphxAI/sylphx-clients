@@ -62,10 +62,15 @@ pub fn manifest(cmd: &Command, tree: &Tree) -> Value {
                 let extra: Vec<String> = names(sub)
                     .into_iter()
                     .filter(|n| {
-                        !svc.collections.iter().any(|c| &c.noun == n)
-                            && !svc.commands.iter().any(|m| &m.verb == n)
-                            && (crate::HAND_WRITTEN.contains(&(name, n.as_str()))
-                                || !svc
+                        crate::HAND_WRITTEN.contains(&(name, n.as_str()))
+                            || (!svc.collections.iter().any(|c| {
+                                if c.collapsed {
+                                    c.commands.iter().any(|m| &m.verb == n)
+                                } else {
+                                    &c.noun == n
+                                }
+                            }) && !svc.commands.iter().any(|m| &m.verb == n)
+                                && !svc
                                     .porcelain
                                     .iter()
                                     .any(|p| p.words().first() == Some(&n.as_str())))

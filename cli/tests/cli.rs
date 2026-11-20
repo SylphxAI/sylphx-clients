@@ -2002,36 +2002,201 @@ async fn login_keeps_an_issued_key_it_cannot_confirm_yet() {
     assert!(creds.contains("sylphx_sk_test_issued"), "{creds}");
 }
 
-/// No keychain and no directory of its own: the shared default is refused,
-/// before any key is read or any device grant is started.
+/// Headless/SSH/CI/container hosts with no OS keychain fall back gracefully
+/// to a mode-0600 credentials.json in `~/.config/sylphx` (or `XDG_CONFIG_HOME`).
 #[tokio::test(flavor = "multi_thread")]
-async fn login_refuses_the_shared_default_store_without_a_keychain() {
-    let (url, log) = serve(vec![]).await;
-    let sb = Sandbox::new("login-shared-default");
+async fn login_falls_back_to_0600_file_without_a_keychain() {
+    let (url, _log) = serve(device_replies()).await;
+    let sb = Sandbox::new("login-headless-fallback");
     let home = sb.dir.join("home");
     let shared = home.join(".config/sylphx/credentials.json");
-    for args in [
-        vec!["login", "--api-key", "sylphx_sk_test_given", "--no-verify"],
-        vec!["login", "--org", "acme"],
-    ] {
-        let mut c = sb.cmd(&url, &args);
-        c.env_remove("SYLPHX_API_KEY")
-            .env_remove("SYLPHX_CONFIG_DIR")
-            .env_remove("XDG_CONFIG_HOME")
-            .env("HOME", &home)
-            .env("SYLPHX_NO_KEYCHAIN", "1");
-        let out = tokio::task::spawn_blocking(move || c.output().unwrap())
-            .await
-            .unwrap();
-        let err = String::from_utf8_lossy(&out.stderr);
-        assert_eq!(out.status.code(), Some(2), "{args:?}: {err}");
-        assert!(
-            err.contains("--store-file") && err.contains("SYLPHX_CONFIG_DIR"),
-            "{err}"
+
+    // 1. Direct API key login without --store-file or SYLPHX_CONFIG_DIR.
+    let mut c = sb.cmd(
+        &url,
+        &["login", "--api-key", "sylphx_sk_test_given", "--no-verify"],
+    );
+    c.env_remove("SYLPHX_API_KEY")
+        .env_remove("SYLPHX_CONFIG_DIR")
+        .env_remove("XDG_CONFIG_HOME")
+        .env("HOME", &home)
+        .env("SYLPHX_NO_KEYCHAIN", "1");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{err}");
+    assert!(err.contains("mode 0600"), "{err}");
+    let contents = std::fs::read_to_string(&shared).unwrap();
+    assert!(contents.contains("sylphx_sk_test_given"), "{contents}");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(&shared).unwrap().permissions().mode() & 0o777,
+            0o600
         );
     }
-    assert!(!shared.exists(), "nothing written to the shared default");
-    assert!(log.lock().is_empty(), "no device grant started");
+
+    // 2. Device flow login without --store-file or SYLPHX_CONFIG_DIR.
+    let mut c = sb.cmd(&url, &["login", "--org", "acme", "--no-verify"]);
+    c.env_remove("SYLPHX_API_KEY")
+        .env_remove("SYLPHX_CONFIG_DIR")
+        .env_remove("XDG_CONFIG_HOME")
+        .env("HOME", &home)
+        .env("SYLPHX_NO_KEYCHAIN", "1");
+    let out = tokio::task::spawn_blocking(move || c.output().unwrap())
+        .await
+        .unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{err}");
+    assert!(!err.contains("sylphx_sk_test_issued"), "secret leaked");
+    let contents = std::fs::read_to_string(&shared).unwrap();
+    assert!(contents.contains("sylphx_sk_test_issued"), "{contents}");
+}
+
+/// Device login verifies immediately without blocking on a 10-second `active_after_ms` sleep.
+#[tokio::test(flavor = "multi_thread")]
+async fn device_login_does_not_block_on_active_after() {
+    let (url, _log) = serve(vec![
+        (
+            200,
+            json!({"device_code": "dc", "user_code": "BCDF-GHJK", "verification_uri": "https://sylphx.com/device",
+                   "interval": 1, "expires_in": 600}),
+        ),
+        (
+            200,
+            json!({"keys": [{"api_key": "sylphx_sk_fast", "org": {"id": "org_a", "slug": "acme"}, "key": {"name": "orgs/org_a/api_keys/key_cli"}}], "active_after_ms": 10000}),
+        ),
+        (200, whoami_reply()),
+    ])
+    .await;
+    let sb = Sandbox::new("login-no-active-after-sleep");
+    let started = std::time::Instant::now();
+    let out = run_stored(&sb, &url, &["login", "--org", "acme"]).await;
+    assert_success(&out);
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(5),
+        "login should not sleep for active_after_ms (took {:?})",
+        started.elapsed()
+    );
+}
+
+/// `whoami` fails non-zero when unauthenticated or when the API returns no
+/// verified identity; `--offline` inspects local metadata without network calls.
+#[tokio::test(flavor = "multi_thread")]
+async fn whoami_requires_verified_identity_and_supports_offline_mode() {
+    let (url, log) = serve(vec![(200, json!({}))]).await;
+    let sb = Sandbox::new("whoami-verified-and-offline");
+
+    // Unauthenticated online and offline both fail non-zero.
+    let unauth = run_stored(&sb, &url, &["whoami"]).await;
+    assert!(!unauth.status.success());
+    let unauth_offline = run_stored(&sb, &url, &["whoami", "--offline"]).await;
+    assert!(!unauth_offline.status.success());
+    assert!(log.lock().is_empty());
+
+    // An empty 200 payload from /v1/whoami is rejected as unverified.
+    let empty_online = run(&sb, &url, &["whoami"]).await;
+    assert!(
+        !empty_online.status.success(),
+        "empty whoami payload must fail non-zero"
+    );
+    assert_eq!(log.lock().len(), 1);
+
+    // Offline mode with SYLPHX_API_KEY succeeds without contacting the server
+    // and never prints the plaintext secret key.
+    let offline = run(&sb, &url, &["whoami", "--offline", "-o", "json"]).await;
+    assert_success(&offline);
+    assert_eq!(log.lock().len(), 1, "offline must not contact the API");
+    let stdout = String::from_utf8_lossy(&offline.stdout);
+    assert!(!stdout.contains("sylphx_sk_"), "secret leaked: {stdout}");
+    let parsed: Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(parsed["offline"], true);
+    assert_eq!(parsed["verified"], false);
+    assert_eq!(parsed["source"], "env");
+}
+
+/// `sylphx init --unclaimed` creates a project anonymously, writes `.sylphx/project.json`,
+/// stores its key in the 0600 credential store, and never prints the secret key.
+#[tokio::test(flavor = "multi_thread")]
+async fn init_unclaimed_bootstraps_without_credentials() {
+    let unclaimed_reply = json!({
+        "id": "prj_unclaimed1",
+        "org": "orgs/org_unclaimed1",
+        "project": "orgs/org_unclaimed1/projects/prj_unclaimed1",
+        "project_slug": "agent-demo",
+        "environment": "orgs/org_unclaimed1/projects/prj_unclaimed1/envs/env_unclaimed1",
+        "key": "sylphx_sk_unclaimed_secret",
+        "publishable_key": "sylphx_pk_unclaimed_pub",
+        "expires_at": "2026-11-26T00:00:00Z",
+        "claim_url": "https://sylphx.com/claim/tok_demo",
+        "claim_expires_at": "2026-11-20T00:00:00Z",
+        "services": ["hosting", "data"],
+        "next": "Send claim_url to a person before claim_expires_at."
+    });
+    let (url, log) = serve(vec![(201, unclaimed_reply), (200, whoami_reply())]).await;
+    let sb = Sandbox::new("init-unclaimed");
+    std::fs::remove_file(sb.dir.join(".sylphx/project.json")).unwrap();
+
+    let out = run_stored(
+        &sb,
+        &url,
+        &[
+            "init",
+            "--unclaimed",
+            "--name",
+            "agent-demo",
+            "--services",
+            "hosting,data",
+            "-o",
+            "json",
+        ],
+    )
+    .await;
+    assert_success(&out);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !stdout.contains("sylphx_sk_unclaimed_secret")
+            && !stderr.contains("sylphx_sk_unclaimed_secret"),
+        "unclaimed secret leaked"
+    );
+    let summary: Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(summary["claim_url"], "https://sylphx.com/claim/tok_demo");
+    assert_eq!(
+        summary["project"],
+        "orgs/org_unclaimed1/projects/prj_unclaimed1"
+    );
+    let link: Value = serde_json::from_str(
+        &std::fs::read_to_string(sb.dir.join(".sylphx/project.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        link["env"],
+        "orgs/org_unclaimed1/projects/prj_unclaimed1/envs/env_unclaimed1"
+    );
+
+    // Subsequent commands automatically pick up the stored unclaimed project key.
+    let whoami = run_stored(&sb, &url, &["whoami"]).await;
+    assert_success(&whoami);
+
+    let seen = log.lock();
+    assert_eq!(seen.len(), 2);
+    assert!(seen[0].line.starts_with("POST /v1/unclaimed-projects "));
+    assert!(
+        !seen[0].head.to_ascii_lowercase().contains("authorization:"),
+        "bootstrap must be anonymous: {}",
+        seen[0].head
+    );
+    let body: Value = serde_json::from_str(&seen[0].body).unwrap();
+    assert_eq!(body["name"], "agent-demo");
+    assert_eq!(body["services"], json!(["hosting", "data"]));
+    assert!(
+        seen[1].head.contains("Bearer sylphx_sk_unclaimed_secret"),
+        "{}",
+        seen[1].head
+    );
 }
 
 /// `--store-file` keeps the key in the default directory; `SYLPHX_CONFIG_DIR`

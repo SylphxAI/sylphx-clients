@@ -18,7 +18,6 @@ pub struct Tree {
 pub struct ServiceCmd {
     pub noun: String,
     pub display_name: String,
-    pub stage: String,
     /// `false` when no backend serves the service yet (`contracts/services.toml`).
     #[serde(default = "served_default")]
     pub served: bool,
@@ -61,6 +60,10 @@ pub struct CollectionCmd {
     pub noun: String,
     pub collection: String,
     pub resource_type: String,
+    /// `true` when the collection noun repeats the service noun (`secrets secrets`,
+    /// `build builds`) so its verbs mount directly under `sylphx <service> <verb>`.
+    #[serde(default)]
+    pub collapsed: bool,
     pub commands: Vec<MethodCmd>,
 }
 
@@ -220,9 +223,6 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
         .iter()
         .map(|s| {
             let mut about = s.display_name.clone();
-            if s.stage == "preview" {
-                about.push_str(" (preview)");
-            }
             if !s.served {
                 about.push_str(" - not available yet");
             }
@@ -231,9 +231,30 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
                 .subcommand_required(true)
                 .arg_required_else_help(true);
             for m in &s.commands {
-                cmd = cmd.subcommand(method_command(m));
+                if !hand_written.contains(&(s.noun.as_str(), m.verb.as_str())) {
+                    cmd = cmd.subcommand(method_command(m));
+                }
             }
+            let short: Vec<(Vec<&str>, &MethodCmd)> = s
+                .porcelain
+                .iter()
+                .map(|p| (p.words(), &p.command))
+                .filter(|(w, _)| !hand_written.contains(&(s.noun.as_str(), w[0])))
+                .collect();
             for c in &s.collections {
+                if c.collapsed {
+                    for m in &c.commands {
+                        if hand_written.contains(&(s.noun.as_str(), m.verb.as_str()))
+                            || short
+                                .iter()
+                                .any(|(w, _)| w.len() == 1 && w[0] == m.verb.as_str())
+                        {
+                            continue;
+                        }
+                        cmd = cmd.subcommand(method_command(m));
+                    }
+                    continue;
+                }
                 let mut cc = Command::new(c.noun.clone())
                     .about(format!("`{}`: {}", c.collection, c.resource_type))
                     .subcommand_required(true)
@@ -243,12 +264,6 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
                 }
                 cmd = cmd.subcommand(cc);
             }
-            let short: Vec<(Vec<&str>, &MethodCmd)> = s
-                .porcelain
-                .iter()
-                .map(|p| (p.words(), &p.command))
-                .filter(|(w, _)| !hand_written.contains(&(s.noun.as_str(), w[0])))
-                .collect();
             mount(cmd, &short)
         })
         .collect()
@@ -311,7 +326,19 @@ pub fn find<'t>(
             return Some((&p.command, cur.clone()));
         }
     }
-    let c = s.collections.iter().find(|c| c.noun == sub)?;
+    if let Some(m) = s
+        .collections
+        .iter()
+        .filter(|c| c.collapsed)
+        .flat_map(|c| &c.commands)
+        .find(|m| m.verb == sub)
+    {
+        return Some((m, sub_m.clone()));
+    }
+    let c = s
+        .collections
+        .iter()
+        .find(|c| !c.collapsed && c.noun == sub)?;
     let (verb, verb_m) = sub_m.subcommand()?;
     let m = c.commands.iter().find(|m| m.verb == verb)?;
     Some((m, verb_m.clone()))
@@ -508,24 +535,54 @@ mod tests {
     }
 
     #[test]
-    fn masked_support_inbox_update_requires_only_selected_resource_fields() {
-        let tree = load();
-        let method = tree
-            .services
-            .iter()
-            .flat_map(|s| &s.collections)
-            .flat_map(|c| &c.commands)
-            .find(|m| m.method == "notify.support_inboxes.update")
-            .unwrap();
-        let matches = method_command(method)
+    fn masked_update_requires_only_selected_resource_fields() {
+        let make_flag = |flag: &str, field: &str, required: bool| FlagSpec {
+            flag: flag.into(),
+            field: field.into(),
+            r#type: "string".into(),
+            summary: String::new(),
+            required,
+            sensitive: false,
+            repeated: false,
+            values: None,
+            pattern: None,
+            default_from_context: false,
+        };
+        let method = MethodCmd {
+            verb: "update".into(),
+            method: "demo.items.update".into(),
+            summary: "Update an item".into(),
+            served: true,
+            http: "PATCH /v1/{item.name}".into(),
+            effect: "write".into(),
+            positional: Some(Positional {
+                arg: "NAME".into(),
+                field: "item.name".into(),
+                pattern: Some("orgs/{org}/projects/{project}/envs/{env}/items/{item}".into()),
+                optional: false,
+                default_from_context: false,
+                suffix: None,
+            }),
+            flags: vec![
+                make_flag("--policy", "item.policy", false),
+                make_flag("--locales", "item.locales", true),
+                make_flag("--intake-bound", "item.intake_bound", true),
+            ],
+            waits: None,
+            update_mask: Some("from-flags".into()),
+            sends_etag: true,
+            paginates: false,
+            resource_field_name: Some("item".into()),
+        };
+        let matches = method_command(&method)
             .try_get_matches_from([
                 "update",
-                "orgs/o/projects/p/envs/e/support_inboxes/i",
+                "orgs/o/projects/p/envs/e/items/i",
                 "--policy",
                 "policy-v2",
             ])
             .unwrap();
-        let (values, mask) = flag_values(method, &matches).unwrap();
+        let (values, mask) = flag_values(&method, &matches).unwrap();
         assert_eq!(mask, ["policy"]);
         let mut fields = Map::new();
         for (field, value) in values {
@@ -533,46 +590,37 @@ mod tests {
         }
         fields.insert("update_mask".into(), Value::String(mask.join(",")));
         let mut args = Value::Object(fields);
-        assert!(missing_required(method, &args).is_empty());
+        assert!(missing_required(&method, &args).is_empty());
         assert_eq!(
-            get_path(&args, "support_inbox.policy"),
+            get_path(&args, "item.policy"),
             Some(&Value::String("policy-v2".into()))
         );
-        assert!(get_path(&args, "support_inbox.locales").is_none());
+        assert!(get_path(&args, "item.locales").is_none());
 
         args["update_mask"] = Value::String("policy,locales".into());
-        assert_eq!(missing_required(method, &args), ["--locales"]);
+        assert_eq!(missing_required(&method, &args), ["--locales"]);
         args["update_mask"] = Value::String("*".into());
         assert_eq!(
-            missing_required(method, &args),
+            missing_required(&method, &args),
             ["--locales", "--intake-bound"]
         );
         args.as_object_mut().unwrap().remove("update_mask");
         assert_eq!(
-            missing_required(method, &args),
+            missing_required(&method, &args),
             ["--locales", "--intake-bound"]
         );
 
-        let create = tree
-            .services
-            .iter()
-            .flat_map(|s| &s.collections)
-            .flat_map(|c| &c.commands)
-            .find(|m| m.method == "notify.support_inboxes.create")
-            .unwrap();
+        let mut create = method.clone();
+        create.verb = "create".into();
+        create.method = "demo.items.create".into();
+        create.update_mask = None;
         args["update_mask"] = Value::String("policy".into());
-        assert!(missing_required(create, &args).contains(&"--locales".into()));
+        assert!(missing_required(&create, &args).contains(&"--locales".into()));
 
         let mut request_required = method.clone();
-        let mut precondition = method
+        request_required
             .flags
-            .iter()
-            .find(|f| f.flag == "--locales")
-            .unwrap()
-            .clone();
-        precondition.field = "expected_version".into();
-        precondition.flag = "--expected-version".into();
-        request_required.flags.push(precondition);
+            .push(make_flag("--expected-version", "expected_version", true));
         assert_eq!(
             missing_required(&request_required, &args),
             ["--expected-version"]
@@ -607,42 +655,44 @@ mod tests {
     }
 
     #[test]
-    fn individual_method_help_marks_only_unavailable_commands() {
+    fn every_generated_cli_command_is_served() {
         let tree = load();
-        let agents = tree.services.iter().find(|s| s.noun == "agents").unwrap();
-        assert!(agents.served);
-        for collection in &agents.collections {
-            for method in &collection.commands {
+        for service in &tree.services {
+            assert!(service.served, "unserved service in CLI: {}", service.noun);
+            for method in service
+                .commands
+                .iter()
+                .chain(service.collections.iter().flat_map(|c| &c.commands))
+            {
+                assert!(method.served, "unserved method in CLI: {}", method.method);
                 let help = method_command(method).render_long_help().to_string();
-                assert_eq!(
-                    help.contains("Not available yet"),
-                    !method.served,
-                    "{}",
-                    method.method
-                );
+                assert!(!help.contains("Not available yet"), "{}", method.method);
             }
         }
-        let memories = agents
-            .collections
+        let all_methods: Vec<&str> = tree
+            .services
             .iter()
-            .find(|c| c.collection == "memories")
-            .unwrap();
-        // Memory is served over Sylphx Knowledge.
-        assert!(memories.commands.iter().all(|m| m.served));
-        let management = agents
-            .collections
-            .iter()
-            .find(|c| c.collection == "agents")
-            .unwrap();
-        assert!(management.commands.iter().all(|m| m.served));
+            .flat_map(|s| {
+                s.commands
+                    .iter()
+                    .chain(s.collections.iter().flat_map(|c| &c.commands))
+            })
+            .map(|m| m.method.as_str())
+            .collect();
+        assert!(all_methods.contains(&"agents.agent_sessions.decide_approval"));
+        assert!(!all_methods.contains(&"notify.support_cases.create"));
+        assert!(!tree.services.iter().any(|s| matches!(
+            s.noun.as_str(),
+            "analytics" | "billing" | "entitlement" | "network" | "realtime" | "runners"
+        )));
     }
 
-    /// `MethodPolicy.porcelain` mounts each short command under the same
-    /// words as the SDK method and the MCP tool, and it resolves to the
-    /// method its full-tree command calls.
+    /// `MethodPolicy.porcelain` and collapsed stutter collections mount cleanly
+    /// and resolve to their backing methods.
     #[test]
-    fn short_commands_mount_and_resolve_to_their_method() {
+    fn short_commands_and_collapsed_stutters_mount_and_resolve() {
         root(&[]).debug_assert();
+        root(crate::HAND_WRITTEN).debug_assert();
         for (argv, method) in [
             (
                 &[
@@ -691,16 +741,37 @@ mod tests {
                 ],
                 "build.build_caches.purge",
             ),
-            // The full-tree command stays beside the short one.
+            // Collapsed stutter collections mount directly under the service noun.
+            (
+                &["sylphx", "build", "read-logs", "orgs/o/projects/p/builds/b"],
+                "build.builds.read_logs",
+            ),
+            (
+                &["sylphx", "secrets", "list", "orgs/o/projects/p/envs/e"],
+                "secrets.secrets.list",
+            ),
+            (
+                &["sylphx", "agents", "list", "orgs/o/projects/p/envs/e"],
+                "agents.agents.list",
+            ),
+            (
+                &["sylphx", "workflows", "list", "orgs/o/projects/p/envs/e"],
+                "workflows.workflows.list",
+            ),
+            (
+                &["sylphx", "release", "list", "orgs/o/projects/p/envs/e"],
+                "release.releases.list",
+            ),
+            // Acronym kebab normalization.
             (
                 &[
                     "sylphx",
-                    "build",
-                    "builds",
-                    "read-logs",
-                    "orgs/o/projects/p/builds/b",
+                    "broker",
+                    "trust-policies",
+                    "open-github-pull-request",
+                    "orgs/o/trust_policies/tp",
                 ],
-                "build.builds.read_logs",
+                "broker.trust_policies.open_git_hub_pull_request",
             ),
         ] {
             assert_eq!(
@@ -709,6 +780,22 @@ mod tests {
                 "{argv:?}"
             );
         }
+        let cmd = root(&[]);
+        assert!(cmd
+            .find_subcommand("secrets")
+            .unwrap()
+            .find_subcommand("secrets")
+            .is_none());
+        assert!(cmd
+            .find_subcommand("agents")
+            .unwrap()
+            .find_subcommand("agents")
+            .is_none());
+        assert!(cmd
+            .find_subcommand("build")
+            .unwrap()
+            .find_subcommand("builds")
+            .is_none());
     }
 
     /// A word the binary writes by hand (`build run`) is not mounted from

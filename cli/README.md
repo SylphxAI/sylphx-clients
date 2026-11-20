@@ -6,11 +6,12 @@ small hand-written porcelain on the generated Rust SDK.
 ```sh
 curl -fsSL https://github.com/SylphxAI/sylphx-clients/releases/latest/download/install.sh | sh   # or: npm i -g @sylphx/cli · cargo install sylphx-cli
 sylphx login                          # approve selected orgs at sylphx.com/device; one role-scoped key per org
-                                      #   keys go to the OS keychain (or an explicitly chosen 0600 file), never stdout
+                                      #   keys go to the OS keychain, with graceful 0600 file fallback on headless hosts
 sylphx login --api-key -              # agents and CI: an Access key on stdin (or SYLPHX_API_KEY)
+sylphx init --unclaimed               # agents: bootstrap a temporary unclaimed project with zero prior credentials
 sylphx token --scope hosting:deploy   # one short-lived token (15 min) for one scope, on stdout only
 sylphx org use acme                   # active org when no --org, resource name, or linked context selects another
-sylphx whoami --org beta              # use beta's stored credential for this command only
+sylphx whoami --org beta              # verify beta's stored credential against the API (--offline for local metadata)
 sylphx logout                         # forget selected credentials; supplied API keys are not revoked
 sylphx logout --all                   # forget all stored credentials; add --revoke to revoke supplied keys
 sylphx auth status                   # first use discovers/provisions the default project and production environment
@@ -337,47 +338,6 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   an unavailable cache is never reported as a cache hit.
   `BUILD_CACHE=false` or an existing indexed Git config preserves advanced CI
   source overrides.
-
-## `sylphx work runner`
-
-A self-hosted runner for Sylphx Work: it takes ready steps from your
-workspace and runs your command for each one on this machine, as GitHub's
-self-hosted runners take jobs.
-
-```sh
-sylphx work runner --label kind:build,member:group:builder -- ./run-step.sh   # one step, then exit (default)
-sylphx work runner --loop --label kind:build,member:group:builder,cap:repo-write -- ./run-step.sh
-```
-
-- It long-polls Work (`POST /v2/claim` with `n: 1`, its labels, its runner
-  name and `wait`) for a ready step whose required labels `--label` covers.
-  The runner (`--name`, default the host name) is catalogued on that claim, so
-  the workspace's coverage counts it as a live runner for each
-  `member:<group>` label it advertises.
-- The command gets the claim (item, checkpoint, context, `profile`,
-  `workspaceProfile`, token) as JSON on standard input and in
-  `$SYLPHX_WORK_CLAIM_FILE`, and the claim token, scoped to that one item, in
-  `$SYLPHX_WORK_CLAIM_TOKEN`; `$SYLPHX_WORK_URL`, `$SYLPHX_WORK_ITEM`,
-  `$SYLPHX_WORK_GENERATION` and `$SYLPHX_WORK_RUNNER` name the rest.
-  `SYLPHX_API_KEY` is removed from its environment: the step acts with the
-  claim token, never the runner's key. `SYLPHX_CONFIG_DIR` points to an empty
-  per-step directory rather than the runner's saved login; it is removed after
-  the step. Each beat writes the renewed token to
-  `$SYLPHX_WORK_CLAIM_TOKEN_FILE`. Work names no harness or model: the command
-  is yours.
-- While the command runs the runner beats the claim at half its
-  time-to-live (`--ttl`, default the step kind's lease). A beat that answers
-  `cancel` (dropped, reassigned or revoked) stops the command's process group
-  (SIGTERM, SIGKILL after 10 s).
-- When the command ends the runner releases the step with a checkpoint that
-  names its exit status, unless the command already handed it over with the
-  claim token. With `--ephemeral` (the default) it then exits 0, whatever the
-  command's status; `--loop` takes the next step. Ctrl-C stops the command,
-  hands the step over and exits 130. `-o json` prints one JSON line per step
-  (`item`, `generation`, `exitCode`, `cancelled`, `handedOverBy`).
-- Work's address is `--work-url`, else `SYLPHX_WORK_URL`, else
-  `https://work.sylphx.com`; the key is your login, `SYLPHX_API_KEY` or
-  `--api-key`.
 
 ## `sylphx token --scope <scope>`
 

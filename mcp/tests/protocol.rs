@@ -495,4 +495,68 @@ async fn remote_knowledge_tools_are_read_only() {
     assert!(names.contains(&json!("knowledge_recall")));
     assert!(names.contains(&json!("skill_load")));
     assert!(!names.contains(&json!("knowledge_remember")));
+    assert!(!names.contains(&json!("project_bootstrap_unclaimed")));
+}
+
+#[tokio::test]
+async fn project_bootstrap_unclaimed_works_anonymously_in_local_mode() {
+    let rec = Recorder::default();
+    rec.replies.lock().unwrap().push_back((
+        201,
+        json!({
+            "id": "prj_u1",
+            "org": "orgs/org_u1",
+            "project": "orgs/org_u1/projects/prj_u1",
+            "project_slug": "demo",
+            "environment": "orgs/org_u1/projects/prj_u1/envs/env_u1",
+            "key": "sylphx_sk_u1",
+            "publishable_key": "sylphx_pk_u1",
+            "claim_url": "https://sylphx.com/claim/tok_u1",
+            "claim_expires_at": "2026-11-20T00:00:00Z",
+            "expires_at": "2026-11-26T00:00:00Z",
+            "services": ["hosting", "data"],
+        }),
+    ));
+    // No authenticated client at all — only the anonymous bootstrap transport.
+    let s = Server::new(None).with_anonymous(Client::new(rec.clone()));
+    let list = call(&s, "tools/list", json!({})).await;
+    assert!(list["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|t| t["name"] == "project_bootstrap_unclaimed"));
+    let r = call(
+        &s,
+        "tools/call",
+        json!({
+            "name": "project_bootstrap_unclaimed",
+            "arguments": {"name": "demo", "services": ["hosting", "data"]}
+        }),
+    )
+    .await;
+    assert_eq!(r["result"]["isError"], false, "{r}");
+    assert_eq!(
+        r["result"]["structuredContent"]["claim_url"],
+        "https://sylphx.com/claim/tok_u1"
+    );
+    let sent = rec.sent.lock().unwrap();
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].method, "POST");
+    assert_eq!(sent[0].path, "/v1/unclaimed-projects");
+    assert_eq!(
+        sent[0].body,
+        Some(json!({"name": "demo", "services": ["hosting", "data"]}))
+    );
+}
+
+#[tokio::test]
+async fn project_bootstrap_unclaimed_is_refused_in_remote_read_only_mode() {
+    let s = Server::remote(None::<Client<Recorder>>);
+    let r = call(
+        &s,
+        "tools/call",
+        json!({"name": "project_bootstrap_unclaimed", "arguments": {}}),
+    )
+    .await;
+    assert_eq!(r["result"]["isError"], true);
 }
