@@ -28915,6 +28915,11 @@
       "sylphx.money.v1.CustomerSubscription": {
         "description": "A Customer Subscription is a subject's recurring purchase, mirrored from\nthe processor after Money read it back. Money writes it; a caller changes it\nonly through `:cancel` and `:resume`.",
         "properties": {
+          "available_portal_switch_price": {
+            "description": "On GetCustomerSubscription, the eligible annual catalog price key, or\nempty when Money cannot offer the switch. An offer is not a quote: Money\nchecks eligibility again when creating the hosted confirmation session.",
+            "readOnly": true,
+            "type": "string"
+          },
           "billing_country_code": {
             "description": "The buyer's billing country, upper-case ISO 3166-1 alpha-2 (for example\n`HK`), for a web subscription: the processor customer's billing address\n(which checkout requires and saves), else the default payment method's\nbilling address. Kept current when the processor reports a subscription\nor customer change. Empty when unknown, and for store subscriptions.",
             "readOnly": true,
@@ -30978,6 +30983,11 @@
             "description": "Whose portal.",
             "x-sylphx-immutable": true
           },
+          "switch_price": {
+            "description": "The explicitly allowed annual catalog price key to offer for the named\ncustomer_subscription. Opens only a hosted confirmation, not the general\nportal, and never changes the subscription until the buyer confirms.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
           "uid": {
             "description": "`pts_<cell><ulid>`; never reused.",
             "readOnly": true,
@@ -31030,6 +31040,10 @@
           },
           "key": {
             "description": "The lookup key the app uses; `^[a-z][a-z0-9_]{0,63}$`, unique in the\ncatalog.",
+            "type": "string"
+          },
+          "portal_annual_price": {
+            "description": "Opt in to a Stripe-hosted switch from this active monthly price to the\nnamed active yearly price on the same product. Both intervals must have\na count of one. Empty disables buyer-initiated switches from this price.",
             "type": "string"
           },
           "recurring_interval": {
@@ -106498,6 +106512,9 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
           "409": {
             "$ref": "#/components/responses/Problem"
           },
@@ -106521,6 +106538,7 @@
           "PERMISSION_DENIED",
           "UNKNOWN_FIELD",
           "INVALID_FIELD",
+          "RESOURCE_NOT_FOUND",
           "INVALID_STATE",
           "UNAVAILABLE",
           "IDEMPOTENCY_KEY_REUSED",

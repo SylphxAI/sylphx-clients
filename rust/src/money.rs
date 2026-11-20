@@ -1953,6 +1953,17 @@ pub struct CustomerSubscription {
         alias = "lastPaidTime"
     )]
     pub last_paid_time: String,
+    /// On GetCustomerSubscription, the eligible annual catalog price key, or
+    /// empty when Money cannot offer the switch. An offer is not a quote: Money
+    /// checks eligibility again when creating the hosted confirmation session.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "availablePortalSwitchPrice"
+    )]
+    pub available_portal_switch_price: String,
 }
 
 /// The request of DeleteRevenueSource.
@@ -4037,6 +4048,17 @@ pub struct PortalSession {
         alias = "customerSubscription"
     )]
     pub customer_subscription: String,
+    /// The explicitly allowed annual catalog price key to offer for the named
+    /// customer_subscription. Opens only a hosted confirmation, not the general
+    /// portal, and never changes the subscription until the buyer confirms.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "switchPrice"
+    )]
+    pub switch_price: String,
     /// The hosted page; valid for a few minutes.
     ///
     /// Field behavior: `output_only`.
@@ -4135,6 +4157,15 @@ pub struct Price {
         alias = "grantCadence"
     )]
     pub grant_cadence: String,
+    /// Opt in to a Stripe-hosted switch from this active monthly price to the
+    /// named active yearly price on the same product. Both intervals must have
+    /// a count of one. Empty disables buyer-initiated switches from this price.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "portalAnnualPrice"
+    )]
+    pub portal_annual_price: String,
 }
 
 /// A stored Stripe hint. No payload, customer details, credential or raw error
@@ -9591,7 +9622,7 @@ impl<'a, T: crate::runtime::Transport> PortalSessionsCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/portal_sessions` · permission `billing:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
     pub async fn create(
         &self,
         request: CreatePortalSessionRequest,

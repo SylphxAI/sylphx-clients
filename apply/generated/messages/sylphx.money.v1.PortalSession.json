@@ -113,6 +113,25 @@
     },
     {
       "behaviors": [
+        "OPTIONAL",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "switch_price",
+      "number": 13,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
         "OUTPUT_ONLY"
       ],
       "cli_flag": "",

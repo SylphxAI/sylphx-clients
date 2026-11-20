@@ -323,6 +323,24 @@
         "kind": "well_known",
         "wkt": "timestamp"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "available_portal_switch_price",
+      "number": 25,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.money.v1.CustomerSubscription",

@@ -29228,6 +29228,10 @@
                                 "description": "The lookup key the app uses; `^[a-z][a-z0-9_]{0,63}$`, unique in the\ncatalog.",
                                 "type": "string"
                               },
+                              "portal_annual_price": {
+                                "description": "Opt in to a Stripe-hosted switch from this active monthly price to the\nnamed active yearly price on the same product. Both intervals must have\na count of one. Empty disables buyer-initiated switches from this price.",
+                                "type": "string"
+                              },
                               "recurring_interval": {
                                 "description": "Unset for a one-time price; `day`, `week`, `month`, or `year`.",
                                 "type": "string"
@@ -31442,6 +31446,11 @@
                   }
                 },
                 "type": "object",
+                "x-sylphx-immutable": true
+              },
+              "switch_price": {
+                "description": "The explicitly allowed annual catalog price key to offer for the named\ncustomer_subscription. Opens only a hosted confirmation, not the general\nportal, and never changes the subscription until the buyer confirms.",
+                "type": "string",
                 "x-sylphx-immutable": true
               }
             },

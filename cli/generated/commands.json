@@ -17992,6 +17992,12 @@
                   "flag": "--customer-subscription",
                   "summary": "Optional owned Stripe subscription whose processor customer opens the portal. Omitted: use the subject's original customer binding.",
                   "type": "string"
+                },
+                {
+                  "field": "portal_session.switch_price",
+                  "flag": "--switch-price",
+                  "summary": "The explicitly allowed annual catalog price key to offer for the named customer_subscription. Opens only a hosted confirmation, not the general portal, and never changes the subscription until the buyer confirms.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/portal_sessions",

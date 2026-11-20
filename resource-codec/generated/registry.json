@@ -88482,6 +88482,25 @@
             "kind": "well_known",
             "wkt": "timestamp"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "On GetCustomerSubscription, the eligible annual catalog price key, or\nempty when Money cannot offer the switch. An offer is not a quote: Money\nchecks eligibility again when creating the hosted confirmation session.",
+          "filterable": false,
+          "name": "available_portal_switch_price",
+          "number": 25,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.CustomerSubscription",
@@ -93939,6 +93958,26 @@
         },
         {
           "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The explicitly allowed annual catalog price key to offer for the named\ncustomer_subscription. Opens only a hosted confirmation, not the general\nportal, and never changes the subscription until the buyer confirms.",
+          "filterable": false,
+          "name": "switch_price",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
@@ -94202,6 +94241,25 @@
           "filterable": false,
           "name": "grant_cadence",
           "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Opt in to a Stripe-hosted switch from this active monthly price to the\nnamed active yearly price on the same product. Both intervals must have\na count of one. Empty disables buyer-initiated switches from this price.",
+          "filterable": false,
+          "name": "portal_annual_price",
+          "number": 13,
           "oneof": null,
           "optional": false,
           "repeated": false,
@@ -176362,6 +176420,7 @@
                 "PERMISSION_DENIED",
                 "UNKNOWN_FIELD",
                 "INVALID_FIELD",
+                "RESOURCE_NOT_FOUND",
                 "INVALID_STATE",
                 "UNAVAILABLE",
                 "IDEMPOTENCY_KEY_REUSED",

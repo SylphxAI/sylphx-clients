@@ -856,6 +856,12 @@ export interface CustomerSubscription {
 	readonly latestPaymentId?: string
 	/** Timestamp of the latest settled subscription payment, when reported. */
 	readonly lastPaidTime?: string
+	/**
+	 * On GetCustomerSubscription, the eligible annual catalog price key, or
+	 * empty when Money cannot offer the switch. An offer is not a quote: Money
+	 * checks eligibility again when creating the hosted confirmation session.
+	 */
+	readonly availablePortalSwitchPrice?: string
 }
 
 /** The request of DeleteRevenueSource. */
@@ -1860,6 +1866,12 @@ export interface PortalSession {
 	 * Omitted: use the subject's original customer binding.
 	 */
 	customerSubscription?: string
+	/**
+	 * The explicitly allowed annual catalog price key to offer for the named
+	 * customer_subscription. Opens only a hosted confirmation, not the general
+	 * portal, and never changes the subscription until the buyer confirms.
+	 */
+	switchPrice?: string
 	/** The hosted page; valid for a few minutes. */
 	readonly url?: string
 }
@@ -1913,6 +1925,12 @@ export interface Price {
 	features?: Record<string, string>
 	/** Overrides the product cadence. Unset inherits the product cadence. */
 	grantCadence?: string
+	/**
+	 * Opt in to a Stripe-hosted switch from this active monthly price to the
+	 * named active yearly price on the same product. Both intervals must have
+	 * a count of one. Empty disables buyer-initiated switches from this price.
+	 */
+	portalAnnualPrice?: string
 }
 
 /**
@@ -3542,6 +3560,7 @@ runtime.registerSchemas({
 		['latestInvoiceId', 'latest_invoice_id'],
 		['latestPaymentId', 'latest_payment_id'],
 		['lastPaidTime', 'last_paid_time'],
+		['availablePortalSwitchPrice', 'available_portal_switch_price'],
 	],
 	'sylphx.money.v1.DeleteRevenueSourceRequest': [
 		['validateOnly', 'validate_only'],
@@ -3826,6 +3845,7 @@ runtime.registerSchemas({
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
 		['returnUrl', 'return_url'],
 		['customerSubscription', 'customer_subscription'],
+		['switchPrice', 'switch_price'],
 	],
 	'sylphx.money.v1.Price': [
 		['recurringInterval', 'recurring_interval'],
@@ -3838,6 +3858,7 @@ runtime.registerSchemas({
 		['fxPricing', 'fx_pricing', 'sylphx.money.v1.FxPricing'],
 		['features', 'features', undefined, 'map'],
 		['grantCadence', 'grant_cadence'],
+		['portalAnnualPrice', 'portal_annual_price'],
 	],
 	'sylphx.money.v1.ProcessorEvent': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -5534,7 +5555,7 @@ export class PortalSessionsCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/portal_sessions` · permission `billing:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
 	 */
 	async create(request: CreatePortalSessionRequest): Promise<PortalSession> {
 		return this.client.call<PortalSession>({
