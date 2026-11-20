@@ -1187,6 +1187,28 @@ async fn an_api_error_prints_the_problem_and_exits_1() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn ai_models_list_and_legacy_spelling_call_the_same_route() {
+    let sb = Sandbox::new("ai-models-list");
+    let response = json!({"ai_models": [{"name": "ai_models/example"}]});
+    for noun in ["models", "ai-models"] {
+        let (url, log) = serve(vec![(200, response.clone())]).await;
+        let out = run(&sb, &url, &["ai", noun, "list", "--output", "json"]).await;
+        assert!(
+            out.status.success(),
+            "{noun}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(
+            serde_json::from_slice::<Value>(&out.stdout).unwrap(),
+            response
+        );
+        let log = log.lock();
+        assert_eq!(log.len(), 1);
+        assert_eq!(log[0].line, "GET /v1/ai_models HTTP/1.1");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn list_defaults_to_the_linked_env_and_prints_a_table() {
     let (url, log) = serve(vec![(
         200,

@@ -4121,6 +4121,9 @@
     {
       "collections": [
         {
+          "aliases": [
+            "ai-models"
+          ],
           "collection": "ai_models",
           "commands": [
             {
@@ -4175,7 +4178,7 @@
               "verb": "list"
             }
           ],
-          "noun": "ai-models",
+          "noun": "models",
           "resource_type": "ai.sylphx.com/AiModel"
         }
       ],

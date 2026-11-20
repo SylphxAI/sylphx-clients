@@ -58,6 +58,9 @@ fn served_default() -> bool {
 #[derive(Debug, Deserialize)]
 pub struct CollectionCmd {
     pub noun: String,
+    /// Earlier spellings of `noun` that still resolve (`ai-models` for `models`).
+    #[serde(default)]
+    pub aliases: Vec<String>,
     pub collection: String,
     pub resource_type: String,
     /// `true` when the collection noun repeats the service noun (`secrets secrets`,
@@ -257,6 +260,7 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
                     continue;
                 }
                 let mut cc = Command::new(c.noun.clone())
+                    .aliases(c.aliases.iter().cloned())
                     .about(format!("`{}`: {}", c.collection, c.resource_type))
                     .subcommand_required(true)
                     .arg_required_else_help(true);
@@ -861,6 +865,7 @@ mod tests {
                     commands: vec![stub_method("ping", "vapor.ping", true)],
                     collections: vec![CollectionCmd {
                         noun: "items".into(),
+                        aliases: vec![],
                         collection: "items".into(),
                         resource_type: "vapor.sylphx.com/Item".into(),
                         collapsed: false,
@@ -882,6 +887,7 @@ mod tests {
                     collections: vec![
                         CollectionCmd {
                             noun: "widgets".into(),
+                            aliases: vec![],
                             collection: "widgets".into(),
                             resource_type: "demo.sylphx.com/Widget".into(),
                             collapsed: false,
@@ -892,6 +898,7 @@ mod tests {
                         },
                         CollectionCmd {
                             noun: "ghosts".into(),
+                            aliases: vec![],
                             collection: "ghosts".into(),
                             resource_type: "demo.sylphx.com/Ghost".into(),
                             collapsed: false,
@@ -899,6 +906,7 @@ mod tests {
                         },
                         CollectionCmd {
                             noun: "demo".into(),
+                            aliases: vec![],
                             collection: "demos".into(),
                             resource_type: "demo.sylphx.com/Demo".into(),
                             collapsed: true,
@@ -926,6 +934,7 @@ mod tests {
                     commands: vec![stub_method("gone", "empty.gone", false)],
                     collections: vec![CollectionCmd {
                         noun: "things".into(),
+                        aliases: vec![],
                         collection: "things".into(),
                         resource_type: "empty.sylphx.com/Thing".into(),
                         collapsed: false,
