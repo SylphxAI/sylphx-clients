@@ -542,7 +542,7 @@ mod tests {
             "--dockerfile",
             "docker/App.Dockerfile",
             "--push",
-            "registry.sylphx.net/acme/app:1",
+            "registry.sylphx.com/acme/app:1",
             "--registry-auth",
             f,
             "--oci-out",
@@ -554,7 +554,7 @@ mod tests {
         let a = i.argv(".", &i.explicit_publish());
         let at = |flag: &str| a[a.iter().position(|x| x == flag).unwrap() + 1].clone();
         assert_eq!(at("--dockerfile"), "docker/App.Dockerfile");
-        assert_eq!(at("--push"), "registry.sylphx.net/acme/app:1");
+        assert_eq!(at("--push"), "registry.sylphx.com/acme/app:1");
         // The machine sees its own private copy, never the local path.
         assert_eq!(
             at("--registry-auth"),
@@ -637,12 +637,12 @@ mod tests {
             }
         }
         let img = Image {
-            push: Some("registry.sylphx.net:443/acme/app:1".into()),
+            push: Some("registry.sylphx.com:443/acme/app:1".into()),
             ..Image::default()
         };
         assert_eq!(
             allowed_domains(&img, &["api.example.com".into(), BUILD_CACHE_HOST.into()]),
-            [BUILD_CACHE_HOST, "registry.sylphx.net", "api.example.com"]
+            [BUILD_CACHE_HOST, "registry.sylphx.com", "api.example.com"]
         );
         // Docker Hub short names name no host: --allow-host does.
         assert_eq!(registry_host("acme/app:1"), None);
@@ -796,11 +796,11 @@ mod tests {
         let pw = "placeholder-pass";
         let b64 = base64::engine::general_purpose::STANDARD.encode(format!("bot:{pw}"));
         let file = format!(
-            r#"{{"auths":{{"registry.sylphx.net":{{"auth":"{b64}","identitytoken":"tok-placeholder-value"}}}}}}"#
+            r#"{{"auths":{{"registry.sylphx.com":{{"auth":"{b64}","identitytoken":"tok-placeholder-value"}}}}}}"#
         );
         let secrets = auth_secrets(&file);
         let text = format!(
-            "push failed: {file} / {b64} / bot:{pw} / {pw} / tok-placeholder-value / registry.sylphx.net"
+            "push failed: {file} / {b64} / bot:{pw} / {pw} / tok-placeholder-value / registry.sylphx.com"
         );
         let clean = crate::build_cache::scrub(&text, &secrets);
         for leaked in [pw, &b64, "tok-placeholder-value"] {
@@ -808,7 +808,7 @@ mod tests {
         }
         // Ordinary text survives.
         assert!(clean.contains("push failed"));
-        assert!(clean.contains("registry.sylphx.net"));
+        assert!(clean.contains("registry.sylphx.com"));
     }
 
     #[test]
