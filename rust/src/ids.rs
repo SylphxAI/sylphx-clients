@@ -772,32 +772,17 @@ pub const BTA: Prefix = Prefix::new(
 /// BankReceipt (`brc`, money).
 pub const BRC: Prefix = Prefix::new("brc", "BankReceipt", "money", Some("bank_receipts"));
 /// SupportInbox (`sinb`, notify).
-pub const SINB: Prefix = Prefix::new("sinb", "SupportInbox", "notify", Some("support_inboxes"));
+pub const SINB: Prefix = Prefix::new("sinb", "SupportInbox", "notify", None);
 /// SupportCase (`scas`, notify).
-pub const SCAS: Prefix = Prefix::new("scas", "SupportCase", "notify", Some("support_cases"));
+pub const SCAS: Prefix = Prefix::new("scas", "SupportCase", "notify", None);
 /// SupportThreadMessage (`smsg`, notify).
-pub const SMSG: Prefix = Prefix::new(
-    "smsg",
-    "SupportThreadMessage",
-    "notify",
-    Some("support_thread_messages"),
-);
+pub const SMSG: Prefix = Prefix::new("smsg", "SupportThreadMessage", "notify", None);
 /// SupportAction (`sact`, notify).
-pub const SACT: Prefix = Prefix::new("sact", "SupportAction", "notify", Some("support_actions"));
+pub const SACT: Prefix = Prefix::new("sact", "SupportAction", "notify", None);
 /// SupportAuditEvent (`saud`, notify).
-pub const SAUD: Prefix = Prefix::new(
-    "saud",
-    "SupportAuditEvent",
-    "notify",
-    Some("support_audit_events"),
-);
+pub const SAUD: Prefix = Prefix::new("saud", "SupportAuditEvent", "notify", None);
 /// SupportReconciliation (`srec`, notify).
-pub const SREC: Prefix = Prefix::new(
-    "srec",
-    "SupportReconciliation",
-    "notify",
-    Some("support_reconciliations"),
-);
+pub const SREC: Prefix = Prefix::new("srec", "SupportReconciliation", "notify", None);
 /// InboundMessage (`inmsg`, notify).
 pub const INMSG: Prefix = Prefix::new(
     "inmsg",

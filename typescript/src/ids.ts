@@ -233,12 +233,12 @@ export const PREFIXES = [
 	{ prefix: 'chr', entity: 'ChatReport', service: 'events', collection: 'chat_reports' },
 	{ prefix: 'bta', entity: 'BankTransferAccount', service: 'money', collection: 'bank_transfer_accounts' },
 	{ prefix: 'brc', entity: 'BankReceipt', service: 'money', collection: 'bank_receipts' },
-	{ prefix: 'sinb', entity: 'SupportInbox', service: 'notify', collection: 'support_inboxes' },
-	{ prefix: 'scas', entity: 'SupportCase', service: 'notify', collection: 'support_cases' },
-	{ prefix: 'smsg', entity: 'SupportThreadMessage', service: 'notify', collection: 'support_thread_messages' },
-	{ prefix: 'sact', entity: 'SupportAction', service: 'notify', collection: 'support_actions' },
-	{ prefix: 'saud', entity: 'SupportAuditEvent', service: 'notify', collection: 'support_audit_events' },
-	{ prefix: 'srec', entity: 'SupportReconciliation', service: 'notify', collection: 'support_reconciliations' },
+	{ prefix: 'sinb', entity: 'SupportInbox', service: 'notify', collection: null },
+	{ prefix: 'scas', entity: 'SupportCase', service: 'notify', collection: null },
+	{ prefix: 'smsg', entity: 'SupportThreadMessage', service: 'notify', collection: null },
+	{ prefix: 'sact', entity: 'SupportAction', service: 'notify', collection: null },
+	{ prefix: 'saud', entity: 'SupportAuditEvent', service: 'notify', collection: null },
+	{ prefix: 'srec', entity: 'SupportReconciliation', service: 'notify', collection: null },
 	{ prefix: 'inmsg', entity: 'InboundMessage', service: 'notify', collection: 'inbound_messages' },
 ] as const satisfies readonly PrefixInfo[]
 
