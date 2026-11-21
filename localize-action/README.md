@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4   # pin by full commit SHA in your repository
-      - uses: SylphxAI/cloud/clients/localize-action@main
+      - uses: SylphxAI/sylphx/clients/localize-action@main
         with:
           catalog: orgs/ORG/projects/PROJECT/envs/ENV/catalogs/web
           api-key: ${{ secrets.SYLPHX_API_KEY }}

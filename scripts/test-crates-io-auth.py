@@ -30,7 +30,7 @@ class ReleaseIdentity(unittest.TestCase):
         self.assertTrue(admitted(event='workflow_dispatch', tag='v1.2.3'))
 
     def test_foreign_repository_and_fork_are_denied(self):
-        for repository in ('SylphxAI/cloud', 'shtse8/sylphx-clients', 'fork/sylphx-clients'):
+        for repository in ('SylphxAI/sylphx', 'shtse8/sylphx-clients', 'fork/sylphx-clients'):
             with self.subTest(repository=repository):
                 self.assertFalse(admitted(repository=repository))
 

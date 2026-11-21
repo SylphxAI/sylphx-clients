@@ -76,7 +76,7 @@ Registries publish only from a public repository named
 `SylphxAI/terraform-provider-sylphx` is `sylphxai/sylphx` on
 registry.opentofu.org (and, later, registry.terraform.io).
 
-1. Tag `clients/terraform/v0.x.y` on main in SylphxAI/cloud.
+1. Tag `clients/terraform/v0.x.y` on main in SylphxAI/sylphx.
 2. `.github/workflows/mirror-publish.yml` splits this directory
    (`scripts/mirror-split.sh`, deterministic, history kept), checks it (MIT
    `LICENSE`, `README.md`, denylist, gitleaks), fast-forwards the mirror's
@@ -85,7 +85,7 @@ registry.opentofu.org (and, later, registry.terraform.io).
    and runs goreleaser (`.goreleaser.yml`), which creates the mirror's GitHub
    Release: zips, `SHA256SUMS`, its GPG signature, and the manifest. It
    publishes only while the `TERRAFORM_GPG_PRIVATE_KEY` and
-   `TERRAFORM_GPG_PASSPHRASE` secrets exist in SylphxAI/cloud.
+   `TERRAFORM_GPG_PASSPHRASE` secrets exist in SylphxAI/sylphx.
 
 Releases are signed with the RSA-4096 key in [`signing-key.asc`](signing-key.asc)
 (fingerprint `BD72CA557CC6A8ABBA9F45F2242632127A587E4C`). The OpenTofu registry indexes new tags of the mirror

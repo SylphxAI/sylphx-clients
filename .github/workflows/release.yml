@@ -1,5 +1,5 @@
 # Release of the generated Sylphx clients. Runs in the public mirror
-# SylphxAI/sylphx-clients, which SylphxAI/cloud's release-clients.yml
+# SylphxAI/sylphx-clients, which SylphxAI/sylphx's release-clients.yml
 # fast-forwards from `clients/` and tags `v{cli version}`. Linux builds run on
 # Sylphx runners (`sylphx-linux-standard`); the macOS build runs on GitHub's
 # free standard hosted macOS runner, because the Sylphx macOS pool does not

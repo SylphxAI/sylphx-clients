@@ -1,7 +1,7 @@
 # Terraform Registry release layout (https://developer.hashicorp.com/terraform/registry/providers/publishing):
 # zipped binaries per platform, a SHA256SUMS file, its detached GPG signature,
 # and the registry manifest. Builds the mirror SylphxAI/terraform-provider-sylphx
-# via SylphxAI/cloud mirror-publish.yml (terraform-release), with GPG_FINGERPRINT.
+# via SylphxAI/sylphx mirror-publish.yml (terraform-release), with GPG_FINGERPRINT.
 version: 2
 before:
   hooks:

@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn a_slug_is_a_valid_label_value() {
         assert_eq!(slug("Build-Reservation-Demand"), "build-reservation-demand");
-        assert_eq!(slug("SylphxAI/cloud"), "sylphxai-cloud");
+        assert_eq!(slug("SylphxAI/sylphx"), "sylphxai-sylphx");
         // Beyond the limit is capped, and a capped edge never ends on a `-`.
         let long = slug(&"a".repeat(80));
         assert_eq!(long.len(), MAX_LEN);
