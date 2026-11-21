@@ -115189,6 +115189,26 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "The Reply-To address for this email, from a template or a mailbox. Use one\nbare ASCII email address with a DNS domain, at most 254 bytes. Its domain\nmay differ from the From domain. Omit to send without a Reply-To header.",
+          "filterable": false,
+          "name": "reply_to",
+          "number": 28,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.notify.v1.Message",

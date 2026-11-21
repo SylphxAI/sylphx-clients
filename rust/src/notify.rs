@@ -3616,6 +3616,13 @@ pub struct Message {
         alias = "emailMessageId"
     )]
     pub email_message_id: String,
+    /// The Reply-To address for this email, from a template or a mailbox. Use one
+    /// bare ASCII email address with a DNS domain, at most 254 bytes. Its domain
+    /// may differ from the From domain. Omit to send without a Reply-To header.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "replyTo")]
+    pub reply_to: Option<String>,
 }
 
 /// What a message to a test recipient rendered to.

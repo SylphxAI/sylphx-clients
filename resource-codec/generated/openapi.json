@@ -38001,6 +38001,11 @@
             "type": "array",
             "x-sylphx-immutable": true
           },
+          "reply_to": {
+            "description": "The Reply-To address for this email, from a template or a mailbox. Use one\nbare ASCII email address with a DNS domain, at most 254 bytes. Its domain\nmay differ from the From domain. Omit to send without a Reply-To header.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
           "send_time": {
             "description": "Send no earlier than this.",
             "format": "date-time",

@@ -1588,6 +1588,12 @@ export interface Message {
 	references?: string[]
 	/** The Message-ID Notify gave the email, without angle brackets. */
 	readonly emailMessageId?: string
+	/**
+	 * The Reply-To address for this email, from a template or a mailbox. Use one
+	 * bare ASCII email address with a DNS domain, at most 254 bytes. Its domain
+	 * may differ from the From domain. Omit to send without a Reply-To header.
+	 */
+	replyTo?: string
 }
 
 /** What a message to a test recipient rendered to. */
@@ -2922,6 +2928,7 @@ runtime.registerSchemas({
 		['content', 'content', 'sylphx.notify.v1.MessageContent'],
 		['parentMessageId', 'parent_message_id'],
 		['emailMessageId', 'email_message_id'],
+		['replyTo', 'reply_to'],
 	],
 	'sylphx.notify.v1.MessageCapture': [
 		['textBody', 'text_body'],
