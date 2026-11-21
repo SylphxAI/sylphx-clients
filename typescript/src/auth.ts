@@ -259,6 +259,8 @@ export interface CustomerOrganization {
 	publicMetadata?: Record<string, unknown>
 	/** Live memberships. */
 	readonly memberCount?: number
+	/** Optional seat cap, including pending unexpired invitations. Unset is unlimited. */
+	maxMembers?: number
 }
 
 /** The request of DeleteCustomerOrganization. */
@@ -1442,6 +1444,7 @@ runtime.registerSchemas({
 		['verifiedDomains', 'verified_domains'],
 		['publicMetadata', 'public_metadata', undefined, 'json'],
 		['memberCount', 'member_count'],
+		['maxMembers', 'max_members'],
 	],
 	'sylphx.auth.v1.DeleteCustomerOrganizationRequest': [
 		['allowMissing', 'allow_missing'],

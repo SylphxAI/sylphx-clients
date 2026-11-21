@@ -543,6 +543,9 @@ pub struct CustomerOrganization {
         alias = "memberCount"
     )]
     pub member_count: i32,
+    /// Optional seat cap, including pending unexpired invitations. Unset is unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "maxMembers")]
+    pub max_members: Option<i32>,
 }
 
 /// The request of DeleteCustomerOrganization.

@@ -5532,6 +5532,12 @@
                   "type": "json"
                 },
                 {
+                  "field": "customer_organization.max_members",
+                  "flag": "--max-members",
+                  "summary": "Optional seat cap, including pending unexpired invitations. Unset is unlimited.",
+                  "type": "int"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -5591,6 +5597,12 @@
                   "flag": "--public-metadata",
                   "summary": "App data.",
                   "type": "json"
+                },
+                {
+                  "field": "customer_organization.max_members",
+                  "flag": "--max-members",
+                  "summary": "Optional seat cap, including pending unexpired invitations. Unset is unlimited.",
+                  "type": "int"
                 },
                 {
                   "field": "allow_missing",

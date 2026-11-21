@@ -9073,6 +9073,12 @@
             "additionalProperties": false,
             "description": "The customer organization to create; only caller-writable fields are read.",
             "properties": {
+              "max_members": {
+                "description": "Optional seat cap, including pending unexpired invitations. Unset is unlimited.",
+                "format": "int32",
+                "minimum": 1,
+                "type": "integer"
+              },
               "meta": {
                 "additionalProperties": false,
                 "description": "Resource metadata.",
@@ -9167,6 +9173,12 @@
             "additionalProperties": false,
             "description": "The customer organization to update; `name` identifies it.",
             "properties": {
+              "max_members": {
+                "description": "Optional seat cap, including pending unexpired invitations. Unset is unlimited.",
+                "format": "int32",
+                "minimum": 1,
+                "type": "integer"
+              },
               "meta": {
                 "additionalProperties": false,
                 "description": "Resource metadata.",

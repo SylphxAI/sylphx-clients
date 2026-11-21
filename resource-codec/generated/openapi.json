@@ -7491,6 +7491,12 @@
       "sylphx.auth.v1.CustomerOrganization": {
         "description": "A Customer Organization is a B2B tenant inside a customer's app. It is never\na Sylphx org and never a Resource name segment of anything but its own\nmemberships.",
         "properties": {
+          "max_members": {
+            "description": "Optional seat cap, including pending unexpired invitations. Unset is unlimited.",
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
           "member_count": {
             "description": "Live memberships.",
             "format": "int32",
