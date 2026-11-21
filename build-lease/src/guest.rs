@@ -20,7 +20,10 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde_json::{json, Value};
 
+mod output;
 mod refusal;
+
+pub use output::OutputTransferError;
 
 /// How the guest failed a call.
 #[derive(Debug)]
@@ -309,6 +312,8 @@ impl Guest {
     pub fn new(base: &str, sandbox: &str, token: &str) -> Result<Self, String> {
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(20))
+            // A guest token belongs to the authenticated lease endpoint only.
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| e.to_string())?;
         Ok(Self {
