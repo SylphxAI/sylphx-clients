@@ -31,9 +31,34 @@ impl Guest {
         max_bytes: u64,
         staging: &mut (impl AsyncWrite + Unpin + Send + ?Sized),
     ) -> Result<(), OutputTransferError> {
+        self.download_into(path, user, Some(expected_bytes), max_bytes, staging)
+            .await
+    }
+
+    /// Read up to the caller's cap from a fixed file whose length is not known
+    /// in advance. The caller must validate the received complete document.
+    pub async fn download_bounded_into(
+        &self,
+        path: &str,
+        user: &str,
+        max_bytes: u64,
+        staging: &mut (impl AsyncWrite + Unpin + Send + ?Sized),
+    ) -> Result<(), OutputTransferError> {
+        self.download_into(path, user, None, max_bytes, staging)
+            .await
+    }
+
+    async fn download_into(
+        &self,
+        path: &str,
+        user: &str,
+        expected_bytes: Option<u64>,
+        max_bytes: u64,
+        staging: &mut (impl AsyncWrite + Unpin + Send + ?Sized),
+    ) -> Result<(), OutputTransferError> {
         use OutputTransferError::{LengthMismatch, LimitExceeded, Refused, Staging, Transport};
 
-        if expected_bytes > max_bytes {
+        if expected_bytes.is_some_and(|bytes| bytes > max_bytes) {
             return Err(LimitExceeded);
         }
         let mut resp = self
@@ -53,25 +78,24 @@ impl Guest {
             if len > max_bytes {
                 return Err(LimitExceeded);
             }
-            if len != expected_bytes {
+            if expected_bytes.is_some_and(|bytes| len != bytes) {
                 return Err(LengthMismatch);
             }
         }
 
-        let mut remaining = expected_bytes;
+        let mut copied = 0;
         while let Some(chunk) = resp.chunk().await.map_err(|_| Transport)? {
             let len = chunk.len() as u64;
-            if len > remaining {
-                return Err(if len - remaining > max_bytes - expected_bytes {
-                    LimitExceeded
-                } else {
-                    LengthMismatch
-                });
+            if len > max_bytes - copied {
+                return Err(LimitExceeded);
+            }
+            copied += len;
+            if expected_bytes.is_some_and(|bytes| copied > bytes) {
+                return Err(LengthMismatch);
             }
             staging.write_all(&chunk).await.map_err(|_| Staging)?;
-            remaining -= len;
         }
-        if remaining != 0 {
+        if expected_bytes.is_some_and(|bytes| copied != bytes) {
             return Err(LengthMismatch);
         }
         staging.flush().await.map_err(|_| Staging)

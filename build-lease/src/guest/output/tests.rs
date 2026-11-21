@@ -13,7 +13,7 @@ async fn read_headers(socket: &mut tokio::net::TcpStream) -> String {
 
 async fn with_reply(
     reply: &str,
-    expected: u64,
+    expected: impl Into<Option<u64>>,
     max: u64,
 ) -> (Result<(), OutputTransferError>, Vec<u8>) {
     let server = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -31,10 +31,20 @@ async fn with_reply(
     });
     let guest = Guest::new(&format!("http://{addr}"), "lease-id", "test-token").unwrap();
     let mut staging = Vec::new();
-    let result = tokio::time::timeout(
-        Duration::from_secs(3),
-        guest.download_exact_into("/out/build?result", "user", expected, max, &mut staging),
-    )
+    let result = tokio::time::timeout(Duration::from_secs(3), async {
+        match expected.into() {
+            Some(expected) => {
+                guest
+                    .download_exact_into("/out/build?result", "user", expected, max, &mut staging)
+                    .await
+            }
+            None => {
+                guest
+                    .download_bounded_into("/out/build?result", "user", max, &mut staging)
+                    .await
+            }
+        }
+    })
     .await
     .expect("the loopback transfer must terminate");
     task.await.unwrap();
@@ -114,4 +124,14 @@ async fn never_follows_a_redirect_with_the_lease_token() {
             .await
             .is_err()
     );
+}
+
+#[tokio::test]
+async fn unknown_length_index_stays_within_cap() {
+    let reply =
+        "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n[]\r\n1\r\n \r\n0\r\n\r\n";
+    assert_eq!(with_reply(reply, None, 3).await, (Ok(()), b"[] ".to_vec()));
+    let (result, staging) = with_reply(reply, None, 2).await;
+    assert_eq!(result, Err(OutputTransferError::LimitExceeded));
+    assert!(staging.len() <= 2);
 }
