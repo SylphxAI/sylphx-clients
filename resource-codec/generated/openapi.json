@@ -45832,6 +45832,37 @@
         ],
         "type": "object"
       },
+      "sylphx.sandboxes.v1.VolumeDurability": {
+        "description": "VolumeDurability describes the data-loss boundary of a scoped Volume.",
+        "enum": [
+          "replicated",
+          "node_local"
+        ],
+        "type": "string"
+      },
+      "sylphx.sandboxes.v1.VolumeLeaseScope": {
+        "description": "VolumeLeaseScope restricts which leases can mount this volume.",
+        "properties": {
+          "require_snapshots": {
+            "description": "Must be explicitly set. True requires snapshot support at placement.\nFalse accepts placement on unreplicated, unencrypted node-local storage\nwithout snapshots. If that node is lost, the volume data is lost.",
+            "type": "boolean"
+          },
+          "shape": {
+            "description": "Exact lease shape: linux-s, linux-m or linux-l.",
+            "type": "string"
+          },
+          "template": {
+            "description": "Canonical template name; currently only agent is supported.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template",
+          "shape",
+          "require_snapshots"
+        ],
+        "type": "object"
+      },
       "sylphx.sandboxes.v1.VolumeMount": {
         "description": "VolumeMount attaches a Volume to a lease.",
         "properties": {
@@ -45857,6 +45888,11 @@
       "sylphx.sandboxes.v1.VolumeSpec": {
         "description": "VolumeSpec is the caller-writable state of a Volume.",
         "properties": {
+          "lease_scope": {
+            "$ref": "#/components/schemas/sylphx.sandboxes.v1.VolumeLeaseScope",
+            "description": "Opt into placement for one exact lease template and shape. Omit for a\ntemplate-neutral volume. Scoped volumes must use standard storage, accept\nonly one volume mount, and cannot attach on VM memory restore. If the\nregion is omitted, choose an eligible region with room for the exact\nlease and volume. The volume remains in that region for its lifetime.\nFor a scoped volume, this scope can override the usual standard storage\ncharacteristics; use status.durability and status.encrypted instead.",
+            "x-sylphx-immutable": true
+          },
           "region": {
             "description": "The region whose Cell holds the volume; default the project's home\nregion. A lease mounts the volume only in the same region.",
             "type": "string",
@@ -45914,8 +45950,13 @@
             "readOnly": true,
             "type": "array"
           },
+          "durability": {
+            "$ref": "#/components/schemas/sylphx.sandboxes.v1.VolumeDurability",
+            "description": "Observed durability for a lease-scoped volume. Omitted for legacy volumes.",
+            "readOnly": true
+          },
           "encrypted": {
-            "description": "Whether the volume is encrypted at rest with its own key: true for\n`standard`, false for `local`.",
+            "description": "Whether the volume is encrypted at rest with its own key.",
             "readOnly": true,
             "type": "boolean"
           },

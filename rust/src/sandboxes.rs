@@ -2858,6 +2858,33 @@ pub struct Volume {
     pub status: Option<VolumeStatus>,
 }
 
+/// VolumeLeaseScope restricts which leases can mount this volume.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct VolumeLeaseScope {
+    /// Canonical template name; currently only agent is supported.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub template: String,
+    /// Exact lease shape: linux-s, linux-m or linux-l.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub shape: String,
+    /// Must be explicitly set. True requires snapshot support at placement.
+    /// False accepts placement on unreplicated, unencrypted node-local storage
+    /// without snapshots. If that node is lost, the volume data is lost.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "requireSnapshots"
+    )]
+    pub require_snapshots: Option<bool>,
+}
+
 /// VolumeMount attaches a Volume to a lease.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2919,6 +2946,17 @@ pub struct VolumeSpec {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub region: String,
+    /// Opt into placement for one exact lease template and shape. Omit for a
+    /// template-neutral volume. Scoped volumes must use standard storage, accept
+    /// only one volume mount, and cannot attach on VM memory restore. If the
+    /// region is omitted, choose an eligible region with room for the exact
+    /// lease and volume. The volume remains in that region for its lifetime.
+    /// For a scoped volume, this scope can override the usual standard storage
+    /// characteristics; use status.durability and status.encrypted instead.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "leaseScope")]
+    pub lease_scope: Option<VolumeLeaseScope>,
 }
 
 /// VolumeStatus is the observed state of a Volume.
@@ -2964,12 +3002,16 @@ pub struct VolumeStatus {
         alias = "attachedGeneration"
     )]
     pub attached_generation: i64,
-    /// Whether the volume is encrypted at rest with its own key: true for
-    /// `standard`, false for `local`.
+    /// Whether the volume is encrypted at rest with its own key.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub encrypted: bool,
+    /// Observed durability for a lease-scoped volume. Omitted for legacy volumes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub durability: Option<VolumeDurability>,
 }
 
 /// WaitAction sleeps.
@@ -3980,6 +4022,57 @@ impl<'de> serde::Deserialize<'de> for TokenScope {
 }
 
 impl crate::runtime::QueryValue for TokenScope {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// VolumeDurability describes the data-loss boundary of a scoped Volume.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum VolumeDurability {
+    /// Replicated storage survives a single worker loss.
+    Replicated,
+    /// Data lives on one node and is lost if that node is lost.
+    NodeLocal,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl VolumeDurability {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Replicated => "replicated",
+            Self::NodeLocal => "node_local",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "replicated" => Self::Replicated,
+            "node_local" => Self::NodeLocal,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for VolumeDurability {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for VolumeDurability {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for VolumeDurability {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }

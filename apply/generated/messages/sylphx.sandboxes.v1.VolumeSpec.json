@@ -61,6 +61,25 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "lease_scope",
+      "number": 4,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.sandboxes.v1.VolumeLeaseScope"
+      }
     }
   ],
   "name": "sylphx.sandboxes.v1.VolumeSpec",

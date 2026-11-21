@@ -46132,6 +46132,31 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "lease_scope": {
+                    "additionalProperties": false,
+                    "description": "Opt into placement for one exact lease template and shape. Omit for a\ntemplate-neutral volume. Scoped volumes must use standard storage, accept\nonly one volume mount, and cannot attach on VM memory restore. If the\nregion is omitted, choose an eligible region with room for the exact\nlease and volume. The volume remains in that region for its lifetime.\nFor a scoped volume, this scope can override the usual standard storage\ncharacteristics; use status.durability and status.encrypted instead.",
+                    "properties": {
+                      "require_snapshots": {
+                        "description": "Must be explicitly set. True requires snapshot support at placement.\nFalse accepts placement on unreplicated, unencrypted node-local storage\nwithout snapshots. If that node is lost, the volume data is lost.",
+                        "type": "boolean"
+                      },
+                      "shape": {
+                        "description": "Exact lease shape: linux-s, linux-m or linux-l.",
+                        "type": "string"
+                      },
+                      "template": {
+                        "description": "Canonical template name; currently only agent is supported.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "template",
+                      "shape",
+                      "require_snapshots"
+                    ],
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
                   "region": {
                     "description": "The region whose Cell holds the volume; default the project's home\nregion. A lease mounts the volume only in the same region.",
                     "type": "string",
@@ -46237,6 +46262,31 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "lease_scope": {
+                    "additionalProperties": false,
+                    "description": "Opt into placement for one exact lease template and shape. Omit for a\ntemplate-neutral volume. Scoped volumes must use standard storage, accept\nonly one volume mount, and cannot attach on VM memory restore. If the\nregion is omitted, choose an eligible region with room for the exact\nlease and volume. The volume remains in that region for its lifetime.\nFor a scoped volume, this scope can override the usual standard storage\ncharacteristics; use status.durability and status.encrypted instead.",
+                    "properties": {
+                      "require_snapshots": {
+                        "description": "Must be explicitly set. True requires snapshot support at placement.\nFalse accepts placement on unreplicated, unencrypted node-local storage\nwithout snapshots. If that node is lost, the volume data is lost.",
+                        "type": "boolean"
+                      },
+                      "shape": {
+                        "description": "Exact lease shape: linux-s, linux-m or linux-l.",
+                        "type": "string"
+                      },
+                      "template": {
+                        "description": "Canonical template name; currently only agent is supported.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "template",
+                      "shape",
+                      "require_snapshots"
+                    ],
+                    "type": "object",
+                    "x-sylphx-immutable": true
+                  },
                   "region": {
                     "description": "The region whose Cell holds the volume; default the project's home\nregion. A lease mounts the volume only in the same region.",
                     "type": "string",

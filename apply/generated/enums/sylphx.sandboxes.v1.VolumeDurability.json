@@ -1,0 +1,16 @@
+{
+  "name": "sylphx.sandboxes.v1.VolumeDurability",
+  "package": "sylphx.sandboxes.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "VOLUME_DURABILITY_REPLICATED",
+      "wire": "replicated"
+    },
+    {
+      "number": 2,
+      "proto_name": "VOLUME_DURABILITY_NODE_LOCAL",
+      "wire": "node_local"
+    }
+  ]
+}

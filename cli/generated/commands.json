@@ -26916,6 +26916,24 @@
                   "type": "string"
                 },
                 {
+                  "field": "volume.spec.lease_scope.template",
+                  "flag": "--spec.lease-scope.template",
+                  "summary": "Canonical template name; currently only agent is supported.",
+                  "type": "string"
+                },
+                {
+                  "field": "volume.spec.lease_scope.shape",
+                  "flag": "--spec.lease-scope.shape",
+                  "summary": "Exact lease shape: linux-s, linux-m or linux-l.",
+                  "type": "string"
+                },
+                {
+                  "field": "volume.spec.lease_scope.require_snapshots",
+                  "flag": "--spec.lease-scope.require-snapshots",
+                  "summary": "Must be explicitly set. True requires snapshot support at placement. False accepts placement on unreplicated, unencrypted node-local storage without snapshots. If that node is lost, the volume data is lost.",
+                  "type": "bool"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",

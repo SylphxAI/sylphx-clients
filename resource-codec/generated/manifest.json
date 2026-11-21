@@ -5191,6 +5191,25 @@
       ]
     },
     {
+      "doc": "VolumeDurability describes the data-loss boundary of a scoped Volume.",
+      "name": "sylphx.sandboxes.v1.VolumeDurability",
+      "package": "sylphx.sandboxes.v1",
+      "values": [
+        {
+          "doc": "Replicated storage survives a single worker loss.",
+          "number": 1,
+          "proto_name": "VOLUME_DURABILITY_REPLICATED",
+          "wire": "replicated"
+        },
+        {
+          "doc": "Data lives on one node and is lost if that node is lost.",
+          "number": 2,
+          "proto_name": "VOLUME_DURABILITY_NODE_LOCAL",
+          "wire": "node_local"
+        }
+      ]
+    },
+    {
       "doc": "VolumeState is the volume state machine.",
       "name": "sylphx.sandboxes.v1.VolumeState",
       "package": "sylphx.sandboxes.v1",
@@ -137538,6 +137557,70 @@
       "package": "sylphx.sandboxes.v1"
     },
     {
+      "doc": "VolumeLeaseScope restricts which leases can mount this volume.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical template name; currently only agent is supported.",
+          "filterable": false,
+          "name": "template",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact lease shape: linux-s, linux-m or linux-l.",
+          "filterable": false,
+          "name": "shape",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Must be explicitly set. True requires snapshot support at placement.\nFalse accepts placement on unreplicated, unencrypted node-local storage\nwithout snapshots. If that node is lost, the volume data is lost.",
+          "filterable": false,
+          "name": "require_snapshots",
+          "number": 3,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.sandboxes.v1.VolumeLeaseScope",
+      "package": "sylphx.sandboxes.v1"
+    },
+    {
       "doc": "VolumeMount attaches a Volume to a lease.",
       "fields": [
         {
@@ -137668,6 +137751,26 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "Opt into placement for one exact lease template and shape. Omit for a\ntemplate-neutral volume. Scoped volumes must use standard storage, accept\nonly one volume mount, and cannot attach on VM memory restore. If the\nregion is omitted, choose an eligible region with room for the exact\nlease and volume. The volume remains in that region for its lifetime.\nFor a scoped volume, this scope can override the usual standard storage\ncharacteristics; use status.durability and status.encrypted instead.",
+          "filterable": false,
+          "name": "lease_scope",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.sandboxes.v1.VolumeLeaseScope"
+          }
         }
       ],
       "name": "sylphx.sandboxes.v1.VolumeSpec",
@@ -137776,7 +137879,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Whether the volume is encrypted at rest with its own key: true for\n`standard`, false for `local`.",
+          "doc": "Whether the volume is encrypted at rest with its own key.",
           "filterable": false,
           "name": "encrypted",
           "number": 13,
@@ -137788,6 +137891,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Observed durability for a lease-scoped volume. Omitted for legacy volumes.",
+          "filterable": false,
+          "name": "durability",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.sandboxes.v1.VolumeDurability"
           }
         }
       ],

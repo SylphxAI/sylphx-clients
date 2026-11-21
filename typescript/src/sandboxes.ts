@@ -1442,6 +1442,20 @@ export interface Volume {
 	readonly status?: VolumeStatus
 }
 
+/** VolumeLeaseScope restricts which leases can mount this volume. */
+export interface VolumeLeaseScope {
+	/** Canonical template name; currently only agent is supported. */
+	template?: string
+	/** Exact lease shape: linux-s, linux-m or linux-l. */
+	shape?: string
+	/**
+	 * Must be explicitly set. True requires snapshot support at placement.
+	 * False accepts placement on unreplicated, unencrypted node-local storage
+	 * without snapshots. If that node is lost, the volume data is lost.
+	 */
+	requireSnapshots?: boolean
+}
+
 /** VolumeMount attaches a Volume to a lease. */
 export interface VolumeMount {
 	/** The volume. */
@@ -1475,6 +1489,16 @@ export interface VolumeSpec {
 	 * region. A lease mounts the volume only in the same region.
 	 */
 	region?: string
+	/**
+	 * Opt into placement for one exact lease template and shape. Omit for a
+	 * template-neutral volume. Scoped volumes must use standard storage, accept
+	 * only one volume mount, and cannot attach on VM memory restore. If the
+	 * region is omitted, choose an eligible region with room for the exact
+	 * lease and volume. The volume remains in that region for its lifetime.
+	 * For a scoped volume, this scope can override the usual standard storage
+	 * characteristics; use status.durability and status.encrypted instead.
+	 */
+	leaseScope?: VolumeLeaseScope
 }
 
 /** VolumeStatus is the observed state of a Volume. */
@@ -1489,11 +1513,10 @@ export interface VolumeStatus {
 	readonly attachedLease?: string
 	/** The generation of `attached_lease` that holds the write fence. */
 	readonly attachedGeneration?: string
-	/**
-	 * Whether the volume is encrypted at rest with its own key: true for
-	 * `standard`, false for `local`.
-	 */
+	/** Whether the volume is encrypted at rest with its own key. */
 	readonly encrypted?: boolean
+	/** Observed durability for a lease-scoped volume. Omitted for legacy volumes. */
+	readonly durability?: VolumeDurability
 }
 
 /** WaitAction sleeps. */
@@ -1580,6 +1603,9 @@ export type StreamRole = 'viewer' | 'controller' | (string & {})
 
 /** TokenScope is what a lease token admits. */
 export type TokenScope = 'guest' | 'ports' | 'cdp' | 'computer' | (string & {})
+
+/** VolumeDurability describes the data-loss boundary of a scoped Volume. */
+export type VolumeDurability = 'replicated' | 'node_local' | (string & {})
 
 /** VolumeState is the volume state machine. */
 export type VolumeState = 'creating' | 'available' | 'attached' | 'deleting' | 'failed' | (string & {})
@@ -1981,6 +2007,9 @@ runtime.registerSchemas({
 		['spec', 'spec', 'sylphx.sandboxes.v1.VolumeSpec'],
 		['status', 'status', 'sylphx.sandboxes.v1.VolumeStatus'],
 	],
+	'sylphx.sandboxes.v1.VolumeLeaseScope': [
+		['requireSnapshots', 'require_snapshots'],
+	],
 	'sylphx.sandboxes.v1.VolumeMount': [
 		['mountPath', 'mount_path'],
 		['readOnly', 'read_only'],
@@ -1988,6 +2017,7 @@ runtime.registerSchemas({
 	'sylphx.sandboxes.v1.VolumeSpec': [
 		['sizeGib', 'size_gib'],
 		['storageClass', 'storage_class'],
+		['leaseScope', 'lease_scope', 'sylphx.sandboxes.v1.VolumeLeaseScope'],
 	],
 	'sylphx.sandboxes.v1.VolumeStatus': [
 		['observedGeneration', 'observed_generation'],
