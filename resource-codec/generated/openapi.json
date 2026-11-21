@@ -46292,7 +46292,7 @@
             "type": "string"
           },
           "force": {
-            "description": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+            "description": "Also delete child Resources where supported. For app environment secrets,\nforce neither erases versions nor bypasses active dependencies.",
             "type": "boolean"
           },
           "name": {
@@ -47118,7 +47118,7 @@
         "description": "SecretSpec is the caller-writable state of a Secret.",
         "properties": {
           "deletion_protection": {
-            "description": "While true, Delete fails with DELETION_PROTECTED. Default true.",
+            "description": "Protects against permanent deletion. Default true. App environment secret\nretirement is non-erasing and does not require disabling this protection.",
             "type": "boolean"
           },
           "encryption_key": {
@@ -117925,7 +117925,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}": {
       "delete": {
-        "description": "Deletes a secret and destroys every version.",
+        "description": "Deletes a secret. App environment secrets are retired without erasing\nretained versions or changing already released configurations.",
         "operationId": "secrets_secrets_delete",
         "parameters": [
           {
@@ -117979,7 +117979,7 @@
             }
           },
           {
-            "description": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+            "description": "Also delete child Resources where supported. For app environment secrets,\nforce neither erases versions nor bypasses active dependencies.",
             "in": "query",
             "name": "force",
             "required": false,
@@ -118027,7 +118027,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Deletes a secret and destroys every version.",
+        "summary": "Deletes a secret. App environment secrets are retired without erasing retained versions or changing already released configurations.",
         "tags": [
           "secrets"
         ],
@@ -118037,6 +118037,7 @@
           "PERMISSION_DENIED",
           "RESOURCE_NOT_FOUND",
           "ETAG_MISMATCH",
+          "FAILED_PRECONDITION",
           "INVALID_STATE",
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS",

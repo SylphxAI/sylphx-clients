@@ -46803,7 +46803,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "deletion_protection": {
-                    "description": "While true, Delete fails with DELETION_PROTECTED. Default true.",
+                    "description": "Protects against permanent deletion. Default true. App environment secret\nretirement is non-erasing and does not require disabling this protection.",
                     "type": "boolean"
                   },
                   "encryption_key": {
@@ -46899,7 +46899,7 @@
                 "description": "Desired state.",
                 "properties": {
                   "deletion_protection": {
-                    "description": "While true, Delete fails with DELETION_PROTECTED. Default true.",
+                    "description": "Protects against permanent deletion. Default true. App environment secret\nretirement is non-erasing and does not require disabling this protection.",
                     "type": "boolean"
                   },
                   "encryption_key": {
@@ -46947,9 +46947,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Deletes a secret and destroys every version."
+        "title": "Deletes a secret. App environment secrets are retired without erasing retained versions or changing already released configurations."
       },
-      "description": "Deletes a secret and destroys every version.",
+      "description": "Deletes a secret. App environment secrets are retired without erasing\nretained versions or changing already released configurations.",
       "effect": "destructive",
       "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/secrets/*}",
       "input_schema": {
@@ -46966,7 +46966,7 @@
             "type": "string"
           },
           "force": {
-            "description": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+            "description": "Also delete child Resources where supported. For app environment secrets,\nforce neither erases versions nor bypasses active dependencies.",
             "type": "boolean"
           },
           "name": {

@@ -27380,7 +27380,7 @@
                 {
                   "field": "secret.spec.deletion_protection",
                   "flag": "--spec.deletion-protection",
-                  "summary": "While true, Delete fails with DELETION_PROTECTED. Default true.",
+                  "summary": "Protects against permanent deletion. Default true. App environment secret retirement is non-erasing and does not require disabling this protection.",
                   "type": "bool"
                 },
                 {
@@ -27435,7 +27435,7 @@
                 {
                   "field": "secret.spec.deletion_protection",
                   "flag": "--spec.deletion-protection",
-                  "summary": "While true, Delete fails with DELETION_PROTECTED. Default true.",
+                  "summary": "Protects against permanent deletion. Default true. App environment secret retirement is non-erasing and does not require disabling this protection.",
                   "type": "bool"
                 },
                 {
@@ -27482,7 +27482,7 @@
                 {
                   "field": "force",
                   "flag": "--force",
-                  "summary": "Also delete every child Resource; without it a parent with children fails with FAILED_PRECONDITION.",
+                  "summary": "Also delete child Resources where supported. For app environment secrets, force neither erases versions nor bypasses active dependencies.",
                   "type": "bool"
                 }
               ],
@@ -27495,7 +27495,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}"
               },
-              "summary": "Deletes a secret and destroys every version.",
+              "summary": "Deletes a secret. App environment secrets are retired without erasing retained versions or changing already released configurations.",
               "verb": "delete"
             }
           ],

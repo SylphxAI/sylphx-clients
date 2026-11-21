@@ -256,8 +256,8 @@ pub struct DeleteSecretRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
-    /// Also delete every child Resource; without it a parent with children
-    /// fails with FAILED_PRECONDITION.
+    /// Also delete child Resources where supported. For app environment secrets,
+    /// force neither erases versions nor bypasses active dependencies.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub force: bool,
 }
@@ -1064,7 +1064,8 @@ pub struct SecretSpec {
         alias = "rotationPeriod"
     )]
     pub rotation_period: String,
-    /// While true, Delete fails with DELETION_PROTECTED. Default true.
+    /// Protects against permanent deletion. Default true. App environment secret
+    /// retirement is non-erasing and does not require disabling this protection.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -1588,11 +1589,12 @@ impl<'a, T: crate::runtime::Transport> SecretsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Deletes a secret and destroys every version.
+    /// Deletes a secret. App environment secrets are retired without erasing
+    /// retained versions or changing already released configurations.
     ///
     /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/secrets/*}` · permission `secrets:write` · effect `destructive`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `DELETION_PROTECTED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `ETAG_MISMATCH`, `FAILED_PRECONDITION`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `DELETION_PROTECTED`.
     pub async fn delete(
         &self,
         request: DeleteSecretRequest,

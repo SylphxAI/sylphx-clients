@@ -138854,7 +138854,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Also delete every child Resource; without it a parent with children\nfails with FAILED_PRECONDITION.",
+          "doc": "Also delete child Resources where supported. For app environment secrets,\nforce neither erases versions nor bypasses active dependencies.",
           "filterable": false,
           "name": "force",
           "number": 4,
@@ -141117,7 +141117,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "While true, Delete fails with DELETION_PROTECTED. Default true.",
+          "doc": "Protects against permanent deletion. Default true. App environment secret\nretirement is non-erasing and does not require disabling this protection.",
           "filterable": false,
           "name": "deletion_protection",
           "number": 3,
@@ -188162,13 +188162,14 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Deletes a secret and destroys every version.",
+              "doc": "Deletes a secret. App environment secrets are retired without erasing\nretained versions or changing already released configurations.",
               "effect": "destructive",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
                 "RESOURCE_NOT_FOUND",
                 "ETAG_MISMATCH",
+                "FAILED_PRECONDITION",
                 "INVALID_STATE",
                 "IDEMPOTENCY_KEY_REUSED",
                 "IDEMPOTENCY_IN_PROGRESS",

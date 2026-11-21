@@ -1179,7 +1179,7 @@ func secretsSecretSpec() []def.Field {
 	return []def.Field{
 		{Name: "encryption_key", Kind: def.String, Flags: def.Immutable, Doc: "The ENCRYPT Key the values are envelope-encrypted with; unset means the environment's default Key."},
 		{Name: "rotation_period", Kind: def.Duration, Doc: "How often the value should be rotated; the Secret reports Ready=FALSE with reason `RotationDue` once the latest version is older."},
-		{Name: "deletion_protection", Kind: def.Bool, Flags: def.Presence, Doc: "While true, Delete fails with DELETION_PROTECTED. Default true."},
+		{Name: "deletion_protection", Kind: def.Bool, Flags: def.Presence, Doc: "Protects against permanent deletion. Default true. App environment secret retirement is non-erasing and does not require disabling this protection."},
 	}
 }
 
