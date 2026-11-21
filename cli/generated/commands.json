@@ -16392,6 +16392,60 @@
                   "type": "key=value"
                 },
                 {
+                  "field": "catalog.spec.checkout_branding.display_name",
+                  "flag": "--spec.checkout-branding.display-name",
+                  "summary": "Header override, folded to one line and limited to 60 characters by Money. If omitted, use the catalog name for a single product, or Stripe's default.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.icon.file",
+                  "flag": "--spec.checkout-branding.icon.file",
+                  "summary": "A Stripe File ID owned by the connected merchant account.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.icon.url",
+                  "flag": "--spec.checkout-branding.icon.url",
+                  "summary": "A public HTTPS image URL on a public DNS name, up to 2,048 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.logo.file",
+                  "flag": "--spec.checkout-branding.logo.file",
+                  "summary": "A Stripe File ID owned by the connected merchant account.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.logo.url",
+                  "flag": "--spec.checkout-branding.logo.url",
+                  "summary": "A public HTTPS image URL on a public DNS name, up to 2,048 bytes.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.button_color",
+                  "flag": "--spec.checkout-branding.button-color",
+                  "summary": "Six-digit hex color, including the leading '#'.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.background_color",
+                  "flag": "--spec.checkout-branding.background-color",
+                  "summary": "Six-digit hex color, including the leading '#'.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.border_style",
+                  "flag": "--spec.checkout-branding.border-style",
+                  "summary": "Stripe Checkout's shape for buttons and inputs.",
+                  "type": "string"
+                },
+                {
+                  "field": "catalog.spec.checkout_branding.font_family",
+                  "flag": "--spec.checkout-branding.font-family",
+                  "summary": "Stripe Checkout's font family, in lowercase snake_case.",
+                  "type": "string"
+                },
+                {
                   "field": "allow_missing",
                   "flag": "--allow-missing",
                   "summary": "Create the catalog when it does not exist (declarative upsert).",

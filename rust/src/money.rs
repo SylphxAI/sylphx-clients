@@ -573,6 +573,13 @@ pub struct CatalogSpec {
         alias = "fxRatesPerUsd"
     )]
     pub fx_rates_per_usd: std::collections::BTreeMap<String, String>,
+    /// Optional Stripe Checkout styling applied to new sessions in this environment.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "checkoutBranding"
+    )]
+    pub checkout_branding: Option<CheckoutBranding>,
 }
 
 /// CatalogStatus is the observed state of a Catalog.
@@ -849,6 +856,63 @@ pub struct CheckUsageStandingRequest {
         alias = "actorProof"
     )]
     pub actor_proof: String,
+}
+
+/// Select exactly one source for the image; Money does not fetch it.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckoutBrandImage {
+    /// A Stripe File ID owned by the connected merchant account.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+    /// A public HTTPS image URL on a public DNS name, up to 2,048 bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+}
+
+/// Merchant-controlled styling for hosted Stripe Checkout Sessions. Omitted
+/// fields keep the existing behavior; this does not change the Stripe account.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckoutBranding {
+    /// Header override, folded to one line and limited to 60 characters by Money.
+    /// If omitted, use the catalog name for a single product, or Stripe's default.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "displayName"
+    )]
+    pub display_name: Option<String>,
+    /// Square brand image.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<CheckoutBrandImage>,
+    /// Brand logo image.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo: Option<CheckoutBrandImage>,
+    /// Six-digit hex color, including the leading '#'.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "buttonColor"
+    )]
+    pub button_color: Option<String>,
+    /// Six-digit hex color, including the leading '#'.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "backgroundColor"
+    )]
+    pub background_color: Option<String>,
+    /// Stripe Checkout's shape for buttons and inputs.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "borderStyle"
+    )]
+    pub border_style: Option<String>,
+    /// Stripe Checkout's font family, in lowercase snake_case.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fontFamily")]
+    pub font_family: Option<String>,
 }
 
 /// The consent evidence of one checkout: what was asked, what the buyer

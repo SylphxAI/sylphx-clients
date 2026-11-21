@@ -29003,6 +29003,63 @@
                     "description": "Caller-owned, publicly readable application data published atomically with\nthe products in this revision. Money preserves it without interpreting its\nschema or using it for prices, grants, checkout or processor reconciliation.\nThe caller validates its schema and version. At most 65536 UTF-8 bytes when\nserialized as compact JSON; must be an object. Never include secrets or\npersonal data: the public catalog exposes this field.",
                     "type": "object"
                   },
+                  "checkout_branding": {
+                    "additionalProperties": false,
+                    "description": "Optional Stripe Checkout styling applied to new sessions in this environment.",
+                    "properties": {
+                      "background_color": {
+                        "description": "Six-digit hex color, including the leading '#'.",
+                        "type": "string"
+                      },
+                      "border_style": {
+                        "description": "Stripe Checkout's shape for buttons and inputs.",
+                        "type": "string"
+                      },
+                      "button_color": {
+                        "description": "Six-digit hex color, including the leading '#'.",
+                        "type": "string"
+                      },
+                      "display_name": {
+                        "description": "Header override, folded to one line and limited to 60 characters by Money.\nIf omitted, use the catalog name for a single product, or Stripe's default.",
+                        "type": "string"
+                      },
+                      "font_family": {
+                        "description": "Stripe Checkout's font family, in lowercase snake_case.",
+                        "type": "string"
+                      },
+                      "icon": {
+                        "additionalProperties": false,
+                        "description": "Square brand image.",
+                        "properties": {
+                          "file": {
+                            "description": "A Stripe File ID owned by the connected merchant account.",
+                            "type": "string"
+                          },
+                          "url": {
+                            "description": "A public HTTPS image URL on a public DNS name, up to 2,048 bytes.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "logo": {
+                        "additionalProperties": false,
+                        "description": "Brand logo image.",
+                        "properties": {
+                          "file": {
+                            "description": "A Stripe File ID owned by the connected merchant account.",
+                            "type": "string"
+                          },
+                          "url": {
+                            "description": "A public HTTPS image URL on a public DNS name, up to 2,048 bytes.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "client_grant_ttl": {
                     "description": "How long a signed store-purchase grant is valid, from the moment it is\nissued; a client re-verifies to renew it. Default 7 days, 1 hour to 30\ndays.",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",

@@ -258,6 +258,8 @@ export interface CatalogSpec {
 	 * always 1 and can be omitted. Money does not fetch rates during a write.
 	 */
 	fxRatesPerUsd?: Record<string, string>
+	/** Optional Stripe Checkout styling applied to new sessions in this environment. */
+	checkoutBranding?: CheckoutBranding
 }
 
 /** CatalogStatus is the observed state of a Catalog. */
@@ -381,6 +383,38 @@ export interface CheckUsageStandingRequest {
 	subjectProof: string
 	/** For a customer organization: the acting user's token. */
 	actorProof?: string
+}
+
+/** Select exactly one source for the image; Money does not fetch it. */
+export interface CheckoutBrandImage {
+	/** A Stripe File ID owned by the connected merchant account. */
+	file?: string
+	/** A public HTTPS image URL on a public DNS name, up to 2,048 bytes. */
+	url?: string
+}
+
+/**
+ * Merchant-controlled styling for hosted Stripe Checkout Sessions. Omitted
+ * fields keep the existing behavior; this does not change the Stripe account.
+ */
+export interface CheckoutBranding {
+	/**
+	 * Header override, folded to one line and limited to 60 characters by Money.
+	 * If omitted, use the catalog name for a single product, or Stripe's default.
+	 */
+	displayName?: string
+	/** Square brand image. */
+	icon?: CheckoutBrandImage
+	/** Brand logo image. */
+	logo?: CheckoutBrandImage
+	/** Six-digit hex color, including the leading '#'. */
+	buttonColor?: string
+	/** Six-digit hex color, including the leading '#'. */
+	backgroundColor?: string
+	/** Stripe Checkout's shape for buttons and inputs. */
+	borderStyle?: string
+	/** Stripe Checkout's font family, in lowercase snake_case. */
+	fontFamily?: string
 }
 
 /**
@@ -3385,6 +3419,7 @@ runtime.registerSchemas({
 		['currencyMode', 'currency_mode'],
 		['rehomeCooldownDays', 'rehome_cooldown_days'],
 		['fxRatesPerUsd', 'fx_rates_per_usd', undefined, 'map'],
+		['checkoutBranding', 'checkout_branding', 'sylphx.money.v1.CheckoutBranding'],
 	],
 	'sylphx.money.v1.CatalogStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -3424,6 +3459,16 @@ runtime.registerSchemas({
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
 		['subjectProof', 'subject_proof'],
 		['actorProof', 'actor_proof'],
+	],
+	'sylphx.money.v1.CheckoutBrandImage': [],
+	'sylphx.money.v1.CheckoutBranding': [
+		['displayName', 'display_name'],
+		['icon', 'icon', 'sylphx.money.v1.CheckoutBrandImage'],
+		['logo', 'logo', 'sylphx.money.v1.CheckoutBrandImage'],
+		['buttonColor', 'button_color'],
+		['backgroundColor', 'background_color'],
+		['borderStyle', 'border_style'],
+		['fontFamily', 'font_family'],
 	],
 	'sylphx.money.v1.CheckoutConsent': [
 		['termsAccepted', 'terms_accepted'],

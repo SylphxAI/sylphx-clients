@@ -85152,6 +85152,25 @@
               "scalar": "string"
             }
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional Stripe Checkout styling applied to new sessions in this environment.",
+          "filterable": false,
+          "name": "checkout_branding",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CheckoutBranding"
+          }
         }
       ],
       "name": "sylphx.money.v1.CatalogSpec",
@@ -85891,6 +85910,191 @@
         }
       ],
       "name": "sylphx.money.v1.CheckUsageStandingRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "Select exactly one source for the image; Money does not fetch it.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A Stripe File ID owned by the connected merchant account.",
+          "filterable": false,
+          "name": "file",
+          "number": 1,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A public HTTPS image URL on a public DNS name, up to 2,048 bytes.",
+          "filterable": false,
+          "name": "url",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CheckoutBrandImage",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "Merchant-controlled styling for hosted Stripe Checkout Sessions. Omitted\nfields keep the existing behavior; this does not change the Stripe account.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Header override, folded to one line and limited to 60 characters by Money.\nIf omitted, use the catalog name for a single product, or Stripe's default.",
+          "filterable": false,
+          "name": "display_name",
+          "number": 1,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Square brand image.",
+          "filterable": false,
+          "name": "icon",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CheckoutBrandImage"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Brand logo image.",
+          "filterable": false,
+          "name": "logo",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.money.v1.CheckoutBrandImage"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Six-digit hex color, including the leading '#'.",
+          "filterable": false,
+          "name": "button_color",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Six-digit hex color, including the leading '#'.",
+          "filterable": false,
+          "name": "background_color",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Stripe Checkout's shape for buttons and inputs.",
+          "filterable": false,
+          "name": "border_style",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Stripe Checkout's font family, in lowercase snake_case.",
+          "filterable": false,
+          "name": "font_family",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CheckoutBranding",
       "package": "sylphx.money.v1"
     },
     {
