@@ -213,8 +213,8 @@ pub struct BuildLogLine {
     pub text: String,
 }
 
-/// BuildOutput is what a Build wrote to Kernel Artifacts, by digest: the
-/// image fields for an image, `exit_code` and `artifacts` for a command.
+/// BuildOutput is the result of a Build: an image, command outputs, or a
+/// verified static site manifest and its build inputs.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct BuildOutput {
@@ -269,6 +269,11 @@ pub struct BuildOutput {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub artifacts: Vec<BuildArtifact>,
+    /// Present only for a successful static site Build with a verified result.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "staticSite")]
+    pub static_site: Option<StaticSiteBuildOutput>,
 }
 
 /// BuildSource is the exact source a Build reads, fetched at `commit`
@@ -379,8 +384,8 @@ pub struct BuildStatus {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure: Option<BuildFailure>,
-    /// The result: an image when `state` is SUCCEEDED; for a command, set
-    /// whenever the command ran, whatever its exit code.
+    /// The result: an image or verified static site when `state` is SUCCEEDED;
+    /// for a command, set whenever the command ran, whatever its exit code.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -857,6 +862,78 @@ pub struct RunBuildRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// StaticSiteBuildOutput records the inputs and uploaded output verified for
+/// this Build's UID and lease. It does not authorize a Release.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct StaticSiteBuildOutput {
+    /// The environment ID selected for this Build.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "environmentId"
+    )]
+    pub environment_id: String,
+    /// The service ID selected for this Build.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "serviceId"
+    )]
+    pub service_id: String,
+    /// The source provider's immutable repository ID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "repositoryId"
+    )]
+    pub repository_id: u64,
+    /// The full Git commit SHA.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub commit: String,
+    /// The Git tree SHA of that commit.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub tree: String,
+    /// The SHA-256 hex digest of the source manifest.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sourceManifestSha256"
+    )]
+    pub source_manifest_sha256: String,
+    /// The immutable build template image digest, prefixed with `sha256:`.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "templateDigest"
+    )]
+    pub template_digest: String,
+    /// The SHA-256 hex digest of the packaged site manifest verified after upload.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "manifestSha256"
+    )]
+    pub manifest_sha256: String,
 }
 
 /// The request of UpdateBuildCache.

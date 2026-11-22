@@ -108,8 +108,8 @@ export interface BuildLogLine {
 }
 
 /**
- * BuildOutput is what a Build wrote to Kernel Artifacts, by digest: the
- * image fields for an image, `exit_code` and `artifacts` for a command.
+ * BuildOutput is the result of a Build: an image, command outputs, or a
+ * verified static site manifest and its build inputs.
  */
 export interface BuildOutput {
 	/** The image reference: `registry.sylphx.net/<path>@sha256:<hex>`. */
@@ -126,6 +126,8 @@ export interface BuildOutput {
 	readonly exitCode?: number
 	/** The files the command's `artifacts` globs matched, by digest. */
 	readonly artifacts?: BuildArtifact[]
+	/** Present only for a successful static site Build with a verified result. */
+	readonly staticSite?: StaticSiteBuildOutput
 }
 
 /**
@@ -179,8 +181,8 @@ export interface BuildStatus {
 	/** Why the build failed, when `state` is FAILED. */
 	readonly failure?: BuildFailure
 	/**
-	 * The result: an image when `state` is SUCCEEDED; for a command, set
-	 * whenever the command ran, whatever its exit code.
+	 * The result: an image or verified static site when `state` is SUCCEEDED;
+	 * for a command, set whenever the command ran, whatever its exit code.
 	 */
 	readonly output?: BuildOutput
 	/** The Sandboxes lease the build ran on. */
@@ -419,6 +421,29 @@ export interface RunBuildRequest {
 	validateOnly?: boolean
 }
 
+/**
+ * StaticSiteBuildOutput records the inputs and uploaded output verified for
+ * this Build's UID and lease. It does not authorize a Release.
+ */
+export interface StaticSiteBuildOutput {
+	/** The environment ID selected for this Build. */
+	readonly environmentId?: string
+	/** The service ID selected for this Build. */
+	readonly serviceId?: string
+	/** The source provider's immutable repository ID. */
+	readonly repositoryId?: string
+	/** The full Git commit SHA. */
+	readonly commit?: string
+	/** The Git tree SHA of that commit. */
+	readonly tree?: string
+	/** The SHA-256 hex digest of the source manifest. */
+	readonly sourceManifestSha256?: string
+	/** The immutable build template image digest, prefixed with `sha256:`. */
+	readonly templateDigest?: string
+	/** The SHA-256 hex digest of the packaged site manifest verified after upload. */
+	readonly manifestSha256?: string
+}
+
 /** The request of UpdateBuildCache. */
 export interface UpdateBuildCacheRequest {
 	/** The build cache to update; `name` identifies it. */
@@ -487,6 +512,7 @@ runtime.registerSchemas({
 		['provenanceDigest', 'provenance_digest'],
 		['exitCode', 'exit_code'],
 		['artifacts', 'artifacts', 'sylphx.build.v1.BuildArtifact'],
+		['staticSite', 'static_site', 'sylphx.build.v1.StaticSiteBuildOutput'],
 	],
 	'sylphx.build.v1.BuildSource': [
 		['sourceLink', 'source_link'],
@@ -568,6 +594,14 @@ runtime.registerSchemas({
 		['allowHosts', 'allow_hosts'],
 		['buildId', 'build_id'],
 		['validateOnly', 'validate_only'],
+	],
+	'sylphx.build.v1.StaticSiteBuildOutput': [
+		['environmentId', 'environment_id'],
+		['serviceId', 'service_id'],
+		['repositoryId', 'repository_id'],
+		['sourceManifestSha256', 'source_manifest_sha256'],
+		['templateDigest', 'template_digest'],
+		['manifestSha256', 'manifest_sha256'],
 	],
 	'sylphx.build.v1.UpdateBuildCacheRequest': [
 		['buildCache', 'build_cache', 'sylphx.build.v1.BuildCache'],

@@ -12304,7 +12304,7 @@
         "type": "object"
       },
       "sylphx.build.v1.BuildOutput": {
-        "description": "BuildOutput is what a Build wrote to Kernel Artifacts, by digest: the\nimage fields for an image, `exit_code` and `artifacts` for a command.",
+        "description": "BuildOutput is the result of a Build: an image, command outputs, or a\nverified static site manifest and its build inputs.",
         "properties": {
           "artifact": {
             "description": "The artifact in Sylphx Artifacts that holds the three.",
@@ -12345,6 +12345,11 @@
             "description": "The SBOM Artifact digest.",
             "readOnly": true,
             "type": "string"
+          },
+          "static_site": {
+            "$ref": "#/components/schemas/sylphx.build.v1.StaticSiteBuildOutput",
+            "description": "Present only for a successful static site Build with a verified result.",
+            "readOnly": true
           }
         },
         "type": "object"
@@ -12493,7 +12498,7 @@
           },
           "output": {
             "$ref": "#/components/schemas/sylphx.build.v1.BuildOutput",
-            "description": "The result: an image when `state` is SUCCEEDED; for a command, set\nwhenever the command ran, whatever its exit code.",
+            "description": "The result: an image or verified static site when `state` is SUCCEEDED;\nfor a command, set whenever the command ran, whatever its exit code.",
             "readOnly": true
           },
           "start_time": {
@@ -12955,6 +12960,53 @@
           "tree",
           "command"
         ],
+        "type": "object"
+      },
+      "sylphx.build.v1.StaticSiteBuildOutput": {
+        "description": "StaticSiteBuildOutput records the inputs and uploaded output verified for\nthis Build's UID and lease. It does not authorize a Release.",
+        "properties": {
+          "commit": {
+            "description": "The full Git commit SHA.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "environment_id": {
+            "description": "The environment ID selected for this Build.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "description": "The SHA-256 hex digest of the packaged site manifest verified after upload.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "repository_id": {
+            "description": "The source provider's immutable repository ID.",
+            "format": "uint64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "service_id": {
+            "description": "The service ID selected for this Build.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "source_manifest_sha256": {
+            "description": "The SHA-256 hex digest of the source manifest.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "template_digest": {
+            "description": "The immutable build template image digest, prefixed with `sha256:`.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "tree": {
+            "description": "The Git tree SHA of that commit.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.build.v1.UpdateBuildCacheRequest": {

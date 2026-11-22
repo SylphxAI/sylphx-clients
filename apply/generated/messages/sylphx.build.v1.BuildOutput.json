@@ -125,6 +125,24 @@
         "kind": "message",
         "name": "sylphx.build.v1.BuildArtifact"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "static_site",
+      "number": 8,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.build.v1.StaticSiteBuildOutput"
+      }
     }
   ],
   "name": "sylphx.build.v1.BuildOutput",
