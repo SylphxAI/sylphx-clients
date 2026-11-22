@@ -63,6 +63,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 	const [expanded, setExpanded] = useState(false)
 	const [canPasskey, setCanPasskey] = useState(false)
 	const [lastUsed, setLastUsed] = useState('')
+	const emailCodeLastUsed = emailOtpEnabled && lastUsed === 'email'
 	const [userAgent, setUserAgent] = useState('')
 	const busyRef = useRef(false)
 	const ceremony = useRef<AbortController | null>(null)
@@ -359,7 +360,12 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 					>
 						{step === 'email' ? (
 							<>
-								<label htmlFor={`${id}-email`}>Email</label>
+								<div className="sx-signin__email-label">
+									<label htmlFor={`${id}-email`}>Email</label>
+									{emailCodeLastUsed && (
+										<small id={`${id}-email-last-used`}>Email code · Last used</small>
+									)}
+								</div>
 								<input
 									id={`${id}-email`}
 									name="email"
@@ -377,7 +383,11 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 									}}
 									required
 									disabled={busy}
-									aria-describedby={error ? `${id}-error` : undefined}
+									aria-describedby={
+										[emailCodeLastUsed && `${id}-email-last-used`, error && `${id}-error`]
+											.filter(Boolean)
+											.join(' ') || undefined
+									}
 								/>
 							</>
 						) : step === 'code' ? (
