@@ -61000,14 +61000,14 @@
       "package": "sylphx.events.v1"
     },
     {
-      "doc": "A Connector is one delivery channel of the environment, as stored: an\nemail connector's allowed senders, a webhook's kind, and so on. It is\nread-only here: connectors are created and changed through\n`/v1/connectors`, and webhook endpoints have their own Resource. No secret\nor credential is ever shown.",
+      "doc": "A Connector is one delivery channel of the environment, as stored: an\nemail connector's allowed senders, a webhook's kind, and so on. It is\nread-only here: connectors are created and changed through\n`/v1/events/connectors` on `api.sylphx.com`. Webhook endpoints have their\nown Resource. No secret or credential is ever shown.",
       "fields": [
         {
           "behaviors": [
             "IDENTIFIER"
           ],
           "cli_flag": "",
-          "doc": "`orgs/{org}/projects/{project}/envs/{env}/connectors/{connector}`, where\n`{connector}` is the connector id of `/v1/connectors`.",
+          "doc": "`orgs/{org}/projects/{project}/envs/{env}/connectors/{connector}`, where\n`{connector}` is the connector id returned by `/v1/events/connectors`.",
           "filterable": false,
           "name": "name",
           "number": 1,

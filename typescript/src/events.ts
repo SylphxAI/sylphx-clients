@@ -346,13 +346,13 @@ export interface ConfigureChatProfileRequest {
  * A Connector is one delivery channel of the environment, as stored: an
  * email connector's allowed senders, a webhook's kind, and so on. It is
  * read-only here: connectors are created and changed through
- * `/v1/connectors`, and webhook endpoints have their own Resource. No secret
- * or credential is ever shown.
+ * `/v1/events/connectors` on `api.sylphx.com`. Webhook endpoints have their
+ * own Resource. No secret or credential is ever shown.
  */
 export interface Connector {
 	/**
 	 * `orgs/{org}/projects/{project}/envs/{env}/connectors/{connector}`, where
-	 * `{connector}` is the connector id of `/v1/connectors`.
+	 * `{connector}` is the connector id returned by `/v1/events/connectors`.
 	 */
 	name?: string
 	/** `con_<cell><ulid>`; never reused. */
