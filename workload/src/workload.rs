@@ -610,11 +610,9 @@ mod tests {
     #[test]
     fn delimited_end_refuses_only_what_runs_past_the_buffer() {
         assert_eq!(delimited_end(10, 2, 8, "trunc").unwrap(), 10);
-        assert!(
-            delimited_end(10, 2, 9, "trunc")
-                .unwrap_err()
-                .contains("trunc")
-        );
+        assert!(delimited_end(10, 2, 9, "trunc")
+            .unwrap_err()
+            .contains("trunc"));
         assert!(delimited_end(10, 10, 0, "trunc").is_ok());
         assert!(delimited_end(10, 2, u64::MAX, "trunc").is_err());
         assert!(delimited_end(usize::MAX, usize::MAX, 1, "trunc").is_err());
