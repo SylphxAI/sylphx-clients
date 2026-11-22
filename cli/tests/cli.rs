@@ -2663,44 +2663,99 @@ async fn auth_status_reads_the_identity_bindings_back() {
         .starts_with("GET /v1/projects/prj_a/composition/bindings "));
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn workflows_schedules_read_the_served_compute_route() {
-    let sched = json!({"id": "sched_1", "name": "nightly", "status": "active"});
-    let (url, log) = serve(vec![
-        (200, json!({"schedules": [sched.clone()], "limit": 50})),
-        (200, sched),
+#[tokio::test]
+async fn workflows_schedules_list_resolves_parent_on_platform_and_reads_compute_page() {
+    let project = "orgs/org_b/projects/prj_b";
+    let env = "orgs/org_b/projects/prj_b/envs/env_b";
+    let (platform_url, platform_log) = serve(vec![
+        (200, projects_page(vec![project_row(project, "web")])),
+        (200, envs_page(vec![env_row(env, "production")])),
     ])
     .await;
-    let sb = Sandbox::new("schedules");
-    let out = run(&sb, &url, &["workflows", "schedules", "list", "-o", "json"]).await;
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    assert!(String::from_utf8_lossy(&out.stdout).contains("sched_1"));
-    let out = run(
+    let page = json!({"schedules": [], "nextCursor": null, "limit": 7});
+    let (compute_url, compute_log) = serve(vec![(200, page.clone())]).await;
+    let sb = Sandbox::new("schedules-parent");
+    store_org_keys(
         &sb,
-        &url,
-        &["workflows", "schedules", "get", "sched_1", "-o", "json"],
+        &platform_url,
+        &[
+            ("org_a", "alpha", "sylphx_sk_org_a"),
+            ("org_b", "beta", "sylphx_sk_org_b"),
+        ],
+        "org_a",
+    );
+    let out = run_with(
+        &sb,
+        &platform_url,
+        &[
+            "workflows",
+            "schedules",
+            "list",
+            "orgs/org_b/projects/web/envs/production",
+            "--page-size",
+            "7",
+            "--page-token",
+            "foo+bar/==",
+            "-o",
+            "json",
+        ],
+        |cmd| {
+            cmd.env_remove("SYLPHX_API_KEY")
+                .env_remove("SYLPHX_BASE_URL")
+                .env("SYLPHX_COMPUTE_URL", &compute_url);
+        },
     )
     .await;
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
+    assert_success(&out);
+    assert_eq!(serde_json::from_slice::<Value>(&out.stdout).unwrap(), page);
+    let platform = platform_log.lock();
+    assert_eq!(platform.len(), 2);
+    assert_eq!(platform[0].line, "GET /v1/orgs/org_b/projects HTTP/1.1");
+    assert_eq!(platform[1].line, format!("GET /v1/{project}/envs HTTP/1.1"));
+    let compute = compute_log.lock();
+    assert_eq!(compute.len(), 1);
+    let target = compute[0].line.split_whitespace().nth(1).unwrap();
+    let url = reqwest::Url::parse(&format!("{compute_url}{target}")).unwrap();
+    assert_eq!(url.path(), format!("/v1/{env}/schedules"));
+    assert_eq!(
+        url.query_pairs().into_owned().collect::<BTreeMap<_, _>>(),
+        BTreeMap::from([
+            ("cursor".into(), "foo+bar/==".into()),
+            ("limit".into(), "7".into())
+        ]),
+    );
+    for request in platform.iter().chain(compute.iter()) {
+        assert!(request.head.contains("Bearer sylphx_sk_org_b"));
+    }
+}
+
+#[tokio::test]
+async fn workflows_schedules_read_the_served_compute_routes() {
+    let sched = json!({"id": "sched_1", "name": "nightly", "status": "active"});
+    let page = json!({"schedules": [sched.clone()], "limit": 50});
+    let (url, log) = serve(vec![(200, page.clone()), (200, page), (200, sched)]).await;
+    let sb = Sandbox::new("schedules-defaults");
+    let list = ["workflows", "schedules", "list", "-o", "json"];
+    let no_compute_override = |cmd: &mut Command| {
+        cmd.env_remove("SYLPHX_COMPUTE_URL");
+    };
+    assert_success(&run_with(&sb, &url, &list, no_compute_override).await);
+    unlink(&sb);
+    assert_success(&run_with(&sb, &url, &list, no_compute_override).await);
+    assert_success(
+        &run_with(
+            &sb,
+            &url,
+            &["workflows", "schedules", "get", "sched_1", "-o", "json"],
+            no_compute_override,
+        )
+        .await,
     );
     let seen = log.lock();
-    assert!(
-        seen[0].line.starts_with("GET /v1/schedules "),
-        "{}",
-        seen[0].line
-    );
-    assert!(
-        seen[1].line.starts_with("GET /v1/schedules/sched_1 "),
-        "{}",
-        seen[1].line
-    );
+    assert_eq!(seen.len(), 3);
+    assert_eq!(seen[0].line, format!("GET /v1/{ENV}/schedules HTTP/1.1"));
+    assert_eq!(seen[1].line, "GET /v1/schedules HTTP/1.1");
+    assert_eq!(seen[2].line, "GET /v1/schedules/sched_1 HTTP/1.1");
 }
 
 /// One Connect envelope of the envd process stream.

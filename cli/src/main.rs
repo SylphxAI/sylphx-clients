@@ -778,10 +778,10 @@ fn command_org(matches: &ArgMatches) -> Option<&str> {
 }
 
 /// `sylphx workflows schedules list|get`: the schedules a manifest declares
-/// (`[[compute.schedules]]`) live in Compute, which answers them at
-/// `/v1/schedules` for the key's own project, with the last tick and the
-/// dead letters. The platform api's `schedules` collection only holds the
-/// retired cron rows, so these two verbs read Compute.
+/// (`[[compute.schedules]]`) live in Compute. List reads an environment when
+/// one is named or linked, and otherwise keeps the key-scoped Compute route.
+/// Get still reads by bare id. The platform API only resolves names here; its
+/// `schedules` collection holds the retired cron rows.
 async fn compute_schedules(
     api_key: Option<String>,
     base_url: Option<String>,
@@ -793,21 +793,18 @@ async fn compute_schedules(
     let url = std::env::var("SYLPHX_COMPUTE_URL")
         .ok()
         .filter(|u| !u.is_empty())
-        .or(base_url)
+        .or_else(|| base_url.clone())
         .or_else(|| {
             std::env::var("SYLPHX_BASE_URL")
                 .ok()
                 .filter(|u| !u.is_empty())
         })
         .unwrap_or_else(|| "https://api.compute.sylphx.com".to_string());
-    let client = context::client(api_key, Some(url), org)
-        .await?
-        .ok_or_else(|| {
-            Failure::Usage(
-                "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY"
-                    .into(),
-            )
-        })?;
+    let mut credential = context::resolve(api_key, base_url, org).ok_or_else(|| {
+        Failure::Usage(
+            "not signed in: run `sylphx login`, or give an Access key with SYLPHX_API_KEY".into(),
+        )
+    })?;
     let (path, query) = if method.verb == "get" {
         let id = mm.get_one::<String>("__positional").ok_or_else(|| {
             Failure::Usage("name the schedule: sylphx workflows schedules get <id>".into())
@@ -828,9 +825,35 @@ async fn compute_schedules(
             };
             query.push((key.to_string(), text));
         }
-        ("/v1/schedules".to_string(), query)
+        let parent = match mm.get_one::<String>("__positional") {
+            Some(parent) => Some(parent.clone()),
+            None => {
+                let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+                // With no environment default, let Compute use the key's
+                // scope rather than discover or provision an environment.
+                context::default_link_for(&cwd, org)
+                    .map_err(Failure::Usage)?
+                    .and_then(|link| (!link.env.is_empty()).then_some(link.env))
+            }
+        };
+        let path = if let Some(parent) = parent {
+            if Link::environment_project(&parent).is_none() {
+                return Err(Failure::Usage(
+                    "schedule list parent must be a full environment name, orgs/{org}/projects/{project}/envs/{env}"
+                        .into(),
+                ));
+            }
+            let platform = context::client_for(&credential)?;
+            let parent = names::resolve(&platform, &parent).await?;
+            let parent = sylphx::runtime::protocol_param(&parent, true, "parent")?;
+            format!("/v1/{parent}/schedules")
+        } else {
+            "/v1/schedules".to_string()
+        };
+        (path, query)
     };
-    let v: Value = client
+    credential.base_url = Some(url);
+    let v: Value = context::client_for(&credential)?
         .call(HttpRequest {
             method: "GET",
             path,
