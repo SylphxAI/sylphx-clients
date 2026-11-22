@@ -143,14 +143,10 @@ pub struct AuthConfigSpec {
         alias = "userSyncDatabase"
     )]
     pub user_sync_database: String,
-    /// Social sign-in: one entry per provider Sylphx serves (`google`, `github`,
-    /// `apple`), whether it is on, and whether end users can use it now. An
-    /// update changes only the providers it lists; the others keep their state.
-    /// Without any change Google is on through Sylphx's shared client, when
-    /// Sylphx has one. The provider's credentials (the shared client, or your
-    /// own client id and secret) are set with the instance's
-    /// `sign-in-providers:put`: a client secret never passes through this
-    /// resource.
+    /// Built-in social sign-in providers and whether users can use them now.
+    /// An update changes only the listed providers' enabled flags. Configure
+    /// credentials separately with ConfigureSocialProvider. By default Google
+    /// is on when Sylphx has a shared Google client.
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
@@ -211,6 +207,45 @@ pub struct AuthConfigStatus {
         alias = "issuerUri"
     )]
     pub issuer_uri: String,
+}
+
+/// The request of ConfigureSocialProvider.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ConfigureSocialProviderRequest {
+    /// The name of the environment's Auth config (id default).
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// A built-in provider ID from GetAuthConfig.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub provider: String,
+    /// shared (Sylphx's client) or custom (your own client).
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub credentials: String,
+    /// The OAuth client ID, required for custom credentials, omitted for shared.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// The write-only client secret. Required for a new client ID; omit to keep
+    /// the existing secret for an unchanged ID. For Apple, supply the JSON object
+    /// with team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).
+    ///
+    /// Field behavior: `input_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "clientSecret"
+    )]
+    pub client_secret: Option<String>,
 }
 
 /// The request of CreateCustomerOrganization.
@@ -2546,7 +2581,7 @@ pub struct SessionPolicy {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct SocialProvider {
-    /// The provider: `google`, `github` or `apple`.
+    /// The built-in provider ID (for example, google or github).
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -2567,6 +2602,34 @@ pub struct SocialProvider {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub usable: bool,
+    /// Whether Sylphx has shared credentials for this provider, independently
+    /// of the credential mode and the provider's enabled state.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sharedAvailable"
+    )]
+    pub shared_available: bool,
+    /// The configured custom OAuth client ID, empty when using the shared client.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientId"
+    )]
+    pub client_id: String,
+    /// Whether a custom client secret is configured. Its value is never returned.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "clientSecretConfigured"
+    )]
+    pub client_secret_configured: bool,
 }
 
 /// The request of SuspendEndUser.
@@ -4080,6 +4143,37 @@ impl<'a, T: crate::runtime::Transport> AuthConfigsCollection<'a, T> {
             path,
             query: query.0,
             body: Some(crate::runtime::body(&request.auth_config)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Sets one social sign-in provider's credentials without changing whether it
+    /// is enabled. Secret values are never returned.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}:configureSocialProvider` · permission `auth:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn configure_social_provider(
+        &self,
+        request: ConfigureSocialProviderRequest,
+    ) -> Result<AuthConfig, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:configureSocialProvider",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/auth_configs/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

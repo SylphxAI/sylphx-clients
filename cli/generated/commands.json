@@ -5206,7 +5206,7 @@
                   "field": "auth_config.spec.social_providers",
                   "flag": "--spec.social-providers",
                   "repeated": true,
-                  "summary": "Social sign-in: one entry per provider Sylphx serves (`google`, `github`, `apple`), whether it is on, and whether end users can use it now. An update changes only the providers it lists; the others keep their state. Without any change Google is on through Sylphx's shared client, when Sylphx has one. The provider's credentials (the shared client, or your own client id and secret) are set with the instance's `sign-in-providers:put`: a client secret never passes through this resource.",
+                  "summary": "Built-in social sign-in providers and whether users can use them now. An update changes only the listed providers' enabled flags. Configure credentials separately with ConfigureSocialProvider. By default Google is on when Sylphx has a shared Google client.",
                   "type": "json"
                 },
                 {
@@ -5242,6 +5242,49 @@
               "summary": "Updates an auth config.",
               "update_mask": "from-flags",
               "verb": "update"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "provider",
+                  "flag": "--provider",
+                  "required": true,
+                  "summary": "A built-in provider ID from GetAuthConfig.",
+                  "type": "string"
+                },
+                {
+                  "field": "credentials",
+                  "flag": "--credentials",
+                  "required": true,
+                  "summary": "shared (Sylphx's client) or custom (your own client).",
+                  "type": "string"
+                },
+                {
+                  "field": "client_id",
+                  "flag": "--client-id",
+                  "summary": "The OAuth client ID, required for custom credentials, omitted for shared.",
+                  "type": "string"
+                },
+                {
+                  "field": "client_secret",
+                  "flag": "--client-secret",
+                  "sensitive": true,
+                  "summary": "The write-only client secret. Required for a new client ID; omit to keep the existing secret for an unchanged ID. For Apple, supply the JSON object with team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}:configureSocialProvider",
+              "method": "auth.auth_configs.configure_social_provider",
+              "permission": "auth:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/auth_configs/{auth_config}"
+              },
+              "summary": "Sets one social sign-in provider's credentials without changing whether it is enabled. Secret values are never returned.",
+              "verb": "configure-social-provider"
             }
           ],
           "noun": "auth-configs",

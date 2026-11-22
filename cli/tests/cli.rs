@@ -705,6 +705,70 @@ async fn file_positional_conflicts_are_refused_before_a_request() {
     }
 }
 
+#[tokio::test]
+async fn social_provider_credentials_go_from_stdin_or_file_only_to_the_request() {
+    let sb = Sandbox::new("oauth-provider-credentials");
+    let fixture = "synthetic-oauth-cli-credential";
+    std::fs::write(sb.dir.join("oauth-secret"), format!("{fixture}\r\n")).unwrap();
+    let answer = json!({"spec": {"social_providers": [{"provider": "github", "credentials": "custom", "client_secret_configured": true}]}});
+    let (url, log) = serve(vec![(200, answer.clone()), (200, answer)]).await;
+    let name = format!("{ENV}/auth_configs/default");
+    let args = |secret_source| {
+        [
+            "auth",
+            "auth-configs",
+            "configure-social-provider",
+            &name,
+            "--provider",
+            "github",
+            "--credentials",
+            "custom",
+            "--client-id",
+            "client-a",
+            "--client-secret",
+            secret_source,
+            "-o",
+            "json",
+        ]
+    };
+    let refused = run(&sb, &url, &args(fixture)).await;
+    assert_eq!(refused.status.code(), Some(2));
+    assert!(log.lock().is_empty());
+    assert!(!String::from_utf8_lossy(&refused.stderr).contains(fixture));
+    let file = run(&sb, &url, &args("@oauth-secret")).await;
+    assert_success(&file);
+    assert!(!String::from_utf8_lossy(&file.stdout).contains(fixture));
+    assert!(!String::from_utf8_lossy(&file.stderr).contains(fixture));
+    let mut cmd = sb.cmd(&url, &args("-"));
+    let piped = tokio::task::spawn_blocking(move || {
+        let mut child = cmd
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        writeln!(child.stdin.take().unwrap(), "{fixture}").unwrap();
+        child.wait_with_output().unwrap()
+    })
+    .await
+    .unwrap();
+    assert_success(&piped);
+    assert!(!String::from_utf8_lossy(&piped.stdout).contains(fixture));
+    assert!(!String::from_utf8_lossy(&piped.stderr).contains(fixture));
+    let requests = log.lock();
+    assert_eq!(requests.len(), 2);
+    for request in requests.iter() {
+        assert_eq!(
+            request.line,
+            format!("POST /v1/{name}:configureSocialProvider HTTP/1.1")
+        );
+        let body: Value = serde_json::from_str(&request.body).unwrap();
+        assert_eq!(body["provider"], "github");
+        assert_eq!(body["client_id"], "client-a");
+        assert!(body["client_secret"] == fixture, "wrong secret payload");
+    }
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn password_file_conflicts_never_print_either_secret() {
     let sb = Sandbox::new("password-conflict");

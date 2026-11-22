@@ -7205,7 +7205,7 @@
             "description": "Session limits."
           },
           "social_providers": {
-            "description": "Social sign-in: one entry per provider Sylphx serves (`google`, `github`,\n`apple`), whether it is on, and whether end users can use it now. An\nupdate changes only the providers it lists; the others keep their state.\nWithout any change Google is on through Sylphx's shared client, when\nSylphx has one. The provider's credentials (the shared client, or your\nown client id and secret) are set with the instance's\n`sign-in-providers:put`: a client secret never passes through this\nresource.",
+            "description": "Built-in social sign-in providers and whether users can use them now.\nAn update changes only the listed providers' enabled flags. Configure\ncredentials separately with ConfigureSocialProvider. By default Google\nis on when Sylphx has a shared Google client.",
             "items": {
               "$ref": "#/components/schemas/sylphx.auth.v1.SocialProvider"
             },
@@ -7265,6 +7265,40 @@
           "device"
         ],
         "type": "string"
+      },
+      "sylphx.auth.v1.ConfigureSocialProviderRequest": {
+        "description": "The request of ConfigureSocialProvider.",
+        "properties": {
+          "client_id": {
+            "description": "The OAuth client ID, required for custom credentials, omitted for shared.",
+            "type": "string"
+          },
+          "client_secret": {
+            "description": "The write-only client secret. Required for a new client ID; omit to keep\nthe existing secret for an unchanged ID. For Apple, supply the JSON object\nwith team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).",
+            "type": "string",
+            "writeOnly": true,
+            "x-sylphx-sensitive": true
+          },
+          "credentials": {
+            "description": "shared (Sylphx's client) or custom (your own client).",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the environment's Auth config (id default).",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/AuthConfig"
+          },
+          "provider": {
+            "description": "A built-in provider ID from GetAuthConfig.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "provider",
+          "credentials"
+        ],
+        "type": "object"
       },
       "sylphx.auth.v1.CreateCustomerOrganizationRequest": {
         "description": "The request of CreateCustomerOrganization.",
@@ -9445,6 +9479,16 @@
       "sylphx.auth.v1.SocialProvider": {
         "description": "One social sign-in provider of an environment's Auth.",
         "properties": {
+          "client_id": {
+            "description": "The configured custom OAuth client ID, empty when using the shared client.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "client_secret_configured": {
+            "description": "Whether a custom client secret is configured. Its value is never returned.",
+            "readOnly": true,
+            "type": "boolean"
+          },
           "credentials": {
             "description": "`shared` (Sylphx's client) or `custom` (your own client).",
             "readOnly": true,
@@ -9455,8 +9499,13 @@
             "type": "boolean"
           },
           "provider": {
-            "description": "The provider: `google`, `github` or `apple`.",
+            "description": "The built-in provider ID (for example, google or github).",
             "type": "string"
+          },
+          "shared_available": {
+            "description": "Whether Sylphx has shared credentials for this provider, independently\nof the credential mode and the provider's enabled state.",
+            "readOnly": true,
+            "type": "boolean"
           },
           "usable": {
             "description": "Whether end users can sign in with it now: it is on and its credentials\nexist. The client config (`GET /v1/client/config`) lists exactly the\nusable providers.",
@@ -69701,6 +69750,135 @@
           "IDEMPOTENCY_IN_PROGRESS"
         ],
         "x-sylphx-method": "auth.auth_configs.update",
+        "x-sylphx-permission": "auth:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/auth_configs/{auth_config}:configureSocialProvider": {
+      "post": {
+        "description": "Sets one social sign-in provider's credentials without changing whether it\nis enabled. Secret values are never returned.",
+        "operationId": "auth_auth_configs_configure_social_provider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "auth_config",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "client_id": {
+                    "description": "The OAuth client ID, required for custom credentials, omitted for shared.",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "description": "The write-only client secret. Required for a new client ID; omit to keep\nthe existing secret for an unchanged ID. For Apple, supply the JSON object\nwith team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-sylphx-sensitive": true
+                  },
+                  "credentials": {
+                    "description": "shared (Sylphx's client) or custom (your own client).",
+                    "type": "string"
+                  },
+                  "provider": {
+                    "description": "A built-in provider ID from GetAuthConfig.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "credentials"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.AuthConfig"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Sets one social sign-in provider's credentials without changing whether it is enabled. Secret values are never returned.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "auth.auth_configs.configure_social_provider",
         "x-sylphx-permission": "auth:write",
         "x-sylphx-stage": "preview"
       }

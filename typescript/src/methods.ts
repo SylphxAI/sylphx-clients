@@ -1151,6 +1151,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'destructive',
 		permission: 'assets:write',
 	},
+	'auth.auth_configs.configure_social_provider': {
+		id: 'auth.auth_configs.configure_social_provider',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}:configureSocialProvider',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/auth_configs/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'auth:write',
+	},
 	'auth.auth_configs.get': {
 		id: 'auth.auth_configs.get',
 		httpMethod: 'GET',

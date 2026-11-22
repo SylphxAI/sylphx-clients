@@ -8675,7 +8675,7 @@
                     "type": "object"
                   },
                   "social_providers": {
-                    "description": "Social sign-in: one entry per provider Sylphx serves (`google`, `github`,\n`apple`), whether it is on, and whether end users can use it now. An\nupdate changes only the providers it lists; the others keep their state.\nWithout any change Google is on through Sylphx's shared client, when\nSylphx has one. The provider's credentials (the shared client, or your\nown client id and secret) are set with the instance's\n`sign-in-providers:put`: a client secret never passes through this\nresource.",
+                    "description": "Built-in social sign-in providers and whether users can use them now.\nAn update changes only the listed providers' enabled flags. Configure\ncredentials separately with ConfigureSocialProvider. By default Google\nis on when Sylphx has a shared Google client.",
                     "items": {
                       "additionalProperties": false,
                       "description": "One social sign-in provider of an environment's Auth.",
@@ -8685,7 +8685,7 @@
                           "type": "boolean"
                         },
                         "provider": {
-                          "description": "The provider: `google`, `github` or `apple`.",
+                          "description": "The built-in provider ID (for example, google or github).",
                           "type": "string"
                         }
                       },

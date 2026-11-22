@@ -73,14 +73,10 @@ export interface AuthConfigSpec {
 	/** A Sylphx Data database end users are synced into; unset disables sync. */
 	userSyncDatabase?: string
 	/**
-	 * Social sign-in: one entry per provider Sylphx serves (`google`, `github`,
-	 * `apple`), whether it is on, and whether end users can use it now. An
-	 * update changes only the providers it lists; the others keep their state.
-	 * Without any change Google is on through Sylphx's shared client, when
-	 * Sylphx has one. The provider's credentials (the shared client, or your
-	 * own client id and secret) are set with the instance's
-	 * `sign-in-providers:put`: a client secret never passes through this
-	 * resource.
+	 * Built-in social sign-in providers and whether users can use them now.
+	 * An update changes only the listed providers' enabled flags. Configure
+	 * credentials separately with ConfigureSocialProvider. By default Google
+	 * is on when Sylphx has a shared Google client.
 	 */
 	socialProviders?: SocialProvider[]
 	/**
@@ -107,6 +103,24 @@ export interface AuthConfigStatus {
 	readonly portalOrigin?: string
 	/** The OAuth issuer URI; tokens verify from its JWKS. */
 	readonly issuerUri?: string
+}
+
+/** The request of ConfigureSocialProvider. */
+export interface ConfigureSocialProviderRequest {
+	/** The name of the environment's Auth config (id default). */
+	name: string
+	/** A built-in provider ID from GetAuthConfig. */
+	provider: string
+	/** shared (Sylphx's client) or custom (your own client). */
+	credentials: string
+	/** The OAuth client ID, required for custom credentials, omitted for shared. */
+	clientId?: string
+	/**
+	 * The write-only client secret. Required for a new client ID; omit to keep
+	 * the existing secret for an unchanged ID. For Apple, supply the JSON object
+	 * with team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).
+	 */
+	clientSecret?: string
 }
 
 /** The request of CreateCustomerOrganization. */
@@ -1163,7 +1177,7 @@ export interface SessionPolicy {
 
 /** One social sign-in provider of an environment's Auth. */
 export interface SocialProvider {
-	/** The provider: `google`, `github` or `apple`. */
+	/** The built-in provider ID (for example, google or github). */
 	provider?: string
 	/**
 	 * Whether the provider is offered. Turning one on needs credentials:
@@ -1178,6 +1192,15 @@ export interface SocialProvider {
 	 * usable providers.
 	 */
 	readonly usable?: boolean
+	/**
+	 * Whether Sylphx has shared credentials for this provider, independently
+	 * of the credential mode and the provider's enabled state.
+	 */
+	readonly sharedAvailable?: boolean
+	/** The configured custom OAuth client ID, empty when using the shared client. */
+	readonly clientId?: string
+	/** Whether a custom client secret is configured. Its value is never returned. */
+	readonly clientSecretConfigured?: boolean
 }
 
 /** The request of SuspendEndUser. */
@@ -1397,6 +1420,10 @@ runtime.registerSchemas({
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['portalOrigin', 'portal_origin'],
 		['issuerUri', 'issuer_uri'],
+	],
+	'sylphx.auth.v1.ConfigureSocialProviderRequest': [
+		['clientId', 'client_id'],
+		['clientSecret', 'client_secret'],
 	],
 	'sylphx.auth.v1.CreateCustomerOrganizationRequest': [
 		['customerOrganizationId', 'customer_organization_id'],
@@ -1721,7 +1748,11 @@ runtime.registerSchemas({
 		['absoluteTimeout', 'absolute_timeout'],
 		['fingerprintBinding', 'fingerprint_binding'],
 	],
-	'sylphx.auth.v1.SocialProvider': [],
+	'sylphx.auth.v1.SocialProvider': [
+		['sharedAvailable', 'shared_available'],
+		['clientId', 'client_id'],
+		['clientSecretConfigured', 'client_secret_configured'],
+	],
 	'sylphx.auth.v1.SuspendEndUserRequest': [],
 	'sylphx.auth.v1.TrustedIssuer': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2112,6 +2143,25 @@ export class AuthConfigsCollection {
 			query: { update_mask: request.updateMask, allow_missing: request.allowMissing, validate_only: request.validateOnly },
 			body: request.authConfig ?? {},
 			bodyType: 'sylphx.auth.v1.AuthConfig',
+			responseType: 'sylphx.auth.v1.AuthConfig',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Sets one social sign-in provider's credentials without changing whether it
+	 * is enabled. Secret values are never returned.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/auth_configs/*}:configureSocialProvider` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async configureSocialProvider(request: ConfigureSocialProviderRequest): Promise<AuthConfig> {
+		return this.client.call<AuthConfig>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/auth_configs/*', 'name')}:configureSocialProvider`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.auth.v1.ConfigureSocialProviderRequest',
 			responseType: 'sylphx.auth.v1.AuthConfig',
 			mutation: true,
 		})

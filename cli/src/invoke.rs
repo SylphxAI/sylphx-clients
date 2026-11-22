@@ -2,7 +2,7 @@
 //! context defaults, etag pre-reads, destructive confirmation, pagination, and
 //! long-running operation waiting.
 
-use std::io::{IsTerminal, Write};
+use std::io::{IsTerminal, Read, Write};
 
 use clap::ArgMatches;
 use serde_json::{json, Map, Value};
@@ -45,6 +45,33 @@ fn same_field_value(existing: &Value, value: &Value, ty: &str) -> bool {
     }
 }
 
+/// Keep OAuth secrets out of the command line and bound bytes read from a pipe or file.
+fn social_provider_secret(source: &str) -> Result<String, Failure> {
+    let input: Box<dyn Read> = if source == "-" && !std::io::stdin().is_terminal() {
+        Box::new(std::io::stdin())
+    } else if let Some(path) = source.strip_prefix('@').filter(|p| !p.is_empty()) {
+        Box::new(
+            std::fs::File::open(path).map_err(|_| {
+                Failure::Usage("--client-secret: could not open secret file".into())
+            })?,
+        )
+    } else {
+        return Err(Failure::Usage(
+            "--client-secret needs @FILE or piped stdin (-); do not pass a secret on the command line".into(),
+        ));
+    };
+    let mut secret = String::new();
+    input
+        .take(4098)
+        .read_to_string(&mut secret)
+        .map_err(|_| Failure::Usage("--client-secret: could not read UTF-8 secret input".into()))?;
+    let secret = secret.trim_end_matches(['\r', '\n']);
+    if secret.trim().is_empty() || secret.len() > 4096 {
+        return Err(Failure::Usage("--client-secret needs 1–4096 bytes".into()));
+    }
+    Ok(secret.to_owned())
+}
+
 pub(crate) async fn generated(
     client: &Client,
     method: &MethodCmd,
@@ -52,13 +79,21 @@ pub(crate) async fn generated(
     root: &ArgMatches,
     format: Format,
 ) -> Result<(), Failure> {
+    let configures_social = method.method == "auth.auth_configs.configure_social_provider";
     let mut args = match root.get_one::<String>("from-file") {
         Some(path) => {
             let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+            let parse_error = |error: &dyn std::fmt::Display| {
+                if configures_social {
+                    format!("{path}: invalid provider configuration request")
+                } else {
+                    format!("{path}: {error}")
+                }
+            };
             let v: Value = if path.ends_with(".json") {
-                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?
+                serde_json::from_str(&text).map_err(|e| parse_error(&e))?
             } else {
-                serde_yaml_ng::from_str(&text).map_err(|e| format!("{path}: {e}"))?
+                serde_yaml_ng::from_str(&text).map_err(|e| parse_error(&e))?
             };
             match v {
                 Value::Object(o) => o,
@@ -88,7 +123,14 @@ pub(crate) async fn generated(
         }
     }
     let file_args = Value::Object(args.clone());
-    let (values, mask) = tree::flag_values(method, mm)?;
+    let (mut values, mask) = tree::flag_values(method, mm)?;
+    if configures_social {
+        for (field, value) in &mut values {
+            if field == "client_secret" {
+                *value = Value::String(social_provider_secret(value.as_str().unwrap_or_default())?);
+            }
+        }
+    }
     for (field, value) in &values {
         if let Some(existing) = tree::get_path(&file_args, field) {
             let flag = method
