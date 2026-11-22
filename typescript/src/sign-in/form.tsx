@@ -16,6 +16,7 @@ import {
 import {
 	conditionalPasskeyAvailable,
 	offerPasskey,
+	passkeyEnrollmentAvailable,
 	passkeyAvailable,
 	signInWithPasskey,
 } from './passkey.js'
@@ -107,7 +108,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 		destination.current = result.next ?? latest.current.next
 		if (
 			method !== 'passkey' &&
-			passkeyAvailable() &&
+			passkeyEnrollmentAvailable() &&
 			endpoints.registerBegin &&
 			endpoints.registerFinish &&
 			Number(readPreference(`${preference}:passkey-after`)) <= Date.now()

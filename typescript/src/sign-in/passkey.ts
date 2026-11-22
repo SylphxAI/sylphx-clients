@@ -21,6 +21,11 @@ export function passkeyAvailable(): boolean {
 		typeof PublicKeyCredential !== 'undefined' && typeof navigator.credentials?.get === 'function'
 	)
 }
+export function passkeyEnrollmentAvailable(): boolean {
+	return (
+		typeof PublicKeyCredential !== 'undefined' && typeof navigator.credentials?.create === 'function'
+	)
+}
 export async function conditionalPasskeyAvailable(): Promise<boolean> {
 	if (!passkeyAvailable()) return false
 	try {
