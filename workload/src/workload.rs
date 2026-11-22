@@ -118,7 +118,6 @@ pub async fn validate_jwt_svid(
 /// A connection per call is enough here — the agent is on the same node and
 /// these calls carry an SVID, not bulk data.
 async fn unary(path: &str, body: &[u8]) -> Result<Vec<u8>, String> {
-    use bytes::BytesMut;
     let stream = tokio::net::UnixStream::connect(SPIFFE_WORKLOAD_SOCKET)
         .await
         .map_err(|error| connect_detail(&error))?;
@@ -142,46 +141,76 @@ async fn unary(path: &str, body: &[u8]) -> Result<Vec<u8>, String> {
     send_stream
         .send_data(grpc_frame(body), true)
         .map_err(|e| format!("h2_send_data: {e}"))?;
-    let mut response = response.await.map_err(|e| format!("h2_response: {e}"))?;
+    let response = response.await.map_err(|e| format!("h2_response: {e}"))?;
+    read_unary_response(response).await
+}
+
+async fn read_unary_response(
+    mut response: http::Response<h2::RecvStream>,
+) -> Result<Vec<u8>, String> {
+    use bytes::BytesMut;
     let status = response.status();
     if !status.is_success() {
         return Err(format!("http_status_{status}"));
     }
+    if response.headers().contains_key("grpc-status") {
+        // A trailers-only response carries its terminal status in HEADERS
+        // with END_STREAM, not in RecvStream::trailers().
+        if !response.body().is_end_stream() {
+            return Err("grpc_unexpected_initial_status".into());
+        }
+        check_grpc_status(response.headers())?;
+        return Err("empty_jwt_svid_stream".into());
+    }
+
     let mut buf = BytesMut::new();
     let body = response.body_mut();
     let mut message = None;
     while let Some(chunk) = body.data().await {
         let chunk = chunk.map_err(|e| format!("h2_body: {e}"))?;
-        buf.extend_from_slice(&chunk);
         body.flow_control()
             .release_capacity(chunk.len())
             .map_err(|e| format!("h2_flow: {e}"))?;
-        if let Some(msg) = try_pop_grpc_message(&mut buf)? {
-            message = Some(msg);
-            break;
+        if chunk.is_empty() {
+            continue;
+        }
+        if message.is_some() {
+            return Err("grpc_extra_unary_data".into());
+        }
+        buf.extend_from_slice(&chunk);
+        message = try_pop_grpc_message(&mut buf)?;
+        if message.is_some() && !buf.is_empty() {
+            return Err("grpc_extra_unary_data".into());
         }
     }
-    if message.is_none() {
-        // An empty stream is how the agent refuses (expired SVID, unknown
-        // audience): the reason is in the trailers, not in a message.
-        if let Some(trailers) = body
-            .trailers()
-            .await
-            .map_err(|e| format!("h2_trailers: {e}"))?
-        {
-            if let Some(gs) = trailers.get("grpc-status").and_then(|v| v.to_str().ok()) {
-                if gs != "0" {
-                    let gm = trailers
-                        .get("grpc-message")
-                        .and_then(|v| v.to_str().ok())
-                        .unwrap_or("");
-                    return Err(format!("grpc_status_{gs}:{gm}"));
-                }
-            }
-        }
-        message = try_pop_grpc_message(&mut buf)?;
+    // A frame alone does not make the RPC successful. Do not decode or use
+    // an SVID or validation answer until the agent confirms success.
+    let trailers = body
+        .trailers()
+        .await
+        .map_err(|e| format!("h2_trailers: {e}"))?
+        .ok_or("grpc_status_missing")?;
+    check_grpc_status(&trailers)?;
+    if !buf.is_empty() {
+        return Err("grpc_incomplete_unary_frame".into());
     }
     message.ok_or_else(|| "empty_jwt_svid_stream".to_string())
+}
+
+fn check_grpc_status(headers: &http::HeaderMap) -> Result<(), String> {
+    let code = headers
+        .get("grpc-status")
+        .ok_or("grpc_status_missing")?
+        .to_str()
+        .ok()
+        .and_then(|value| value.parse::<u8>().ok())
+        .filter(|code| *code <= 16)
+        .ok_or("grpc_status_invalid")?;
+    match code {
+        0 => Ok(()),
+        // Do not surface arbitrary agent grpc-message text to callers/logs.
+        _ => Err(format!("grpc_status_{code}")),
+    }
 }
 
 /// `iat` and `exp` of a JWT, in milliseconds since the epoch.
@@ -581,9 +610,11 @@ mod tests {
     #[test]
     fn delimited_end_refuses_only_what_runs_past_the_buffer() {
         assert_eq!(delimited_end(10, 2, 8, "trunc").unwrap(), 10);
-        assert!(delimited_end(10, 2, 9, "trunc")
-            .unwrap_err()
-            .contains("trunc"));
+        assert!(
+            delimited_end(10, 2, 9, "trunc")
+                .unwrap_err()
+                .contains("trunc")
+        );
         assert!(delimited_end(10, 10, 0, "trunc").is_ok());
         assert!(delimited_end(10, 2, u64::MAX, "trunc").is_err());
         assert!(delimited_end(usize::MAX, usize::MAX, 1, "trunc").is_err());
@@ -743,5 +774,94 @@ mod tests {
             "/spiffe-workload-api/spire-agent.sock"
         );
         assert!(!is_socket_absent("workload_api_timeout"));
+    }
+}
+
+#[cfg(test)]
+mod wire_tests {
+    use super::*;
+
+    async fn exchange(
+        headers_status: Option<&str>,
+        data: bool,
+        trailers_status: Option<&str>,
+    ) -> Result<Vec<u8>, String> {
+        let (client, server) = tokio::net::UnixStream::pair().expect("socket pair");
+        let trailers_only = headers_status.is_some();
+        let mut response = http::Response::builder().header("content-type", "application/grpc");
+        if let Some(status) = headers_status {
+            response = response.header("grpc-status", status);
+        }
+        let response = response.body(()).expect("response headers");
+        let trailers = trailers_status.map(|status| {
+            let mut trailers = http::HeaderMap::new();
+            trailers.insert("grpc-status", status.parse().expect("status"));
+            trailers
+        });
+        tokio::spawn(async move {
+            let mut conn = h2::server::handshake(server)
+                .await
+                .expect("server handshake");
+            let (_, mut reply) = conn.accept().await.expect("stream").expect("request");
+            let mut stream = reply
+                .send_response(response, trailers_only)
+                .expect("headers");
+            if data {
+                stream
+                    .send_data(grpc_frame(b"jwt fixture"), trailers.is_none())
+                    .expect("DATA");
+            }
+            if let Some(trailers) = trailers {
+                stream.send_trailers(trailers).expect("trailers");
+            }
+            while conn.accept().await.is_some() {}
+        });
+        let (mut sender, conn) = h2::client::handshake(client)
+            .await
+            .expect("client handshake");
+        let driver = tokio::spawn(conn);
+        let req = http::Request::builder()
+            .method("POST")
+            .uri(FETCH_JWT_SVID_PATH)
+            .body(())
+            .expect("request");
+        let (response, _) = sender.send_request(req, true).expect("send request");
+        let result = read_unary_response(response.await.expect("response")).await;
+        driver.abort();
+        result
+    }
+
+    #[test]
+    fn unary_requires_a_successful_terminal_status() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                assert_eq!(
+                    exchange(Some("7"), false, None).await,
+                    Err("grpc_status_7".into())
+                );
+                assert_eq!(
+                    exchange(None, false, Some("14")).await,
+                    Err("grpc_status_14".into())
+                );
+                assert_eq!(
+                    exchange(None, true, Some("7")).await,
+                    Err("grpc_status_7".into())
+                );
+                assert_eq!(
+                    exchange(None, true, None).await,
+                    Err("grpc_status_missing".into())
+                );
+                assert_eq!(
+                    exchange(None, false, Some("0")).await,
+                    Err("empty_jwt_svid_stream".into())
+                );
+                assert_eq!(
+                    exchange(None, true, Some("0")).await,
+                    Ok(b"jwt fixture".to_vec())
+                );
+            });
     }
 }
