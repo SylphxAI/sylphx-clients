@@ -12981,7 +12981,7 @@
             "type": "string"
           },
           "repository_id": {
-            "description": "The source provider's immutable repository ID.",
+            "description": "The source provider's immutable repository ID, as a decimal string.\nIt is an opaque identifier and can exceed the signed 64-bit range.",
             "format": "uint64",
             "readOnly": true,
             "type": "string"

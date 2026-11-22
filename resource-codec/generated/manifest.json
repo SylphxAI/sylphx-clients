@@ -42758,7 +42758,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "The source provider's immutable repository ID.",
+          "doc": "The source provider's immutable repository ID, as a decimal string.\nIt is an opaque identifier and can exceed the signed 64-bit range.",
           "filterable": false,
           "name": "repository_id",
           "number": 3,

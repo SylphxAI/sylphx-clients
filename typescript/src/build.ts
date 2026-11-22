@@ -430,7 +430,10 @@ export interface StaticSiteBuildOutput {
 	readonly environmentId?: string
 	/** The service ID selected for this Build. */
 	readonly serviceId?: string
-	/** The source provider's immutable repository ID. */
+	/**
+	 * The source provider's immutable repository ID, as a decimal string.
+	 * It is an opaque identifier and can exceed the signed 64-bit range.
+	 */
 	readonly repositoryId?: string
 	/** The full Git commit SHA. */
 	readonly commit?: string
