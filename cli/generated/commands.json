@@ -7740,6 +7740,53 @@
           "resource_type": "connections.sylphx.com/Connection"
         },
         {
+          "collection": "secret_versions",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "sender_number",
+                  "flag": "--sender-number",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Sending number, in E.164 form.",
+                  "type": "string"
+                },
+                {
+                  "field": "recipient_number",
+                  "flag": "--recipient-number",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Recipient number, in E.164 form.",
+                  "type": "string"
+                },
+                {
+                  "field": "text",
+                  "flag": "--text",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Text to send, at most 1,600 UTF-8 bytes.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:sendCarrierSms",
+              "method": "broker.secret_versions.send_carrier_sms",
+              "permission": "broker:sms:send",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}"
+              },
+              "summary": "Sends one SMS with a pinned same-environment carrier credential in Secrets. Requires an exact-version broker:sms:send grant and an Idempotency-Key. Returns only a carrier receipt; never exports credentials or retries on a different carrier. The credential is a JSON secret payload with provider \"telnyx\" and an api_key string. Receipts are retained for 24 hours. If the outcome is unknown, reconcile with the carrier before attempting a new send.",
+              "verb": "send-carrier-sms"
+            }
+          ],
+          "noun": "secret-versions",
+          "resource_type": "secrets.sylphx.com/SecretVersion"
+        },
+        {
           "collection": "token_exchanges",
           "commands": [
             {

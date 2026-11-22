@@ -1,0 +1,78 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "name",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "secrets.sylphx.com/SecretVersion",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "sender_number",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "recipient_number",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "REQUIRED"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "text",
+      "number": 4,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    }
+  ],
+  "name": "sylphx.broker.v1.SendCarrierSmsRequest",
+  "package": "sylphx.broker.v1"
+}

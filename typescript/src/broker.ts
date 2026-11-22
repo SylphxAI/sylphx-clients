@@ -235,6 +235,27 @@ export interface RevokeTokenExchangeRequest {
 	name: string
 }
 
+/**
+ * The request of SendCarrierSms. The credential type selects the carrier,
+ * never a caller-supplied destination URL.
+ */
+export interface SendCarrierSmsRequest {
+	/** Exact SecretVersion name; the "latest" alias is not accepted. */
+	name: string
+	/** Sending number, in E.164 form. */
+	senderNumber: string
+	/** Recipient number, in E.164 form. */
+	recipientNumber: string
+	/** Text to send, at most 1,600 UTF-8 bytes. */
+	text: string
+}
+
+/** The response of SendCarrierSms. This is acceptance, not delivery. */
+export interface SendCarrierSmsResponse {
+	/** Opaque carrier-assigned receipt, qualified with the carrier name. */
+	receipt?: string
+}
+
 /** The request of SignVapidAssertion. */
 export interface SignVapidAssertionRequest {
 	/** Exact same-org Web Push Connection. */
@@ -462,6 +483,11 @@ runtime.registerSchemas({
 		['head', 'head', 'sylphx.broker.v1.GitHubPullRequestHead'],
 	],
 	'sylphx.broker.v1.RevokeTokenExchangeRequest': [],
+	'sylphx.broker.v1.SendCarrierSmsRequest': [
+		['senderNumber', 'sender_number'],
+		['recipientNumber', 'recipient_number'],
+	],
+	'sylphx.broker.v1.SendCarrierSmsResponse': [],
 	'sylphx.broker.v1.SignVapidAssertionRequest': [],
 	'sylphx.broker.v1.SignVapidAssertionResponse': [
 		['applicationServerKey', 'application_server_key'],
@@ -509,12 +535,15 @@ export class BrokerApi {
 	readonly trustPolicies: TrustPoliciesCollection
 	/** The `connections` collection. */
 	readonly connections: ConnectionsCollection
+	/** The `secret_versions` collection. */
+	readonly secretVersions: SecretVersionsCollection
 	/** The `token_exchanges` collection. */
 	readonly tokenExchanges: TokenExchangesCollection
 
 	constructor(client: runtime.Client) {
 		this.trustPolicies = new TrustPoliciesCollection(client)
 		this.connections = new ConnectionsCollection(client)
+		this.secretVersions = new SecretVersionsCollection(client)
 		this.tokenExchanges = new TokenExchangesCollection(client)
 	}
 }
@@ -720,6 +749,38 @@ export class ConnectionsCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.SignVapidAssertionRequest',
 			responseType: 'sylphx.broker.v1.SignVapidAssertionResponse',
+			mutation: true,
+		})
+	}
+}
+
+/** `secret_versions` of Sylphx Broker: Resource type `secrets.sylphx.com/SecretVersion`. */
+export class SecretVersionsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Sends one SMS with a pinned same-environment carrier credential in Secrets.
+	 * Requires an exact-version broker:sms:send grant and an Idempotency-Key.
+	 * Returns only a carrier receipt; never exports credentials or retries on a
+	 * different carrier. The credential is a JSON secret payload with provider
+	 * "telnyx" and an api_key string. Receipts are retained for 24 hours. If the
+	 * outcome is unknown, reconcile with the carrier before attempting a new send.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/secrets/*\/secret_versions/*}:sendCarrierSms` · permission `broker:sms:send` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async sendCarrierSms(request: SendCarrierSmsRequest): Promise<SendCarrierSmsResponse> {
+		return this.client.call<SendCarrierSmsResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:sendCarrierSms`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.SendCarrierSmsRequest',
+			responseType: 'sylphx.broker.v1.SendCarrierSmsResponse',
 			mutation: true,
 		})
 	}

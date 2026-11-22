@@ -428,6 +428,50 @@ pub struct RevokeTokenExchangeRequest {
     pub name: String,
 }
 
+/// The request of SendCarrierSms. The credential type selects the carrier,
+/// never a caller-supplied destination URL.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SendCarrierSmsRequest {
+    /// Exact SecretVersion name; the "latest" alias is not accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Sending number, in E.164 form.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "senderNumber"
+    )]
+    pub sender_number: String,
+    /// Recipient number, in E.164 form.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "recipientNumber"
+    )]
+    pub recipient_number: String,
+    /// Text to send, at most 1,600 UTF-8 bytes.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub text: String,
+}
+
+/// The response of SendCarrierSms. This is acceptance, not delivery.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SendCarrierSmsResponse {
+    /// Opaque carrier-assigned receipt, qualified with the carrier name.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub receipt: String,
+}
+
 /// The request of SignVapidAssertion.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -821,6 +865,13 @@ impl<'a, T: crate::runtime::Transport> BrokerApi<'a, T> {
         }
     }
 
+    /// The `secret_versions` collection.
+    pub fn secret_versions(&self) -> SecretVersionsCollection<'a, T> {
+        SecretVersionsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `token_exchanges` collection.
     pub fn token_exchanges(&self) -> TokenExchangesCollection<'a, T> {
         TokenExchangesCollection {
@@ -1114,6 +1165,48 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
         let path = format!(
             "/v1/{}:signVapidAssertion",
             crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `secret_versions` of Sylphx Broker: Resource type `secrets.sylphx.com/SecretVersion`.
+pub struct SecretVersionsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> SecretVersionsCollection<'a, T> {
+    /// Sends one SMS with a pinned same-environment carrier credential in Secrets.
+    /// Requires an exact-version broker:sms:send grant and an Idempotency-Key.
+    /// Returns only a carrier receipt; never exports credentials or retries on a
+    /// different carrier. The credential is a JSON secret payload with provider
+    /// "telnyx" and an api_key string. Receipts are retained for 24 hours. If the
+    /// outcome is unknown, reconcile with the carrier before attempting a new send.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:sendCarrierSms` · permission `broker:sms:send` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `RATE_LIMITED`, `UNAVAILABLE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn send_carrier_sms(
+        &self,
+        request: SendCarrierSmsRequest,
+    ) -> Result<SendCarrierSmsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:sendCarrierSms",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+                "name"
+            )?
         );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {

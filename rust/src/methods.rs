@@ -2704,6 +2704,23 @@ pub static METHODS: &[MethodSpec] = &[
         effect_ids: false,
     },
     MethodSpec {
+        id: "broker.secret_versions.send_carrier_sms",
+        http_method: "POST",
+        template: "/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:sendCarrierSms",
+        path_params: &[(
+            "name",
+            "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+        )],
+        query_params: &[],
+        body: Some("*"),
+        long_running: false,
+        server_streaming: false,
+        effect: "write",
+        permission: "broker:sms:send",
+        origin: None,
+        effect_ids: false,
+    },
+    MethodSpec {
         id: "broker.token_exchanges.get",
         http_method: "GET",
         template: "/v1/{name=orgs/*/trust_policies/*/token_exchanges/*}",

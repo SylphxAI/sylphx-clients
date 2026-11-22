@@ -1923,6 +1923,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'broker:exchange',
 	},
+	'broker.secret_versions.send_carrier_sms': {
+		id: 'broker.secret_versions.send_carrier_sms',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:sendCarrierSms',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'broker:sms:send',
+	},
 	'broker.token_exchanges.get': {
 		id: 'broker.token_exchanges.get',
 		httpMethod: 'GET',
