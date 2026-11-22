@@ -155,6 +155,9 @@
 							},
 							"user": {
 								"$ref": "#/$defs/User"
+							},
+							"is_new_user": {
+								"type": "boolean"
 							}
 						},
 						"required": ["session", "user"],

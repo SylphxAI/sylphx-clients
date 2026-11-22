@@ -129,6 +129,7 @@ export interface AuthSession {
 export interface AuthSignIn {
 	session: AuthSession
 	user: AuthUser
+	isNewUser?: boolean
 }
 
 export interface AuthCurrentSession {
@@ -262,6 +263,7 @@ const user = (w: Wire): AuthUser => ({
 const signIn = (w: Wire): AuthSignIn => ({
 	session: { id: w.session.id, token: w.session.token, expiresAt: w.session.expires_at },
 	user: user(w.user),
+	...(typeof w.is_new_user === 'boolean' ? { isNewUser: w.is_new_user } : {}),
 })
 const privacy = (w: Wire): PrivacyRequest => ({
 	requestId: w.request_id,

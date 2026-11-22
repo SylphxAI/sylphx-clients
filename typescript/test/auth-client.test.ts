@@ -210,9 +210,10 @@ describe('routes', () => {
 	})
 
 	test('POST tickets:redeem', async () => {
-		const s = stub(() => ok({ session: sessionWire, user: userWire }))
+		const s = stub(() => ok({ session: sessionWire, user: userWire, is_new_user: true }))
 		const auth = createAuthClient({ publishableKey: KEY, fetch: s.fetch })
-		await auth.redeemTicket('tk')
+		const result = await auth.redeemTicket('tk')
+		expect(result.isNewUser).toBe(true)
 		expect(s.calls[0]?.url).toContain('/v1/client/tickets:redeem?')
 		expect(JSON.parse(s.calls[0]?.init.body as string)).toEqual({ ticket: 'tk' })
 		expect(auth.sessionToken).toBe('identity_org_session_x')

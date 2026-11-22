@@ -73,10 +73,22 @@ describe('SDK continue contract against mock', () => {
 		if ('session' in result) {
 			expect(result.user.email).toBe('new@example.com')
 			expect(result.user.emailVerified).toBe(true)
+			expect(result.isNewUser).toBe(true)
 			expect(client.sessionToken).toBe(result.session.token)
 			expect(result.session.expiresAt).toBeGreaterThan(0)
 		}
 		await rejected(client.continueVerify({ flow: step.flow, code: mail.code }))
+		const returningStep = otp(
+			await client.continue({ email: 'New@Example.com', sessionMode: 'browser' }),
+		)
+		const returningResult = await client.continueVerify({
+			flow: returningStep.flow,
+			code: mock.outbox[1]!.code,
+		})
+		expect('session' in returningResult).toBe(true)
+		if ('session' in returningResult) {
+			expect(returningResult.isNewUser).toBe(false)
+		}
 	})
 
 	test('server mode is the default and returns a ticket without remembering a token', async () => {

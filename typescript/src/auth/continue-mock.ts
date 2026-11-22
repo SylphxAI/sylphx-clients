@@ -81,13 +81,15 @@ export function createContinueMock(options: ContinueMockOptions) {
 			return fail(401, 'unauthorized')
 		}
 		if (!accounts.has(flow.email) && options.signUp === false) return fail(403, 'forbidden')
-		if (!accounts.has(flow.email)) accounts.set(flow.email, { email: flow.email })
+		const isNewUser = !accounts.has(flow.email)
+		if (isNewUser) accounts.set(flow.email, { email: flow.email })
 		flow.used = true
 		return flow.mode === 'server'
 			? reply(200, { ticket: `mock-ticket-${crypto.randomUUID()}`, expires_in: 120 })
 			: reply(200, {
 				session: { id: `mock-session-${crypto.randomUUID()}`, token: `mock-token-${crypto.randomUUID()}`, expires_at: Math.floor(now() / 1000) + 3600 },
 				user: { id: `mock-user-${flow.email}`, email: flow.email, name: flow.email.split('@')[0], email_verified: true },
+				is_new_user: isNewUser,
 			})
 	}
 	return { fetch, outbox }
