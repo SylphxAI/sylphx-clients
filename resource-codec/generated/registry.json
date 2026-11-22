@@ -39727,6 +39727,191 @@
       "package": "sylphx.broker.v1"
     },
     {
+      "doc": "One object operation. No query parameters or arbitrary signed headers.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Same-org S3 signing Connection.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "connections.sylphx.com/Connection",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "GET or PUT only.",
+          "filterable": false,
+          "name": "method",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact canonical HTTPS origin from the Connection.",
+          "filterable": false,
+          "name": "origin",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Path-style bucket and key, without the initial slash.",
+          "filterable": false,
+          "name": "object_key",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "'*' for PUT; unset for GET.",
+          "filterable": false,
+          "name": "if_none_match",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+          "filterable": false,
+          "name": "payload_sha256",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.SignS3RequestRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "Send this proof only with the exact signed request. Response is not cached.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "SigV4 Authorization header.",
+          "filterable": false,
+          "name": "authorization",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "x-amz-date header.",
+          "filterable": false,
+          "name": "amz_date",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "x-amz-content-sha256 header.",
+          "filterable": false,
+          "name": "payload_sha256",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.SignS3RequestResponse",
+      "package": "sylphx.broker.v1"
+    },
+    {
       "doc": "The request of SignVapidAssertion.",
       "fields": [
         {
@@ -47420,6 +47605,25 @@
             "kind": "message",
             "name": "sylphx.connections.v1.Oauth2ConnectionConfig"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "R2 object signing, mutually exclusive with other Connection kinds.",
+          "filterable": false,
+          "name": "s3_signing",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.connections.v1.S3SigningConfig"
+          }
         }
       ],
       "name": "sylphx.connections.v1.ConnectionSpec",
@@ -49488,6 +49692,89 @@
         }
       ],
       "name": "sylphx.connections.v1.ProviderSharingGrant",
+      "package": "sylphx.connections.v1"
+    },
+    {
+      "doc": "S3SigningConfig admits one workload and one canonical path-style key prefix.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact Access workload principal, in the Connection organization.",
+          "filterable": false,
+          "name": "principal",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Pinned same-org SecretVersion containing the R2 signing key pair.",
+          "filterable": false,
+          "name": "secret_version",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical R2 HTTPS origin (no path, port, query or fragment).",
+          "filterable": false,
+          "name": "origin",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Bucket and an object namespace; slash-terminated, no leading slash.",
+          "filterable": false,
+          "name": "object_prefix",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.connections.v1.S3SigningConfig",
       "package": "sylphx.connections.v1"
     },
     {
@@ -162447,6 +162734,49 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "sign_vapid_assertion"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Signs one exact S3 object request under a committed Connection and workload grant.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "UNAVAILABLE",
+                "RATE_LIMITED"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/connections/{connection}",
+                    "pattern": "orgs/*/connections/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/connections/*}:signS3Request"
+              },
+              "id": "broker.connections.sign_s3_request",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "broker:s3:sign",
+              "proto": "sylphx.broker.v1.BrokerService.SignS3Request",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.SignS3RequestRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.SignS3RequestResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "sign_s3_request"
             }
           ],
           "name": "connections",

@@ -11904,6 +11904,65 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.SignS3RequestRequest": {
+        "description": "One object operation. No query parameters or arbitrary signed headers.",
+        "properties": {
+          "if_none_match": {
+            "description": "'*' for PUT; unset for GET.",
+            "type": "string"
+          },
+          "method": {
+            "description": "GET or PUT only.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Same-org S3 signing Connection.",
+            "type": "string",
+            "x-sylphx-resource-reference": "connections.sylphx.com/Connection"
+          },
+          "object_key": {
+            "description": "Path-style bucket and key, without the initial slash.",
+            "type": "string"
+          },
+          "origin": {
+            "description": "Exact canonical HTTPS origin from the Connection.",
+            "type": "string"
+          },
+          "payload_sha256": {
+            "description": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "method",
+          "origin",
+          "object_key",
+          "payload_sha256"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.SignS3RequestResponse": {
+        "description": "Send this proof only with the exact signed request. Response is not cached.",
+        "properties": {
+          "amz_date": {
+            "description": "x-amz-date header.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "authorization": {
+            "description": "SigV4 Authorization header.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "payload_sha256": {
+            "description": "x-amz-content-sha256 header.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.SignVapidAssertionRequest": {
         "description": "The request of SignVapidAssertion.",
         "properties": {
@@ -14664,6 +14723,10 @@
             "x-sylphx-immutable": true,
             "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
           },
+          "s3_signing": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.S3SigningConfig",
+            "description": "R2 object signing, mutually exclusive with other Connection kinds."
+          },
           "web_push": {
             "$ref": "#/components/schemas/sylphx.connections.v1.WebPushConfig",
             "description": "Web Push assertion configuration. Mutually exclusive with provider and\nexternal_id. The Connection kind cannot change after creation."
@@ -15400,6 +15463,34 @@
           "selected"
         ],
         "type": "string"
+      },
+      "sylphx.connections.v1.S3SigningConfig": {
+        "description": "S3SigningConfig admits one workload and one canonical path-style key prefix.",
+        "properties": {
+          "object_prefix": {
+            "description": "Bucket and an object namespace; slash-terminated, no leading slash.",
+            "type": "string"
+          },
+          "origin": {
+            "description": "Canonical R2 HTTPS origin (no path, port, query or fragment).",
+            "type": "string"
+          },
+          "principal": {
+            "description": "Exact Access workload principal, in the Connection organization.",
+            "type": "string"
+          },
+          "secret_version": {
+            "description": "Pinned same-org SecretVersion containing the R2 signing key pair.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal",
+          "secret_version",
+          "origin",
+          "object_prefix"
+        ],
+        "type": "object"
       },
       "sylphx.connections.v1.UpdateConnectionProviderRequest": {
         "description": "The request of UpdateConnectionProvider.",
@@ -56961,6 +57052,127 @@
         },
         "x-sylphx-method": "connections.connections.import_oauth2_credentials",
         "x-sylphx-permission": "connections:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/connections/{connection}:signS3Request": {
+      "post": {
+        "description": "Signs one exact S3 object request under a committed Connection and workload grant.",
+        "operationId": "broker_connections_sign_s3_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "if_none_match": {
+                    "description": "'*' for PUT; unset for GET.",
+                    "type": "string"
+                  },
+                  "method": {
+                    "description": "GET or PUT only.",
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "description": "Path-style bucket and key, without the initial slash.",
+                    "type": "string"
+                  },
+                  "origin": {
+                    "description": "Exact canonical HTTPS origin from the Connection.",
+                    "type": "string"
+                  },
+                  "payload_sha256": {
+                    "description": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "method",
+                  "origin",
+                  "object_key",
+                  "payload_sha256"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.SignS3RequestResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Signs one exact S3 object request under a committed Connection and workload grant.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "UNAVAILABLE",
+          "RATE_LIMITED"
+        ],
+        "x-sylphx-method": "broker.connections.sign_s3_request",
+        "x-sylphx-permission": "broker:s3:sign",
         "x-sylphx-stage": "preview"
       }
     },

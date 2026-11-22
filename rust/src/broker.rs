@@ -472,6 +472,81 @@ pub struct SendCarrierSmsResponse {
     pub receipt: String,
 }
 
+/// One object operation. No query parameters or arbitrary signed headers.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SignS3RequestRequest {
+    /// Same-org S3 signing Connection.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// GET or PUT only.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub method: String,
+    /// Exact canonical HTTPS origin from the Connection.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub origin: String,
+    /// Path-style bucket and key, without the initial slash.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "objectKey"
+    )]
+    pub object_key: String,
+    /// '*' for PUT; unset for GET.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ifNoneMatch"
+    )]
+    pub if_none_match: String,
+    /// Lowercase hex SHA-256; for GET, the digest of an empty body.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payloadSha256"
+    )]
+    pub payload_sha256: String,
+}
+
+/// Send this proof only with the exact signed request. Response is not cached.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SignS3RequestResponse {
+    /// SigV4 Authorization header.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub authorization: String,
+    /// x-amz-date header.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "amzDate"
+    )]
+    pub amz_date: String,
+    /// x-amz-content-sha256 header.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payloadSha256"
+    )]
+    pub payload_sha256: String,
+}
+
 /// The request of SignVapidAssertion.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1164,6 +1239,32 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
     ) -> Result<SignVapidAssertionResponse, crate::runtime::Error> {
         let path = format!(
             "/v1/{}:signVapidAssertion",
+            crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Signs one exact S3 object request under a committed Connection and workload grant.
+    ///
+    /// `POST /v1/{name=orgs/*/connections/*}:signS3Request` · permission `broker:s3:sign` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`, `RATE_LIMITED`.
+    pub async fn sign_s3_request(
+        &self,
+        request: SignS3RequestRequest,
+    ) -> Result<SignS3RequestResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:signS3Request",
             crate::runtime::path_param(&request.name, "orgs/*/connections/*", "name")?
         );
         let query = crate::runtime::Query::default();

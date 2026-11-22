@@ -15814,6 +15814,35 @@
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
                   },
+                  "s3_signing": {
+                    "additionalProperties": false,
+                    "description": "R2 object signing, mutually exclusive with other Connection kinds.",
+                    "properties": {
+                      "object_prefix": {
+                        "description": "Bucket and an object namespace; slash-terminated, no leading slash.",
+                        "type": "string"
+                      },
+                      "origin": {
+                        "description": "Canonical R2 HTTPS origin (no path, port, query or fragment).",
+                        "type": "string"
+                      },
+                      "principal": {
+                        "description": "Exact Access workload principal, in the Connection organization.",
+                        "type": "string"
+                      },
+                      "secret_version": {
+                        "description": "Pinned same-org SecretVersion containing the R2 signing key pair.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "principal",
+                      "secret_version",
+                      "origin",
+                      "object_prefix"
+                    ],
+                    "type": "object"
+                  },
                   "web_push": {
                     "additionalProperties": false,
                     "description": "Web Push assertion configuration. Mutually exclusive with provider and\nexternal_id. The Connection kind cannot change after creation.",
@@ -15968,6 +15997,35 @@
                     "type": "string",
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "connections.sylphx.com/ConnectionProvider"
+                  },
+                  "s3_signing": {
+                    "additionalProperties": false,
+                    "description": "R2 object signing, mutually exclusive with other Connection kinds.",
+                    "properties": {
+                      "object_prefix": {
+                        "description": "Bucket and an object namespace; slash-terminated, no leading slash.",
+                        "type": "string"
+                      },
+                      "origin": {
+                        "description": "Canonical R2 HTTPS origin (no path, port, query or fragment).",
+                        "type": "string"
+                      },
+                      "principal": {
+                        "description": "Exact Access workload principal, in the Connection organization.",
+                        "type": "string"
+                      },
+                      "secret_version": {
+                        "description": "Pinned same-org SecretVersion containing the R2 signing key pair.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "principal",
+                      "secret_version",
+                      "origin",
+                      "object_prefix"
+                    ],
+                    "type": "object"
                   },
                   "web_push": {
                     "additionalProperties": false,

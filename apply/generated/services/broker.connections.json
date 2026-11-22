@@ -8,6 +8,13 @@
           },
           "id": "broker.connections.sign_vapid_assertion",
           "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "broker.connections.sign_s3_request",
+          "kind": "custom"
         }
       ],
       "resource_type": "connections.sylphx.com/Connection"

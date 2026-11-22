@@ -421,6 +421,9 @@ pub struct ConnectionSpec {
     /// `github_user`. Requires an `oauth2` ConnectionProvider.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oauth2: Option<Oauth2ConnectionConfig>,
+    /// R2 object signing, mutually exclusive with other Connection kinds.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "s3Signing")]
+    pub s3_signing: Option<S3SigningConfig>,
 }
 
 /// ConnectionStatus is the observed state of a Connection, as last read back
@@ -1242,6 +1245,40 @@ pub struct ProviderSharingGrant {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "externalIds")]
     pub external_ids: Vec<String>,
+}
+
+/// S3SigningConfig admits one workload and one canonical path-style key prefix.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct S3SigningConfig {
+    /// Exact Access workload principal, in the Connection organization.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub principal: String,
+    /// Pinned same-org SecretVersion containing the R2 signing key pair.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "secretVersion"
+    )]
+    pub secret_version: String,
+    /// Canonical R2 HTTPS origin (no path, port, query or fragment).
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub origin: String,
+    /// Bucket and an object namespace; slash-terminated, no leading slash.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "objectPrefix"
+    )]
+    pub object_prefix: String,
 }
 
 /// The request of UpdateConnectionProvider.

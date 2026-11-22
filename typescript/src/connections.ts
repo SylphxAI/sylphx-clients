@@ -203,6 +203,8 @@ export interface ConnectionSpec {
 	 * `github_user`. Requires an `oauth2` ConnectionProvider.
 	 */
 	oauth2?: Oauth2ConnectionConfig
+	/** R2 object signing, mutually exclusive with other Connection kinds. */
+	s3Signing?: S3SigningConfig
 }
 
 /**
@@ -560,6 +562,18 @@ export interface ProviderSharingGrant {
 	externalIds?: string[]
 }
 
+/** S3SigningConfig admits one workload and one canonical path-style key prefix. */
+export interface S3SigningConfig {
+	/** Exact Access workload principal, in the Connection organization. */
+	principal?: string
+	/** Pinned same-org SecretVersion containing the R2 signing key pair. */
+	secretVersion?: string
+	/** Canonical R2 HTTPS origin (no path, port, query or fragment). */
+	origin?: string
+	/** Bucket and an object namespace; slash-terminated, no leading slash. */
+	objectPrefix?: string
+}
+
 /** The request of UpdateConnectionProvider. */
 export interface UpdateConnectionProviderRequest {
 	/** The connection provider to update; `name` identifies it. */
@@ -668,6 +682,7 @@ runtime.registerSchemas({
 		['webPush', 'web_push', 'sylphx.connections.v1.WebPushConfig'],
 		['githubUser', 'github_user', 'sylphx.connections.v1.GitHubUserConfig'],
 		['oauth2', 'oauth2', 'sylphx.connections.v1.Oauth2ConnectionConfig'],
+		['s3Signing', 's3_signing', 'sylphx.connections.v1.S3SigningConfig'],
 	],
 	'sylphx.connections.v1.ConnectionStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -779,6 +794,10 @@ runtime.registerSchemas({
 	],
 	'sylphx.connections.v1.ProviderSharingGrant': [
 		['externalIds', 'external_ids'],
+	],
+	'sylphx.connections.v1.S3SigningConfig': [
+		['secretVersion', 'secret_version'],
+		['objectPrefix', 'object_prefix'],
 	],
 	'sylphx.connections.v1.UpdateConnectionProviderRequest': [
 		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],

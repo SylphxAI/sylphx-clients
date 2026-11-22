@@ -7777,6 +7777,56 @@
               },
               "summary": "Signs an RFC 8292 assertion using a committed same-org Web Push Connection. The stored contact supplies the subject; an ordinary caller must hold broker:exchange on this exact Connection and satisfy its TrustPolicy.",
               "verb": "sign-vapid-assertion"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "method",
+                  "flag": "--method",
+                  "required": true,
+                  "summary": "GET or PUT only.",
+                  "type": "string"
+                },
+                {
+                  "field": "origin",
+                  "flag": "--origin",
+                  "required": true,
+                  "summary": "Exact canonical HTTPS origin from the Connection.",
+                  "type": "string"
+                },
+                {
+                  "field": "object_key",
+                  "flag": "--object-key",
+                  "required": true,
+                  "summary": "Path-style bucket and key, without the initial slash.",
+                  "type": "string"
+                },
+                {
+                  "field": "if_none_match",
+                  "flag": "--if-none-match",
+                  "summary": "'*' for PUT; unset for GET.",
+                  "type": "string"
+                },
+                {
+                  "field": "payload_sha256",
+                  "flag": "--payload-sha256",
+                  "required": true,
+                  "summary": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/connections/*}:signS3Request",
+              "method": "broker.connections.sign_s3_request",
+              "permission": "broker:s3:sign",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/connections/{connection}"
+              },
+              "summary": "Signs one exact S3 object request under a committed Connection and workload grant.",
+              "verb": "sign-s3-request"
             }
           ],
           "noun": "connections",
@@ -10441,6 +10491,30 @@
                   "type": "key=value"
                 },
                 {
+                  "field": "connection.spec.s3_signing.principal",
+                  "flag": "--spec.s3-signing.principal",
+                  "summary": "Exact Access workload principal, in the Connection organization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.secret_version",
+                  "flag": "--spec.s3-signing.secret-version",
+                  "summary": "Pinned same-org SecretVersion containing the R2 signing key pair.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.origin",
+                  "flag": "--spec.s3-signing.origin",
+                  "summary": "Canonical R2 HTTPS origin (no path, port, query or fragment).",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.object_prefix",
+                  "flag": "--spec.s3-signing.object-prefix",
+                  "summary": "Bucket and an object namespace; slash-terminated, no leading slash.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10523,6 +10597,30 @@
                   "repeated": true,
                   "summary": "Non-secret provider metadata captured from callbacks or supplied by the caller. Secret-bearing keys are rejected.",
                   "type": "key=value"
+                },
+                {
+                  "field": "connection.spec.s3_signing.principal",
+                  "flag": "--spec.s3-signing.principal",
+                  "summary": "Exact Access workload principal, in the Connection organization.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.secret_version",
+                  "flag": "--spec.s3-signing.secret-version",
+                  "summary": "Pinned same-org SecretVersion containing the R2 signing key pair.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.origin",
+                  "flag": "--spec.s3-signing.origin",
+                  "summary": "Canonical R2 HTTPS origin (no path, port, query or fragment).",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.object_prefix",
+                  "flag": "--spec.s3-signing.object-prefix",
+                  "summary": "Bucket and an object namespace; slash-terminated, no leading slash.",
+                  "type": "string"
                 },
                 {
                   "field": "validate_only",

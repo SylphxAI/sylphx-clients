@@ -1923,6 +1923,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'billing:read',
 	},
+	'broker.connections.sign_s3_request': {
+		id: 'broker.connections.sign_s3_request',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/connections/*}:signS3Request',
+		pathParams: [['name', 'orgs/*/connections/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'read',
+		permission: 'broker:s3:sign',
+	},
 	'broker.connections.sign_vapid_assertion': {
 		id: 'broker.connections.sign_vapid_assertion',
 		httpMethod: 'POST',

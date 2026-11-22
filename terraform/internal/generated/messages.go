@@ -301,6 +301,7 @@ func connectionsConnectionSpec() []def.Field {
 		{Name: "web_push", Kind: def.Message, Msg: connectionsWebPushConfig, Doc: "Web Push assertion configuration. Mutually exclusive with provider and external_id. The Connection kind cannot change after creation."},
 		{Name: "github_user", Kind: def.Message, Msg: connectionsGitHubUserConfig, Doc: "GitHub user authorization. Mutually exclusive with all other kinds. Device authorization keeps credentials sealed inside Broker, bound to the Connection name and version, for user actions only."},
 		{Name: "oauth2", Kind: def.Message, Msg: connectionsOauth2ConnectionConfig, Doc: "Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and `github_user`. Requires an `oauth2` ConnectionProvider."},
+		{Name: "s3_signing", Kind: def.Message, Msg: connectionsS3SigningConfig, Doc: "R2 object signing, mutually exclusive with other Connection kinds."},
 	}
 }
 
@@ -409,6 +410,16 @@ func connectionsProviderSharingGrant() []def.Field {
 	return []def.Field{
 		{Name: "organization", Kind: def.String, Flags: def.Required, Doc: "The recipient, `orgs/{org}`; wildcards are not accepted."},
 		{Name: "external_ids", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "Exact provider installation ids. For GitHub these are canonical positive decimal installation ids. An empty list grants nothing."},
+	}
+}
+
+// connectionsS3SigningConfig is `sylphx.connections.v1.S3SigningConfig`.
+func connectionsS3SigningConfig() []def.Field {
+	return []def.Field{
+		{Name: "principal", Kind: def.String, Flags: def.Required, Doc: "Exact Access workload principal, in the Connection organization."},
+		{Name: "secret_version", Kind: def.String, Flags: def.Required, Doc: "Pinned same-org SecretVersion containing the R2 signing key pair."},
+		{Name: "origin", Kind: def.String, Flags: def.Required, Doc: "Canonical R2 HTTPS origin (no path, port, query or fragment)."},
+		{Name: "object_prefix", Kind: def.String, Flags: def.Required, Doc: "Bucket and an object namespace; slash-terminated, no leading slash."},
 	}
 }
 

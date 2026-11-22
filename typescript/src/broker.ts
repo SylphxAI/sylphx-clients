@@ -256,6 +256,32 @@ export interface SendCarrierSmsResponse {
 	receipt?: string
 }
 
+/** One object operation. No query parameters or arbitrary signed headers. */
+export interface SignS3RequestRequest {
+	/** Same-org S3 signing Connection. */
+	name: string
+	/** GET or PUT only. */
+	method: string
+	/** Exact canonical HTTPS origin from the Connection. */
+	origin: string
+	/** Path-style bucket and key, without the initial slash. */
+	objectKey: string
+	/** '*' for PUT; unset for GET. */
+	ifNoneMatch?: string
+	/** Lowercase hex SHA-256; for GET, the digest of an empty body. */
+	payloadSha256: string
+}
+
+/** Send this proof only with the exact signed request. Response is not cached. */
+export interface SignS3RequestResponse {
+	/** SigV4 Authorization header. */
+	readonly authorization?: string
+	/** x-amz-date header. */
+	readonly amzDate?: string
+	/** x-amz-content-sha256 header. */
+	readonly payloadSha256?: string
+}
+
 /** The request of SignVapidAssertion. */
 export interface SignVapidAssertionRequest {
 	/** Exact same-org Web Push Connection. */
@@ -488,6 +514,15 @@ runtime.registerSchemas({
 		['recipientNumber', 'recipient_number'],
 	],
 	'sylphx.broker.v1.SendCarrierSmsResponse': [],
+	'sylphx.broker.v1.SignS3RequestRequest': [
+		['objectKey', 'object_key'],
+		['ifNoneMatch', 'if_none_match'],
+		['payloadSha256', 'payload_sha256'],
+	],
+	'sylphx.broker.v1.SignS3RequestResponse': [
+		['amzDate', 'amz_date'],
+		['payloadSha256', 'payload_sha256'],
+	],
 	'sylphx.broker.v1.SignVapidAssertionRequest': [],
 	'sylphx.broker.v1.SignVapidAssertionResponse': [
 		['applicationServerKey', 'application_server_key'],
@@ -749,6 +784,24 @@ export class ConnectionsCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.SignVapidAssertionRequest',
 			responseType: 'sylphx.broker.v1.SignVapidAssertionResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Signs one exact S3 object request under a committed Connection and workload grant.
+	 *
+	 * `POST /v1/{name=orgs/*\/connections/*}:signS3Request` · permission `broker:s3:sign` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`, `RATE_LIMITED`.
+	 */
+	async signS3Request(request: SignS3RequestRequest): Promise<SignS3RequestResponse> {
+		return this.client.call<SignS3RequestResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/connections/*', 'name')}:signS3Request`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.SignS3RequestRequest',
+			responseType: 'sylphx.broker.v1.SignS3RequestResponse',
 			mutation: true,
 		})
 	}
