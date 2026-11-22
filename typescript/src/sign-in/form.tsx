@@ -39,7 +39,7 @@ function savePreference(key: string, value: string): void {
 
 /** The one form, shared by embedded pages and the Account Portal. No SDK context required. */
 export function ContinueSignInForm(options: ContinueSignInOptions) {
-	const { productName, endpoints, next, termsUrl, privacyUrl } = options
+	const { productName, endpoints, next, termsUrl, privacyUrl, emailOtpEnabled = true } = options
 	/* Only documents the product set are linked; an unset one is never filled in. */
 	const documents = [
 		{ href: termsUrl, label: 'Terms' },
@@ -177,6 +177,17 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 		return () => abort.abort()
 	}, [step, endpoints.passkeyBegin, endpoints.passkeyFinish])
 
+	function showPassword() {
+		if (!mounted.current) return
+		setHasPassword(true)
+		setHasCodeChallenge(false)
+		setFlow('')
+		setCode('')
+		setPassword('')
+		setMfa(null)
+		setFactorCode('')
+		setStep('password')
+	}
 	async function begin(resend = false) {
 		await run(async () => {
 			let answer = await signInRequest<ContinueChallenge>(endpoints.begin, {
@@ -186,6 +197,10 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 			})
 			let passwordAvailable = hasPassword
 			if (answer.step === 'password') {
+				if (!emailOtpEnabled) {
+					showPassword()
+					return
+				}
 				passwordAvailable = true
 				try {
 					answer = await signInRequest<ContinueChallenge>(endpoints.begin, {
@@ -197,16 +212,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 				} catch (problem) {
 					// The first answer already established the existing password route.
 					// A refused email send must not strand that working continuation.
-					if (mounted.current) {
-						setHasPassword(true)
-						setHasCodeChallenge(false)
-						setFlow('')
-						setCode('')
-						setPassword('')
-						setMfa(null)
-						setFactorCode('')
-						setStep('password')
-					}
+					showPassword()
 					if (problem instanceof SignInRequestError && problem.retryAfter) throw problem
 					throw new Error('A code could not be sent. Use your password to continue.')
 				}
@@ -507,7 +513,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 									Use password instead
 								</button>
 							)}
-							{step === 'password' && (
+							{step === 'password' && emailOtpEnabled && (
 								<button
 									className="sx-signin__link"
 									disabled={busy || paused}

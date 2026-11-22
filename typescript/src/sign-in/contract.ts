@@ -7,6 +7,8 @@ export interface ContinueSignInOptions {
 	/** Linked in the consent line when set; omitted or `null` shows no link. */
 	termsUrl?: string | null
 	privacyUrl?: string | null
+	/** Explicit false skips email-code fallback. Unset preserves adapter defaults. */
+	emailOtpEnabled?: boolean
 	providers?: readonly { id: string; name: string; href: string }[]
 	endpoints: {
 		begin: string
