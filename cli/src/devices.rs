@@ -19,6 +19,7 @@ use sylphx::Client;
 use crate::{names, Failure};
 
 mod diagnostics;
+mod logs;
 mod scenario;
 
 /// A device lease is a `linux-l` Sandboxes lease of kind ANDROID (§3, §4.1).
@@ -252,8 +253,8 @@ struct Report {
     capture: Option<Value>,
     expected_stopped: bool,
     platform_interruption: Option<diagnostics::Interruption>,
-    logcat_truncated: bool,
-    crash_log_truncated: bool,
+    logcat_verified: bool,
+    crash_log_verified: bool,
 }
 
 impl Report {
@@ -379,14 +380,6 @@ impl Run<'_> {
             eprintln!("device: {}", self.r.install_error);
         } else {
             eprintln!("device: installed {}", self.r.package);
-            // The launch onwards is what the collected log is about.
-            let cleared = self.exec(&name, &["logcat", "-c"]).await?;
-            if cleared.exit_code != 0 {
-                return Err(format!(
-                    "clearing the launch log failed: {}",
-                    tail(&cleared)
-                ));
-            }
             if self.o.scenario.is_some() {
                 // Keep diagnostics even when an input guard or scenario step
                 // fails; the original error still controls the verdict.
@@ -533,6 +526,21 @@ impl Run<'_> {
             ],
             None => vec!["monkey", "-p", package.as_str(), "-c", LAUNCH_CATEGORY, "1"],
         };
+        // Only clear before the first launch: a later scenario launch must
+        // not erase evidence from earlier steps.
+        if !self.r.launched {
+            match self
+                .exec(lease, &["logcat", "-b", "main,system,crash", "-c"])
+                .await
+            {
+                Ok(o) if o.exit_code == 0 && !o.truncated => {}
+                Ok(o) => eprintln!(
+                    "warning: clearing the Android log before launch failed (exit {})",
+                    o.exit_code
+                ),
+                Err(e) => eprintln!("warning: clearing the Android log before launch failed: {e}"),
+            }
+        }
         match self.exec(lease, &argv).await {
             Ok(o) if o.exit_code == 0 => {
                 self.r.launched = true;
@@ -615,40 +623,39 @@ impl Run<'_> {
                 .await?
                 .exit_code
                 != 0;
-        let logcat = self.exec(lease, &["logcat", "-d"]).await?;
-        let crash_log = self.exec(lease, &["logcat", "-b", "crash", "-d"]).await?;
-        self.r.logcat_truncated = logcat.truncated;
-        self.r.crash_log_truncated = crash_log.truncated;
-        if logcat.truncated || crash_log.truncated {
-            eprintln!("device: the API truncated collected logs; result.json records which files are partial");
-        }
-        write(&self.o.out.join("logcat.txt"), logcat.stdout.as_bytes())?;
-        write(&self.o.out.join("crash.txt"), crash_log.stdout.as_bytes())?;
+        let logcat = self.save_log(lease, "logcat.txt", &[]).await;
+        let crash_log = self.save_log(lease, "crash.txt", &["-b", "crash"]).await;
+        self.r.logcat_verified = logcat.is_ok();
+        self.r.crash_log_verified = crash_log.is_ok();
         let mut diagnostics = Map::new();
-        let logcat_tail = if logcat.truncated {
-            self.diagnostic(
-                lease,
-                "logcat-tail.txt",
-                &["sh", "-c", "logcat -d | tail -c 786432"],
-                &mut diagnostics,
-            )
-            .await?
-        } else {
-            String::new()
+        let logcat_evidence = match &logcat {
+            Ok(bytes) => String::from_utf8_lossy(bytes).into_owned(),
+            Err(_) => {
+                self.diagnostic(
+                    lease,
+                    "logcat-tail.txt",
+                    &["sh", "-c", "set -o pipefail; logcat -d | tail -c 524288"],
+                    &mut diagnostics,
+                )
+                .await?
+            }
         };
-        let crash_tail = if crash_log.truncated {
-            self.diagnostic(
-                lease,
-                "crash-tail.txt",
-                &["sh", "-c", "logcat -b crash -d | tail -c 786432"],
-                &mut diagnostics,
-            )
-            .await?
-        } else {
-            String::new()
+        let crash_evidence = match &crash_log {
+            Ok(bytes) => String::from_utf8_lossy(bytes).into_owned(),
+            Err(_) => {
+                self.diagnostic(
+                    lease,
+                    "crash-tail.txt",
+                    &[
+                        "sh",
+                        "-c",
+                        "set -o pipefail; logcat -b crash -d | tail -c 524288",
+                    ],
+                    &mut diagnostics,
+                )
+                .await?
+            }
         };
-        let logcat_evidence = format!("{}\n{logcat_tail}", logcat.stdout);
-        let crash_evidence = format!("{}\n{crash_tail}", crash_log.stdout);
         self.r
             .diagnose(&package, process_missing, &logcat_evidence, &crash_evidence);
         let unfinished_capture = self.r.capture.as_ref().is_some_and(|capture| {
@@ -686,11 +693,24 @@ impl Run<'_> {
                     .as_bytes(),
             )?;
         }
+        let log_error = match (logcat, crash_log) {
+            (Ok(_), Ok(_)) => None,
+            (Err(e), Ok(_)) => Some(format!("logcat collection failed: {e}")),
+            (Ok(_), Err(e)) => Some(format!("crash log collection failed: {e}")),
+            (Err(logcat), Err(crash)) => Some(format!(
+                "logcat collection failed: {logcat}; crash log collection failed: {crash}"
+            )),
+        };
+        if let Some(error) = &log_error {
+            eprintln!("device: {error}");
+        }
         // A missing/ambiguous window must not discard the logs and ANR data.
-        let png = self.screenshot(lease).await?;
-        self.save("screenshot-final.png", &png)?;
+        let screenshot = self
+            .screenshot(lease)
+            .await
+            .and_then(|png| self.save("screenshot-final.png", &png));
         self.timing("collect", t);
-        Ok(())
+        log_error.map_or(screenshot, Err)
     }
 
     /// Best-effort diagnostics use the existing lease and do not hide the
@@ -728,20 +748,26 @@ impl Run<'_> {
     /// `:exec` on an ANDROID lease runs the argv on the device (§4.1). The
     /// wire carries the output as base64 bytes; this answers it as text.
     async fn exec(&self, lease: &str, argv: &[&str]) -> Result<Exec, String> {
+        self.exec_wire(lease, argv).await.map(Exec::from)
+    }
+
+    async fn exec_wire(
+        &self,
+        lease: &str,
+        argv: &[&str],
+    ) -> Result<sbx::ExecLeaseResponse, String> {
         let mut req = sbx::ExecLeaseRequest::default();
         req.name = lease.to_string();
         req.command = argv.iter().map(|a| a.to_string()).collect();
         let mut key = [0u8; 16];
         getrandom::getrandom(&mut key).map_err(|e| format!("no execution key source: {e}"))?;
         req.idempotency_key = key.iter().map(|b| format!("{b:02x}")).collect();
-        let r = self
-            .client
+        self.client
             .sandboxes()
             .leases()
             .exec(req)
             .await
-            .map_err(|e| format!("`{}` failed: {}", argv[0], why(&e)))?;
-        Ok(r.into())
+            .map_err(|e| format!("`{}` failed: {}", argv[0], why(&e)))
     }
 
     /// `:act` with no actions and a screenshot set only takes a screenshot.
@@ -1093,7 +1119,7 @@ fn report_json(r: &Report) -> Value {
             "error_log": e.error,
             "kill_log": e.killed,
         })),
-        "log_truncation": {"logcat": r.logcat_truncated, "crash": r.crash_log_truncated},
+        "log_truncation": {"logcat": !r.logcat_verified, "crash": !r.crash_log_verified},
         "screenshots": r.screenshots,
         "timings_ms": Value::Object(timings),
         "error": r.error,
@@ -1518,7 +1544,6 @@ mod tests {
         let mut report = Report {
             installed: true,
             launched: true,
-            logcat_truncated: true,
             ..Default::default()
         };
         report.diagnose("example.game", true, &interrupted_log(), "");

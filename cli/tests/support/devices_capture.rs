@@ -1,12 +1,41 @@
 //! Native capture transport checks reuse the CLI's ordinary fake public API.
 use super::*;
-use base64::Engine;
+use base64::{engine::general_purpose::STANDARD, Engine};
+use sha2::{Digest, Sha256};
 
-fn exec_reply(stdout: &str) -> (u16, Value) {
+const MAIN_LOG: &str = "/data/local/tmp/sylphx-log.aaaaaaaaaa";
+const CRASH_LOG: &str = "/data/local/tmp/sylphx-log.bbbbbbbbbb";
+
+fn exec_bytes(stdout: &[u8], truncated: bool) -> (u16, Value) {
+    // Exercise both the raw stream ceiling and base64 wire overhead.
+    let stdout = STANDARD.encode(stdout);
+    assert!(stdout.len() < 1024 * 1024);
     (
         200,
-        json!({"exit_code":0,"stdout":base64::engine::general_purpose::STANDARD.encode(stdout)}),
+        json!({"exit_code":0,"stdout":stdout,"truncated":truncated}),
     )
+}
+
+fn snapshot_metadata(path: &str, bytes: &[u8]) -> (u16, Value) {
+    exec_reply(&format!(
+        "{path} {} {:x}
+",
+        bytes.len(),
+        Sha256::digest(bytes)
+    ))
+}
+
+fn small_snapshot(path: &str, contents: &str) -> Vec<(u16, Value)> {
+    let mut replies = vec![snapshot_metadata(path, contents.as_bytes())];
+    if !contents.is_empty() {
+        replies.push(exec_reply(contents));
+    }
+    replies.push(exec_reply("")); // rm
+    replies
+}
+
+fn exec_reply(stdout: &str) -> (u16, Value) {
+    exec_bytes(stdout.as_bytes(), false)
 }
 
 fn screenshot(width: u32, height: u32) -> (u16, Value) {
@@ -40,7 +69,6 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
             ),
             (200, json!({})), // APK upload
             (200, json!({"package_name":"com.example.game"})),
-            exec_reply(""), // clear logcat
             exec_reply(""), // native wm size
             exec_reply(""), // native wm density
             exec_reply("Physical size: 1080x2400\nOverride size: 2560x1600\n"),
@@ -56,6 +84,11 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
             ]);
         }
         replies.extend([
+            if failure == "no-play-store" {
+                (200, json!({"exit_code":1})) // unsupported clear is advisory
+            } else {
+                exec_reply("")
+            },
             exec_reply("Events injected: 1"), // launch
             exec_reply("mResumedActivity: ActivityRecord{a u0 com.example.game/.Main t1}"),
             exec_reply(if failure == "foreground" {
@@ -80,19 +113,12 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
             ]);
         }
         replies.push(exec_reply("1234")); // still running
-        if failure == "foreground" || failure == "none" {
-            replies.push((
-                200,
-                json!({"exit_code":0,"truncated":true,
-                "stdout":base64::engine::general_purpose::STANDARD.encode("early boot noise")}),
-            ));
+        if failure == "foreground" {
+            replies.push(exec_bytes(b"partial metadata", true));
         } else {
-            replies.push(exec_reply("quiet"));
+            replies.extend(small_snapshot(MAIN_LOG, "quiet"));
         }
-        replies.push(exec_reply("")); // crash buffer
-        if failure == "none" {
-            replies.push(exec_reply("quiet")); // capped successful capture needs only its log tail
-        }
+        replies.extend(small_snapshot(CRASH_LOG, ""));
         if failure == "foreground" {
             replies.extend([
                 exec_reply("ANR in com.example.game\nInput dispatching timed out"),
@@ -169,6 +195,21 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
             .map(|row| serde_json::from_str(&row.body).unwrap())
             .map(|body: Value| body["command"].clone())
             .collect();
+        let launch = commands
+            .iter()
+            .position(|argv| argv[0] == "monkey")
+            .unwrap();
+        assert_eq!(
+            commands[launch - 1],
+            json!(["logcat", "-b", "main,system,crash", "-c"])
+        );
+        assert_eq!(
+            commands.iter().filter(|argv| argv[0] == "logcat").count(),
+            1
+        );
+        if failure == "no-play-store" {
+            assert!(stderr.contains("warning: clearing the Android log before launch failed"));
+        }
         let taps: Vec<_> = commands
             .iter()
             .filter(|command| command[0] == "input")
@@ -188,7 +229,7 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
             assert!(sb.dir.join("captures/lobby.png").is_file());
             if failure == "none" {
                 assert_eq!(
-                    std::fs::read_to_string(sb.dir.join("captures/logcat-tail.txt")).unwrap(),
+                    std::fs::read_to_string(sb.dir.join("captures/logcat.txt")).unwrap(),
                     "quiet"
                 );
                 assert!(!sb.dir.join("captures/last-anr.txt").exists());
@@ -211,10 +252,7 @@ async fn device_capture_uses_one_public_lease_and_guards_actual_png_coordinates(
             if failure == "foreground" {
                 assert_eq!(result["log_truncation"]["logcat"], true);
                 assert_eq!(result["crashed"], true, "late ANR evidence is retained");
-                assert_eq!(
-                    std::fs::read_to_string(sb.dir.join("captures/logcat.txt")).unwrap(),
-                    "early boot noise"
-                );
+                assert!(!sb.dir.join("captures/logcat.txt").exists());
                 assert!(
                     std::fs::read_to_string(sb.dir.join("captures/logcat-tail.txt"))
                         .unwrap()
@@ -301,4 +339,144 @@ async fn invalid_device_scenario_fails_before_a_lease_request() {
         std::fs::read(sb.dir.join("existing/first.png")).unwrap(),
         b"prior evidence"
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn device_log_snapshot_is_lossless_or_fails_closed() {
+    const BLOCK: usize = 512 * 1024;
+    let logcat: Vec<u8> = (0..(5 * BLOCK + 97))
+        .map(|i| ((i ^ (i >> 8) ^ (i >> 17)) % 256) as u8)
+        .collect();
+    let crash = "separate crash buffer\n";
+    for (case, error, expected_reads) in [
+        ("complete", "", 6),
+        ("wrong-hash", "SHA-256 mismatch", 6),
+        ("truncated", "the API truncated", 2),
+        ("short", "incorrect log chunk length", 2),
+        ("failed", "did not succeed", 2),
+        ("oversize", "32 MiB limit", 0),
+    ] {
+        let sb = Sandbox::new(&format!("device-logs-{case}"));
+        std::fs::write(sb.dir.join("app.apk"), b"APK fixture").unwrap();
+        let lease = format!("{ENV}/leases/logs");
+        let mut replies = vec![
+            (
+                200,
+                json!({"name":lease,"spec":{"device":{"os_version":"14"}},"status":{"state":"ready"}}),
+            ),
+            (200, json!({})), // APK upload
+            (200, json!({"package_name":"com.example.app"})),
+            exec_reply(""), // clear before launch
+            exec_reply("Events injected: 1"),
+            exec_reply("1234"), // pidof at collection
+            if case == "oversize" {
+                exec_reply(&format!("{MAIN_LOG} {} {:064x}\n", 32 * 1024 * 1024 + 1, 0))
+            } else {
+                snapshot_metadata(MAIN_LOG, &logcat)
+            },
+        ];
+        for (index, chunk) in logcat.chunks(BLOCK).take(expected_reads).enumerate() {
+            replies.push(match (case, index) {
+                ("wrong-hash", 1) => {
+                    let mut corrupt = chunk.to_vec();
+                    corrupt[0] ^= 1;
+                    exec_bytes(&corrupt, false)
+                }
+                // Even a correctly sized reply cannot pass a truncation flag.
+                ("truncated", 1) => exec_bytes(chunk, true),
+                ("short", 1) => exec_bytes(&chunk[..chunk.len() - 1], false),
+                ("failed", 1) => (200, json!({"exit_code":1})),
+                _ => exec_bytes(chunk, false),
+            });
+        }
+        replies.push(exec_reply("")); // rm main snapshot, including on failure
+        replies.extend(small_snapshot(CRASH_LOG, crash));
+        if !error.is_empty() {
+            replies.push(exec_reply("diagnostic only"));
+        }
+        replies.extend([
+            screenshot(1080, 2400),
+            (200, json!({"name":lease,"status":{"state":"ending"}})),
+        ]);
+        let (url, log) = serve(replies).await;
+        let out = run(
+            &sb,
+            &url,
+            &[
+                "devices",
+                "run",
+                "--app",
+                "app.apk",
+                "--env",
+                ENV,
+                "--wait",
+                "0s",
+                "--screenshot-every",
+                "0s",
+                "--out",
+                "capture",
+                "-o",
+                "json",
+            ],
+        )
+        .await;
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(
+            out.status.code(),
+            Some(if error.is_empty() { 0 } else { 2 }),
+            "{case}: {stderr}"
+        );
+        let capture = sb.dir.join("capture");
+        let result: Value =
+            serde_json::from_slice(&std::fs::read(capture.join("result.json")).unwrap()).unwrap();
+        assert_eq!(
+            result["log_truncation"],
+            json!({"logcat":!error.is_empty(),"crash":false}),
+            "{case}"
+        );
+        if error.is_empty() {
+            assert_eq!(std::fs::read(capture.join("logcat.txt")).unwrap(), logcat);
+        } else {
+            assert!(
+                result["error"].as_str().unwrap().contains(error),
+                "{case}: {result}"
+            );
+            assert!(!capture.join("logcat.txt").exists(), "{case}");
+            assert!(capture.join("logcat-tail.txt").is_file(), "{case}");
+        }
+        assert_eq!(
+            std::fs::read(capture.join("crash.txt")).unwrap(),
+            crash.as_bytes()
+        );
+        let commands: Vec<Value> = log
+            .lock()
+            .iter()
+            .filter(|row| row.line.contains(":exec"))
+            .map(|row| serde_json::from_str::<Value>(&row.body).unwrap()["command"].clone())
+            .collect();
+        assert_eq!(
+            commands[0],
+            json!(["logcat", "-b", "main,system,crash", "-c"])
+        );
+        assert_eq!(commands[1][0], "monkey");
+        let input = format!("if={MAIN_LOG}");
+        let reads: Vec<_> = commands
+            .iter()
+            .filter(|argv| argv[0] == "dd" && argv[1] == input)
+            .cloned()
+            .collect();
+        let expected: Vec<_> = (0..expected_reads)
+            .map(|i| {
+                json!([
+                    "dd",
+                    input,
+                    format!("bs={BLOCK}"),
+                    format!("skip={i}"),
+                    "count=1"
+                ])
+            })
+            .collect();
+        assert_eq!(reads, expected, "{case}");
+        assert!(commands.contains(&json!(["rm", "-f", MAIN_LOG])), "{case}");
+    }
 }
