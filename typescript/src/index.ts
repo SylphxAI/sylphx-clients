@@ -46,6 +46,7 @@ export {
 export { METHODS } from './methods.js'
 export * as ids from './ids.js'
 export * from './auth/client.js'
+export * from './wallet-auto-top-up.js'
 
 import { Flags, FlagsHandle, type FlagsHandleOptions } from './flags.js'
 export { FlagsHandle, type FlagsHandleOptions } from './flags.js'
