@@ -76,36 +76,10 @@ pub struct Agent {
     pub status: Option<AgentStatus>,
 }
 
-/// AgentBudget caps what one turn and one session may spend.
+/// AgentBudget retains the former budget envelope for wire compatibility.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
-pub struct AgentBudget {
-    /// Model and tool steps per turn, 1 to 1000; default 100.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "maxStepsPerTurn"
-    )]
-    pub max_steps_per_turn: i32,
-    /// Absolute maximum turn lifetime, 10s to 24h; default 4h from the original
-    /// turn start, including retries. Observed model and tool progress renews
-    /// the turn and sandbox inactivity leases only up to this maximum.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "turnTimeout"
-    )]
-    pub turn_timeout: String,
-    /// Spend per session in micro-USD, models and tools together; 0 is the
-    /// project's spend limit only.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        with = "crate::runtime::int64",
-        alias = "maxSessionSpendMicros"
-    )]
-    pub max_session_spend_micros: i64,
-}
+pub struct AgentBudget {}
 
 /// The owner's pinned model and the cheap inference-only tool/compaction model.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -592,7 +566,7 @@ pub struct AgentSpec {
     /// The policy every tool call passes before it runs.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "toolPolicy")]
     pub tool_policy: Option<ToolPolicy>,
-    /// Spend and time limits per turn and per session.
+    /// Retained for wire compatibility; has no runtime settings.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub budget: Option<AgentBudget>,
     /// Whether end-user session access is intended for this agent. Reserved

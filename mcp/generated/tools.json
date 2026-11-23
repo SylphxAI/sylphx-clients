@@ -2214,26 +2214,8 @@
                 "properties": {
                   "budget": {
                     "additionalProperties": false,
-                    "description": "Spend and time limits per turn and per session.",
-                    "properties": {
-                      "max_session_spend_micros": {
-                        "description": "Spend per session in micro-USD, models and tools together; 0 is the\nproject's spend limit only.",
-                        "format": "int64",
-                        "type": "string"
-                      },
-                      "max_steps_per_turn": {
-                        "description": "Model and tool steps per turn, 1 to 1000; default 100.",
-                        "format": "int32",
-                        "maximum": 1000,
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "turn_timeout": {
-                        "description": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original\nturn start, including retries. Observed model and tool progress renews\nthe turn and sandbox inactivity leases only up to this maximum.",
-                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
-                        "type": "string"
-                      }
-                    },
+                    "description": "Retained for wire compatibility; has no runtime settings.",
+                    "properties": {},
                     "type": "object"
                   },
                   "end_user_access": {
@@ -2735,26 +2717,8 @@
                 "properties": {
                   "budget": {
                     "additionalProperties": false,
-                    "description": "Spend and time limits per turn and per session.",
-                    "properties": {
-                      "max_session_spend_micros": {
-                        "description": "Spend per session in micro-USD, models and tools together; 0 is the\nproject's spend limit only.",
-                        "format": "int64",
-                        "type": "string"
-                      },
-                      "max_steps_per_turn": {
-                        "description": "Model and tool steps per turn, 1 to 1000; default 100.",
-                        "format": "int32",
-                        "maximum": 1000,
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "turn_timeout": {
-                        "description": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original\nturn start, including retries. Observed model and tool progress renews\nthe turn and sandbox inactivity leases only up to this maximum.",
-                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
-                        "type": "string"
-                      }
-                    },
+                    "description": "Retained for wire compatibility; has no runtime settings.",
+                    "properties": {},
                     "type": "object"
                   },
                   "end_user_access": {
@@ -51701,26 +51665,8 @@
                 "properties": {
                   "budget": {
                     "additionalProperties": false,
-                    "description": "Spend and time limits per turn and per session.",
-                    "properties": {
-                      "max_session_spend_micros": {
-                        "description": "Spend per session in micro-USD, models and tools together; 0 is the\nproject's spend limit only.",
-                        "format": "int64",
-                        "type": "string"
-                      },
-                      "max_steps_per_turn": {
-                        "description": "Model and tool steps per turn, 1 to 1000; default 100.",
-                        "format": "int32",
-                        "maximum": 1000,
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "turn_timeout": {
-                        "description": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original\nturn start, including retries. Observed model and tool progress renews\nthe turn and sandbox inactivity leases only up to this maximum.",
-                        "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
-                        "type": "string"
-                      }
-                    },
+                    "description": "Retained for wire compatibility; has no runtime settings.",
+                    "properties": {},
                     "type": "object"
                   },
                   "end_user_access": {

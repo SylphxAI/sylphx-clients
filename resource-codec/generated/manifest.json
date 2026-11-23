@@ -9630,72 +9630,8 @@
       "package": "sylphx.agents.v1"
     },
     {
-      "doc": "AgentBudget caps what one turn and one session may spend.",
-      "fields": [
-        {
-          "behaviors": [
-            "OPTIONAL"
-          ],
-          "cli_flag": "",
-          "doc": "Model and tool steps per turn, 1 to 1000; default 100.",
-          "filterable": false,
-          "name": "max_steps_per_turn",
-          "number": 1,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "scalar",
-            "scalar": "int32"
-          },
-          "validation": {
-            "int32": {
-              "maximum": 1000,
-              "minimum": 0
-            }
-          }
-        },
-        {
-          "behaviors": [
-            "OPTIONAL"
-          ],
-          "cli_flag": "",
-          "doc": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original\nturn start, including retries. Observed model and tool progress renews\nthe turn and sandbox inactivity leases only up to this maximum.",
-          "filterable": false,
-          "name": "turn_timeout",
-          "number": 2,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "well_known",
-            "wkt": "duration"
-          }
-        },
-        {
-          "behaviors": [
-            "OPTIONAL"
-          ],
-          "cli_flag": "",
-          "doc": "Spend per session in micro-USD, models and tools together; 0 is the\nproject's spend limit only.",
-          "filterable": false,
-          "name": "max_session_spend_micros",
-          "number": 3,
-          "oneof": null,
-          "optional": false,
-          "repeated": false,
-          "resource_reference": null,
-          "sensitive": false,
-          "type": {
-            "kind": "scalar",
-            "scalar": "int64"
-          }
-        }
-      ],
+      "doc": "AgentBudget retains the former budget envelope for wire compatibility.",
+      "fields": [],
       "name": "sylphx.agents.v1.AgentBudget",
       "package": "sylphx.agents.v1"
     },
@@ -11044,7 +10980,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Spend and time limits per turn and per session.",
+          "doc": "Retained for wire compatibility; has no runtime settings.",
           "filterable": false,
           "name": "budget",
           "number": 8,

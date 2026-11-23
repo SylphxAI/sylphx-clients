@@ -43,21 +43,8 @@ export interface Agent {
 	readonly status?: AgentStatus
 }
 
-/** AgentBudget caps what one turn and one session may spend. */
+/** AgentBudget retains the former budget envelope for wire compatibility. */
 export interface AgentBudget {
-	/** Model and tool steps per turn, 1 to 1000; default 100. */
-	maxStepsPerTurn?: number
-	/**
-	 * Absolute maximum turn lifetime, 10s to 24h; default 4h from the original
-	 * turn start, including retries. Observed model and tool progress renews
-	 * the turn and sandbox inactivity leases only up to this maximum.
-	 */
-	turnTimeout?: string
-	/**
-	 * Spend per session in micro-USD, models and tools together; 0 is the
-	 * project's spend limit only.
-	 */
-	maxSessionSpendMicros?: string
 }
 
 /** The owner's pinned model and the cheap inference-only tool/compaction model. */
@@ -278,7 +265,7 @@ export interface AgentSpec {
 	memoryStores?: string[]
 	/** The policy every tool call passes before it runs. */
 	toolPolicy?: ToolPolicy
-	/** Spend and time limits per turn and per session. */
+	/** Retained for wire compatibility; has no runtime settings. */
 	budget?: AgentBudget
 	/**
 	 * Whether end-user session access is intended for this agent. Reserved
@@ -2082,11 +2069,7 @@ runtime.registerSchemas({
 		['spec', 'spec', 'sylphx.agents.v1.AgentSpec'],
 		['status', 'status', 'sylphx.agents.v1.AgentStatus'],
 	],
-	'sylphx.agents.v1.AgentBudget': [
-		['maxStepsPerTurn', 'max_steps_per_turn'],
-		['turnTimeout', 'turn_timeout'],
-		['maxSessionSpendMicros', 'max_session_spend_micros'],
-	],
+	'sylphx.agents.v1.AgentBudget': [],
 	'sylphx.agents.v1.AgentModels': [],
 	'sylphx.agents.v1.AgentSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],

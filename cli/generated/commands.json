@@ -1609,24 +1609,6 @@
                   "type": "string"
                 },
                 {
-                  "field": "agent.spec.budget.max_steps_per_turn",
-                  "flag": "--spec.budget.max-steps-per-turn",
-                  "summary": "Model and tool steps per turn, 1 to 1000; default 100.",
-                  "type": "int"
-                },
-                {
-                  "field": "agent.spec.budget.turn_timeout",
-                  "flag": "--spec.budget.turn-timeout",
-                  "summary": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original turn start, including retries. Observed model and tool progress renews the turn and sandbox inactivity leases only up to this maximum.",
-                  "type": "duration"
-                },
-                {
-                  "field": "agent.spec.budget.max_session_spend_micros",
-                  "flag": "--spec.budget.max-session-spend-micros",
-                  "summary": "Spend per session in micro-USD, models and tools together; 0 is the project's spend limit only.",
-                  "type": "int"
-                },
-                {
                   "field": "agent.spec.end_user_access",
                   "flag": "--spec.end-user-access",
                   "summary": "Whether end-user session access is intended for this agent. Reserved until the backend enforces end-user ownership; all contract methods currently require a secret key.",
@@ -1832,24 +1814,6 @@
                   "repeated": true,
                   "summary": "Hosts every network call of the agent's tools may reach, beyond the tools' own endpoints; `*.example.com` matches subdomains. Private and internal addresses are refused whatever this says.",
                   "type": "string"
-                },
-                {
-                  "field": "agent.spec.budget.max_steps_per_turn",
-                  "flag": "--spec.budget.max-steps-per-turn",
-                  "summary": "Model and tool steps per turn, 1 to 1000; default 100.",
-                  "type": "int"
-                },
-                {
-                  "field": "agent.spec.budget.turn_timeout",
-                  "flag": "--spec.budget.turn-timeout",
-                  "summary": "Absolute maximum turn lifetime, 10s to 24h; default 4h from the original turn start, including retries. Observed model and tool progress renews the turn and sandbox inactivity leases only up to this maximum.",
-                  "type": "duration"
-                },
-                {
-                  "field": "agent.spec.budget.max_session_spend_micros",
-                  "flag": "--spec.budget.max-session-spend-micros",
-                  "summary": "Spend per session in micro-USD, models and tools together; 0 is the project's spend limit only.",
-                  "type": "int"
                 },
                 {
                   "field": "agent.spec.end_user_access",
