@@ -11,3 +11,4 @@ pub mod ir;
 pub mod problem;
 pub mod route;
 pub mod schema;
+pub mod service_env_isolation;

@@ -67,11 +67,15 @@ struct Root {
 impl Declarations {
     /// Parses a `sylphx.toml`.
     pub fn from_toml(text: &str) -> Result<Self, ApplyError> {
+        Self::from_value(Self::decode_toml(text)?)
+    }
+
+    /// Decodes the entire TOML document for callers that preflight other sections
+    /// before extracting its Resource declarations with [Self::from_value].
+    pub fn decode_toml(text: &str) -> Result<Value, ApplyError> {
         let value: toml::Value =
             toml::from_str(text).map_err(|e| ApplyError::Parse(format!("sylphx.toml: {e}")))?;
-        let json = serde_json::to_value(value)
-            .map_err(|e| ApplyError::Parse(format!("sylphx.toml: {e}")))?;
-        Self::from_value(json)
+        serde_json::to_value(value).map_err(|e| ApplyError::Parse(format!("sylphx.toml: {e}")))
     }
 
     /// Parses the JSON form: `{"resource": [...], "removed": [...]}`.

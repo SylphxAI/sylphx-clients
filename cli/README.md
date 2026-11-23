@@ -103,8 +103,11 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   updates, and wildcard masks retain the full required-field checks.
 - `sylphx apply` reads `sylphx.toml` (or `--manifest PATH`, including a Release's
   `declarations.json`) and uses the shared Resource planner and writer.
-  `--offline` checks without a key or network; `--dry-run` plans without
-  writing; `-o json` prints the Resource actions and unsettled names.
+  `--offline` checks Resource declarations and, for TOML manifests, service
+  `env_isolation` without a key or network. This is not full deployment
+  validation. JSON inputs are Resource declarations only. `--dry-run` plans
+  Resource changes without writing; `-o json` prints the Resource actions and
+  unsettled names.
   `--detailed-exitcode` returns 0 for no changes, 2 for changes, and 1 for
   errors. `--timeout SECONDS` defaults to 600 per Resource. `--release ID`
   and `--source REPO@SHA:PATH` record provenance; a Release run also writes

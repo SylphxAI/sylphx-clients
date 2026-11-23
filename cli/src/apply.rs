@@ -8,10 +8,16 @@ use crate::{context, output::Format, Failure};
 
 pub fn command() -> Command {
     let mut cmd = Command::new("apply").about("Apply the Resources declared in a manifest");
-    for flag in ["dry-run", "offline", "detailed-exitcode", "force"] {
+    for flag in ["dry-run", "detailed-exitcode", "force"] {
         cmd = cmd.arg(Arg::new(flag).long(flag).action(ArgAction::SetTrue));
     }
     cmd.arg(
+        Arg::new("offline")
+            .long("offline")
+            .action(ArgAction::SetTrue)
+            .help("Check Resources and TOML service env isolation locally (not full deploy validation)"),
+    )
+    .arg(
         Arg::new("manifest")
             .long("manifest")
             .default_value("sylphx.toml"),
@@ -39,6 +45,12 @@ pub async fn run(
         std::fs::read_to_string(path).map_err(|e| Failure::Refused(format!("{path}: {e}")))?;
     let decls = if path.ends_with(".json") {
         Declarations::from_json(&text)
+    } else if m.get_flag("offline") {
+        let manifest =
+            Declarations::decode_toml(&text).map_err(|e| Failure::Refused(e.to_string()))?;
+        sylphx_resource_codec::service_env_isolation::validate_manifest(&manifest)
+            .map_err(|e| Failure::Refused(format!("{path} invalid: {e}")))?;
+        Declarations::from_value(manifest)
     } else {
         Declarations::from_toml(&text)
     }
