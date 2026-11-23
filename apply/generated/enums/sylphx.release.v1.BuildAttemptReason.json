@@ -1,0 +1,36 @@
+{
+  "name": "sylphx.release.v1.BuildAttemptReason",
+  "package": "sylphx.release.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "BUILD_ATTEMPT_REASON_BUILD_FAILED",
+      "wire": "build_failed"
+    },
+    {
+      "number": 2,
+      "proto_name": "BUILD_ATTEMPT_REASON_PREPARATION_FAILED",
+      "wire": "preparation_failed"
+    },
+    {
+      "number": 3,
+      "proto_name": "BUILD_ATTEMPT_REASON_EXPORT_FAILED",
+      "wire": "export_failed"
+    },
+    {
+      "number": 4,
+      "proto_name": "BUILD_ATTEMPT_REASON_SMOKE_TEST_FAILED",
+      "wire": "smoke_test_failed"
+    },
+    {
+      "number": 5,
+      "proto_name": "BUILD_ATTEMPT_REASON_CANCELLED",
+      "wire": "cancelled"
+    },
+    {
+      "number": 6,
+      "proto_name": "BUILD_ATTEMPT_REASON_SUPERSEDED",
+      "wire": "superseded"
+    }
+  ]
+}

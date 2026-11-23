@@ -5,6 +5,33 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/**
+ * A BuildAttempt is a read-only observation of a native service build for an
+ * environment and source commit. It does not imply that a Release exists.
+ */
+export interface BuildAttempt {
+	/** The attempt's name. Only listing is supported. */
+	name?: string
+	/** Stable identity of this attempt. */
+	readonly uid?: string
+	/** The time the build was recorded, before it necessarily began running. */
+	readonly meta?: common.ResourceMeta
+	/** The project service slug, when still available. */
+	readonly serviceSlug?: string
+	/** The intended source commit for this attempt, even before source capture. */
+	readonly commit?: string
+	/** The recorded build state, independent of Release admission or serving. */
+	readonly state?: BuildAttemptState
+	/** When the build was marked started, if recorded. */
+	readonly startTime?: string
+	/** When the build finished or was cancelled, if recorded. */
+	readonly endTime?: string
+	/** Finite terminal reason; absent while active or after a successful build. */
+	readonly reason?: BuildAttemptReason
+	/** Stable project service ID, absent on older project-level attempts. */
+	readonly serviceId?: string
+}
+
 /** The request of CreateRelease. */
 export interface CreateReleaseRequest {
 	/** The environment to create in. */
@@ -44,6 +71,29 @@ export interface GetReleaseRequest {
 export interface GetRolloutRequest {
 	/** The name of the rollout to get. */
 	name: string
+}
+
+/** The request of ListBuildAttempts. */
+export interface ListBuildAttemptsRequest {
+	/** The environment to inspect. */
+	parent: string
+	/**
+	 * The full 40-character source commit SHA (case-insensitive). Branch names
+	 * and prefixes are not accepted.
+	 */
+	commit: string
+	/** At most this many; default 50, clamped to 100. */
+	pageSize?: number
+	/** The previous page's next_page_token for the same environment and commit. */
+	pageToken?: string
+}
+
+/** The response of ListBuildAttempts. */
+export interface ListBuildAttemptsResponse {
+	/** Latest matching attempt per service as observed at the time of this read. */
+	buildAttempts?: BuildAttempt[]
+	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
 }
 
 /** The request of ListReleases. */
@@ -303,6 +353,12 @@ export interface Wave {
 	readonly endTime?: string
 }
 
+/** Customer-safe build attribution. No runner messages or log text are returned. */
+export type BuildAttemptReason = 'build_failed' | 'preparation_failed' | 'export_failed' | 'smoke_test_failed' | 'cancelled' | 'superseded' | (string & {})
+
+/** State recorded by the native build executor. */
+export type BuildAttemptState = 'queued' | 'building' | 'succeeded' | 'failed' | 'cancelled' | (string & {})
+
 /** ReleaseState is the lifecycle state of a Release. */
 export type ReleaseState = 'pending' | 'rolling_out' | 'live' | 'failed' | 'superseded' | 'rejected' | (string & {})
 
@@ -313,6 +369,13 @@ export type RolloutState = 'waiting' | 'in_progress' | 'succeeded' | 'failed' | 
 export type WaveScope = 'canary' | 'cell' | 'region' | 'all' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.release.v1.BuildAttempt': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['serviceSlug', 'service_slug'],
+		['startTime', 'start_time'],
+		['endTime', 'end_time'],
+		['serviceId', 'service_id'],
+	],
 	'sylphx.release.v1.CreateReleaseRequest': [
 		['release', 'release', 'sylphx.release.v1.Release'],
 		['releaseId', 'release_id'],
@@ -321,6 +384,14 @@ runtime.registerSchemas({
 	'sylphx.release.v1.DeployReleaseRequest': [],
 	'sylphx.release.v1.GetReleaseRequest': [],
 	'sylphx.release.v1.GetRolloutRequest': [],
+	'sylphx.release.v1.ListBuildAttemptsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.release.v1.ListBuildAttemptsResponse': [
+		['buildAttempts', 'build_attempts', 'sylphx.release.v1.BuildAttempt'],
+		['nextPageToken', 'next_page_token'],
+	],
 	'sylphx.release.v1.ListReleasesRequest': [
 		['pageSize', 'page_size'],
 		['pageToken', 'page_token'],
@@ -410,11 +481,14 @@ runtime.registerSchemas({
 export class ReleaseApi {
 	/** The `releases` collection. */
 	readonly releases: ReleasesCollection
+	/** The `build_attempts` collection. */
+	readonly buildAttempts: BuildAttemptsCollection
 	/** The `rollouts` collection. */
 	readonly rollouts: RolloutsCollection
 
 	constructor(client: runtime.Client) {
 		this.releases = new ReleasesCollection(client)
+		this.buildAttempts = new BuildAttemptsCollection(client)
 		this.rollouts = new RolloutsCollection(client)
 	}
 }
@@ -539,6 +613,46 @@ export class ReleasesCollection {
 			mutation: true,
 		})
 		return new runtime.Operation<Release>(this.client, operation, 'sylphx.release.v1.Release')
+	}
+}
+
+/** `build_attempts` of Sylphx Release: Resource type `release.sylphx.com/BuildAttempt`. */
+export class BuildAttemptsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Lists the latest native build attempt per service for one exact commit,
+	 * newest first. Use this to follow a push even before a Release exists.
+	 * An empty result means no matching attempts were observed. An unreadable
+	 * store returns an error. This does not list standalone Build runs.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/build_attempts` · permission `release:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `PAGE_TOKEN_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async list(request: ListBuildAttemptsRequest): Promise<ListBuildAttemptsResponse> {
+		return this.client.call<ListBuildAttemptsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/build_attempts`,
+			query: { commit: request.commit, page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.release.v1.ListBuildAttemptsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListBuildAttemptsRequest): AsyncGenerator<BuildAttempt> {
+		let next: ListBuildAttemptsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.buildAttempts ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
 	}
 }
 

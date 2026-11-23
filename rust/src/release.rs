@@ -3,6 +3,79 @@
 
 #![allow(clippy::all)]
 
+/// A BuildAttempt is a read-only observation of a native service build for an
+/// environment and source commit. It does not imply that a Release exists.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BuildAttempt {
+    /// The attempt's name. Only listing is supported.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Stable identity of this attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// The time the build was recorded, before it necessarily began running.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The project service slug, when still available.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "serviceSlug"
+    )]
+    pub service_slug: String,
+    /// The intended source commit for this attempt, even before source capture.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub commit: String,
+    /// The recorded build state, independent of Release admission or serving.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<BuildAttemptState>,
+    /// When the build was marked started, if recorded.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startTime"
+    )]
+    pub start_time: String,
+    /// When the build finished or was cancelled, if recorded.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "endTime"
+    )]
+    pub end_time: String,
+    /// Finite terminal reason; absent while active or after a successful build.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<BuildAttemptReason>,
+    /// Stable project service ID, absent on older project-level attempts.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "serviceId"
+    )]
+    pub service_id: String,
+}
+
 /// The request of CreateRelease.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -72,6 +145,57 @@ pub struct GetRolloutRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// The request of ListBuildAttempts.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListBuildAttemptsRequest {
+    /// The environment to inspect.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The full 40-character source commit SHA (case-insensitive). Branch names
+    /// and prefixes are not accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub commit: String,
+    /// At most this many; default 50, clamped to 100.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// The previous page's next_page_token for the same environment and commit.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListBuildAttempts.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListBuildAttemptsResponse {
+    /// Latest matching attempt per service as observed at the time of this read.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "buildAttempts"
+    )]
+    pub build_attempts: Vec<BuildAttempt>,
+    /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListReleases.
@@ -645,6 +769,136 @@ pub struct Wave {
     pub end_time: String,
 }
 
+/// Customer-safe build attribution. No runner messages or log text are returned.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum BuildAttemptReason {
+    /// Build failed; no specific phase is available.
+    BuildFailed,
+    /// Source or build inputs could not be prepared.
+    PreparationFailed,
+    /// Artifact export failed.
+    ExportFailed,
+    /// The build's smoke test failed.
+    SmokeTestFailed,
+    /// Build was cancelled; no specific cause is available.
+    Cancelled,
+    /// A newer commit superseded the attempt.
+    Superseded,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl BuildAttemptReason {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::BuildFailed => "build_failed",
+            Self::PreparationFailed => "preparation_failed",
+            Self::ExportFailed => "export_failed",
+            Self::SmokeTestFailed => "smoke_test_failed",
+            Self::Cancelled => "cancelled",
+            Self::Superseded => "superseded",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "build_failed" => Self::BuildFailed,
+            "preparation_failed" => Self::PreparationFailed,
+            "export_failed" => Self::ExportFailed,
+            "smoke_test_failed" => Self::SmokeTestFailed,
+            "cancelled" => Self::Cancelled,
+            "superseded" => Self::Superseded,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for BuildAttemptReason {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BuildAttemptReason {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for BuildAttemptReason {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// State recorded by the native build executor.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum BuildAttemptState {
+    /// Recorded and awaiting execution.
+    Queued,
+    /// Build has been admitted; may still await an executor.
+    Building,
+    /// Build succeeded. This does not mean the artifact was released.
+    Succeeded,
+    /// Build or its smoke test failed.
+    Failed,
+    /// Build was cancelled.
+    Cancelled,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl BuildAttemptState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Queued => "queued",
+            Self::Building => "building",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "queued" => Self::Queued,
+            "building" => Self::Building,
+            "succeeded" => Self::Succeeded,
+            "failed" => Self::Failed,
+            "cancelled" => Self::Cancelled,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for BuildAttemptState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BuildAttemptState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for BuildAttemptState {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// ReleaseState is the lifecycle state of a Release.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -857,6 +1111,13 @@ impl<'a, T: crate::runtime::Transport> ReleaseApi<'a, T> {
         }
     }
 
+    /// The `build_attempts` collection.
+    pub fn build_attempts(&self) -> BuildAttemptsCollection<'a, T> {
+        BuildAttemptsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `rollouts` collection.
     pub fn rollouts(&self) -> RolloutsCollection<'a, T> {
         RolloutsCollection {
@@ -1037,6 +1298,61 @@ impl<'a, T: crate::runtime::Transport> ReleasesCollection<'a, T> {
         };
         let operation = self.client.call(http).await?;
         Ok(crate::runtime::Operation::new(self.client, operation))
+    }
+}
+
+/// `build_attempts` of Sylphx Release: Resource type `release.sylphx.com/BuildAttempt`.
+pub struct BuildAttemptsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> BuildAttemptsCollection<'a, T> {
+    /// Lists the latest native build attempt per service for one exact commit,
+    /// newest first. Use this to follow a push even before a Release exists.
+    /// An empty result means no matching attempts were observed. An unreadable
+    /// store returns an error. This does not list standalone Build runs.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/build_attempts` · permission `release:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `INVALID_STATE`, `PAGE_TOKEN_MISMATCH`, `UNAVAILABLE`.
+    pub async fn list(
+        &self,
+        request: ListBuildAttemptsRequest,
+    ) -> Result<ListBuildAttemptsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/build_attempts",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("commit", &request.commit);
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListBuildAttemptsRequest,
+    ) -> Result<Vec<BuildAttempt>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.build_attempts);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
     }
 }
 

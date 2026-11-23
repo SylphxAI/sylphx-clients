@@ -7565,6 +7565,16 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		origin: 'https://api.realtime.sylphx.com',
 		effectIds: true,
 	},
+	'release.build_attempts.list': {
+		id: 'release.build_attempts.list',
+		httpMethod: 'GET',
+		template: '/v1/{parent=orgs/*/projects/*/envs/*}/build_attempts',
+		pathParams: [['parent', 'orgs/*/projects/*/envs/*']],
+		queryParams: ['commit', 'page_size', 'page_token'],
+		longRunning: false,
+		effect: 'read',
+		permission: 'release:read',
+	},
 	'release.releases.create': {
 		id: 'release.releases.create',
 		httpMethod: 'POST',

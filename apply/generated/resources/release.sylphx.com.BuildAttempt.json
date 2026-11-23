@@ -1,0 +1,22 @@
+{
+  "collection": "build_attempts",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "BuildAttempt",
+  "message": "sylphx.release.v1.BuildAttempt",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/build_attempts/{build_attempt}",
+  "plural": "buildAttempts",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "release",
+  "shape": "record",
+  "singular": "buildAttempt",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "release.sylphx.com/BuildAttempt"
+}

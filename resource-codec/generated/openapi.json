@@ -42462,6 +42462,86 @@
         ],
         "type": "string"
       },
+      "sylphx.release.v1.BuildAttempt": {
+        "description": "A BuildAttempt is a read-only observation of a native service build for an\nenvironment and source commit. It does not imply that a Release exists.",
+        "properties": {
+          "commit": {
+            "description": "The intended source commit for this attempt, even before source capture.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "end_time": {
+            "description": "When the build finished or was cancelled, if recorded.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "The time the build was recorded, before it necessarily began running.",
+            "readOnly": true
+          },
+          "name": {
+            "description": "The attempt's name. Only listing is supported.",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/sylphx.release.v1.BuildAttemptReason",
+            "description": "Finite terminal reason; absent while active or after a successful build.",
+            "readOnly": true
+          },
+          "service_id": {
+            "description": "Stable project service ID, absent on older project-level attempts.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "service_slug": {
+            "description": "The project service slug, when still available.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "start_time": {
+            "description": "When the build was marked started, if recorded.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.release.v1.BuildAttemptState",
+            "description": "The recorded build state, independent of Release admission or serving.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "Stable identity of this attempt.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.release.v1.BuildAttemptReason": {
+        "description": "Customer-safe build attribution. No runner messages or log text are returned.",
+        "enum": [
+          "build_failed",
+          "preparation_failed",
+          "export_failed",
+          "smoke_test_failed",
+          "cancelled",
+          "superseded"
+        ],
+        "type": "string"
+      },
+      "sylphx.release.v1.BuildAttemptState": {
+        "description": "State recorded by the native build executor.",
+        "enum": [
+          "queued",
+          "building",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "type": "string"
+      },
       "sylphx.release.v1.CreateReleaseRequest": {
         "description": "The request of CreateRelease.",
         "properties": {
@@ -42533,6 +42613,51 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.release.v1.ListBuildAttemptsRequest": {
+        "description": "The request of ListBuildAttempts.",
+        "properties": {
+          "commit": {
+            "description": "The full 40-character source commit SHA (case-insensitive). Branch names\nand prefixes are not accepted.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The previous page's next_page_token for the same environment and commit.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to inspect.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/BuildAttempt"
+          }
+        },
+        "required": [
+          "parent",
+          "commit"
+        ],
+        "type": "object"
+      },
+      "sylphx.release.v1.ListBuildAttemptsResponse": {
+        "description": "The response of ListBuildAttempts.",
+        "properties": {
+          "build_attempts": {
+            "description": "Latest matching attempt per service as observed at the time of this read.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.release.v1.BuildAttempt"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.release.v1.ListReleasesRequest": {
@@ -72716,6 +72841,116 @@
         },
         "x-sylphx-method": "data.buckets.rotate_credentials",
         "x-sylphx-permission": "data:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/build_attempts": {
+      "get": {
+        "description": "Lists the latest native build attempt per service for one exact commit,\nnewest first. Use this to follow a push even before a Release exists.\nAn empty result means no matching attempts were observed. An unreadable\nstore returns an error. This does not list standalone Build runs.",
+        "operationId": "release_build_attempts_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The full 40-character source commit SHA (case-insensitive). Branch names\nand prefixes are not accepted.",
+            "in": "query",
+            "name": "commit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most this many; default 50, clamped to 100.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The previous page's next_page_token for the same environment and commit.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.release.v1.ListBuildAttemptsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the latest native build attempt per service for one exact commit, newest first. Use this to follow a push even before a Release exists. An empty result means no matching attempts were observed. An unreadable store returns an error. This does not list standalone Build runs.",
+        "tags": [
+          "release"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "PAGE_TOKEN_MISMATCH",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "release.build_attempts.list",
+        "x-sylphx-permission": "release:read",
         "x-sylphx-stage": "preview"
       }
     },

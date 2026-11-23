@@ -43258,6 +43258,51 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
+        "title": "Lists the latest native build attempt per service for one exact commit, newest first. Use this to follow a push even before a Release exists. An empty result means no matching attempts were observed. An unreadable store returns an error. This does not list standalone Build runs."
+      },
+      "description": "Lists the latest native build attempt per service for one exact commit,\nnewest first. Use this to follow a push even before a Release exists.\nAn empty result means no matching attempts were observed. An unreadable\nstore returns an error. This does not list standalone Build runs.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/build_attempts",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListBuildAttempts.",
+        "properties": {
+          "commit": {
+            "description": "The full 40-character source commit SHA (case-insensitive). Branch names\nand prefixes are not accepted.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 100.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The previous page's next_page_token for the same environment and commit.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The environment to inspect.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/BuildAttempt"
+          }
+        },
+        "required": [
+          "parent",
+          "commit"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "release.build_attempts.list",
+      "permission": "release:read",
+      "tool": "release_build_attempts_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
         "title": "Gets a rollout."
       },
       "description": "Gets a rollout.",

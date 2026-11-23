@@ -25853,6 +25853,50 @@
           "resource_type": "release.sylphx.com/Release"
         },
         {
+          "collection": "build_attempts",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "commit",
+                  "flag": "--commit",
+                  "required": true,
+                  "summary": "The full 40-character source commit SHA (case-insensitive). Branch names and prefixes are not accepted.",
+                  "type": "string"
+                },
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 100.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "The previous page's next_page_token for the same environment and commit.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/build_attempts",
+              "method": "release.build_attempts.list",
+              "paginates": true,
+              "permission": "release:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists the latest native build attempt per service for one exact commit, newest first. Use this to follow a push even before a Release exists. An empty result means no matching attempts were observed. An unreadable store returns an error. This does not list standalone Build runs.",
+              "verb": "list"
+            }
+          ],
+          "noun": "build-attempts",
+          "resource_type": "release.sylphx.com/BuildAttempt"
+        },
+        {
           "collection": "rollouts",
           "commands": [
             {

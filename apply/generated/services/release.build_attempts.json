@@ -1,0 +1,20 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": [
+              "commit",
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "release.build_attempts.list",
+          "kind": "list"
+        }
+      ],
+      "resource_type": "release.sylphx.com/BuildAttempt"
+    }
+  ]
+}

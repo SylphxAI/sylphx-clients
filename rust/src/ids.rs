@@ -491,6 +491,8 @@ pub const GEN: Prefix = Prefix::new("gen", "Generation", "observability", Some("
 pub const ERR: Prefix = Prefix::new("err", "ErrorRecord", "observability", None);
 /// Release (`rel`, release).
 pub const REL: Prefix = Prefix::new("rel", "Release", "release", Some("releases"));
+/// BuildAttempt (`bda`, release).
+pub const BDA: Prefix = Prefix::new("bda", "BuildAttempt", "release", Some("build_attempts"));
 /// Rollout (`rol`, release).
 pub const ROL: Prefix = Prefix::new("rol", "Rollout", "release", Some("rollouts"));
 /// Runner (`run`, runners).
@@ -798,12 +800,12 @@ pub const ALL: &[Prefix] = &[
     PLAN, URP, BSUB, SITEM, AUSE, ACC, TXN, TPOL, TKX, BLD, BCC, CHG, FLAG, SEG, CONN, CPRV, BKT,
     DB, KV, IDX, CUS, ENT, EVT, IBE, QUE, RTC, RTM, RTG, SUB, TOP, WHD, WHK, PRV, SRL, SVC, SLNK,
     KMS, KMSV, CERT, DOM, EGR, PLK, RT, BCST, IEM, INBX, MBX, MCL, MOA, MSG, TPC, PRF, RCP, SND,
-    SDM, SUP, TMPL, AEV, EEV, EGRP, LOG, SCRP, SMAP, TRC, GEN, ERR, REL, ROL, RUN, SSET, LSE, LEV,
-    POOL, SHP, SNAP, VOL, SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL, TOK,
-    TASK, CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF, DISP,
-    TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO, NSUB,
-    NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB, EGNT,
-    LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, SCR, SCC, URES, UEVT, CGRT, UINV, USET,
-    UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC, UPMF,
-    PEV, CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
+    SDM, SUP, TMPL, AEV, EEV, EGRP, LOG, SCRP, SMAP, TRC, GEN, ERR, REL, BDA, ROL, RUN, SSET, LSE,
+    LEV, POOL, SHP, SNAP, VOL, SBX, SEC, SECV, SECB, PFL, PFLV, PFLA, JOB, SCHED, WF, ESVC, DPL,
+    TOK, TASK, CEX, VMNT, WKSP, MDT, MDEV, CBT, DVS, RES, DBBR, RSTR, PRX, PRULE, WRK, EXP, NTF,
+    DISP, TDEF, ALRT, DOC, FILE, PSEG, PCAM, PDLY, FVER, ACHV, LDB, COH, ADST, DLG, REF, PROMO,
+    NSUB, NSEQ, NST, IDP, SLOG, CFG, BND, AUDT, PERM, ROLE, SA, REQ, CAT, CKS, TCLK, CPL, CSUB,
+    EGNT, LKEY, LTOK, RVS, RVF, RVSUM, FXR, MACT, PSN, SCN, SPU, SCR, SCC, URES, UEVT, CGRT, UINV,
+    USET, UTIER, UMTR, UMPR, SPC, EPI, KEN, KREL, KSCH, SNUM, ISMS, PNUM, UPT, SVRT, SVOB, UPSRC,
+    UPMF, PEV, CHP, CHR, BTA, BRC, SINB, SCAS, SMSG, SACT, SAUD, SREC, INMSG,
 ];

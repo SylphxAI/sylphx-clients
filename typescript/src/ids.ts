@@ -123,6 +123,7 @@ export const PREFIXES = [
 	{ prefix: 'gen', entity: 'Generation', service: 'observability', collection: 'generations' },
 	{ prefix: 'err', entity: 'ErrorRecord', service: 'observability', collection: null },
 	{ prefix: 'rel', entity: 'Release', service: 'release', collection: 'releases' },
+	{ prefix: 'bda', entity: 'BuildAttempt', service: 'release', collection: 'build_attempts' },
 	{ prefix: 'rol', entity: 'Rollout', service: 'release', collection: 'rollouts' },
 	{ prefix: 'run', entity: 'Runner', service: 'runners', collection: 'runners' },
 	{ prefix: 'sset', entity: 'ScaleSet', service: 'runners', collection: 'scale_sets' },

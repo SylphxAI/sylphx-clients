@@ -4469,6 +4469,86 @@
       ]
     },
     {
+      "doc": "Customer-safe build attribution. No runner messages or log text are returned.",
+      "name": "sylphx.release.v1.BuildAttemptReason",
+      "package": "sylphx.release.v1",
+      "values": [
+        {
+          "doc": "Build failed; no specific phase is available.",
+          "number": 1,
+          "proto_name": "BUILD_ATTEMPT_REASON_BUILD_FAILED",
+          "wire": "build_failed"
+        },
+        {
+          "doc": "Source or build inputs could not be prepared.",
+          "number": 2,
+          "proto_name": "BUILD_ATTEMPT_REASON_PREPARATION_FAILED",
+          "wire": "preparation_failed"
+        },
+        {
+          "doc": "Artifact export failed.",
+          "number": 3,
+          "proto_name": "BUILD_ATTEMPT_REASON_EXPORT_FAILED",
+          "wire": "export_failed"
+        },
+        {
+          "doc": "The build's smoke test failed.",
+          "number": 4,
+          "proto_name": "BUILD_ATTEMPT_REASON_SMOKE_TEST_FAILED",
+          "wire": "smoke_test_failed"
+        },
+        {
+          "doc": "Build was cancelled; no specific cause is available.",
+          "number": 5,
+          "proto_name": "BUILD_ATTEMPT_REASON_CANCELLED",
+          "wire": "cancelled"
+        },
+        {
+          "doc": "A newer commit superseded the attempt.",
+          "number": 6,
+          "proto_name": "BUILD_ATTEMPT_REASON_SUPERSEDED",
+          "wire": "superseded"
+        }
+      ]
+    },
+    {
+      "doc": "State recorded by the native build executor.",
+      "name": "sylphx.release.v1.BuildAttemptState",
+      "package": "sylphx.release.v1",
+      "values": [
+        {
+          "doc": "Recorded and awaiting execution.",
+          "number": 1,
+          "proto_name": "BUILD_ATTEMPT_STATE_QUEUED",
+          "wire": "queued"
+        },
+        {
+          "doc": "Build has been admitted; may still await an executor.",
+          "number": 2,
+          "proto_name": "BUILD_ATTEMPT_STATE_BUILDING",
+          "wire": "building"
+        },
+        {
+          "doc": "Build succeeded. This does not mean the artifact was released.",
+          "number": 3,
+          "proto_name": "BUILD_ATTEMPT_STATE_SUCCEEDED",
+          "wire": "succeeded"
+        },
+        {
+          "doc": "Build or its smoke test failed.",
+          "number": 4,
+          "proto_name": "BUILD_ATTEMPT_STATE_FAILED",
+          "wire": "failed"
+        },
+        {
+          "doc": "Build was cancelled.",
+          "number": 5,
+          "proto_name": "BUILD_ATTEMPT_STATE_CANCELLED",
+          "wire": "cancelled"
+        }
+      ]
+    },
+    {
       "doc": "ReleaseState is the lifecycle state of a Release.",
       "name": "sylphx.release.v1.ReleaseState",
       "package": "sylphx.release.v1",
@@ -128360,6 +128440,203 @@
       "package": "sylphx.realtime.v1"
     },
     {
+      "doc": "A BuildAttempt is a read-only observation of a native service build for an\nenvironment and source commit. It does not imply that a Release exists.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "The attempt's name. Only listing is supported.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable identity of this attempt.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The time the build was recorded, before it necessarily began running.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The project service slug, when still available.",
+          "filterable": false,
+          "name": "service_slug",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The intended source commit for this attempt, even before source capture.",
+          "filterable": false,
+          "name": "commit",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The recorded build state, independent of Release admission or serving.",
+          "filterable": false,
+          "name": "state",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.release.v1.BuildAttemptState"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the build was marked started, if recorded.",
+          "filterable": false,
+          "name": "start_time",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "When the build finished or was cancelled, if recorded.",
+          "filterable": false,
+          "name": "end_time",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Finite terminal reason; absent while active or after a successful build.",
+          "filterable": false,
+          "name": "reason",
+          "number": 15,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.release.v1.BuildAttemptReason"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable project service ID, absent on older project-level attempts.",
+          "filterable": false,
+          "name": "service_id",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.release.v1.BuildAttempt",
+      "package": "sylphx.release.v1"
+    },
+    {
       "doc": "The request of CreateRelease.",
       "fields": [
         {
@@ -128537,6 +128814,130 @@
         }
       ],
       "name": "sylphx.release.v1.GetRolloutRequest",
+      "package": "sylphx.release.v1"
+    },
+    {
+      "doc": "The request of ListBuildAttempts.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The environment to inspect.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "release.sylphx.com/BuildAttempt",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The full 40-character source commit SHA (case-insensitive). Branch names\nand prefixes are not accepted.",
+          "filterable": false,
+          "name": "commit",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "At most this many; default 50, clamped to 100.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The previous page's next_page_token for the same environment and commit.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.release.v1.ListBuildAttemptsRequest",
+      "package": "sylphx.release.v1"
+    },
+    {
+      "doc": "The response of ListBuildAttempts.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Latest matching attempt per service as observed at the time of this read.",
+          "filterable": false,
+          "name": "build_attempts",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.release.v1.BuildAttempt"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The token of the next page; empty on the last page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.release.v1.ListBuildAttemptsResponse",
       "package": "sylphx.release.v1"
     },
     {
@@ -154185,6 +154586,28 @@
       "storage": "service",
       "terraform": false,
       "type": "observability.sylphx.com/UptimeSource"
+    },
+    {
+      "collection": "build_attempts",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "BuildAttempt",
+      "message": "sylphx.release.v1.BuildAttempt",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/build_attempts/{build_attempt}",
+      "plural": "buildAttempts",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "release",
+      "shape": "record",
+      "singular": "buildAttempt",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "release.sylphx.com/BuildAttempt"
     },
     {
       "collection": "releases",
@@ -187684,6 +188107,62 @@
           ],
           "name": "releases",
           "resource_type": "release.sylphx.com/Release"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists the latest native build attempt per service for one exact commit,\nnewest first. Use this to follow a push even before a Release exists.\nAn empty result means no matching attempts were observed. An unreadable\nstore returns an error. This does not list standalone Build runs.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "INVALID_STATE",
+                "PAGE_TOKEN_MISMATCH",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "commit",
+                  "page_size",
+                  "page_token"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/build_attempts"
+              },
+              "id": "release.build_attempts.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "default",
+              "page": {
+                "item": "sylphx.release.v1.BuildAttempt",
+                "items_field": "build_attempts"
+              },
+              "permission": "release:read",
+              "proto": "sylphx.release.v1.ReleaseService.ListBuildAttempts",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.release.v1.ListBuildAttemptsRequest",
+              "resource_field": null,
+              "response": "sylphx.release.v1.ListBuildAttemptsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            }
+          ],
+          "name": "build_attempts",
+          "resource_type": "release.sylphx.com/BuildAttempt"
         },
         {
           "methods": [
