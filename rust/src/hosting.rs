@@ -999,6 +999,18 @@ pub struct ServiceObservation {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub release: String,
+    /// Immutable serving revision name, scoped to this environment and service.
+    /// Set only when Hosting has current applied
+    /// evidence that exactly one revision receives 100% of ordinary traffic.
+    /// Missing means unknown, not that the service is stopped or has no traffic.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "servingRevision"
+    )]
+    pub serving_revision: String,
 }
 
 /// ServiceScaling bounds a Service's instances. A Service idles to zero unless

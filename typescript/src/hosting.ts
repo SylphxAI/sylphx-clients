@@ -466,6 +466,13 @@ export interface ServiceObservation {
 	readonly reason?: string
 	/** Current serving Release identity. */
 	readonly release?: string
+	/**
+	 * Immutable serving revision name, scoped to this environment and service.
+	 * Set only when Hosting has current applied
+	 * evidence that exactly one revision receives 100% of ordinary traffic.
+	 * Missing means unknown, not that the service is stopped or has no traffic.
+	 */
+	readonly servingRevision?: string
 }
 
 /**
@@ -877,6 +884,7 @@ runtime.registerSchemas({
 	],
 	'sylphx.hosting.v1.ServiceObservation': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['servingRevision', 'serving_revision'],
 	],
 	'sylphx.hosting.v1.ServiceScaling': [
 		['minInstances', 'min_instances'],

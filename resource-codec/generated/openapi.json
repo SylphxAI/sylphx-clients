@@ -23775,6 +23775,11 @@
             "readOnly": true,
             "type": "string"
           },
+          "serving_revision": {
+            "description": "Immutable serving revision name, scoped to this environment and service.\nSet only when Hosting has current applied\nevidence that exactly one revision receives 100% of ordinary traffic.\nMissing means unknown, not that the service is stopped or has no traffic.",
+            "readOnly": true,
+            "type": "string"
+          },
           "uid": {
             "description": "Immutable environment-service identity.",
             "readOnly": true,

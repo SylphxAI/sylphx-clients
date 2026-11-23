@@ -73377,6 +73377,25 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Immutable serving revision name, scoped to this environment and service.\nSet only when Hosting has current applied\nevidence that exactly one revision receives 100% of ordinary traffic.\nMissing means unknown, not that the service is stopped or has no traffic.",
+          "filterable": false,
+          "name": "serving_revision",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.hosting.v1.ServiceObservation",
