@@ -7874,6 +7874,29 @@
               },
               "summary": "Sends one SMS with a pinned same-environment carrier credential in Secrets. Requires an exact-version broker:sms:send grant and an Idempotency-Key. Returns only a carrier receipt; never exports credentials or retries on a different carrier. The credential is a JSON secret payload with provider \"telnyx\" and an api_key string. Receipts are retained for 24 hours. If the outcome is unknown, reconcile with the carrier before attempting a new send.",
               "verb": "send-carrier-sms"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "send_key",
+                  "flag": "--send-key",
+                  "required": true,
+                  "summary": "The original attested Notify send's Idempotency-Key.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:checkCarrierSmsDelivery",
+              "method": "broker.secret_versions.check_carrier_sms_delivery",
+              "permission": "broker:sms:send",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}"
+              },
+              "summary": "Reads the delivery state of an accepted Notify SMS using the exact live SecretVersion and the original send key. Only the attested Notify workload may read its own recorded acceptance, during the 24-hour receipt window. Does not send, bill, or return message content or credentials.",
+              "verb": "check-carrier-sms-delivery"
             }
           ],
           "noun": "secret-versions",

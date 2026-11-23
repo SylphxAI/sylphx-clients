@@ -11421,6 +11421,39 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.CheckCarrierSmsDeliveryRequest": {
+        "description": "Looks up the recorded acceptance for a specific pinned Notify send.",
+        "properties": {
+          "name": {
+            "description": "Exact SecretVersion used to send; \"latest\" is not accepted.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+          },
+          "send_key": {
+            "description": "The original attested Notify send's Idempotency-Key.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "send_key"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.CheckCarrierSmsDeliveryResponse": {
+        "description": "The carrier delivery state for the recorded acceptance.",
+        "properties": {
+          "receipt": {
+            "description": "The canonical receipt recorded by Broker for this send.",
+            "type": "string"
+          },
+          "state": {
+            "description": "One of \"pending\", \"delivered\", or \"failed\".",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.CreateTrustPolicyRequest": {
         "description": "The request of CreateTrustPolicy.",
         "properties": {
@@ -11946,7 +11979,7 @@
         "description": "Send this proof only with the exact signed request. Response is not cached.",
         "properties": {
           "amz_date": {
-            "description": "x-amz-date header.",
+            "description": "x-amz-date wire header in the exact SigV4 signing format.",
             "readOnly": true,
             "type": "string"
           },
@@ -119209,6 +119242,112 @@
         ],
         "x-sylphx-method": "secrets.secret_versions.access",
         "x-sylphx-permission": "secrets:access",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}:checkCarrierSmsDelivery": {
+      "get": {
+        "description": "Reads the delivery state of an accepted Notify SMS using the exact live\nSecretVersion and the original send key. Only the attested Notify workload\nmay read its own recorded acceptance, during the 24-hour receipt window.\nDoes not send, bill, or return message content or credentials.",
+        "operationId": "broker_secret_versions_check_carrier_sms_delivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The original attested Notify send's Idempotency-Key.",
+            "in": "query",
+            "name": "send_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.CheckCarrierSmsDeliveryResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads the delivery state of an accepted Notify SMS using the exact live SecretVersion and the original send key. Only the attested Notify workload may read its own recorded acceptance, during the 24-hour receipt window. Does not send, bill, or return message content or credentials.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "INVALID_STATE",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.secret_versions.check_carrier_sms_delivery",
+        "x-sylphx-permission": "broker:sms:send",
         "x-sylphx-stage": "preview"
       }
     },

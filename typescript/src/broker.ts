@@ -5,6 +5,22 @@ import * as runtime from './runtime.js'
 import './common.js'
 import type * as common from './common.js'
 
+/** Looks up the recorded acceptance for a specific pinned Notify send. */
+export interface CheckCarrierSmsDeliveryRequest {
+	/** Exact SecretVersion used to send; "latest" is not accepted. */
+	name: string
+	/** The original attested Notify send's Idempotency-Key. */
+	sendKey: string
+}
+
+/** The carrier delivery state for the recorded acceptance. */
+export interface CheckCarrierSmsDeliveryResponse {
+	/** The canonical receipt recorded by Broker for this send. */
+	receipt?: string
+	/** One of "pending", "delivered", or "failed". */
+	state?: string
+}
+
 /** The request of CreateTrustPolicy. */
 export interface CreateTrustPolicyRequest {
 	/** The org to create in. */
@@ -276,7 +292,7 @@ export interface SignS3RequestRequest {
 export interface SignS3RequestResponse {
 	/** SigV4 Authorization header. */
 	readonly authorization?: string
-	/** x-amz-date header. */
+	/** x-amz-date wire header in the exact SigV4 signing format. */
 	readonly amzDate?: string
 	/** x-amz-content-sha256 header. */
 	readonly payloadSha256?: string
@@ -453,6 +469,10 @@ export interface UpdateTrustPolicyRequest {
 export type CredentialKind = 'access_token' | 'runner_registration' | 'vapid_assertion' | (string & {})
 
 runtime.registerSchemas({
+	'sylphx.broker.v1.CheckCarrierSmsDeliveryRequest': [
+		['sendKey', 'send_key'],
+	],
+	'sylphx.broker.v1.CheckCarrierSmsDeliveryResponse': [],
 	'sylphx.broker.v1.CreateTrustPolicyRequest': [
 		['trustPolicy', 'trust_policy', 'sylphx.broker.v1.TrustPolicy'],
 		['trustPolicyId', 'trust_policy_id'],
@@ -835,6 +855,26 @@ export class SecretVersionsCollection {
 			bodyType: 'sylphx.broker.v1.SendCarrierSmsRequest',
 			responseType: 'sylphx.broker.v1.SendCarrierSmsResponse',
 			mutation: true,
+		})
+	}
+
+	/**
+	 * Reads the delivery state of an accepted Notify SMS using the exact live
+	 * SecretVersion and the original send key. Only the attested Notify workload
+	 * may read its own recorded acceptance, during the 24-hour receipt window.
+	 * Does not send, bill, or return message content or credentials.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/secrets/*\/secret_versions/*}:checkCarrierSmsDelivery` · permission `broker:sms:send` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async checkCarrierSmsDelivery(request: CheckCarrierSmsDeliveryRequest): Promise<CheckCarrierSmsDeliveryResponse> {
+		return this.client.call<CheckCarrierSmsDeliveryResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:checkCarrierSmsDelivery`,
+			query: { send_key: request.sendKey },
+			responseType: 'sylphx.broker.v1.CheckCarrierSmsDeliveryResponse',
+			mutation: false,
 		})
 	}
 }

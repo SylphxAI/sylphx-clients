@@ -1945,6 +1945,16 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'broker:exchange',
 	},
+	'broker.secret_versions.check_carrier_sms_delivery': {
+		id: 'broker.secret_versions.check_carrier_sms_delivery',
+		httpMethod: 'GET',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:checkCarrierSmsDelivery',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*']],
+		queryParams: ['send_key'],
+		longRunning: false,
+		effect: 'read',
+		permission: 'broker:sms:send',
+	},
 	'broker.secret_versions.send_carrier_sms': {
 		id: 'broker.secret_versions.send_carrier_sms',
 		httpMethod: 'POST',

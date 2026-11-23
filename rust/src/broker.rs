@@ -3,6 +3,38 @@
 
 #![allow(clippy::all)]
 
+/// Looks up the recorded acceptance for a specific pinned Notify send.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckCarrierSmsDeliveryRequest {
+    /// Exact SecretVersion used to send; "latest" is not accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The original attested Notify send's Idempotency-Key.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sendKey"
+    )]
+    pub send_key: String,
+}
+
+/// The carrier delivery state for the recorded acceptance.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CheckCarrierSmsDeliveryResponse {
+    /// The canonical receipt recorded by Broker for this send.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub receipt: String,
+    /// One of "pending", "delivered", or "failed".
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+}
+
 /// The request of CreateTrustPolicy.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -527,7 +559,7 @@ pub struct SignS3RequestResponse {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub authorization: String,
-    /// x-amz-date header.
+    /// x-amz-date wire header in the exact SigV4 signing format.
     ///
     /// Field behavior: `output_only`.
     #[serde(
@@ -1316,6 +1348,40 @@ impl<'a, T: crate::runtime::Transport> SecretVersionsCollection<'a, T> {
             query: query.0,
             body: Some(crate::runtime::body_without(&request, &["name"])?),
             mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reads the delivery state of an accepted Notify SMS using the exact live
+    /// SecretVersion and the original send key. Only the attested Notify workload
+    /// may read its own recorded acceptance, during the 24-hour receipt window.
+    /// Does not send, bill, or return message content or credentials.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:checkCarrierSmsDelivery` · permission `broker:sms:send` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn check_carrier_sms_delivery(
+        &self,
+        request: CheckCarrierSmsDeliveryRequest,
+    ) -> Result<CheckCarrierSmsDeliveryResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:checkCarrierSmsDelivery",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("send_key", &request.send_key);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
             origin: None,
             effect_ids: false,
         };
