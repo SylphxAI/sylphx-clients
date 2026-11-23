@@ -1845,7 +1845,7 @@ export type DeliveryAttemptOutcome = 'delivered' | 'retryable_failure' | 'termin
 export type DeliveryState = 'pending' | 'delivered' | 'dead_lettered' | 'cancelled' | (string & {})
 
 /** The signature scheme an Inbound Endpoint verifies. */
-export type InboundSignatureScheme = 'standard_webhooks' | 'stripe' | 'shopify' | 'github' | (string & {})
+export type InboundSignatureScheme = 'standard_webhooks' | 'stripe' | 'shopify' | 'github' | 'bearer' | (string & {})
 
 /** Whether a Webhook Endpoint receives deliveries. */
 export type WebhookEndpointState = 'enabled' | 'disabled' | 'failing_disabled' | (string & {})

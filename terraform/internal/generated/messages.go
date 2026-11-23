@@ -592,7 +592,7 @@ func eventsChatChannelPolicy() []def.Field {
 // eventsInboundEndpointSpec is `sylphx.events.v1.InboundEndpointSpec`.
 func eventsInboundEndpointSpec() []def.Field {
 	return []def.Field{
-		{Name: "signature_scheme", Kind: def.Enum, Values: []string{"standard_webhooks", "stripe", "shopify", "github"}, Flags: def.Required, Doc: "The sender's signature scheme."},
+		{Name: "signature_scheme", Kind: def.Enum, Values: []string{"standard_webhooks", "stripe", "shopify", "github", "bearer"}, Flags: def.Required, Doc: "The sender's signature scheme."},
 		{Name: "verification_secret", Kind: def.String, Flags: def.Required, Doc: "The provider's verification secret, held in Sylphx Secrets."},
 		{Name: "topic", Kind: def.String, Flags: def.Required, Doc: "The Topic verified requests are published to."},
 		{Name: "source", Kind: def.String, Doc: "The CloudEvents `source` of published events; default the endpoint name."},

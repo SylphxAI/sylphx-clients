@@ -2799,6 +2799,12 @@
           "number": 4,
           "proto_name": "INBOUND_SIGNATURE_SCHEME_GITHUB",
           "wire": "github"
+        },
+        {
+          "doc": "A shared token in the Authorization Bearer header.",
+          "number": 5,
+          "proto_name": "INBOUND_SIGNATURE_SCHEME_BEARER",
+          "wire": "bearer"
         }
       ]
     },

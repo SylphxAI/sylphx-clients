@@ -21,6 +21,11 @@
       "number": 4,
       "proto_name": "INBOUND_SIGNATURE_SCHEME_GITHUB",
       "wire": "github"
+    },
+    {
+      "number": 5,
+      "proto_name": "INBOUND_SIGNATURE_SCHEME_BEARER",
+      "wire": "bearer"
     }
   ]
 }

@@ -20604,7 +20604,8 @@
                       "standard_webhooks",
                       "stripe",
                       "shopify",
-                      "github"
+                      "github",
+                      "bearer"
                     ],
                     "type": "string"
                   },
@@ -20722,7 +20723,8 @@
                       "standard_webhooks",
                       "stripe",
                       "shopify",
-                      "github"
+                      "github",
+                      "bearer"
                     ],
                     "type": "string"
                   },

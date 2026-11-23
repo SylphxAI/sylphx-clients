@@ -4267,6 +4267,8 @@ pub enum InboundSignatureScheme {
     Shopify,
     /// GitHub `X-Hub-Signature-256`.
     Github,
+    /// A shared token in the Authorization Bearer header.
+    Bearer,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -4279,6 +4281,7 @@ impl InboundSignatureScheme {
             Self::Stripe => "stripe",
             Self::Shopify => "shopify",
             Self::Github => "github",
+            Self::Bearer => "bearer",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -4290,6 +4293,7 @@ impl InboundSignatureScheme {
             "stripe" => Self::Stripe,
             "shopify" => Self::Shopify,
             "github" => Self::Github,
+            "bearer" => Self::Bearer,
             other => Self::Unknown(other.to_string()),
         }
     }
