@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test'
+import { putObjectBytes } from '../src/data/objects.js'
 import * as sdk from '../src/index.js'
 
 test('object PUT uses authenticated JSON, never a typed Blob against a presigned URL', async () => {
@@ -22,11 +23,10 @@ test('object PUT uses authenticated JSON, never a typed Blob against a presigned
 			maxRetries: 0,
 		})
 		const file = new Blob(['payload'], { type: 'image/png' })
-		await client.data.objects.put({
+		await putObjectBytes(client.data.objects, {
 			bucketId: 'uploads',
 			key: 'image.png',
-			body: Buffer.from(await file.arrayBuffer()).toString('base64'),
-			contentType: file.type,
+			body: file,
 		})
 		expect(captured?.method).toBe('PUT')
 		expect(captured?.url.pathname).toBe('/v1/objects/uploads/image.png')

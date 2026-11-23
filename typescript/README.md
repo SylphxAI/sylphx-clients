@@ -72,6 +72,25 @@ await sylphx.data.documents.put({ indexId: 'articles', documentId: slug, documen
 const { hits: found } = await sylphx.data.search.query({ indexId: 'articles', query: 'pricing', limit: 10 })
 ```
 
+### Upload and download bytes without base64 glue
+
+Use the object helpers for in-memory files and buffers. They use the same
+Data API and credentials as `data.objects.put` and `.get`; the server's object
+limits still apply. For large browser uploads to S3, see the separate
+[browser upload helper](#browser-file-uploads).
+
+```ts
+import { getObjectBytes, putObjectBytes } from '@sylphx/sdk/data/objects'
+
+const target = { bucketId: 'uploads', key: 'profile/photo.png' }
+await putObjectBytes(sylphx.data.objects, { ...target, body: file }) // Blob or Uint8Array
+const { object, body } = await getObjectBytes(sylphx.data.objects, target) // body: Uint8Array
+```
+
+A Blob's media type is used unless you pass `contentType` explicitly. Pass
+`expectedVersion` on uploads to require a specific current version or
+`version` on downloads to read a particular version.
+
 ### Object upload transport and older SDKs
 
 `data.objects.put` sends base64 bytes in an authenticated JSON request. Its
