@@ -255,11 +255,19 @@ fn push_owners(dst: &mut Vec<String>, srcs: &[&str]) {
 }
 
 fn bounded(v: &str) -> String {
-    if v.chars().count() <= 96 {
+    if v.chars().count() <= 160 {
         v.into()
     } else {
-        format!("{}...", v.chars().take(93).collect::<String>())
+        format!("{}...", v.chars().take(157).collect::<String>())
     }
+}
+
+fn clean_controls(v: &str) -> String {
+    v.chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect::<String>()
+        .trim()
+        .into()
 }
 
 fn join_or_none(v: &[String]) -> String {
@@ -328,9 +336,18 @@ fn window_id_and_title(value: &str) -> Option<(&str, &str)> {
     Some((id, rest))
 }
 
-fn window_block_owners<'a>(windows: &'a str, identity: &str) -> Vec<(bool, Vec<&'a str>)> {
+struct WindowBlock<'a> {
+    header: &'a str,
+    title: &'a str,
+    saw_owner: bool,
+    pkgs: Vec<&'a str>,
+    hidden: bool,
+}
+
+fn matches_window_id(line: &str, identity: &str) -> bool {
     let needle = format!("Window{{{identity}");
-    let matches_id = |mut s: &str| loop {
+    let mut s = line;
+    loop {
         let Some(pos) = s.find(&needle) else {
             return false;
         };
@@ -338,89 +355,131 @@ fn window_block_owners<'a>(windows: &'a str, identity: &str) -> Vec<(bool, Vec<&
             return true;
         }
         s = &s[pos + 1..];
-    };
-    let (mut records, mut cur): (_, Option<(bool, Vec<&'a str>)>) = (Vec::new(), None);
+    }
+}
+
+fn parse_window_blocks<'a>(windows: &'a str) -> Vec<WindowBlock<'a>> {
+    let (mut blocks, mut cur): (Vec<WindowBlock<'a>>, Option<WindowBlock<'a>>) = (Vec::new(), None);
     for line in windows.lines() {
         let t = line.trim_start();
         if t.starts_with("Window #") {
-            records.extend(cur.take());
-            if matches_id(t) {
-                cur = Some((false, Vec::new()));
-            }
+            blocks.extend(cur.take());
+            let title = window_id_and_title(t).map(|(_, s)| s.trim()).unwrap_or("");
+            cur = Some(WindowBlock {
+                header: t,
+                title,
+                saw_owner: false,
+                pkgs: Vec::new(),
+                hidden: false,
+            });
         } else if !line.starts_with(char::is_whitespace) && line.starts_with("WINDOW MANAGER ") {
-            records.extend(cur.take());
-        } else if let Some((saw, pkgs)) = cur.as_mut().filter(|_| t.starts_with("mOwnerUid=")) {
-            *saw = true;
-            for p in t
-                .split_whitespace()
-                .filter_map(|p| p.strip_prefix("package="))
-                .map(|p| p.trim_end_matches(|c: char| ",;".contains(c)))
-                .filter(|p| !p.is_empty() && *p != "null" && is_pkg(p))
-            {
-                if !pkgs.contains(&p) {
-                    pkgs.push(p);
+            blocks.extend(cur.take());
+        } else if let Some(block) = cur.as_mut() {
+            if t.starts_with("mOwnerUid=") {
+                block.saw_owner = true;
+                for p in t
+                    .split_whitespace()
+                    .filter_map(|p| p.strip_prefix("package="))
+                    .map(|p| p.trim_end_matches(|c: char| ",;".contains(c)))
+                    .filter(|p| !p.is_empty() && *p != "null" && is_pkg(p))
+                {
+                    if !block.pkgs.contains(&p) {
+                        block.pkgs.push(p);
+                    }
+                }
+            }
+            for tok in t.split_whitespace() {
+                if matches!(
+                    tok,
+                    "isOnScreen=false" | "isVisible=false" | "mHasSurface=false"
+                ) || tok
+                    .strip_prefix("mViewVisibility=")
+                    .is_some_and(|v| v != "0x0")
+                {
+                    block.hidden = true;
                 }
             }
         }
     }
-    records.extend(cur);
-    records
+    blocks.extend(cur);
+    blocks
 }
 
-fn sanitize_window(value: &str, components: &[(&str, &str)]) -> String {
+fn window_block_owners<'a>(
+    blocks: &[WindowBlock<'a>],
+    identity: &str,
+) -> Vec<(bool, Vec<&'a str>)> {
+    blocks
+        .iter()
+        .filter(|b| matches_window_id(b.header, identity))
+        .map(|b| (b.saw_owner, b.pkgs.clone()))
+        .collect()
+}
+
+fn is_blocking_window_block(block: &WindowBlock<'_>) -> bool {
+    if block.hidden {
+        return false;
+    }
+    let title = block.title;
+    if title.starts_with("Application Not Responding")
+        || title.starts_with("Application Error")
+        || matches!(
+            title,
+            "NotificationShade" | "Keyguard" | "BiometricPrompt" | "Bouncer"
+        )
+    {
+        return true;
+    }
+    if (title == "android" || title.starts_with("PopupWindow"))
+        && block.pkgs.iter().any(|p| *p == "android")
+    {
+        return true;
+    }
+    let blocking_pkg = |p: &str| {
+        matches!(
+            p,
+            "com.android.permissioncontroller"
+                | "com.google.android.permissioncontroller"
+                | "com.android.packageinstaller"
+                | "com.google.android.packageinstaller"
+        )
+    };
+    let blocking_comp = |c: &str| {
+        c.contains("ChooserActivity")
+            || c.contains("ResolverActivity")
+            || c.contains("UsbPermissionActivity")
+            || c.contains("GrantPermissionsActivity")
+    };
+    block.pkgs.iter().any(|p| blocking_pkg(p))
+        || extract_components(title)
+            .iter()
+            .any(|(p, c)| blocking_pkg(p) || blocking_comp(c))
+}
+
+fn is_benign_system_focus(package: &str, title: &str, owner: &str) -> bool {
+    if !matches!(owner, "android" | "com.android.systemui") {
+        return false;
+    }
+    matches!(
+        title,
+        "ImmersiveModeConfirmation"
+            | "PointerLocation"
+            | "StatusBar"
+            | "NavigationBar"
+            | "NavigationBar0"
+    ) || title == format!("Splash Screen {package}")
+}
+
+fn raw_window_title(value: &str) -> String {
     if value.is_empty() || value == "null" || value.starts_with("null ") {
         return "null".into();
     }
-    let title = window_id_and_title(value)
-        .map(|(_, t)| t.trim().trim_end_matches('}').trim())
-        .unwrap_or("");
-    if !components.is_empty() {
-        let mut names = Vec::new();
-        for (_, c) in components {
-            if names.len() < 2 && !names.contains(c) {
-                names.push(*c);
-            }
-        }
-        let j = names.join(",");
-        return bounded(&if title.starts_with("SurfaceView") {
-            format!("SurfaceView[{j}]")
-        } else {
-            j
-        });
-    }
-    for (pre, lbl) in [
-        ("PopupWindow", "PopupWindow"),
-        ("Application Not Responding", "ApplicationNotResponding"),
-        ("Application Error", "ApplicationError"),
-    ] {
-        if title.starts_with(pre) {
-            return lbl.into();
-        }
-    }
-    if title.starts_with("SurfaceView") {
-        return title
-            .split(|c: char| !(c.is_ascii_alphanumeric() || "_.".contains(c)))
-            .find(|t| is_pkg(t))
-            .map_or_else(
-                || "SurfaceView".into(),
-                |p| bounded(&format!("SurfaceView[{p}]")),
-            );
-    }
-    if let Some(rest) = title.strip_prefix("Splash Screen") {
-        let tail = rest.trim();
-        return if is_pkg(tail) {
-            bounded(&format!("SplashScreen({tail})"))
-        } else {
-            "SplashScreen".into()
-        };
-    }
-    const SYS: &str = "StatusBar NavigationBar NavigationBar0 InputMethod NotificationShade Keyguard BiometricPrompt AssistPreviewPanel DockedStackDivider PipMenuActivity";
-    if SYS.split_whitespace().any(|w| w == title) || (!title.is_empty() && is_pkg(title)) {
-        bounded(title)
-    } else if title.is_empty() {
+    let raw = window_id_and_title(value).map_or(value, |(_, title)| title);
+    let cleaned = clean_controls(raw);
+    if cleaned.is_empty() {
         "untitled".into()
     } else {
-        "<redacted>".into()
+        bounded(&cleaned)
     }
 }
 
@@ -441,22 +500,19 @@ fn classify_pkgs(package: &str, pkgs: &[&str], allow_self: bool) -> FocusClass {
 
 fn assess_one(
     package: &str,
-    windows: &str,
+    blocks: &[WindowBlock<'_>],
     display: Option<u32>,
     value: &str,
+    allow_benign_system: bool,
 ) -> (Option<u32>, bool, FocusClass, Vec<String>, String) {
-    let components = extract_components(value);
     let comp_pkgs = component_packages(value);
-    let window = sanitize_window(value, &components);
+    let window = raw_window_title(value);
     let is_null = value.is_empty() || value == "null" || value.starts_with("null ");
     let mut owners = Vec::new();
-    let records = if is_null {
-        Vec::new()
-    } else {
-        window_id_and_title(value)
-            .map(|(id, _)| window_block_owners(windows, id))
-            .unwrap_or_default()
-    };
+    let parsed_id = (!is_null).then(|| window_id_and_title(value)).flatten();
+    let records = parsed_id
+        .map(|(id, _)| window_block_owners(blocks, id))
+        .unwrap_or_default();
     let class = match records.as_slice() {
         _ if is_null => FocusClass::Missing,
         [_, _, ..] => {
@@ -466,28 +522,41 @@ fn assess_one(
             push_owners(&mut owners, &comp_pkgs);
             FocusClass::Ambiguous
         }
-        [(true, pkgs)] => {
-            push_owners(&mut owners, pkgs);
-            match pkgs.as_slice() {
-                [] => {
-                    push_owners(&mut owners, &comp_pkgs);
-                    classify_pkgs(package, &comp_pkgs, false)
-                }
-                [p] if *p == package && (comp_pkgs.is_empty() || comp_pkgs == [package]) => {
-                    FocusClass::SelfOwner
-                }
-                [p] if *p == package => {
-                    push_owners(&mut owners, &comp_pkgs);
-                    FocusClass::Ambiguous
-                }
-                [_] if comp_pkgs.contains(&package) => {
-                    push_owners(&mut owners, &[package]);
-                    FocusClass::Ambiguous
-                }
-                [_] => FocusClass::Other,
-                _ => FocusClass::Ambiguous,
+        [(true, pkgs)] => match pkgs.as_slice() {
+            [] => {
+                push_owners(&mut owners, &comp_pkgs);
+                classify_pkgs(package, &comp_pkgs, false)
             }
-        }
+            [p] if *p == package && (comp_pkgs.is_empty() || comp_pkgs == [package]) => {
+                push_owners(&mut owners, pkgs);
+                FocusClass::SelfOwner
+            }
+            [p] if *p == package => {
+                push_owners(&mut owners, pkgs);
+                push_owners(&mut owners, &comp_pkgs);
+                FocusClass::Ambiguous
+            }
+            [_] if comp_pkgs.contains(&package) => {
+                push_owners(&mut owners, pkgs);
+                push_owners(&mut owners, &[package]);
+                FocusClass::Ambiguous
+            }
+            [p] if allow_benign_system
+                && comp_pkgs.is_empty()
+                && parsed_id.is_some_and(|(_, t)| is_benign_system_focus(package, t.trim(), p)) =>
+            {
+                push_owners(&mut owners, &[package]);
+                FocusClass::SelfOwner
+            }
+            [_] => {
+                push_owners(&mut owners, pkgs);
+                FocusClass::Other
+            }
+            _ => {
+                push_owners(&mut owners, pkgs);
+                FocusClass::Ambiguous
+            }
+        },
         _ => {
             push_owners(&mut owners, &comp_pkgs);
             classify_pkgs(package, &comp_pkgs, true)
@@ -497,7 +566,8 @@ fn assess_one(
 }
 
 fn assess_focus_summary(package: &str, windows: &str) -> (FocusClass, Vec<String>, String) {
-    let (mut apps, mut entries, mut display) = (Vec::new(), Vec::new(), None);
+    let blocks = parse_window_blocks(windows);
+    let (mut apps, mut raw_entries, mut display) = (Vec::new(), Vec::new(), None);
     for line in windows.lines() {
         let t = line.trim_start();
         if !line.starts_with(char::is_whitespace) && line.starts_with("WINDOW MANAGER ") {
@@ -522,9 +592,15 @@ fn assess_focus_summary(package: &str, windows: &str) -> (FocusClass, Vec<String
             push_owners(&mut apps, &component_packages(v));
         }
         if let Some(v) = parse_field(line, "mCurrentFocus") {
-            entries.push(assess_one(package, windows, display, v));
+            raw_entries.push((display, v));
         }
     }
+    let allow_benign_system =
+        apps.len() == 1 && apps[0] == package && !blocks.iter().any(is_blocking_window_block);
+    let entries: Vec<_> = raw_entries
+        .into_iter()
+        .map(|(d, v)| assess_one(package, &blocks, d, v, allow_benign_system))
+        .collect();
     let primary_ok = entries.iter().any(|e| e.0 == Some(0) && !e.1);
     let active: Vec<_> = if primary_ok {
         entries
@@ -726,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    fn foreground_classifies_other_missing_ambiguous_and_redacts_titles() {
+    fn foreground_classifies_other_missing_ambiguous_and_reports_raw_titles() {
         let activity = "mResumedActivity: ActivityRecord{abc u0 com.example.app/.Main t1}";
         let system_overlay = concat!(
             "  mCurrentFocus=Window{999 u0 com.android.systemui/com.android.systemui.usb.UsbPermissionActivity}\n",
@@ -737,6 +813,12 @@ mod tests {
         let err = foreground("com.example.app", activity, system_overlay).unwrap_err();
         assert!(err.contains("classification=other"), "{err}");
         assert!(err.contains("owner=com.android.systemui"), "{err}");
+        assert!(
+            err.contains(
+                "window=com.android.systemui/com.android.systemui.usb.UsbPermissionActivity"
+            ),
+            "{err}"
+        );
         assert!(err.contains("focused_app=com.example.app"), "{err}");
 
         let chooser =
@@ -744,20 +826,20 @@ mod tests {
         let err = foreground("com.example.app", activity, chooser).unwrap_err();
         assert!(err.contains("classification=other"), "{err}");
         assert!(err.contains("owner=android"), "{err}");
-
-        let pii_title = concat!(
-            "  mCurrentFocus=Window{444 u0 alice@example.com secret_token=xyz123}\n",
-            "  Window #0 Window{444 u0 alice@example.com secret_token=xyz123}:\n",
-            "    mOwnerUid=10200 package=com.other.app",
-        );
-        let err = foreground("com.example.app", activity, pii_title).unwrap_err();
-        assert!(err.contains("classification=other"), "{err}");
-        assert!(err.contains("owner=com.other.app"), "{err}");
-        assert!(err.contains("window=<redacted>"), "{err}");
         assert!(
-            !err.contains("alice@example.com") && !err.contains("secret_token"),
+            err.contains("window=android/com.android.internal.app.ChooserActivity"),
             "{err}"
         );
+
+        let raw_title = concat!(
+            "  mCurrentFocus=Window{444 u0 Custom System Dialog\tDetail}\n",
+            "  Window #0 Window{444 u0 Custom System Dialog\tDetail}:\n",
+            "    mOwnerUid=10200 package=com.other.app",
+        );
+        let err = foreground("com.example.app", activity, raw_title).unwrap_err();
+        assert!(err.contains("classification=other"), "{err}");
+        assert!(err.contains("owner=com.other.app"), "{err}");
+        assert!(err.contains("window=Custom System Dialog Detail"), "{err}");
 
         for missing in [
             "",
@@ -776,9 +858,251 @@ mod tests {
             "Display: mDisplayId=0 (organized)\n  mCurrentFocus=null\nDisplay: mDisplayId=1 (organized)\n  mCurrentFocus=Window{2 u0 com.example.app/.Main}",
             "mCurrentFocus=Window{123 u0 com.example.app/.Main}\nWindow #0 Window{123 u0 com.example.app/.Main}:\n  mOwnerUid=10200 package=com.other.app",
             "mCurrentFocus=Window{123 u0 PopupWindow:a}\nWindow #0 Window{123 u0 PopupWindow:a}:\n  mOwnerUid=1 package=com.example.app\nWindow #1 Window{123 u0 PopupWindow:a}:\n  mOwnerUid=2 package=com.other.app",
+            concat!(
+                "Display: mDisplayId=0 (organized)\n",
+                "  mCurrentFocus=Window{1 u0 ImmersiveModeConfirmation}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "Display: mDisplayId=1 (organized)\n",
+                "  mCurrentFocus=Window{2 u0 com.android.systemui/.Dialog}\n",
+                "WINDOW MANAGER WINDOWS\n",
+                "  Window #0 Window{1 u0 ImmersiveModeConfirmation}:\n",
+                "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE\n",
+                "  Window #1 Window{2 u0 com.android.systemui/.Dialog}:\n",
+                "    mOwnerUid=10100 package=com.android.systemui",
+            ),
         ] {
             let err = foreground("com.example.app", activity, ambiguous).unwrap_err();
             assert!(err.contains("classification=ambiguous"), "{ambiguous} => {err}");
+        }
+    }
+
+    #[test]
+    fn foreground_accepts_non_blocking_android_chrome_when_focused_app_is_unique() {
+        let activity = "mResumedActivity: ActivityRecord{abc u0 com.example.app/.Main t1}";
+        let immersive_realistic = concat!(
+            "WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)\n",
+            "  Display: mDisplayId=0 (organized)\n",
+            "    mCurrentFocus=Window{abcd123 u0 ImmersiveModeConfirmation}\n",
+            "    mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+            "WINDOW MANAGER WINDOWS (dumpsys window windows)\n",
+            "  Window #0 Window{abcd123 u0 ImmersiveModeConfirmation}:\n",
+            "    mDisplayId=0 rootTaskId=1 mSession=Session{1 1000:1000}\n",
+            "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE\n",
+            "    mHasSurface=true isOnScreen=true mViewVisibility=0x0\n",
+            "  Window #1 Window{ef01234 u0 com.example.app/.Main}:\n",
+            "    mOwnerUid=10185 showForAllUsers=false package=com.example.app appop=NONE\n",
+            "    mHasSurface=true isOnScreen=true mViewVisibility=0x0\n",
+            "  Window #2 Window{beef001 u0 NotificationShade}:\n",
+            "    mOwnerUid=10100 showForAllUsers=true package=com.android.systemui appop=NONE\n",
+            "    mViewVisibility=0x8 mHasSurface=false isOnScreen=false\n",
+            "  Window #3 Window{beef002 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity}:\n",
+            "    mOwnerUid=10120 showForAllUsers=false package=com.google.android.apps.nexuslauncher appop=NONE\n",
+            "    mViewVisibility=0x8 mHasSurface=false isOnScreen=false\n",
+        );
+        assert!(foreground("com.example.app", activity, immersive_realistic).is_ok());
+
+        for valid in [
+            concat!(
+                "  mCurrentFocus=Window{111 u0 Splash Screen com.example.app}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "  Window #0 Window{111 u0 Splash Screen com.example.app}:\n",
+                "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+            ),
+            concat!(
+                "  mCurrentFocus=Window{111 u0 Splash Screen com.example.app}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "  Window #0 Window{111 u0 Splash Screen com.example.app}:\n",
+                "    mOwnerUid=10100 showForAllUsers=true package=com.android.systemui appop=NONE",
+            ),
+            concat!(
+                "  mCurrentFocus=Window{222 u0 PointerLocation}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "  Window #0 Window{222 u0 PointerLocation}:\n",
+                "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+            ),
+            concat!(
+                "  mCurrentFocus=Window{333 u0 StatusBar}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "  Window #0 Window{333 u0 StatusBar}:\n",
+                "    mOwnerUid=10100 showForAllUsers=true package=com.android.systemui appop=NONE",
+            ),
+            concat!(
+                "  mCurrentFocus=Window{444 u0 NavigationBar0}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "  Window #0 Window{444 u0 NavigationBar0}:\n",
+                "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+            ),
+            concat!(
+                "Display: mDisplayId=0 (organized)\n",
+                "  mCurrentFocus=Window{a1 u0 ImmersiveModeConfirmation}\n",
+                "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                "Display: mDisplayId=1 (organized)\n",
+                "  mCurrentFocus=null\n",
+                "WINDOW MANAGER WINDOWS\n",
+                "  Window #0 Window{a1 u0 ImmersiveModeConfirmation}:\n",
+                "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+            ),
+        ] {
+            assert!(
+                foreground("com.example.app", activity, valid).is_ok(),
+                "{valid}"
+            );
+        }
+    }
+
+    #[test]
+    fn foreground_fails_closed_on_blocking_android_dialogs_and_unverified_chrome() {
+        let activity = "mResumedActivity: ActivityRecord{abc u0 com.example.app/.Main t1}";
+        for (dump, expected_owner, expected_window) in [
+            (
+                concat!(
+                    "  mCurrentFocus=Window{100 u0 Application Not Responding: com.example.app}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{100 u0 Application Not Responding: com.example.app}:\n",
+                    "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+                ),
+                "owner=android",
+                "window=Application Not Responding: com.example.app",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{101 u0 Application Error: com.example.app}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{101 u0 Application Error: com.example.app}:\n",
+                    "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+                ),
+                "owner=android",
+                "window=Application Error: com.example.app",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{102 u0 com.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{102 u0 com.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity}:\n",
+                    "    mOwnerUid=10110 package=com.android.permissioncontroller",
+                ),
+                "owner=com.android.permissioncontroller",
+                "window=com.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{103 u0 android}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{103 u0 android}:\n",
+                    "    mOwnerUid=1000 showForAllUsers=true package=android appop=NONE",
+                ),
+                "owner=android",
+                "window=android",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{104 u0 PopupWindow:dead}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{104 u0 PopupWindow:dead}:\n",
+                    "    mOwnerUid=1000 package=android",
+                ),
+                "owner=android",
+                "window=PopupWindow:dead",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{105 u0 Splash Screen com.other.app}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{105 u0 Splash Screen com.other.app}:\n",
+                    "    mOwnerUid=1000 package=android",
+                ),
+                "owner=android",
+                "window=Splash Screen com.other.app",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{106 u0 ImmersiveModeConfirmation}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.other.app/.Main t1}\n",
+                    "  Window #0 Window{106 u0 ImmersiveModeConfirmation}:\n",
+                    "    mOwnerUid=1000 package=android",
+                ),
+                "owner=android",
+                "window=ImmersiveModeConfirmation",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{107 u0 ImmersiveModeConfirmation}\n",
+                    "  Window #0 Window{107 u0 ImmersiveModeConfirmation}:\n",
+                    "    mOwnerUid=1000 package=android",
+                ),
+                "owner=android",
+                "window=ImmersiveModeConfirmation",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{108 u0 ImmersiveModeConfirmation}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{108 u0 ImmersiveModeConfirmation}:\n",
+                    "    mOwnerUid=10200 package=com.other.app",
+                ),
+                "owner=com.other.app",
+                "window=ImmersiveModeConfirmation",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{109 u0 ImmersiveModeConfirmation}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{109 u0 ImmersiveModeConfirmation}:\n",
+                    "    mOwnerUid=1000 package=android\n",
+                    "  Window #1 Window{110 u0 Application Not Responding: com.example.app}:\n",
+                    "    mOwnerUid=1000 package=android",
+                ),
+                "owner=android",
+                "window=ImmersiveModeConfirmation",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{111 u0 ImmersiveModeConfirmation}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{111 u0 ImmersiveModeConfirmation}:\n",
+                    "    mOwnerUid=1000 package=android\n",
+                    "  Window #1 Window{112 u0 NotificationShade}:\n",
+                    "    mOwnerUid=10100 package=com.android.systemui\n",
+                    "    mViewVisibility=0x0 mHasSurface=true isOnScreen=true",
+                ),
+                "owner=android",
+                "window=ImmersiveModeConfirmation",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{113 u0 NotificationShade}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{113 u0 NotificationShade}:\n",
+                    "    mOwnerUid=10100 package=com.android.systemui",
+                ),
+                "owner=com.android.systemui",
+                "window=NotificationShade",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{114 u0 Keyguard}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{114 u0 Keyguard}:\n",
+                    "    mOwnerUid=10100 package=com.android.systemui",
+                ),
+                "owner=com.android.systemui",
+                "window=Keyguard",
+            ),
+            (
+                concat!(
+                    "  mCurrentFocus=Window{115 u0 InputMethod}\n",
+                    "  mFocusedApp=ActivityRecord{abc u0 com.example.app/.Main t1}\n",
+                    "  Window #0 Window{115 u0 InputMethod}:\n",
+                    "    mOwnerUid=10190 package=com.example.ime",
+                ),
+                "owner=com.example.ime",
+                "window=InputMethod",
+            ),
+        ] {
+            let err = foreground("com.example.app", activity, dump).unwrap_err();
+            assert!(err.contains("classification=other"), "{err}");
+            assert!(err.contains(expected_owner), "{err}");
+            assert!(err.contains(expected_window), "{err}");
         }
     }
 }
