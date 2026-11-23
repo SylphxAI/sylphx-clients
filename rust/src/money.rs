@@ -471,23 +471,36 @@ pub struct CancelCustomerSubscriptionRequest {
     pub refund_last_payment: bool,
 }
 
+/// Request to settle the hold against a terminal receipt.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct CapturePlatformUsageHoldRequest {
+    /// Organization whose balance backs the hold.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "payerOrg"
     )]
     pub payer_org: String,
+    /// Metered service associated with the execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
+    /// Stable caller-generated identity of the metered execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "executionKey"
     )]
     pub execution_key: String,
+    /// Actual amount, as a decimal string in pico-USD. Zero is valid.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -495,6 +508,8 @@ pub struct CapturePlatformUsageHoldRequest {
     )]
     pub actual_picousd: String,
     /// Stable receipt identity (include the provider/account namespace).
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -1434,17 +1449,27 @@ pub struct CheckoutSession {
     pub claim_secret_expires_at: String,
 }
 
+/// Request to claim dispatch using the reserved hold.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ClaimPlatformUsageHoldRequest {
+    /// Organization whose balance backs the hold.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "payerOrg"
     )]
     pub payer_org: String,
+    /// Metered service associated with the execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
+    /// Stable caller-generated identity of the metered execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4126,40 +4151,51 @@ pub struct MerchantAccount {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct PlatformUsageHoldReceipt {
+    /// Canonical resource name of the hold receipt.
+    ///
     /// Field behavior: `identifier`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+    /// Stable identifier of the hold.
+    ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub uid: String,
+    /// Resource metadata, when available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<crate::common::ResourceMeta>,
+    /// Organization whose balance backs the hold.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "payerOrg"
     )]
     pub payer_org: String,
+    /// Metered service associated with the execution.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
+    /// Stable caller-generated identity of the metered execution.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "executionKey"
     )]
     pub execution_key: String,
+    /// Maximum amount authorized by the hold, in pico-USD.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "upperBoundPicousd"
     )]
     pub upper_bound_picousd: String,
+    /// Deadline to claim dispatch, as an RFC 3339 timestamp.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "dispatchBy"
     )]
     pub dispatch_by: String,
+    /// Deadline to submit a terminal receipt, as an RFC 3339 timestamp.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4169,12 +4205,14 @@ pub struct PlatformUsageHoldReceipt {
     /// pending, in_flight, awaiting_settlement (receipt overdue), captured, released, or expired.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub state: String,
+    /// Amount charged to the hold, in pico-USD.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "capturedPicousd"
     )]
     pub captured_picousd: String,
+    /// Amount returned from the hold, in pico-USD.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4188,6 +4226,7 @@ pub struct PlatformUsageHoldReceipt {
         alias = "ledgerTransactionId"
     )]
     pub ledger_transaction_id: String,
+    /// Whether the operation returned an already recorded result.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub replayed: bool,
 }
@@ -4780,17 +4819,27 @@ pub struct RefundCheckoutSessionResponse {
     pub refund: Option<Refund>,
 }
 
+/// Request to return the hold without charging the payer.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ReleasePlatformUsageHoldRequest {
+    /// Organization whose balance backs the hold.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "payerOrg"
     )]
     pub payer_org: String,
+    /// Metered service associated with the execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
+    /// Stable caller-generated identity of the metered execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4920,36 +4969,54 @@ pub struct ReportStorePurchaseUsageResponse {
     pub store_purchase: Option<StorePurchase>,
 }
 
+/// Request to reserve an upper bound against the payer balance.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ReservePlatformUsageHoldRequest {
+    /// Organization whose balance backs the hold.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "payerOrg"
     )]
     pub payer_org: String,
+    /// Metered service associated with the execution.
+    ///
+    /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub service: String,
     /// Use a durable, caller-generated platform-hold:<unique-execution-id>.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "executionKey"
     )]
     pub execution_key: String,
+    /// Maximum amount authorized by the hold, in pico-USD.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "upperBoundPicousd"
     )]
     pub upper_bound_picousd: String,
+    /// Deadline to claim dispatch, as an RFC 3339 timestamp.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "dispatchBy"
     )]
     pub dispatch_by: String,
+    /// Deadline to submit a terminal receipt, as an RFC 3339 timestamp.
+    ///
+    /// Field behavior: `required`.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -7986,7 +8053,7 @@ pub struct PlatformUsageHoldsCollection<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
-    /// ReservePlatformUsageHold is an internal platform service operation.
+    /// ReservePlatformUsageHold holds an upper bound before dispatch.
     ///
     /// `POST /v1/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
     ///
@@ -8009,7 +8076,7 @@ impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// ClaimPlatformUsageHold is an internal platform service operation.
+    /// ClaimPlatformUsageHold records that dispatch has been claimed against the hold.
     ///
     /// `POST /v1/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
     ///
@@ -8032,7 +8099,7 @@ impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// CapturePlatformUsageHold is an internal platform service operation.
+    /// CapturePlatformUsageHold settles the hold against a definitive terminal receipt.
     ///
     /// `POST /v1/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
     ///
@@ -8055,7 +8122,7 @@ impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// ReleasePlatformUsageHold is an internal platform service operation.
+    /// ReleasePlatformUsageHold returns the held funds when the execution will not be charged.
     ///
     /// `POST /v1/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
     ///

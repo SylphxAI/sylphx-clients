@@ -15909,37 +15909,43 @@
                 {
                   "field": "payer_org",
                   "flag": "--payer-org",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Organization whose balance backs the hold.",
                   "type": "string"
                 },
                 {
                   "field": "service",
                   "flag": "--service",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Metered service associated with the execution.",
                   "type": "string"
                 },
                 {
                   "field": "execution_key",
                   "flag": "--execution-key",
+                  "required": true,
                   "summary": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
                   "type": "string"
                 },
                 {
                   "field": "upper_bound_picousd",
                   "flag": "--upper-bound-picousd",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Maximum amount authorized by the hold, in pico-USD.",
                   "type": "string"
                 },
                 {
                   "field": "dispatch_by",
                   "flag": "--dispatch-by",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Deadline to claim dispatch, as an RFC 3339 timestamp.",
                   "type": "string"
                 },
                 {
                   "field": "settle_by",
                   "flag": "--settle-by",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Deadline to submit a terminal receipt, as an RFC 3339 timestamp.",
                   "type": "string"
                 }
               ],
@@ -15947,7 +15953,7 @@
               "method": "money.platform_usage_holds.reserve",
               "permission": "money:platform_usage:write",
               "positional": null,
-              "summary": "ReservePlatformUsageHold is an internal platform service operation.",
+              "summary": "ReservePlatformUsageHold holds an upper bound before dispatch.",
               "verb": "reserve"
             },
             {
@@ -15956,19 +15962,22 @@
                 {
                   "field": "payer_org",
                   "flag": "--payer-org",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Organization whose balance backs the hold.",
                   "type": "string"
                 },
                 {
                   "field": "service",
                   "flag": "--service",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Metered service associated with the execution.",
                   "type": "string"
                 },
                 {
                   "field": "execution_key",
                   "flag": "--execution-key",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Stable caller-generated identity of the metered execution.",
                   "type": "string"
                 }
               ],
@@ -15976,7 +15985,7 @@
               "method": "money.platform_usage_holds.claim",
               "permission": "money:platform_usage:write",
               "positional": null,
-              "summary": "ClaimPlatformUsageHold is an internal platform service operation.",
+              "summary": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
               "verb": "claim"
             },
             {
@@ -15985,30 +15994,35 @@
                 {
                   "field": "payer_org",
                   "flag": "--payer-org",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Organization whose balance backs the hold.",
                   "type": "string"
                 },
                 {
                   "field": "service",
                   "flag": "--service",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Metered service associated with the execution.",
                   "type": "string"
                 },
                 {
                   "field": "execution_key",
                   "flag": "--execution-key",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Stable caller-generated identity of the metered execution.",
                   "type": "string"
                 },
                 {
                   "field": "actual_picousd",
                   "flag": "--actual-picousd",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Actual amount, as a decimal string in pico-USD. Zero is valid.",
                   "type": "string"
                 },
                 {
                   "field": "terminal_receipt_key",
                   "flag": "--terminal-receipt-key",
+                  "required": true,
                   "summary": "Stable receipt identity (include the provider/account namespace).",
                   "type": "string"
                 }
@@ -16017,7 +16031,7 @@
               "method": "money.platform_usage_holds.capture",
               "permission": "money:platform_usage:write",
               "positional": null,
-              "summary": "CapturePlatformUsageHold is an internal platform service operation.",
+              "summary": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
               "verb": "capture"
             },
             {
@@ -16026,19 +16040,22 @@
                 {
                   "field": "payer_org",
                   "flag": "--payer-org",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Organization whose balance backs the hold.",
                   "type": "string"
                 },
                 {
                   "field": "service",
                   "flag": "--service",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Metered service associated with the execution.",
                   "type": "string"
                 },
                 {
                   "field": "execution_key",
                   "flag": "--execution-key",
-                  "summary": "",
+                  "required": true,
+                  "summary": "Stable caller-generated identity of the metered execution.",
                   "type": "string"
                 },
                 {
@@ -16052,7 +16069,7 @@
               "method": "money.platform_usage_holds.release",
               "permission": "money:platform_usage:write",
               "positional": null,
-              "summary": "ReleasePlatformUsageHold is an internal platform service operation.",
+              "summary": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
               "verb": "release"
             }
           ],

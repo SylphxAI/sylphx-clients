@@ -1,7 +1,9 @@
 {
   "fields": [
     {
-      "behaviors": [],
+      "behaviors": [
+        "REQUIRED"
+      ],
       "cli_flag": "",
       "filterable": false,
       "name": "payer_org",
@@ -17,7 +19,9 @@
       }
     },
     {
-      "behaviors": [],
+      "behaviors": [
+        "REQUIRED"
+      ],
       "cli_flag": "",
       "filterable": false,
       "name": "service",
@@ -33,7 +37,9 @@
       }
     },
     {
-      "behaviors": [],
+      "behaviors": [
+        "REQUIRED"
+      ],
       "cli_flag": "",
       "filterable": false,
       "name": "execution_key",
@@ -49,7 +55,9 @@
       }
     },
     {
-      "behaviors": [],
+      "behaviors": [
+        "REQUIRED"
+      ],
       "cli_flag": "",
       "filterable": false,
       "name": "upper_bound_picousd",
@@ -65,7 +73,9 @@
       }
     },
     {
-      "behaviors": [],
+      "behaviors": [
+        "REQUIRED"
+      ],
       "cli_flag": "",
       "filterable": false,
       "name": "dispatch_by",
@@ -81,7 +91,9 @@
       }
     },
     {
-      "behaviors": [],
+      "behaviors": [
+        "REQUIRED"
+      ],
       "cli_flag": "",
       "filterable": false,
       "name": "settle_by",

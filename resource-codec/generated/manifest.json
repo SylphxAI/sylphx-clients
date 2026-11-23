@@ -85771,12 +85771,14 @@
       "package": "sylphx.money.v1"
     },
     {
-      "doc": "",
+      "doc": "Request to settle the hold against a terminal receipt.",
       "fields": [
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Organization whose balance backs the hold.",
           "filterable": false,
           "name": "payer_org",
           "number": 1,
@@ -85791,9 +85793,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Metered service associated with the execution.",
           "filterable": false,
           "name": "service",
           "number": 2,
@@ -85808,9 +85812,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Stable caller-generated identity of the metered execution.",
           "filterable": false,
           "name": "execution_key",
           "number": 3,
@@ -85825,9 +85831,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Actual amount, as a decimal string in pico-USD. Zero is valid.",
           "filterable": false,
           "name": "actual_picousd",
           "number": 4,
@@ -85842,7 +85850,9 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
           "doc": "Stable receipt identity (include the provider/account namespace).",
           "filterable": false,
@@ -88206,12 +88216,14 @@
       "package": "sylphx.money.v1"
     },
     {
-      "doc": "",
+      "doc": "Request to claim dispatch using the reserved hold.",
       "fields": [
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Organization whose balance backs the hold.",
           "filterable": false,
           "name": "payer_org",
           "number": 1,
@@ -88226,9 +88238,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Metered service associated with the execution.",
           "filterable": false,
           "name": "service",
           "number": 2,
@@ -88243,9 +88257,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Stable caller-generated identity of the metered execution.",
           "filterable": false,
           "name": "execution_key",
           "number": 3,
@@ -95126,7 +95142,7 @@
             "IDENTIFIER"
           ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Canonical resource name of the hold receipt.",
           "filterable": false,
           "name": "name",
           "number": 1,
@@ -95145,7 +95161,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Stable identifier of the hold.",
           "filterable": false,
           "name": "uid",
           "number": 2,
@@ -95164,7 +95180,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Resource metadata, when available.",
           "filterable": false,
           "name": "meta",
           "number": 3,
@@ -95181,7 +95197,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Organization whose balance backs the hold.",
           "filterable": false,
           "name": "payer_org",
           "number": 4,
@@ -95198,7 +95214,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Metered service associated with the execution.",
           "filterable": false,
           "name": "service",
           "number": 5,
@@ -95215,7 +95231,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Stable caller-generated identity of the metered execution.",
           "filterable": false,
           "name": "execution_key",
           "number": 6,
@@ -95232,7 +95248,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Maximum amount authorized by the hold, in pico-USD.",
           "filterable": false,
           "name": "upper_bound_picousd",
           "number": 7,
@@ -95249,7 +95265,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Deadline to claim dispatch, as an RFC 3339 timestamp.",
           "filterable": false,
           "name": "dispatch_by",
           "number": 8,
@@ -95266,7 +95282,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Deadline to submit a terminal receipt, as an RFC 3339 timestamp.",
           "filterable": false,
           "name": "settle_by",
           "number": 9,
@@ -95300,7 +95316,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Amount charged to the hold, in pico-USD.",
           "filterable": false,
           "name": "captured_picousd",
           "number": 11,
@@ -95317,7 +95333,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Amount returned from the hold, in pico-USD.",
           "filterable": false,
           "name": "released_picousd",
           "number": 12,
@@ -95351,7 +95367,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Whether the operation returned an already recorded result.",
           "filterable": false,
           "name": "replayed",
           "number": 14,
@@ -96947,12 +96963,14 @@
       "package": "sylphx.money.v1"
     },
     {
-      "doc": "",
+      "doc": "Request to return the hold without charging the payer.",
       "fields": [
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Organization whose balance backs the hold.",
           "filterable": false,
           "name": "payer_org",
           "number": 1,
@@ -96967,9 +96985,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Metered service associated with the execution.",
           "filterable": false,
           "name": "service",
           "number": 2,
@@ -96984,9 +97004,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Stable caller-generated identity of the metered execution.",
           "filterable": false,
           "name": "execution_key",
           "number": 3,
@@ -97001,7 +97023,9 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "OPTIONAL"
+          ],
           "cli_flag": "",
           "doc": "Required after claim. An unknown dispatch or missing receipt is not proof.",
           "filterable": false,
@@ -97274,12 +97298,14 @@
       "package": "sylphx.money.v1"
     },
     {
-      "doc": "",
+      "doc": "Request to reserve an upper bound against the payer balance.",
       "fields": [
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Organization whose balance backs the hold.",
           "filterable": false,
           "name": "payer_org",
           "number": 1,
@@ -97294,9 +97320,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Metered service associated with the execution.",
           "filterable": false,
           "name": "service",
           "number": 2,
@@ -97311,7 +97339,9 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
           "doc": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
           "filterable": false,
@@ -97328,9 +97358,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Maximum amount authorized by the hold, in pico-USD.",
           "filterable": false,
           "name": "upper_bound_picousd",
           "number": 4,
@@ -97345,9 +97377,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Deadline to claim dispatch, as an RFC 3339 timestamp.",
           "filterable": false,
           "name": "dispatch_by",
           "number": 5,
@@ -97362,9 +97396,11 @@
           }
         },
         {
-          "behaviors": [],
+          "behaviors": [
+            "REQUIRED"
+          ],
           "cli_flag": "",
-          "doc": "",
+          "doc": "Deadline to submit a terminal receipt, as an RFC 3339 timestamp.",
           "filterable": false,
           "name": "settle_by",
           "number": 6,
@@ -153000,13 +153036,13 @@
       "message": "sylphx.money.v1.PlatformUsageHoldReceipt",
       "meters": [],
       "parent_pattern": "orgs/{org}",
-      "pattern": "orgs/{org}/platform_usage_holds/{platform_usage_hold}",
+      "pattern": "orgs/{org}/platform_usage_holds/{platform_usage_hold_receipt}",
       "plural": "platformUsageHolds",
       "priority_chunk": false,
       "reconciled": false,
       "service": "money",
       "shape": "record",
-      "singular": "platformUsageHold",
+      "singular": "platformUsageHoldReceipt",
       "stale_bound": null,
       "storage": "service",
       "terraform": false,
@@ -176042,7 +176078,7 @@
               "backend_idempotency": true,
               "cancellable": false,
               "cli_verb": "",
-              "doc": "ReservePlatformUsageHold is an internal platform service operation.",
+              "doc": "ReservePlatformUsageHold holds an upper bound before dispatch.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
@@ -176080,7 +176116,7 @@
               "backend_idempotency": true,
               "cancellable": false,
               "cli_verb": "",
-              "doc": "ClaimPlatformUsageHold is an internal platform service operation.",
+              "doc": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
@@ -176118,7 +176154,7 @@
               "backend_idempotency": true,
               "cancellable": false,
               "cli_verb": "",
-              "doc": "CapturePlatformUsageHold is an internal platform service operation.",
+              "doc": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
@@ -176156,7 +176192,7 @@
               "backend_idempotency": true,
               "cancellable": false,
               "cli_verb": "",
-              "doc": "ReleasePlatformUsageHold is an internal platform service operation.",
+              "doc": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",

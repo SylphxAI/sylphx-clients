@@ -191,13 +191,18 @@ export interface CancelCustomerSubscriptionRequest {
 	refundLastPayment?: boolean
 }
 
+/** Request to settle the hold against a terminal receipt. */
 export interface CapturePlatformUsageHoldRequest {
-	payerOrg?: string
-	service?: string
-	executionKey?: string
-	actualPicousd?: string
+	/** Organization whose balance backs the hold. */
+	payerOrg: string
+	/** Metered service associated with the execution. */
+	service: string
+	/** Stable caller-generated identity of the metered execution. */
+	executionKey: string
+	/** Actual amount, as a decimal string in pico-USD. Zero is valid. */
+	actualPicousd: string
 	/** Stable receipt identity (include the provider/account namespace). */
-	terminalReceiptKey?: string
+	terminalReceiptKey: string
 }
 
 /**
@@ -635,10 +640,14 @@ export interface CheckoutSession {
 	readonly claimSecretExpiresAt?: string
 }
 
+/** Request to claim dispatch using the reserved hold. */
 export interface ClaimPlatformUsageHoldRequest {
-	payerOrg?: string
-	service?: string
-	executionKey?: string
+	/** Organization whose balance backs the hold. */
+	payerOrg: string
+	/** Metered service associated with the execution. */
+	service: string
+	/** Stable caller-generated identity of the metered execution. */
+	executionKey: string
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -1900,21 +1909,33 @@ export interface MerchantAccount {
  * receipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).
  */
 export interface PlatformUsageHoldReceipt {
+	/** Canonical resource name of the hold receipt. */
 	name?: string
+	/** Stable identifier of the hold. */
 	readonly uid?: string
+	/** Resource metadata, when available. */
 	meta?: common.ResourceMeta
+	/** Organization whose balance backs the hold. */
 	payerOrg?: string
+	/** Metered service associated with the execution. */
 	service?: string
+	/** Stable caller-generated identity of the metered execution. */
 	executionKey?: string
+	/** Maximum amount authorized by the hold, in pico-USD. */
 	upperBoundPicousd?: string
+	/** Deadline to claim dispatch, as an RFC 3339 timestamp. */
 	dispatchBy?: string
+	/** Deadline to submit a terminal receipt, as an RFC 3339 timestamp. */
 	settleBy?: string
 	/** pending, in_flight, awaiting_settlement (receipt overdue), captured, released, or expired. */
 	state?: string
+	/** Amount charged to the hold, in pico-USD. */
 	capturedPicousd?: string
+	/** Amount returned from the hold, in pico-USD. */
 	releasedPicousd?: string
 	/** Present only for a positive capture; this is the only billable journal. */
 	ledgerTransactionId?: string
+	/** Whether the operation returned an already recorded result. */
 	replayed?: boolean
 }
 
@@ -2184,10 +2205,14 @@ export interface RefundCheckoutSessionResponse {
 	readonly refund?: Refund
 }
 
+/** Request to return the hold without charging the payer. */
 export interface ReleasePlatformUsageHoldRequest {
-	payerOrg?: string
-	service?: string
-	executionKey?: string
+	/** Organization whose balance backs the hold. */
+	payerOrg: string
+	/** Metered service associated with the execution. */
+	service: string
+	/** Stable caller-generated identity of the metered execution. */
+	executionKey: string
 	/** Required after claim. An unknown dispatch or missing receipt is not proof. */
 	definitiveNoCharge?: boolean
 }
@@ -2252,14 +2277,20 @@ export interface ReportStorePurchaseUsageResponse {
 	storePurchase?: StorePurchase
 }
 
+/** Request to reserve an upper bound against the payer balance. */
 export interface ReservePlatformUsageHoldRequest {
-	payerOrg?: string
-	service?: string
+	/** Organization whose balance backs the hold. */
+	payerOrg: string
+	/** Metered service associated with the execution. */
+	service: string
 	/** Use a durable, caller-generated platform-hold:<unique-execution-id>. */
-	executionKey?: string
-	upperBoundPicousd?: string
-	dispatchBy?: string
-	settleBy?: string
+	executionKey: string
+	/** Maximum amount authorized by the hold, in pico-USD. */
+	upperBoundPicousd: string
+	/** Deadline to claim dispatch, as an RFC 3339 timestamp. */
+	dispatchBy: string
+	/** Deadline to submit a terminal receipt, as an RFC 3339 timestamp. */
+	settleBy: string
 }
 
 /** Resolves held evidence without altering its original receipt. */
@@ -4483,7 +4514,7 @@ export class PlatformUsageHoldsCollection {
 	}
 
 	/**
-	 * ReservePlatformUsageHold is an internal platform service operation.
+	 * ReservePlatformUsageHold holds an upper bound before dispatch.
 	 *
 	 * `POST /v1/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
 	 *
@@ -4501,7 +4532,7 @@ export class PlatformUsageHoldsCollection {
 	}
 
 	/**
-	 * ClaimPlatformUsageHold is an internal platform service operation.
+	 * ClaimPlatformUsageHold records that dispatch has been claimed against the hold.
 	 *
 	 * `POST /v1/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
 	 *
@@ -4519,7 +4550,7 @@ export class PlatformUsageHoldsCollection {
 	}
 
 	/**
-	 * CapturePlatformUsageHold is an internal platform service operation.
+	 * CapturePlatformUsageHold settles the hold against a definitive terminal receipt.
 	 *
 	 * `POST /v1/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
 	 *
@@ -4537,7 +4568,7 @@ export class PlatformUsageHoldsCollection {
 	}
 
 	/**
-	 * ReleasePlatformUsageHold is an internal platform service operation.
+	 * ReleasePlatformUsageHold returns the held funds when the execution will not be charged.
 	 *
 	 * `POST /v1/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
 	 *
