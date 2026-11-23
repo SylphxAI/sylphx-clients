@@ -163,12 +163,26 @@ pub fn method_command(m: &MethodCmd) -> Command {
     if about.is_empty() {
         about = m.method.clone();
     }
+    let build_list = m.method == "build.builds.list";
+    if build_list {
+        about = "Lists standalone Build records in a project, not deployment builds.".into();
+    }
     let mut cmd = Command::new(m.verb.clone())
         .about(about)
         .after_help(format!(
             "{}  ·  method {}  ·  effect {}",
             m.http, m.method, m.effect
         ));
+    if build_list {
+        cmd = cmd.long_about(concat!(
+            "Lists standalone Build records in a project (including `sylphx build run --no-tree`).",
+            "\n\nFor a GitHub-triggered deployment, open the commit’s `sylphx/deploy` check for ",
+            "your environment, including while it is waiting for build artifacts. After a Release ",
+            "exists, run `sylphx status` in the linked environment.",
+            "\n\nFor a regular `sylphx build run` or `sylphx build image`, use the command’s ",
+            "output or `sylphx sandboxes leases list` in the run’s environment.",
+        ));
+    }
     if let Some(p) = &m.positional {
         let mut arg = Arg::new("__positional").value_name(p.arg.clone());
         arg = arg.required(!(p.optional || p.default_from_context));
@@ -541,6 +555,29 @@ mod tests {
         let m = cmd.try_get_matches_from(argv).expect("parses");
         let (service, sub) = m.subcommand().expect("service");
         find(&load(), service, sub).map(|(c, _)| c.method.clone())
+    }
+
+    #[test]
+    fn build_list_help_points_to_the_owning_read_surface() {
+        let help = root(&[])
+            .try_get_matches_from(["sylphx", "build", "list", "--help"])
+            .expect_err("--help must display help");
+        assert_eq!(help.kind(), clap::error::ErrorKind::DisplayHelp);
+        let help = help
+            .to_string()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        for needle in [
+            "Lists standalone Build records in a project",
+            "`sylphx build run --no-tree`",
+            "`sylphx/deploy` check for your environment",
+            "After a Release exists, run `sylphx status`",
+            "`sylphx sandboxes leases list`",
+            "method build.builds.list",
+        ] {
+            assert!(help.contains(needle), "missing {needle:?} in {help}");
+        }
     }
 
     #[test]
