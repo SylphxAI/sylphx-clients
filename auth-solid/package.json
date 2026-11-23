@@ -1,0 +1,54 @@
+{
+	"name": "@sylphx/auth-solid",
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"browser": "./dist/browser.js",
+			"default": "./dist/server.js"
+		},
+		"./sign-in.css": "./dist/sign-in.css"
+	},
+	"sideEffects": [
+		"**/*.css"
+	],
+	"scripts": {
+		"lint": "biome check .",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"build": "tsc -p tsconfig.build.json && node build.mjs"
+	},
+	"dependencies": {
+		"@sylphx/auth": "0.1.0"
+	},
+	"peerDependencies": {
+		"solid-js": "^1.9.20"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.0",
+		"solid-js": "1.9.20",
+		"typescript": "6.0.2",
+		"vite": "8.3.8",
+		"vite-plugin-solid": "2.11.17"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "auth-solid"
+	},
+	"engines": {
+		"node": ">=22.12"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public",
+		"tag": "next",
+		"provenance": true
+	}
+}

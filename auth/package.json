@@ -1,0 +1,45 @@
+{
+	"name": "@sylphx/auth",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Web-standard first-party Auth handler and its browser contract",
+	"exports": {
+		".": {
+			"types": "./dist/server.d.ts",
+			"default": "./dist/server.js"
+		},
+		"./client": {
+			"types": "./dist/client.d.ts",
+			"default": "./dist/client.js"
+		}
+	},
+	"scripts": {
+		"lint": "biome check .",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"build": "tsc -p tsconfig.build.json"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.0",
+		"typescript": "6.0.2"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SylphxAI/sylphx-clients.git",
+		"directory": "auth"
+	},
+	"engines": {
+		"node": ">=22.12"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public",
+		"tag": "next",
+		"provenance": true
+	}
+}

@@ -316,6 +316,33 @@ jobs:
             next_tag="$(jq -r '.publishConfig.tag // "latest"' next/package.json)"
             echo "$next_tgz $next_tag @sylphx/next $next_version" >> "$out/list"
           fi
+          # Historical tags can predate both Auth clients. If either directory
+          # exists, require the complete pair and verify the exact archives.
+          if [ -e auth ] || [ -L auth ] || [ -e auth-solid ] || [ -L auth-solid ]; then
+            auth_out="$(mktemp -d "$out/auth-XXXXXX")"
+            python3 -I "$scripts/check-auth-packages.py" --root "$GITHUB_WORKSPACE" --pack-destination "$auth_out"
+            # The existing Publish step confirms registry readback after each
+            # upload, so Auth must precede its exact-version Solid consumer.
+            for dir in auth auth-solid; do
+              name="@sylphx/$dir"
+              version="$(jq -er .version "$dir/package.json")"
+              tag="$(jq -er .publishConfig.tag "$dir/package.json")"
+              tgz="$auth_out/sylphx-$dir-$version.tgz"
+              test -s "$tgz"
+              if found="$(npm view "$name@$version" version --json --prefer-online)"; then
+                if [ "$(jq -er . <<< "$found")" != "$version" ]; then
+                  echo "::error::unexpected npm version lookup result for $name@$version"; exit 1
+                fi
+                echo "$name@$version is on npm already"
+              elif [ "$(jq -r '.error.code' <<< "$found")" = E404 ]; then
+                echo "$tgz $tag $name $version" >> "$out/list"
+              else
+                echo "::error::cannot determine npm state for $name@$version"; exit 1
+              fi
+            done
+          else
+            echo "Skipping Auth archives: tagged source predates both packages"
+          fi
           cat "$out/list"
           echo "any=$([ -s "$out/list" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publish
