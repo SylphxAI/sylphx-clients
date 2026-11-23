@@ -42,18 +42,18 @@ pub fn render(v: &Value, format: Format) -> String {
             .unwrap_or_default()
             .trim_end()
             .to_string(),
-        Format::Name => match list_items(v) {
-            Some(items) => items
-                .iter()
+        Format::Name => {
+            // Named resources can contain arrays of their own (e.g. Release services).
+            if let Some(name) = v.get("name").and_then(Value::as_str) {
+                return name.to_owned();
+            }
+            list_items(v)
+                .into_iter()
+                .flatten()
                 .filter_map(|i| i.get("name").and_then(Value::as_str))
                 .collect::<Vec<_>>()
-                .join("\n"),
-            None => v
-                .get("name")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
-        },
+                .join("\n")
+        }
         Format::Table => match list_items(v) {
             Some(items) if is_secret_list(items) => secrets_table(items),
             Some(items) if is_project_list(items) || is_org_list(items) => {
@@ -364,6 +364,13 @@ mod tests {
             render(&v, Format::Name),
             "orgs/o/projects/p/envs/e/databases/main\norgs/o/projects/p/envs/e/databases/logs"
         );
+    }
+
+    #[test]
+    fn a_named_resource_with_an_array_prints_its_own_name() {
+        let name = "orgs/o/projects/p/envs/e/releases/rel_1";
+        let release = json!({"name": name, "services": [{"service_name": "web"}]});
+        assert_eq!(render(&release, Format::Name), name);
     }
 
     #[test]

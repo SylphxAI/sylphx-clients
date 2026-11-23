@@ -249,6 +249,36 @@ fn current_release(page: &Value) -> &str {
     text(page, "/releases/0/status/current_release")
 }
 
+fn render_status(
+    live: Option<&Value>,
+    newest: Option<&Value>,
+    current: &str,
+    format: Format,
+) -> String {
+    let newer = newest.filter(|n| text(n, "/name") != current);
+    match format {
+        Format::Name => [live, newer]
+            .into_iter()
+            .flatten()
+            .filter_map(|release| release.get("name").and_then(Value::as_str))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Format::Table => {
+            let summary = match live {
+                Some(release) => format!("live: {}", describe(release)),
+                None => "live: none".to_owned(),
+            };
+            match newer {
+                Some(release) => format!("{summary}\nnewest: {}", describe(release)),
+                None => summary,
+            }
+        }
+        Format::Json | Format::Yaml => {
+            output::render(&json!({"live": live, "newest": newest}), format)
+        }
+    }
+}
+
 pub async fn run(
     client: &Client,
     verb: &str,
@@ -277,19 +307,9 @@ pub async fn run(
                     .await?,
             )
         };
-        if format != Format::Table {
-            println!(
-                "{}",
-                output::render(&json!({"live": live, "newest": newest}), format)
-            );
-            return Ok(());
-        }
-        match &live {
-            Some(release) => println!("live: {}", describe(release)),
-            None => println!("live: none"),
-        }
-        if let Some(newest) = newest.filter(|n| text(n, "/name") != current) {
-            println!("newest: {}", describe(&newest));
+        let rendered = render_status(live.as_ref(), newest.as_ref(), &current, format);
+        if !rendered.is_empty() {
+            println!("{rendered}");
         }
         return Ok(());
     }
@@ -374,6 +394,44 @@ mod tests {
                 &json!({"releases": [{"name": "newest", "status": {"state": "live"}}]})
             ),
             ""
+        );
+    }
+
+    #[test]
+    fn status_names_print_live_then_distinct_newest_and_no_empty_line() {
+        let live_name = "orgs/o/projects/p/envs/e/releases/rel_serving";
+        let newest_name = "orgs/o/projects/p/envs/e/releases/rel_new";
+        let live = json!({"name": live_name});
+        let newest = json!({"name": newest_name});
+        assert_eq!(
+            render_status(Some(&live), Some(&newest), live_name, Format::Name),
+            format!("{live_name}\n{newest_name}")
+        );
+        assert_eq!(
+            render_status(Some(&live), Some(&live), live_name, Format::Name),
+            live_name
+        );
+        assert_eq!(
+            render_status(None, Some(&newest), "", Format::Name),
+            newest_name
+        );
+        assert_eq!(render_status(None, None, "", Format::Name), "");
+    }
+
+    #[test]
+    fn status_json_retains_both_fields_when_they_name_the_same_release_or_are_empty() {
+        let current = "orgs/o/projects/p/envs/e/releases/rel_serving";
+        let live = json!({"name": current, "status": {"state": "live"}});
+        let newest = json!({"name": current});
+        let rendered = render_status(Some(&live), Some(&newest), current, Format::Json);
+        assert_eq!(
+            serde_json::from_str::<Value>(&rendered).unwrap(),
+            json!({"live": live, "newest": newest})
+        );
+        let empty = render_status(None, None, "", Format::Json);
+        assert_eq!(
+            serde_json::from_str::<Value>(&empty).unwrap(),
+            json!({"live": null, "newest": null})
         );
     }
 
