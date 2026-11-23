@@ -15949,10 +15949,15 @@
                   "type": "string"
                 }
               ],
-              "http": "POST /v1/platform_usage_holds:reserve",
+              "http": "POST /v1/{parent=orgs/*}/platform_usage_holds:reserve",
               "method": "money.platform_usage_holds.reserve",
               "permission": "money:platform_usage:write",
-              "positional": null,
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
               "summary": "ReservePlatformUsageHold holds an upper bound before dispatch.",
               "verb": "reserve"
             },
@@ -15981,10 +15986,15 @@
                   "type": "string"
                 }
               ],
-              "http": "POST /v1/platform_usage_holds:claim",
+              "http": "POST /v1/{parent=orgs/*}/platform_usage_holds:claim",
               "method": "money.platform_usage_holds.claim",
               "permission": "money:platform_usage:write",
-              "positional": null,
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
               "summary": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
               "verb": "claim"
             },
@@ -16027,10 +16037,15 @@
                   "type": "string"
                 }
               ],
-              "http": "POST /v1/platform_usage_holds:capture",
+              "http": "POST /v1/{parent=orgs/*}/platform_usage_holds:capture",
               "method": "money.platform_usage_holds.capture",
               "permission": "money:platform_usage:write",
-              "positional": null,
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
               "summary": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
               "verb": "capture"
             },
@@ -16065,10 +16080,15 @@
                   "type": "bool"
                 }
               ],
-              "http": "POST /v1/platform_usage_holds:release",
+              "http": "POST /v1/{parent=orgs/*}/platform_usage_holds:release",
               "method": "money.platform_usage_holds.release",
               "permission": "money:platform_usage:write",
-              "positional": null,
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
               "summary": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
               "verb": "release"
             }

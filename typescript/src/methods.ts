@@ -5384,8 +5384,8 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 	'money.platform_usage_holds.capture': {
 		id: 'money.platform_usage_holds.capture',
 		httpMethod: 'POST',
-		template: '/v1/platform_usage_holds:capture',
-		pathParams: [],
+		template: '/v1/{parent=orgs/*}/platform_usage_holds:capture',
+		pathParams: [['parent', 'orgs/*']],
 		queryParams: [],
 		body: '*',
 		longRunning: false,
@@ -5395,8 +5395,8 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 	'money.platform_usage_holds.claim': {
 		id: 'money.platform_usage_holds.claim',
 		httpMethod: 'POST',
-		template: '/v1/platform_usage_holds:claim',
-		pathParams: [],
+		template: '/v1/{parent=orgs/*}/platform_usage_holds:claim',
+		pathParams: [['parent', 'orgs/*']],
 		queryParams: [],
 		body: '*',
 		longRunning: false,
@@ -5406,8 +5406,8 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 	'money.platform_usage_holds.release': {
 		id: 'money.platform_usage_holds.release',
 		httpMethod: 'POST',
-		template: '/v1/platform_usage_holds:release',
-		pathParams: [],
+		template: '/v1/{parent=orgs/*}/platform_usage_holds:release',
+		pathParams: [['parent', 'orgs/*']],
 		queryParams: [],
 		body: '*',
 		longRunning: false,
@@ -5417,8 +5417,8 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 	'money.platform_usage_holds.reserve': {
 		id: 'money.platform_usage_holds.reserve',
 		httpMethod: 'POST',
-		template: '/v1/platform_usage_holds:reserve',
-		pathParams: [],
+		template: '/v1/{parent=orgs/*}/platform_usage_holds:reserve',
+		pathParams: [['parent', 'orgs/*']],
 		queryParams: [],
 		body: '*',
 		longRunning: false,

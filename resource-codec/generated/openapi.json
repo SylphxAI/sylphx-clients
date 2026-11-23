@@ -28152,6 +28152,11 @@
             "description": "Stable caller-generated identity of the metered execution.",
             "type": "string"
           },
+          "parent": {
+            "description": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/Org"
+          },
           "payer_org": {
             "description": "Organization whose balance backs the hold.",
             "type": "string"
@@ -28170,7 +28175,8 @@
           "service",
           "execution_key",
           "actual_picousd",
-          "terminal_receipt_key"
+          "terminal_receipt_key",
+          "parent"
         ],
         "type": "object"
       },
@@ -28905,6 +28911,11 @@
             "description": "Stable caller-generated identity of the metered execution.",
             "type": "string"
           },
+          "parent": {
+            "description": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/Org"
+          },
           "payer_org": {
             "description": "Organization whose balance backs the hold.",
             "type": "string"
@@ -28917,7 +28928,8 @@
         "required": [
           "payer_org",
           "service",
-          "execution_key"
+          "execution_key",
+          "parent"
         ],
         "type": "object"
       },
@@ -31920,6 +31932,11 @@
             "description": "Stable caller-generated identity of the metered execution.",
             "type": "string"
           },
+          "parent": {
+            "description": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/Org"
+          },
           "payer_org": {
             "description": "Organization whose balance backs the hold.",
             "type": "string"
@@ -31932,7 +31949,8 @@
         "required": [
           "payer_org",
           "service",
-          "execution_key"
+          "execution_key",
+          "parent"
         ],
         "type": "object"
       },
@@ -32037,6 +32055,11 @@
             "description": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
             "type": "string"
           },
+          "parent": {
+            "description": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+            "type": "string",
+            "x-sylphx-resource-reference": "access.sylphx.com/Org"
+          },
           "payer_org": {
             "description": "Organization whose balance backs the hold.",
             "type": "string"
@@ -32060,7 +32083,8 @@
           "execution_key",
           "upper_bound_picousd",
           "dispatch_by",
-          "settle_by"
+          "settle_by",
+          "parent"
         ],
         "type": "object"
       },
@@ -58162,6 +58186,451 @@
         "x-sylphx-method": "billing.invoices.record_payment",
         "x-sylphx-permission": "billing:payments:record",
         "x-sylphx-served": false,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/platform_usage_holds:capture": {
+      "post": {
+        "description": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
+        "operationId": "money_platform_usage_holds_capture",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "actual_picousd": {
+                    "description": "Actual amount, as a decimal string in pico-USD. Zero is valid.",
+                    "type": "string"
+                  },
+                  "execution_key": {
+                    "description": "Stable caller-generated identity of the metered execution.",
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "description": "Organization whose balance backs the hold.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "Metered service associated with the execution.",
+                    "type": "string"
+                  },
+                  "terminal_receipt_key": {
+                    "description": "Stable receipt identity (include the provider/account namespace).",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payer_org",
+                  "service",
+                  "execution_key",
+                  "actual_picousd",
+                  "terminal_receipt_key"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.capture",
+        "x-sylphx-permission": "money:platform_usage:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/platform_usage_holds:claim": {
+      "post": {
+        "description": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
+        "operationId": "money_platform_usage_holds_claim",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "execution_key": {
+                    "description": "Stable caller-generated identity of the metered execution.",
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "description": "Organization whose balance backs the hold.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "Metered service associated with the execution.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payer_org",
+                  "service",
+                  "execution_key"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.claim",
+        "x-sylphx-permission": "money:platform_usage:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/platform_usage_holds:release": {
+      "post": {
+        "description": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
+        "operationId": "money_platform_usage_holds_release",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "definitive_no_charge": {
+                    "description": "Required after claim. An unknown dispatch or missing receipt is not proof.",
+                    "type": "boolean"
+                  },
+                  "execution_key": {
+                    "description": "Stable caller-generated identity of the metered execution.",
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "description": "Organization whose balance backs the hold.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "Metered service associated with the execution.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payer_org",
+                  "service",
+                  "execution_key"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.release",
+        "x-sylphx-permission": "money:platform_usage:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/platform_usage_holds:reserve": {
+      "post": {
+        "description": "ReservePlatformUsageHold holds an upper bound before dispatch.",
+        "operationId": "money_platform_usage_holds_reserve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "dispatch_by": {
+                    "description": "Deadline to claim dispatch, as an RFC 3339 timestamp.",
+                    "type": "string"
+                  },
+                  "execution_key": {
+                    "description": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "description": "Organization whose balance backs the hold.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "Metered service associated with the execution.",
+                    "type": "string"
+                  },
+                  "settle_by": {
+                    "description": "Deadline to submit a terminal receipt, as an RFC 3339 timestamp.",
+                    "type": "string"
+                  },
+                  "upper_bound_picousd": {
+                    "description": "Maximum amount authorized by the hold, in pico-USD.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payer_org",
+                  "service",
+                  "execution_key",
+                  "upper_bound_picousd",
+                  "dispatch_by",
+                  "settle_by"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ReservePlatformUsageHold holds an upper bound before dispatch.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.reserve",
+        "x-sylphx-permission": "money:platform_usage:write",
         "x-sylphx-stage": "preview"
       }
     },
@@ -140766,419 +141235,6 @@
         "x-sylphx-method": "billing.plans.get",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-publishable-ok": true,
-        "x-sylphx-stage": "preview"
-      }
-    },
-    "/v1/platform_usage_holds:capture": {
-      "post": {
-        "description": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
-        "operationId": "money_platform_usage_holds_capture",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "actual_picousd": {
-                    "description": "Actual amount, as a decimal string in pico-USD. Zero is valid.",
-                    "type": "string"
-                  },
-                  "execution_key": {
-                    "description": "Stable caller-generated identity of the metered execution.",
-                    "type": "string"
-                  },
-                  "payer_org": {
-                    "description": "Organization whose balance backs the hold.",
-                    "type": "string"
-                  },
-                  "service": {
-                    "description": "Metered service associated with the execution.",
-                    "type": "string"
-                  },
-                  "terminal_receipt_key": {
-                    "description": "Stable receipt identity (include the provider/account namespace).",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "payer_org",
-                  "service",
-                  "execution_key",
-                  "actual_picousd",
-                  "terminal_receipt_key"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "404": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "503": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "CapturePlatformUsageHold settles the hold against a definitive terminal receipt.",
-        "tags": [
-          "money"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND",
-          "INVALID_FIELD",
-          "FAILED_PRECONDITION",
-          "IDEMPOTENCY_KEY_REUSED",
-          "UNAVAILABLE"
-        ],
-        "x-sylphx-method": "money.platform_usage_holds.capture",
-        "x-sylphx-permission": "money:platform_usage:write",
-        "x-sylphx-stage": "preview"
-      }
-    },
-    "/v1/platform_usage_holds:claim": {
-      "post": {
-        "description": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
-        "operationId": "money_platform_usage_holds_claim",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "execution_key": {
-                    "description": "Stable caller-generated identity of the metered execution.",
-                    "type": "string"
-                  },
-                  "payer_org": {
-                    "description": "Organization whose balance backs the hold.",
-                    "type": "string"
-                  },
-                  "service": {
-                    "description": "Metered service associated with the execution.",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "payer_org",
-                  "service",
-                  "execution_key"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "404": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "503": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "ClaimPlatformUsageHold records that dispatch has been claimed against the hold.",
-        "tags": [
-          "money"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND",
-          "INVALID_FIELD",
-          "FAILED_PRECONDITION",
-          "IDEMPOTENCY_KEY_REUSED",
-          "UNAVAILABLE"
-        ],
-        "x-sylphx-method": "money.platform_usage_holds.claim",
-        "x-sylphx-permission": "money:platform_usage:write",
-        "x-sylphx-stage": "preview"
-      }
-    },
-    "/v1/platform_usage_holds:release": {
-      "post": {
-        "description": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
-        "operationId": "money_platform_usage_holds_release",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "definitive_no_charge": {
-                    "description": "Required after claim. An unknown dispatch or missing receipt is not proof.",
-                    "type": "boolean"
-                  },
-                  "execution_key": {
-                    "description": "Stable caller-generated identity of the metered execution.",
-                    "type": "string"
-                  },
-                  "payer_org": {
-                    "description": "Organization whose balance backs the hold.",
-                    "type": "string"
-                  },
-                  "service": {
-                    "description": "Metered service associated with the execution.",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "payer_org",
-                  "service",
-                  "execution_key"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "404": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "503": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "ReleasePlatformUsageHold returns the held funds when the execution will not be charged.",
-        "tags": [
-          "money"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND",
-          "INVALID_FIELD",
-          "FAILED_PRECONDITION",
-          "IDEMPOTENCY_KEY_REUSED",
-          "UNAVAILABLE"
-        ],
-        "x-sylphx-method": "money.platform_usage_holds.release",
-        "x-sylphx-permission": "money:platform_usage:write",
-        "x-sylphx-stage": "preview"
-      }
-    },
-    "/v1/platform_usage_holds:reserve": {
-      "post": {
-        "description": "ReservePlatformUsageHold holds an upper bound before dispatch.",
-        "operationId": "money_platform_usage_holds_reserve",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "dispatch_by": {
-                    "description": "Deadline to claim dispatch, as an RFC 3339 timestamp.",
-                    "type": "string"
-                  },
-                  "execution_key": {
-                    "description": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
-                    "type": "string"
-                  },
-                  "payer_org": {
-                    "description": "Organization whose balance backs the hold.",
-                    "type": "string"
-                  },
-                  "service": {
-                    "description": "Metered service associated with the execution.",
-                    "type": "string"
-                  },
-                  "settle_by": {
-                    "description": "Deadline to submit a terminal receipt, as an RFC 3339 timestamp.",
-                    "type": "string"
-                  },
-                  "upper_bound_picousd": {
-                    "description": "Maximum amount authorized by the hold, in pico-USD.",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "payer_org",
-                  "service",
-                  "execution_key",
-                  "upper_bound_picousd",
-                  "dispatch_by",
-                  "settle_by"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "404": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "503": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "ReservePlatformUsageHold holds an upper bound before dispatch.",
-        "tags": [
-          "money"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND",
-          "INVALID_FIELD",
-          "FAILED_PRECONDITION",
-          "IDEMPOTENCY_KEY_REUSED",
-          "UNAVAILABLE"
-        ],
-        "x-sylphx-method": "money.platform_usage_holds.reserve",
-        "x-sylphx-permission": "money:platform_usage:write",
         "x-sylphx-stage": "preview"
       }
     },

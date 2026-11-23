@@ -85946,6 +85946,25 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+          "filterable": false,
+          "name": "parent",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "access.sylphx.com/Org",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.CapturePlatformUsageHoldRequest",
@@ -88348,6 +88367,25 @@
           "optional": false,
           "repeated": false,
           "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+          "filterable": false,
+          "name": "parent",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "access.sylphx.com/Org",
           "sensitive": false,
           "type": {
             "kind": "scalar",
@@ -97119,6 +97157,25 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+          "filterable": false,
+          "name": "parent",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "access.sylphx.com/Org",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.money.v1.ReleasePlatformUsageHoldRequest",
@@ -97487,6 +97544,25 @@
           "optional": false,
           "repeated": false,
           "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Authenticated platform service organization, as orgs/{org}; not the payer.",
+          "filterable": false,
+          "name": "parent",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "access.sylphx.com/Org",
           "sensitive": false,
           "type": {
             "kind": "scalar",
@@ -176514,9 +176590,15 @@
               "http": {
                 "body": "*",
                 "method": "POST",
-                "path_params": [],
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}",
+                    "pattern": "orgs/*"
+                  }
+                ],
                 "query_params": [],
-                "template": "/v1/platform_usage_holds:reserve"
+                "template": "/v1/{parent=orgs/*}/platform_usage_holds:reserve"
               },
               "id": "money.platform_usage_holds.reserve",
               "kind": "custom",
@@ -176552,9 +176634,15 @@
               "http": {
                 "body": "*",
                 "method": "POST",
-                "path_params": [],
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}",
+                    "pattern": "orgs/*"
+                  }
+                ],
                 "query_params": [],
-                "template": "/v1/platform_usage_holds:claim"
+                "template": "/v1/{parent=orgs/*}/platform_usage_holds:claim"
               },
               "id": "money.platform_usage_holds.claim",
               "kind": "custom",
@@ -176590,9 +176678,15 @@
               "http": {
                 "body": "*",
                 "method": "POST",
-                "path_params": [],
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}",
+                    "pattern": "orgs/*"
+                  }
+                ],
                 "query_params": [],
-                "template": "/v1/platform_usage_holds:capture"
+                "template": "/v1/{parent=orgs/*}/platform_usage_holds:capture"
               },
               "id": "money.platform_usage_holds.capture",
               "kind": "custom",
@@ -176628,9 +176722,15 @@
               "http": {
                 "body": "*",
                 "method": "POST",
-                "path_params": [],
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}",
+                    "pattern": "orgs/*"
+                  }
+                ],
                 "query_params": [],
-                "template": "/v1/platform_usage_holds:release"
+                "template": "/v1/{parent=orgs/*}/platform_usage_holds:release"
               },
               "id": "money.platform_usage_holds.release",
               "kind": "custom",

@@ -7078,8 +7078,8 @@ pub static METHODS: &[MethodSpec] = &[
     MethodSpec {
         id: "money.platform_usage_holds.capture",
         http_method: "POST",
-        template: "/v1/platform_usage_holds:capture",
-        path_params: &[],
+        template: "/v1/{parent=orgs/*}/platform_usage_holds:capture",
+        path_params: &[("parent", "orgs/*")],
         query_params: &[],
         body: Some("*"),
         long_running: false,
@@ -7092,8 +7092,8 @@ pub static METHODS: &[MethodSpec] = &[
     MethodSpec {
         id: "money.platform_usage_holds.claim",
         http_method: "POST",
-        template: "/v1/platform_usage_holds:claim",
-        path_params: &[],
+        template: "/v1/{parent=orgs/*}/platform_usage_holds:claim",
+        path_params: &[("parent", "orgs/*")],
         query_params: &[],
         body: Some("*"),
         long_running: false,
@@ -7106,8 +7106,8 @@ pub static METHODS: &[MethodSpec] = &[
     MethodSpec {
         id: "money.platform_usage_holds.release",
         http_method: "POST",
-        template: "/v1/platform_usage_holds:release",
-        path_params: &[],
+        template: "/v1/{parent=orgs/*}/platform_usage_holds:release",
+        path_params: &[("parent", "orgs/*")],
         query_params: &[],
         body: Some("*"),
         long_running: false,
@@ -7120,8 +7120,8 @@ pub static METHODS: &[MethodSpec] = &[
     MethodSpec {
         id: "money.platform_usage_holds.reserve",
         http_method: "POST",
-        template: "/v1/platform_usage_holds:reserve",
-        path_params: &[],
+        template: "/v1/{parent=orgs/*}/platform_usage_holds:reserve",
+        path_params: &[("parent", "orgs/*")],
         query_params: &[],
         body: Some("*"),
         long_running: false,

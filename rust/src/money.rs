@@ -516,6 +516,11 @@ pub struct CapturePlatformUsageHoldRequest {
         alias = "terminalReceiptKey"
     )]
     pub terminal_receipt_key: String,
+    /// Authenticated platform service organization, as orgs/{org}; not the payer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
 }
 
 /// A Catalog is an environment's features, products, and prices: the desired
@@ -1476,6 +1481,11 @@ pub struct ClaimPlatformUsageHoldRequest {
         alias = "executionKey"
     )]
     pub execution_key: String,
+    /// Authenticated platform service organization, as orgs/{org}; not the payer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
 }
 
 /// The request of ClientVerifyStorePurchase.
@@ -4853,6 +4863,11 @@ pub struct ReleasePlatformUsageHoldRequest {
         alias = "definitiveNoCharge"
     )]
     pub definitive_no_charge: bool,
+    /// Authenticated platform service organization, as orgs/{org}; not the payer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
 }
 
 /// The request of ReleaseUsageInvoiceCollection.
@@ -5023,6 +5038,11 @@ pub struct ReservePlatformUsageHoldRequest {
         alias = "settleBy"
     )]
     pub settle_by: String,
+    /// Authenticated platform service organization, as orgs/{org}; not the payer.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
 }
 
 /// Resolves held evidence without altering its original receipt.
@@ -8055,20 +8075,23 @@ pub struct PlatformUsageHoldsCollection<'a, T> {
 impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
     /// ReservePlatformUsageHold holds an upper bound before dispatch.
     ///
-    /// `POST /v1/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
+    /// `POST /v1/{parent=orgs/*}/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
     pub async fn reserve(
         &self,
         request: ReservePlatformUsageHoldRequest,
     ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
-        let path = "/v1/platform_usage_holds:reserve".to_string();
+        let path = format!(
+            "/v1/{}/platform_usage_holds:reserve",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,
             query: query.0,
-            body: Some(crate::runtime::body_without(&request, &[])?),
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,
@@ -8078,20 +8101,23 @@ impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
 
     /// ClaimPlatformUsageHold records that dispatch has been claimed against the hold.
     ///
-    /// `POST /v1/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
+    /// `POST /v1/{parent=orgs/*}/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
     pub async fn claim(
         &self,
         request: ClaimPlatformUsageHoldRequest,
     ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
-        let path = "/v1/platform_usage_holds:claim".to_string();
+        let path = format!(
+            "/v1/{}/platform_usage_holds:claim",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,
             query: query.0,
-            body: Some(crate::runtime::body_without(&request, &[])?),
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,
@@ -8101,20 +8127,23 @@ impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
 
     /// CapturePlatformUsageHold settles the hold against a definitive terminal receipt.
     ///
-    /// `POST /v1/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
+    /// `POST /v1/{parent=orgs/*}/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
     pub async fn capture(
         &self,
         request: CapturePlatformUsageHoldRequest,
     ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
-        let path = "/v1/platform_usage_holds:capture".to_string();
+        let path = format!(
+            "/v1/{}/platform_usage_holds:capture",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,
             query: query.0,
-            body: Some(crate::runtime::body_without(&request, &[])?),
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,
@@ -8124,20 +8153,23 @@ impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
 
     /// ReleasePlatformUsageHold returns the held funds when the execution will not be charged.
     ///
-    /// `POST /v1/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
+    /// `POST /v1/{parent=orgs/*}/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
     ///
     /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
     pub async fn release(
         &self,
         request: ReleasePlatformUsageHoldRequest,
     ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
-        let path = "/v1/platform_usage_holds:release".to_string();
+        let path = format!(
+            "/v1/{}/platform_usage_holds:release",
+            crate::runtime::path_param(&request.parent, "orgs/*", "parent")?
+        );
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
             method: "POST",
             path,
             query: query.0,
-            body: Some(crate::runtime::body_without(&request, &[])?),
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
             mutation: true,
             origin: None,
             effect_ids: false,

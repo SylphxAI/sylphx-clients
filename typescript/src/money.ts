@@ -203,6 +203,8 @@ export interface CapturePlatformUsageHoldRequest {
 	actualPicousd: string
 	/** Stable receipt identity (include the provider/account namespace). */
 	terminalReceiptKey: string
+	/** Authenticated platform service organization, as orgs/{org}; not the payer. */
+	parent: string
 }
 
 /**
@@ -648,6 +650,8 @@ export interface ClaimPlatformUsageHoldRequest {
 	service: string
 	/** Stable caller-generated identity of the metered execution. */
 	executionKey: string
+	/** Authenticated platform service organization, as orgs/{org}; not the payer. */
+	parent: string
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -2215,6 +2219,8 @@ export interface ReleasePlatformUsageHoldRequest {
 	executionKey: string
 	/** Required after claim. An unknown dispatch or missing receipt is not proof. */
 	definitiveNoCharge?: boolean
+	/** Authenticated platform service organization, as orgs/{org}; not the payer. */
+	parent: string
 }
 
 /** The request of ReleaseUsageInvoiceCollection. */
@@ -2291,6 +2297,8 @@ export interface ReservePlatformUsageHoldRequest {
 	dispatchBy: string
 	/** Deadline to submit a terminal receipt, as an RFC 3339 timestamp. */
 	settleBy: string
+	/** Authenticated platform service organization, as orgs/{org}; not the payer. */
+	parent: string
 }
 
 /** Resolves held evidence without altering its original receipt. */
@@ -4516,15 +4524,15 @@ export class PlatformUsageHoldsCollection {
 	/**
 	 * ReservePlatformUsageHold holds an upper bound before dispatch.
 	 *
-	 * `POST /v1/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
+	 * `POST /v1/{parent=orgs/*}/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
 	 */
 	async reserve(request: ReservePlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
 		return this.client.call<PlatformUsageHoldReceipt>({
 			method: 'POST',
-			path: `/v1/platform_usage_holds:reserve`,
-			body: runtime.omit(request, []),
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/platform_usage_holds:reserve`,
+			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.money.v1.ReservePlatformUsageHoldRequest',
 			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
 			mutation: true,
@@ -4534,15 +4542,15 @@ export class PlatformUsageHoldsCollection {
 	/**
 	 * ClaimPlatformUsageHold records that dispatch has been claimed against the hold.
 	 *
-	 * `POST /v1/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
+	 * `POST /v1/{parent=orgs/*}/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
 	 */
 	async claim(request: ClaimPlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
 		return this.client.call<PlatformUsageHoldReceipt>({
 			method: 'POST',
-			path: `/v1/platform_usage_holds:claim`,
-			body: runtime.omit(request, []),
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/platform_usage_holds:claim`,
+			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.money.v1.ClaimPlatformUsageHoldRequest',
 			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
 			mutation: true,
@@ -4552,15 +4560,15 @@ export class PlatformUsageHoldsCollection {
 	/**
 	 * CapturePlatformUsageHold settles the hold against a definitive terminal receipt.
 	 *
-	 * `POST /v1/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
+	 * `POST /v1/{parent=orgs/*}/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
 	 */
 	async capture(request: CapturePlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
 		return this.client.call<PlatformUsageHoldReceipt>({
 			method: 'POST',
-			path: `/v1/platform_usage_holds:capture`,
-			body: runtime.omit(request, []),
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/platform_usage_holds:capture`,
+			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.money.v1.CapturePlatformUsageHoldRequest',
 			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
 			mutation: true,
@@ -4570,15 +4578,15 @@ export class PlatformUsageHoldsCollection {
 	/**
 	 * ReleasePlatformUsageHold returns the held funds when the execution will not be charged.
 	 *
-	 * `POST /v1/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
+	 * `POST /v1/{parent=orgs/*}/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
 	 *
 	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
 	 */
 	async release(request: ReleasePlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
 		return this.client.call<PlatformUsageHoldReceipt>({
 			method: 'POST',
-			path: `/v1/platform_usage_holds:release`,
-			body: runtime.omit(request, []),
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*', 'parent')}/platform_usage_holds:release`,
+			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.money.v1.ReleasePlatformUsageHoldRequest',
 			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
 			mutation: true,
