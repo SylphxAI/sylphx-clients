@@ -690,15 +690,16 @@ export interface LeaseSpec {
 	/**
 	 * The shape; when unset the platform resolves one from `kind` and the image:
 	 * `linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP
-	 * or ANDROID, and `build-standard` for the `template:build` image. An
-	 * explicit shape must serve `kind`.
+	 * or ANDROID, and `build-standard` for stock Build images. An explicit
+	 * shape must serve `kind`.
 	 */
 	shape?: string
 	/**
-	 * The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`
-	 * (`base`, `desktop`, `browser`, `android`,
-	 * `build`). Default the template of `kind`. Ignored when `source_snapshot` is
-	 * set.
+	 * The image: a digest-pinned OCI reference or `template:<name>` (`base`,
+	 * `desktop`, `browser`, `android`, `build`, …). `template:build@sha256:<64hex>`
+	 * asserts the Cell's approved stock Build image for a cold Build lease.
+	 * It requires a Build shape and does not support volumes or VM memory
+	 * snapshots. Default the template of `kind`.
 	 */
 	image?: string
 	/** What the machine serves; default GENERAL. */

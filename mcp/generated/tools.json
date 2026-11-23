@@ -44502,7 +44502,7 @@
                     "x-sylphx-immutable": true
                   },
                   "image": {
-                    "description": "The image: an artifact in Sylphx Artifacts, by digest, or `template:<name>`\n(`base`, `desktop`, `browser`, `android`,\n`build`). Default the template of `kind`. Ignored when `source_snapshot` is\nset.",
+                    "description": "The image: a digest-pinned OCI reference or `template:<name>` (`base`,\n`desktop`, `browser`, `android`, `build`, …). `template:build@sha256:<64hex>`\nasserts the Cell's approved stock Build image for a cold Build lease.\nIt requires a Build shape and does not support volumes or VM memory\nsnapshots. Default the template of `kind`.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   },
@@ -44589,7 +44589,7 @@
                     "x-sylphx-immutable": true
                   },
                   "shape": {
-                    "description": "The shape; when unset the platform resolves one from `kind` and the image:\n`linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP\nor ANDROID, and `build-standard` for the `template:build` image. An\nexplicit shape must serve `kind`.",
+                    "description": "The shape; when unset the platform resolves one from `kind` and the image:\n`linux-s` for a GENERAL lease, `linux-m` for BROWSER, `linux-l` for DESKTOP\nor ANDROID, and `build-standard` for stock Build images. An explicit\nshape must serve `kind`.",
                     "type": "string",
                     "x-sylphx-immutable": true,
                     "x-sylphx-resource-reference": "sandboxes.sylphx.com/Shape"
