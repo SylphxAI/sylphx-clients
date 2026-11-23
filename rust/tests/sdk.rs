@@ -369,6 +369,18 @@ fn every_method_is_in_the_table_once_and_sorted() {
     assert!(sylphx::methods::method("access.whoami").is_some());
 }
 
+#[tokio::test]
+async fn typed_replay_refuses_transports_that_do_not_support_the_key() {
+    let client = Client::new(Recorder::default());
+    let result = client
+        .events()
+        .events()
+        .publish_service_event_with_idempotency_key(Default::default(), "event-123")
+        .await;
+    assert!(matches!(result, Err(Error::InvalidArgument(_))));
+    assert!(client.transport().sent.lock().unwrap().is_empty());
+}
+
 mod http {
     //! The production transport against a local HTTP/1.1 server.
 
@@ -935,6 +947,100 @@ mod http {
         assert!(handle.await.unwrap_err().is_cancelled());
         tokio::time::sleep(Duration::from_millis(1100)).await;
         assert_eq!(seen.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn typed_event_publish_preserves_the_replay_key_without_leaking_it() {
+        let response = json!({"webhook_deliveries": ["webhookDeliveries/test"]});
+        let mut replies = vec![(503, "Retry-After: 0\r\n", json!({}))];
+        replies.extend((0..4).map(|_| (200, "", response.clone())));
+        let (url, seen) = serve(replies).await;
+        let client = client(&url);
+        let api = client.events().events();
+        let mut req = sylphx::events::PublishServiceEventRequest::default();
+        req.parent = "orgs/test/projects/test/envs/test".into();
+        let mut event = sylphx::events::CloudEvent::default();
+        event.id = "123".into();
+        event.source = "sylphx.example".into();
+        event.r#type = "example.item.ready".into();
+        event.event_time = "2026-11-23T15:00:00.000Z".into();
+        event.data = json!({"ready": true});
+        req.event = Some(event);
+
+        for invalid in [
+            "",
+            "\r\n",
+            "trailing ",
+            " leading",
+            "non-ascii-☃",
+            &"a".repeat(256),
+        ] {
+            let error = api
+                .publish_service_event_with_idempotency_key(req.clone(), invalid)
+                .await
+                .unwrap_err();
+            assert!(matches!(error, Error::InvalidArgument(_)));
+        }
+        assert!(seen.lock().unwrap().is_empty(), "invalid keys never send");
+
+        for _ in 0..2 {
+            let result = api
+                .publish_service_event_with_idempotency_key(req.clone(), "outbox-event-123")
+                .await
+                .unwrap();
+            assert_eq!(result.webhook_deliveries, ["webhookDeliveries/test"]);
+        }
+        let mut another = req.clone();
+        another.event.as_mut().unwrap().id = "124".into();
+        api.publish_service_event(another.clone()).await.unwrap();
+        another.event.as_mut().unwrap().id = "125".into();
+        api.publish_service_event(another).await.unwrap();
+
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 5);
+        let expected = json!({
+            "parent": "orgs/test/projects/test/envs/test",
+            "event": {
+                "id": "123",
+                "source": "sylphx.example",
+                "type": "example.item.ready",
+                "event_time": "2026-11-23T15:00:00.000Z",
+                "data": {"ready": true},
+            },
+        });
+        for sent in &seen[..3] {
+            assert!(sent
+                .head
+                .starts_with("POST /v1/events:publishServiceEvent "));
+            assert_eq!(
+                header(&sent.head, "idempotency-key"),
+                Some("outbox-event-123")
+            );
+            assert_eq!(
+                sent.head
+                    .lines()
+                    .filter(|line| line
+                        .split_once(':')
+                        .is_some_and(|(name, _)| name.eq_ignore_ascii_case("idempotency-key")))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&sent.body).unwrap(),
+                expected
+            );
+        }
+        let auto_one = header(&seen[3].head, "idempotency-key").unwrap();
+        let auto_two = header(&seen[4].head, "idempotency-key").unwrap();
+        assert_eq!(
+            uuid::Uuid::parse_str(auto_one).unwrap().get_version_num(),
+            7
+        );
+        assert_eq!(
+            uuid::Uuid::parse_str(auto_two).unwrap().get_version_num(),
+            7
+        );
+        assert_ne!(auto_one, auto_two);
     }
 
     #[tokio::test]

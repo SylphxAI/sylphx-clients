@@ -4,7 +4,7 @@
 //! The generated namespaces build [`HttpRequest`]s; a [`Transport`] sends
 //! them. [`HttpTransport`] (feature `http`, on by default) is the production
 //! transport: reqwest with rustls, retries with full jitter on retryable
-//! answers, one UUIDv7 `Idempotency-Key` per logical mutation reused across
+//! answers, one replay key (UUIDv7 by default) per logical mutation reused across
 //! its retries, `Retry-After`, and the `Sylphx-Request-Timeout` deadline.
 
 use futures_util::{Stream, StreamExt};
@@ -22,6 +22,21 @@ pub trait Transport: Send + Sync {
         &self,
         request: HttpRequest,
     ) -> impl Future<Output = Result<HttpResponse, Error>> + Send;
+
+    /// Sends a Resource API mutation with the caller's replay key. Transports
+    /// that support this must send it as `Idempotency-Key` on every attempt.
+    /// The default refuses before sending rather than ignoring the key.
+    fn send_with_idempotency_key(
+        &self,
+        _request: HttpRequest,
+        _key: &str,
+    ) -> impl Future<Output = Result<HttpResponse, Error>> + Send {
+        async {
+            Err(Error::InvalidArgument(
+                "this transport does not support caller-supplied idempotency keys".into(),
+            ))
+        }
+    }
 }
 
 /// One typed SSE stream. Reconnect by passing the last revision to the request.
@@ -220,7 +235,34 @@ impl<T: Transport> Client<T> {
 
     /// Sends a request and decodes a success body into `R`.
     pub async fn call<R: DeserializeOwned>(&self, request: HttpRequest) -> Result<R, Error> {
-        let response = self.transport.send(request).await?;
+        Self::decode(self.transport.send(request).await?)
+    }
+
+    pub(crate) async fn call_with_idempotency_key<R: DeserializeOwned>(
+        &self,
+        request: HttpRequest,
+        key: &str,
+    ) -> Result<R, Error> {
+        // HTTP strips surrounding whitespace. Refuse it rather than change a
+        // caller's replay identity on the wire.
+        if key.is_empty()
+            || key.len() > 255
+            || key.trim() != key
+            || !key.bytes().all(|b| (0x20..0x7f).contains(&b))
+        {
+            return Err(Error::InvalidArgument(
+                "Idempotency-Key must be 1–255 printable ASCII characters without surrounding spaces"
+                    .into(),
+            ));
+        }
+        Self::decode(
+            self.transport
+                .send_with_idempotency_key(request, key)
+                .await?,
+        )
+    }
+
+    fn decode<R: DeserializeOwned>(response: HttpResponse) -> Result<R, Error> {
         if response.status >= 400 {
             let raw: serde_json::Value = serde_json::from_slice(&response.body).unwrap_or_default();
             // RFC 9457 (the Resource API) has no `error` member; a service's
@@ -944,6 +986,15 @@ impl HttpTransport {
 impl Transport for HttpTransport {
     async fn send(&self, request: HttpRequest) -> Result<HttpResponse, Error> {
         self.send_with_headers(request, &[]).await
+    }
+
+    async fn send_with_idempotency_key(
+        &self,
+        request: HttpRequest,
+        key: &str,
+    ) -> Result<HttpResponse, Error> {
+        self.send_with_headers(request, &[("Idempotency-Key".into(), key.into())])
+            .await
     }
 }
 

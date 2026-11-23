@@ -54,6 +54,24 @@ async fn main() -> Result<(), sylphx::Error> {
   hosts, retired on 2026-09-03) are not read; a base URL on such a host is
   ignored with a warning.
 
+## Retrying a typed Events publication after a restart
+
+The default `publish_service_event(request)` generates a fresh UUIDv7 each time
+it is called. An outbox publisher can instead persist the key and the typed
+request together before the first send, then pass both on every delivery
+attempt, including after a process restart:
+
+```rust,ignore
+let result = sx.events().events()
+    .publish_service_event_with_idempotency_key(stored_request, &stored_key)
+    .await?;
+```
+
+Keep the request unchanged for that key, and use a different key for a new
+publication. Keys must be 1–255 printable ASCII characters without surrounding
+spaces. The HTTP transport also reuses the supplied key on its own retries;
+it does not affect any other call.
+
 ## Typed flags with offline defaults
 
 ```rust,ignore

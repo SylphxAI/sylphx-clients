@@ -4707,6 +4707,26 @@ impl<'a, T: crate::runtime::Transport> EventsCollection<'a, T> {
         &self,
         request: PublishServiceEventRequest,
     ) -> Result<PublishServiceEventResponse, crate::runtime::Error> {
+        self.publish_service_event_inner(request, None).await
+    }
+
+    /// Like [`Self::publish_service_event`], using a key supplied for this request only.
+    /// Persist the key with the request before sending. Reuse both unchanged
+    /// when retrying the same intent after a disconnect or restart.
+    /// The key must be 1–255 printable ASCII characters without surrounding spaces.
+    pub async fn publish_service_event_with_idempotency_key(
+        &self,
+        request: PublishServiceEventRequest,
+        key: &str,
+    ) -> Result<PublishServiceEventResponse, crate::runtime::Error> {
+        self.publish_service_event_inner(request, Some(key)).await
+    }
+
+    async fn publish_service_event_inner(
+        &self,
+        request: PublishServiceEventRequest,
+        key: Option<&str>,
+    ) -> Result<PublishServiceEventResponse, crate::runtime::Error> {
         let path = "/v1/events:publishServiceEvent".to_string();
         let query = crate::runtime::Query::default();
         let http = crate::runtime::HttpRequest {
@@ -4718,7 +4738,10 @@ impl<'a, T: crate::runtime::Transport> EventsCollection<'a, T> {
             origin: None,
             effect_ids: false,
         };
-        self.client.call(http).await
+        match key {
+            Some(key) => self.client.call_with_idempotency_key(http, key).await,
+            None => self.client.call(http).await,
+        }
     }
 
     /// Gets an event.
