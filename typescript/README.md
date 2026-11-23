@@ -72,6 +72,63 @@ await sylphx.data.documents.put({ indexId: 'articles', documentId: slug, documen
 const { hits: found } = await sylphx.data.search.query({ indexId: 'articles', query: 'pricing', limit: 10 })
 ```
 
+### Consent and checkout attribution
+
+Use `@sylphx/sdk/signal` for browser consent, campaign capture and the Events
+checkout binding. The subpath has no runtime dependencies and can also be
+imported on the server.
+
+```ts
+import { createSignalBrowser } from '@sylphx/sdk/signal'
+
+const signal = createSignalBrowser({
+  // Optional trusted country code; otherwise try same-origin /cdn-cgi/trace.
+  region: country,
+  // Pass true if the original document request carried Sec-GPC: 1.
+  gpc: serverSawGpc,
+})
+await signal.ready
+// Use signal.getConsent() in your UI. Only call setConsent from a real choice.
+// signal.setConsent('granted') or signal.setConsent('denied')
+await signal.bindCheckoutAttribution({ checkoutSessionId }, {
+  apiKey: publishableKey,
+  pageLocation: new URL('https://example.com/landing'), // optional public path
+})
+```
+
+EU/EEA/UK/CH and unknown regions deny collection by default. Known opt-out
+regions grant all four Consent Mode flags until the user opts out.
+The same `resolveEffectiveConsent({ region, storedChoice, gpc })` policy applies
+to the browser and at checkout. Global Privacy Control always wins. Call `capture()` on SPA navigation and `dispose()` when tearing down the
+client. Consented campaign data expires after 30 days; opting out clears the
+SDK's campaign storage. A trace failure is not evidence of an opt-out region.
+
+For Google Consent Mode v2, pass `google: { mode: 'basic' | 'advanced', gtag,
+load }` to `createSignalBrowser`. Supply an adapter that forwards
+`gtag(command, flags)` to the Google tag as `gtag('consent', command, flags).` Let the SDK call
+`load` to initialize the tag *after* it queues the default flags; don't load or
+configure the tag separately. Basic (default) waits for grant. Advanced allows
+Google's denied-state cookieless pings before an explicit choice in a known
+region; it does not start the tag on GPC or explicit opt-out. Consent Mode
+updates a tag already loaded on the page; it does not unload it, clear cookies
+set by third parties, or guarantee zero network requests after withdrawal.
+
+On the server, import `bindCheckoutAttribution` directly. Pass the original
+browser request's `headers` plus `privacy: { region, storedChoice }` from your trusted
+region and persisted-choice sources. Omitting a choice is distinct from
+opting out. Use a single writer and await the binding before redirecting to
+payment; do not retry an old consent snapshot after it changes.
+
+The Events endpoint preserves existing attribution fields on sparse upserts.
+Denied requests send checkout identity and the denied consent flags only, so
+settled purchase delivery is suppressed; this is not a backend erasure API.
+Google click IDs map to their typed fields and a consented Meta click can supply
+`fbc`. Set `gaMeasurementId` to normalize the matching GA4 session cookie into
+`ga_session_id`; unrelated or unrecognized cookies are ignored. UTMs are allowlisted and appended only to an optional public
+`pageLocation`; the endpoint has no standalone UTM fields. The SDK strips the
+input's query and fragment but cannot know if a path contains personal data:
+only pass a public landing path.
+
 ### Upload and download bytes without base64 glue
 
 Use the object helpers for in-memory files and buffers. They use the same
