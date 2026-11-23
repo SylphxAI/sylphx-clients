@@ -39702,6 +39702,75 @@
       "package": "sylphx.broker.v1"
     },
     {
+      "doc": "Looks up the acknowledgment of an existing durable Broker media execution.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Original immutable Broker billing SecretVersion; \"latest\" is not allowed.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "secrets.sylphx.com/SecretVersion",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Original platform-hold execution identity.",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.RecoverMediaExecutionRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "Acknowledgment only. Empty means unresolved, never no-charge.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Opaque supplier request ID, present only when positively correlated.",
+          "filterable": false,
+          "name": "receipt",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.RecoverMediaExecutionResponse",
+      "package": "sylphx.broker.v1"
+    },
+    {
       "doc": "The request of RevokeTokenExchange.",
       "fields": [
         {
@@ -164267,6 +164336,50 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "check_carrier_sms_delivery"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Recovers the supplier acknowledgment for one existing Broker media attempt.\nUses the original tenant and pinned billing SecretVersion. Missing or\nincomplete evidence never authorizes dispatch, capture or release.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}",
+                    "pattern": "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*"
+                  }
+                ],
+                "query_params": [
+                  "execution_key"
+                ],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:recoverMediaExecution"
+              },
+              "id": "broker.secret_versions.recover_media_execution",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "broker:media:recover",
+              "proto": "sylphx.broker.v1.BrokerService.RecoverMediaExecution",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.RecoverMediaExecutionRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.RecoverMediaExecutionResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "recover_media_execution"
             }
           ],
           "name": "secret_versions",

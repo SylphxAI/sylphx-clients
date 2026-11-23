@@ -11863,6 +11863,35 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.RecoverMediaExecutionRequest": {
+        "description": "Looks up the acknowledgment of an existing durable Broker media execution.",
+        "properties": {
+          "execution_key": {
+            "description": "Original platform-hold execution identity.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Original immutable Broker billing SecretVersion; \"latest\" is not allowed.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+          }
+        },
+        "required": [
+          "name",
+          "execution_key"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.RecoverMediaExecutionResponse": {
+        "description": "Acknowledgment only. Empty means unresolved, never no-charge.",
+        "properties": {
+          "receipt": {
+            "description": "Opaque supplier request ID, present only when positively correlated.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.RevokeTokenExchangeRequest": {
         "description": "The request of RevokeTokenExchange.",
         "properties": {
@@ -120670,6 +120699,115 @@
         ],
         "x-sylphx-method": "secrets.secret_versions.enable",
         "x-sylphx-permission": "secrets:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}:recoverMediaExecution": {
+      "get": {
+        "description": "Recovers the supplier acknowledgment for one existing Broker media attempt.\nUses the original tenant and pinned billing SecretVersion. Missing or\nincomplete evidence never authorizes dispatch, capture or release.",
+        "operationId": "broker_secret_versions_recover_media_execution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Original platform-hold execution identity.",
+            "in": "query",
+            "name": "execution_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.RecoverMediaExecutionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Recovers the supplier acknowledgment for one existing Broker media attempt. Uses the original tenant and pinned billing SecretVersion. Missing or incomplete evidence never authorizes dispatch, capture or release.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.secret_versions.recover_media_execution",
+        "x-sylphx-permission": "broker:media:recover",
         "x-sylphx-stage": "preview"
       }
     },

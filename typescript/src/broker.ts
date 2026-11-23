@@ -245,6 +245,20 @@ export interface OpenGitHubPullRequestResponse {
 	head?: GitHubPullRequestHead
 }
 
+/** Looks up the acknowledgment of an existing durable Broker media execution. */
+export interface RecoverMediaExecutionRequest {
+	/** Original immutable Broker billing SecretVersion; "latest" is not allowed. */
+	name: string
+	/** Original platform-hold execution identity. */
+	executionKey: string
+}
+
+/** Acknowledgment only. Empty means unresolved, never no-charge. */
+export interface RecoverMediaExecutionResponse {
+	/** Opaque supplier request ID, present only when positively correlated. */
+	receipt?: string
+}
+
 /** The request of RevokeTokenExchange. */
 export interface RevokeTokenExchangeRequest {
 	/** The record of the credential to revoke. */
@@ -528,6 +542,10 @@ runtime.registerSchemas({
 		['htmlUrl', 'html_url'],
 		['head', 'head', 'sylphx.broker.v1.GitHubPullRequestHead'],
 	],
+	'sylphx.broker.v1.RecoverMediaExecutionRequest': [
+		['executionKey', 'execution_key'],
+	],
+	'sylphx.broker.v1.RecoverMediaExecutionResponse': [],
 	'sylphx.broker.v1.RevokeTokenExchangeRequest': [],
 	'sylphx.broker.v1.SendCarrierSmsRequest': [
 		['senderNumber', 'sender_number'],
@@ -874,6 +892,25 @@ export class SecretVersionsCollection {
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:checkCarrierSmsDelivery`,
 			query: { send_key: request.sendKey },
 			responseType: 'sylphx.broker.v1.CheckCarrierSmsDeliveryResponse',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Recovers the supplier acknowledgment for one existing Broker media attempt.
+	 * Uses the original tenant and pinned billing SecretVersion. Missing or
+	 * incomplete evidence never authorizes dispatch, capture or release.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/secrets/*\/secret_versions/*}:recoverMediaExecution` · permission `broker:media:recover` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`.
+	 */
+	async recoverMediaExecution(request: RecoverMediaExecutionRequest): Promise<RecoverMediaExecutionResponse> {
+		return this.client.call<RecoverMediaExecutionResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:recoverMediaExecution`,
+			query: { execution_key: request.executionKey },
+			responseType: 'sylphx.broker.v1.RecoverMediaExecutionResponse',
 			mutation: false,
 		})
 	}

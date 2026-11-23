@@ -449,6 +449,35 @@ pub struct OpenGitHubPullRequestResponse {
     pub head: Option<GitHubPullRequestHead>,
 }
 
+/// Looks up the acknowledgment of an existing durable Broker media execution.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RecoverMediaExecutionRequest {
+    /// Original immutable Broker billing SecretVersion; "latest" is not allowed.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Original platform-hold execution identity.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+}
+
+/// Acknowledgment only. Empty means unresolved, never no-charge.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RecoverMediaExecutionResponse {
+    /// Opaque supplier request ID, present only when positively correlated.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub receipt: String,
+}
+
 /// The request of RevokeTokenExchange.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1376,6 +1405,39 @@ impl<'a, T: crate::runtime::Transport> SecretVersionsCollection<'a, T> {
         );
         let mut query = crate::runtime::Query::default();
         query.push("send_key", &request.send_key);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Recovers the supplier acknowledgment for one existing Broker media attempt.
+    /// Uses the original tenant and pinned billing SecretVersion. Missing or
+    /// incomplete evidence never authorizes dispatch, capture or release.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:recoverMediaExecution` · permission `broker:media:recover` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`.
+    pub async fn recover_media_execution(
+        &self,
+        request: RecoverMediaExecutionRequest,
+    ) -> Result<RecoverMediaExecutionResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:recoverMediaExecution",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("execution_key", &request.execution_key);
         let http = crate::runtime::HttpRequest {
             method: "GET",
             path,
