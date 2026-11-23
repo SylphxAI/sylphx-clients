@@ -8,6 +8,7 @@ import {
 	resolveEffectiveConsent,
 	type SignalAttribution,
 	type SignalConsent,
+	type SignalConsentChoice,
 } from '../src/signal.js'
 
 const denied: SignalConsent = {
@@ -23,6 +24,7 @@ const granted: SignalConsent = {
 	ad_user_data: 'granted',
 	ad_personalization: 'granted',
 }
+const analyticsOnly: SignalConsent = { ...denied, analytics_storage: 'granted' }
 const gaCookie = '_ga_TEST123=GS2.1.o4%24s1700000000%24g1; _ga_OTHER=GS1.1.1700000001.2'
 const cookie =
 	'_ga=GA1.2.12345.67890; _fbc=fb.1.1700000000000.OriginalClick; _fbp=fb.1.1700000000000.56789'
@@ -47,7 +49,24 @@ function transport() {
 }
 
 describe('Signal consent policy', () => {
-	for (const region of ['EU', 'EEA', 'UK', 'GB', 'CH', 'DE', 'NO', 'LI', 'IS']) {
+	for (const region of [
+		'EU',
+		'EEA',
+		'UK',
+		'GB',
+		'CH',
+		'DE',
+		'NO',
+		'LI',
+		'IS',
+		'AX',
+		'GF',
+		'GP',
+		'MQ',
+		'MF',
+		'RE',
+		'YT',
+	]) {
 		test(`${region} requires opt-in and honors GPC after opt-in`, () => {
 			expect(resolveEffectiveConsent({ region })).toEqual(denied)
 			expect(resolveEffectiveConsent({ region, storedChoice: 'granted' })).toEqual(granted)
@@ -155,8 +174,9 @@ for (const [region, storedChoice, gpc] of [
 	['UK', undefined, '0'],
 	['CA', 'denied', '0'],
 	['US', 'granted', '1'],
+	['US', 'analytics_only', '1'],
 ] as const) {
-	test(`denied checkout upserts only checkout identity and complete denial: ${region}`, async () => {
+	test(`denied checkout upserts only identity: ${region}, choice ${storedChoice}, GPC ${gpc}`, async () => {
 		const { options, requests } = transport()
 		await bindCheckoutAttribution(ids, {
 			...options,
@@ -223,6 +243,45 @@ test('posts the exact canonical binding payload and transport after opt-in', asy
 		fbp: 'fb.1.1700000000000.56789',
 		page_location: 'https://example.com/landing?utm_campaign=Summer+Launch',
 	})
+})
+
+test('analytics-only checkout sends GA4 and a sanitized page URL, never ads', async () => {
+	const { options, requests } = transport()
+	const storedChoice: SignalConsentChoice = 'analytics_only'
+	expect(resolveEffectiveConsent({ region: 'US', storedChoice })).toEqual(analyticsOnly)
+	await bindCheckoutAttribution(ids, {
+		...options,
+		privacy: { region: 'EU', storedChoice },
+		gaMeasurementId: 'G-TEST123',
+		headers: new Headers({ cookie: [cookie, gaCookie].join('; ') }),
+		attribution: {
+			gclid: 'GoogleClick',
+			gbraid: 'Braid',
+			wbraid: 'WebBraid',
+			fbclid: 'New.Click',
+			capturedAt: 1700000000001,
+			utm_campaign: 'Summer Launch',
+			utm_term: ' ',
+		},
+		pageLocation: new URL(
+			'https://example.com/landing?code=private&gclid=private&utm_source=ignored#private',
+		),
+	})
+	await bindCheckoutAttribution(ids, {
+		...options,
+		privacy: { storedChoice },
+		headers: new Headers({ cookie: '_ga=; _fbc=; _fbp=' }),
+		attribution: { utm_campaign: '' },
+	})
+	const [first, second] = await Promise.all(requests.map((request) => request.json()))
+	expect(first).toEqual({
+		checkout_session_id: 'checkout_123',
+		consent: analyticsOnly,
+		ga_client_id: '12345.67890',
+		ga_session_id: '1700000000',
+		page_location: 'https://example.com/landing?utm_campaign=Summer+Launch',
+	})
+	expect(second).toEqual({ checkout_session_id: 'checkout_123', consent: analyticsOnly })
 })
 
 test('rejects requests without a valid checkout key and surfaces endpoint failures', async () => {
@@ -327,6 +386,35 @@ for (const region of ['EU', 'UK']) {
 		reopened.dispose()
 	})
 }
+
+test('browser persists analytics-only, retains UTMs but not ad IDs, and honors navigator GPC', async () => {
+	const { values, nav, location, cookieReads } = browser()
+	const calls: unknown[] = []
+	const signal = createSignalBrowser({
+		region: 'US',
+		google: { gtag: (...args) => calls.push(args), load: () => calls.push('load') },
+	})
+	expect(signal.capture()).toMatchObject({ fbclid: 'Same.Click', utm_source: 'source' })
+	location.href = 'https://example.com/checkout?gclid=NewClick'
+	signal.setConsent('analytics_only')
+	expect(calls).toEqual([['default', granted], 'load', ['update', analyticsOnly]])
+	expect(values.get('sylphx.signal.v1.consent')).toBe('analytics_only')
+	expect(JSON.parse(values.get('sylphx.signal.v1.touch')!).touch).toEqual({ utm_source: 'source' })
+	signal.dispose()
+
+	const reopened = createSignalBrowser({ region: 'US' })
+	expect(reopened.getConsent()).toEqual(analyticsOnly)
+	expect(reopened.capture()).toEqual({ utm_source: 'source' })
+	nav.globalPrivacyControl = true
+	const { options, requests } = transport()
+	await reopened.bindCheckoutAttribution(ids, options)
+	expect(await requests[0]?.json()).toEqual({
+		checkout_session_id: 'checkout_123',
+		consent: denied,
+	})
+	expect(cookieReads()).toBe(0)
+	reopened.dispose()
+})
 
 test('Basic does not load before grant, and GPC blocks even an explicit choice in Advanced', async () => {
 	const { nav, cookieReads } = browser()

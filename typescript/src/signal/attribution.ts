@@ -35,13 +35,15 @@ function clickId(value: unknown): string | undefined {
 	return typeof value === 'string' && /^[A-Za-z0-9_.~-]{1,256}$/.test(value) ? value : undefined
 }
 
-export function cleanAttribution(value: unknown): SignalAttribution {
+export function cleanAttribution(value: unknown, includeAds = true): SignalAttribution {
 	const result: SignalAttribution = {}
 	if (!value || typeof value !== 'object') return result
 	const raw = value as Record<string, unknown>
-	for (const field of clickFields) {
-		const clean = clickId(raw[field])
-		if (clean) result[field] = clean
+	if (includeAds) {
+		for (const field of clickFields) {
+			const clean = clickId(raw[field])
+			if (clean) result[field] = clean
+		}
 	}
 	for (const field of utmFields) {
 		const clean = cleanValue(raw[field], 256, true)
@@ -59,13 +61,17 @@ export function cleanAttribution(value: unknown): SignalAttribution {
 }
 
 /** Read known campaign parameters only. Call after checking consent. */
-export function parseSignalAttribution(url: URL, capturedAt = Date.now()): SignalAttribution {
+export function parseSignalAttribution(
+	url: URL,
+	capturedAt = Date.now(),
+	includeAds = true,
+): SignalAttribution {
 	const entries: Record<string, unknown> = { capturedAt }
-	for (const field of [...clickFields, ...utmFields]) {
+	for (const field of includeAds ? [...clickFields, ...utmFields] : utmFields) {
 		const values = url.searchParams.getAll(field)
 		if (values.length === 1) entries[field] = values[0]
 	}
-	return cleanAttribution(entries)
+	return cleanAttribution(entries, includeAds)
 }
 
 export interface AttributionCookies {
@@ -79,9 +85,10 @@ export interface AttributionCookies {
 export function parseAttributionCookies(
 	header: string,
 	gaMeasurementId?: string,
+	{ analytics = true, ads = true } = {},
 ): AttributionCookies {
 	const sessionCookie =
-		gaMeasurementId && /^G-[A-Z0-9]{1,32}$/.test(gaMeasurementId)
+		analytics && gaMeasurementId && /^G-[A-Z0-9]{1,32}$/.test(gaMeasurementId)
 			? `_ga_${gaMeasurementId.slice(2)}`
 			: undefined
 	const values = new Map<string, string | undefined>()
@@ -89,7 +96,11 @@ export function parseAttributionCookies(
 		const separator = part.indexOf('=')
 		if (separator < 0) continue
 		const name = part.slice(0, separator).trim()
-		if (name !== '_ga' && name !== '_fbc' && name !== '_fbp' && name !== sessionCookie) continue
+		if (
+			!(analytics && (name === '_ga' || name === sessionCookie)) &&
+			!(ads && (name === '_fbc' || name === '_fbp'))
+		)
+			continue
 		if (values.has(name)) {
 			values.set(name, undefined)
 			continue

@@ -22,5 +22,6 @@ export {
 	detectSignalRegion,
 	resolveEffectiveConsent,
 	type SignalConsent,
+	type SignalConsentChoice,
 	type SignalPrivacy,
 } from './signal/consent.js'

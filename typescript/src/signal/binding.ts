@@ -101,22 +101,21 @@ export async function bindCheckoutAttribution(
 		subscription_id: subscriptionId,
 		consent,
 	}
-	if (
-		consent.analytics_storage === 'granted' &&
-		consent.ad_storage === 'granted' &&
-		consent.ad_user_data === 'granted'
-	) {
+	const analytics = consent.analytics_storage === 'granted'
+	const ads = consent.ad_storage === 'granted' && consent.ad_user_data === 'granted'
+	if (analytics || ads) {
 		const cookieHeader =
 			options.headers?.get('Cookie') ??
 			options.readCookies?.() ??
 			(typeof document !== 'undefined' ? document.cookie : '')
-		const cookies = parseAttributionCookies(cookieHeader, options.gaMeasurementId)
-		const touch = cleanAttribution(options.attribution)
-		Object.assign(payload, signalAdFields(touch, cookies), {
-			ga_client_id: cookies.gaClientId,
-			ga_session_id: cookies.gaSessionId,
-			page_location: signalPageLocation(options.pageLocation, touch),
-		})
+		const cookies = parseAttributionCookies(cookieHeader, options.gaMeasurementId, { analytics, ads })
+		const touch = cleanAttribution(options.attribution, ads)
+		if (analytics) {
+			payload.ga_client_id = cookies.gaClientId
+			payload.ga_session_id = cookies.gaSessionId
+			payload.page_location = signalPageLocation(options.pageLocation, touch)
+		}
+		if (ads) Object.assign(payload, signalAdFields(touch, cookies))
 	}
 
 	const response = await (options.fetch ?? fetch)(endpoint, {

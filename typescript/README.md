@@ -89,7 +89,7 @@ const signal = createSignalBrowser({
 })
 await signal.ready
 // Use signal.getConsent() in your UI. Only call setConsent from a real choice.
-// signal.setConsent('granted') or signal.setConsent('denied')
+// Supported choices: 'granted', 'analytics_only', 'denied'.
 await signal.bindCheckoutAttribution({ checkoutSessionId }, {
   apiKey: publishableKey,
   pageLocation: new URL('https://example.com/landing'), // optional public path
@@ -97,7 +97,10 @@ await signal.bindCheckoutAttribution({ checkoutSessionId }, {
 ```
 
 EU/EEA/UK/CH and unknown regions deny collection by default. Known opt-out
-regions grant all four Consent Mode flags until the user opts out.
+regions grant all four Consent Mode flags unless the user chooses otherwise.
+Choose `analytics_only` to grant analytics storage while denying all three
+ad flags. Checkout can send GA4 identifiers and an optional public page URL
+with allowlisted UTMs, but no ad click or browser identifiers.
 The same `resolveEffectiveConsent({ region, storedChoice, gpc })` policy applies
 to the browser and at checkout. Global Privacy Control always wins. Call `capture()` on SPA navigation and `dispose()` when tearing down the
 client. Consented campaign data expires after 30 days; opting out clears the

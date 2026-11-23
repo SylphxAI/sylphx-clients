@@ -6,12 +6,12 @@ import {
 	type CheckoutIdentifiers,
 } from './binding.js'
 import {
-	type ConsentChoice,
 	detectSignalRegion,
 	hasGpc,
 	normalizeRegion,
 	resolveEffectiveConsent,
 	type SignalConsent,
+	type SignalConsentChoice,
 	type SignalPrivacy,
 } from './consent.js'
 
@@ -46,18 +46,19 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 	const choiceKey = `${options.storageKey ?? 'sylphx.signal.v1'}.consent`
 	const touchKey = `${options.storageKey ?? 'sylphx.signal.v1'}.touch`
 	const google = options.google
-	let choiceOverride: ConsentChoice | undefined
+	let choiceOverride: SignalConsentChoice | undefined
 	let current: { expiresAt: number; touch: SignalAttribution } | undefined
 	let regionPending = options.region === undefined && !hasGpc(privacy)
 	let loaded = false
 	let disposed = false
 	let previous: SignalConsent | undefined
 
-	function storedChoice(): ConsentChoice | undefined {
+	function storedChoice(): SignalConsentChoice | undefined {
 		if (choiceOverride) return choiceOverride
 		try {
 			const value = window.localStorage.getItem(choiceKey)
-			return value === 'granted' || value === null ? (value ?? undefined) : 'denied'
+			if (value === null) return undefined
+			return value === 'granted' || value === 'analytics_only' ? value : 'denied'
 		} catch {
 			return 'denied'
 		}
@@ -102,9 +103,12 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 	}
 
 	function capture(): SignalAttribution {
-		if (sync().analytics_storage !== 'granted') return {}
+		const consent = sync()
+		if (consent.analytics_storage !== 'granted') return {}
+		const ads = consent.ad_storage === 'granted' && consent.ad_user_data === 'granted'
 		const now = Date.now()
 		if (current && current.expiresAt <= now) current = undefined
+		if (current && !ads) current.touch = cleanAttribution(current.touch, false)
 		try {
 			const saved: unknown = JSON.parse(window.localStorage.getItem(touchKey) ?? 'null')
 			if (
@@ -116,12 +120,15 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 				saved.expiresAt <= now + touchLifetime &&
 				'touch' in saved
 			) {
-				current = { expiresAt: saved.expiresAt, touch: cleanAttribution(saved.touch) }
+				current = { expiresAt: saved.expiresAt, touch: cleanAttribution(saved.touch, ads) }
+				// On downgrade, keep UTMs and their original expiry, but stop retaining click IDs.
+				if (!ads && JSON.stringify(saved.touch) !== JSON.stringify(current.touch))
+					window.localStorage.setItem(touchKey, JSON.stringify(current))
 			} else if (saved) window.localStorage.removeItem(touchKey)
 		} catch {
 			/* Stay usable in memory if storage is unavailable. */
 		}
-		const latest = parseSignalAttribution(new URL(window.location.href), now)
+		const latest = parseSignalAttribution(new URL(window.location.href), now, ads)
 		if (Object.keys(latest).length) {
 			if (latest.fbclid && latest.fbclid === current?.touch.fbclid)
 				latest.capturedAt = current?.touch.capturedAt ?? now
@@ -159,8 +166,9 @@ export function createSignalBrowser(options: SignalBrowserOptions = {}) {
 		ready,
 		getConsent: sync,
 		/** Persist only an explicit user choice. Recheck GPC before collecting. */
-		setConsent(choice: ConsentChoice) {
-			if (choice !== 'granted' && choice !== 'denied') throw new TypeError('Invalid consent choice')
+		setConsent(choice: SignalConsentChoice) {
+			if (choice !== 'granted' && choice !== 'analytics_only' && choice !== 'denied')
+				throw new TypeError('Invalid consent choice')
 			choiceOverride = choice
 			try {
 				window.localStorage.setItem(choiceKey, choice)
