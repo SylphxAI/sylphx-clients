@@ -430,9 +430,7 @@ fn is_blocking_window_block(block: &WindowBlock<'_>) -> bool {
     {
         return true;
     }
-    if (title == "android" || title.starts_with("PopupWindow"))
-        && block.pkgs.iter().any(|p| *p == "android")
-    {
+    if (title == "android" || title.starts_with("PopupWindow")) && block.pkgs.contains(&"android") {
         return true;
     }
     let blocking_pkg = |p: &str| {
