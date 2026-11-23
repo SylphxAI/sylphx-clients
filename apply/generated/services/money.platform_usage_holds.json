@@ -1,0 +1,37 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.platform_usage_holds.reserve",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.platform_usage_holds.claim",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.platform_usage_holds.capture",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "money.platform_usage_holds.release",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "money.sylphx.com/PlatformUsageHoldReceipt"
+    }
+  ]
+}

@@ -471,6 +471,38 @@ pub struct CancelCustomerSubscriptionRequest {
     pub refund_last_payment: bool,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CapturePlatformUsageHoldRequest {
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerOrg"
+    )]
+    pub payer_org: String,
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "actualPicousd"
+    )]
+    pub actual_picousd: String,
+    /// Stable receipt identity (include the provider/account namespace).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "terminalReceiptKey"
+    )]
+    pub terminal_receipt_key: String,
+}
+
 /// A Catalog is an environment's features, products, and prices: the desired
 /// state Money keeps its merchant account's processor objects equal to, by
 /// lookup key. It is declared in `sylphx.toml` `[money]` or written here.
@@ -1400,6 +1432,25 @@ pub struct CheckoutSession {
         alias = "claimSecretExpiresAt"
     )]
     pub claim_secret_expires_at: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ClaimPlatformUsageHoldRequest {
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerOrg"
+    )]
+    pub payer_org: String,
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
 }
 
 /// The request of ClientVerifyStorePurchase.
@@ -4070,6 +4121,77 @@ pub struct MerchantAccount {
     pub processor_warnings: Vec<String>,
 }
 
+/// Authority to dispatch and, separately, a deadline to submit the terminal
+/// receipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PlatformUsageHoldReceipt {
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerOrg"
+    )]
+    pub payer_org: String,
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "upperBoundPicousd"
+    )]
+    pub upper_bound_picousd: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dispatchBy"
+    )]
+    pub dispatch_by: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "settleBy"
+    )]
+    pub settle_by: String,
+    /// pending, in_flight, awaiting_settlement (receipt overdue), captured, released, or expired.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub state: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "capturedPicousd"
+    )]
+    pub captured_picousd: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "releasedPicousd"
+    )]
+    pub released_picousd: String,
+    /// Present only for a positive capture; this is the only billable journal.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ledgerTransactionId"
+    )]
+    pub ledger_transaction_id: String,
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub replayed: bool,
+}
+
 /// A Portal Session is a hosted page where a subject manages its
 /// subscriptions, payment method, and invoices.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -4658,6 +4780,32 @@ pub struct RefundCheckoutSessionResponse {
     pub refund: Option<Refund>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReleasePlatformUsageHoldRequest {
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerOrg"
+    )]
+    pub payer_org: String,
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+    /// Required after claim. An unknown dispatch or missing receipt is not proof.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "definitiveNoCharge"
+    )]
+    pub definitive_no_charge: bool,
+}
+
 /// The request of ReleaseUsageInvoiceCollection.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -4770,6 +4918,44 @@ pub struct ReportStorePurchaseUsageResponse {
         alias = "storePurchase"
     )]
     pub store_purchase: Option<StorePurchase>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReservePlatformUsageHoldRequest {
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "payerOrg"
+    )]
+    pub payer_org: String,
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+    /// Use a durable, caller-generated platform-hold:<unique-execution-id>.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "upperBoundPicousd"
+    )]
+    pub upper_bound_picousd: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dispatchBy"
+    )]
+    pub dispatch_by: String,
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "settleBy"
+    )]
+    pub settle_by: String,
 }
 
 /// Resolves held evidence without altering its original receipt.
@@ -7583,6 +7769,13 @@ pub struct MoneyApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
+    /// The `platform_usage_holds` collection.
+    pub fn platform_usage_holds(&self) -> PlatformUsageHoldsCollection<'a, T> {
+        PlatformUsageHoldsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `bank_transfer_accounts` collection.
     pub fn bank_transfer_accounts(&self) -> BankTransferAccountsCollection<'a, T> {
         BankTransferAccountsCollection {
@@ -7784,6 +7977,105 @@ impl<'a, T: crate::runtime::Transport> MoneyApi<'a, T> {
         ExchangeRatesCollection {
             client: self.client,
         }
+    }
+}
+
+/// `platform_usage_holds` of Sylphx Money: Resource type `money.sylphx.com/PlatformUsageHoldReceipt`.
+pub struct PlatformUsageHoldsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> PlatformUsageHoldsCollection<'a, T> {
+    /// ReservePlatformUsageHold is an internal platform service operation.
+    ///
+    /// `POST /v1/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+    pub async fn reserve(
+        &self,
+        request: ReservePlatformUsageHoldRequest,
+    ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
+        let path = "/v1/platform_usage_holds:reserve".to_string();
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &[])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ClaimPlatformUsageHold is an internal platform service operation.
+    ///
+    /// `POST /v1/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+    pub async fn claim(
+        &self,
+        request: ClaimPlatformUsageHoldRequest,
+    ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
+        let path = "/v1/platform_usage_holds:claim".to_string();
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &[])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// CapturePlatformUsageHold is an internal platform service operation.
+    ///
+    /// `POST /v1/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+    pub async fn capture(
+        &self,
+        request: CapturePlatformUsageHoldRequest,
+    ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
+        let path = "/v1/platform_usage_holds:capture".to_string();
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &[])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// ReleasePlatformUsageHold is an internal platform service operation.
+    ///
+    /// `POST /v1/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+    pub async fn release(
+        &self,
+        request: ReleasePlatformUsageHoldRequest,
+    ) -> Result<PlatformUsageHoldReceipt, crate::runtime::Error> {
+        let path = "/v1/platform_usage_holds:release".to_string();
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &[])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 

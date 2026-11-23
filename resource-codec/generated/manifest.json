@@ -85765,6 +85765,98 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "payer_org",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "service",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "actual_picousd",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Stable receipt identity (include the provider/account namespace).",
+          "filterable": false,
+          "name": "terminal_receipt_key",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.CapturePlatformUsageHoldRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "A Catalog is an environment's features, products, and prices: the desired\nstate Money keeps its merchant account's processor objects equal to, by\nlookup key. It is declared in `sylphx.toml` `[money]` or written here.",
       "fields": [
         {
@@ -88105,6 +88197,64 @@
         }
       ],
       "name": "sylphx.money.v1.CheckoutSession",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "payer_org",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "service",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ClaimPlatformUsageHoldRequest",
       "package": "sylphx.money.v1"
     },
     {
@@ -94963,6 +95113,257 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "Authority to dispatch and, separately, a deadline to submit the terminal\nreceipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "payer_org",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "service",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "upper_bound_picousd",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "dispatch_by",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "settle_by",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "pending, in_flight, awaiting_settlement (receipt overdue), captured, released, or expired.",
+          "filterable": false,
+          "name": "state",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "captured_picousd",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "released_picousd",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Present only for a positive capture; this is the only billable journal.",
+          "filterable": false,
+          "name": "ledger_transaction_id",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "replayed",
+          "number": 14,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.PlatformUsageHoldReceipt",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "A Portal Session is a hosted page where a subject manages its\nsubscriptions, payment method, and invoices.",
       "fields": [
         {
@@ -96540,6 +96941,81 @@
       "package": "sylphx.money.v1"
     },
     {
+      "doc": "",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "payer_org",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "service",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Required after claim. An unknown dispatch or missing receipt is not proof.",
+          "filterable": false,
+          "name": "definitive_no_charge",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ReleasePlatformUsageHoldRequest",
+      "package": "sylphx.money.v1"
+    },
+    {
       "doc": "The request of ReleaseUsageInvoiceCollection.",
       "fields": [
         {
@@ -96789,6 +97265,115 @@
         }
       ],
       "name": "sylphx.money.v1.ReportStorePurchaseUsageResponse",
+      "package": "sylphx.money.v1"
+    },
+    {
+      "doc": "",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "payer_org",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "service",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "upper_bound_picousd",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "dispatch_by",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "",
+          "filterable": false,
+          "name": "settle_by",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.money.v1.ReservePlatformUsageHoldRequest",
       "package": "sylphx.money.v1"
     },
     {
@@ -152400,6 +152985,28 @@
       "type": "money.sylphx.com/MerchantAccount"
     },
     {
+      "collection": "platform_usage_holds",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "PlatformUsageHoldReceipt",
+      "message": "sylphx.money.v1.PlatformUsageHoldReceipt",
+      "meters": [],
+      "parent_pattern": "orgs/{org}",
+      "pattern": "orgs/{org}/platform_usage_holds/{platform_usage_hold}",
+      "plural": "platformUsageHolds",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "money",
+      "shape": "record",
+      "singular": "platformUsageHold",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "money.sylphx.com/PlatformUsageHoldReceipt"
+    },
+    {
       "collection": "portal_sessions",
       "controller": "",
       "deletion_protection": false,
@@ -175423,6 +176030,164 @@
     },
     {
       "collections": [
+        {
+          "methods": [
+            {
+              "backend_idempotency": true,
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "ReservePlatformUsageHold is an internal platform service operation.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "IDEMPOTENCY_KEY_REUSED",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [],
+                "query_params": [],
+                "template": "/v1/platform_usage_holds:reserve"
+              },
+              "id": "money.platform_usage_holds.reserve",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "money:platform_usage:write",
+              "proto": "sylphx.money.v1.MoneyService.ReservePlatformUsageHold",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ReservePlatformUsageHoldRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.PlatformUsageHoldReceipt",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "reserve"
+            },
+            {
+              "backend_idempotency": true,
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "ClaimPlatformUsageHold is an internal platform service operation.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "IDEMPOTENCY_KEY_REUSED",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [],
+                "query_params": [],
+                "template": "/v1/platform_usage_holds:claim"
+              },
+              "id": "money.platform_usage_holds.claim",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "money:platform_usage:write",
+              "proto": "sylphx.money.v1.MoneyService.ClaimPlatformUsageHold",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ClaimPlatformUsageHoldRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.PlatformUsageHoldReceipt",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "claim"
+            },
+            {
+              "backend_idempotency": true,
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "CapturePlatformUsageHold is an internal platform service operation.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "IDEMPOTENCY_KEY_REUSED",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [],
+                "query_params": [],
+                "template": "/v1/platform_usage_holds:capture"
+              },
+              "id": "money.platform_usage_holds.capture",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "money:platform_usage:write",
+              "proto": "sylphx.money.v1.MoneyService.CapturePlatformUsageHold",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.CapturePlatformUsageHoldRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.PlatformUsageHoldReceipt",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "capture"
+            },
+            {
+              "backend_idempotency": true,
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "ReleasePlatformUsageHold is an internal platform service operation.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "IDEMPOTENCY_KEY_REUSED",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [],
+                "query_params": [],
+                "template": "/v1/platform_usage_holds:release"
+              },
+              "id": "money.platform_usage_holds.release",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "money:platform_usage:write",
+              "proto": "sylphx.money.v1.MoneyService.ReleasePlatformUsageHold",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.money.v1.ReleasePlatformUsageHoldRequest",
+              "resource_field": null,
+              "response": "sylphx.money.v1.PlatformUsageHoldReceipt",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "release"
+            }
+          ],
+          "name": "platform_usage_holds",
+          "resource_type": "money.sylphx.com/PlatformUsageHoldReceipt"
+        },
         {
           "methods": [
             {

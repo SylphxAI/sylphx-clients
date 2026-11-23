@@ -1,0 +1,236 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "IDENTIFIER"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "name",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "uid",
+      "number": 2,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "meta",
+      "number": 3,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.common.v1.ResourceMeta"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "payer_org",
+      "number": 4,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "service",
+      "number": 5,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "execution_key",
+      "number": 6,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "upper_bound_picousd",
+      "number": 7,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "dispatch_by",
+      "number": 8,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "settle_by",
+      "number": 9,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "state",
+      "number": 10,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "captured_picousd",
+      "number": 11,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "released_picousd",
+      "number": 12,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "ledger_transaction_id",
+      "number": 13,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
+    },
+    {
+      "behaviors": [],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "replayed",
+      "number": 14,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "bool"
+      }
+    }
+  ],
+  "name": "sylphx.money.v1.PlatformUsageHoldReceipt",
+  "package": "sylphx.money.v1"
+}

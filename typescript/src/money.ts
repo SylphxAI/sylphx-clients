@@ -191,6 +191,15 @@ export interface CancelCustomerSubscriptionRequest {
 	refundLastPayment?: boolean
 }
 
+export interface CapturePlatformUsageHoldRequest {
+	payerOrg?: string
+	service?: string
+	executionKey?: string
+	actualPicousd?: string
+	/** Stable receipt identity (include the provider/account namespace). */
+	terminalReceiptKey?: string
+}
+
 /**
  * A Catalog is an environment's features, products, and prices: the desired
  * state Money keeps its merchant account's processor objects equal to, by
@@ -624,6 +633,12 @@ export interface CheckoutSession {
 	readonly claimSecret?: string
 	/** When the browser possession proof expires. The existing wire name is retained. */
 	readonly claimSecretExpiresAt?: string
+}
+
+export interface ClaimPlatformUsageHoldRequest {
+	payerOrg?: string
+	service?: string
+	executionKey?: string
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -1881,6 +1896,29 @@ export interface MerchantAccount {
 }
 
 /**
+ * Authority to dispatch and, separately, a deadline to submit the terminal
+ * receipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).
+ */
+export interface PlatformUsageHoldReceipt {
+	name?: string
+	readonly uid?: string
+	meta?: common.ResourceMeta
+	payerOrg?: string
+	service?: string
+	executionKey?: string
+	upperBoundPicousd?: string
+	dispatchBy?: string
+	settleBy?: string
+	/** pending, in_flight, awaiting_settlement (receipt overdue), captured, released, or expired. */
+	state?: string
+	capturedPicousd?: string
+	releasedPicousd?: string
+	/** Present only for a positive capture; this is the only billable journal. */
+	ledgerTransactionId?: string
+	replayed?: boolean
+}
+
+/**
  * A Portal Session is a hosted page where a subject manages its
  * subscriptions, payment method, and invoices.
  */
@@ -2146,6 +2184,14 @@ export interface RefundCheckoutSessionResponse {
 	readonly refund?: Refund
 }
 
+export interface ReleasePlatformUsageHoldRequest {
+	payerOrg?: string
+	service?: string
+	executionKey?: string
+	/** Required after claim. An unknown dispatch or missing receipt is not proof. */
+	definitiveNoCharge?: boolean
+}
+
 /** The request of ReleaseUsageInvoiceCollection. */
 export interface ReleaseUsageInvoiceCollectionRequest {
 	/** The held invoice to release for collection. */
@@ -2204,6 +2250,16 @@ export interface ReportStorePurchaseUsageResponse {
 	storeConsumptionRequest?: StoreConsumptionRequest
 	/** The store purchase that was answered. */
 	storePurchase?: StorePurchase
+}
+
+export interface ReservePlatformUsageHoldRequest {
+	payerOrg?: string
+	service?: string
+	/** Use a durable, caller-generated platform-hold:<unique-execution-id>. */
+	executionKey?: string
+	upperBoundPicousd?: string
+	dispatchBy?: string
+	settleBy?: string
 }
 
 /** Resolves held evidence without altering its original receipt. */
@@ -3405,6 +3461,12 @@ runtime.registerSchemas({
 		['atPeriodEnd', 'at_period_end'],
 		['refundLastPayment', 'refund_last_payment'],
 	],
+	'sylphx.money.v1.CapturePlatformUsageHoldRequest': [
+		['payerOrg', 'payer_org'],
+		['executionKey', 'execution_key'],
+		['actualPicousd', 'actual_picousd'],
+		['terminalReceiptKey', 'terminal_receipt_key'],
+	],
 	'sylphx.money.v1.Catalog': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.money.v1.CatalogSpec'],
@@ -3524,6 +3586,10 @@ runtime.registerSchemas({
 		['claimMethod', 'claim_method'],
 		['claimSecret', 'claim_secret'],
 		['claimSecretExpiresAt', 'claim_secret_expires_at'],
+	],
+	'sylphx.money.v1.ClaimPlatformUsageHoldRequest': [
+		['payerOrg', 'payer_org'],
+		['executionKey', 'execution_key'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -3885,6 +3951,17 @@ runtime.registerSchemas({
 		['processorPermissionsCheckTime', 'processor_permissions_check_time'],
 		['processorWarnings', 'processor_warnings'],
 	],
+	'sylphx.money.v1.PlatformUsageHoldReceipt': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['payerOrg', 'payer_org'],
+		['executionKey', 'execution_key'],
+		['upperBoundPicousd', 'upper_bound_picousd'],
+		['dispatchBy', 'dispatch_by'],
+		['settleBy', 'settle_by'],
+		['capturedPicousd', 'captured_picousd'],
+		['releasedPicousd', 'released_picousd'],
+		['ledgerTransactionId', 'ledger_transaction_id'],
+	],
 	'sylphx.money.v1.PortalSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -3956,6 +4033,11 @@ runtime.registerSchemas({
 	'sylphx.money.v1.RefundCheckoutSessionResponse': [
 		['refund', 'refund', 'sylphx.money.v1.Refund'],
 	],
+	'sylphx.money.v1.ReleasePlatformUsageHoldRequest': [
+		['payerOrg', 'payer_org'],
+		['executionKey', 'execution_key'],
+		['definitiveNoCharge', 'definitive_no_charge'],
+	],
 	'sylphx.money.v1.ReleaseUsageInvoiceCollectionRequest': [],
 	'sylphx.money.v1.ReleaseUsageReservationRequest': [],
 	'sylphx.money.v1.ReportStorePurchaseUsageRequest': [
@@ -3969,6 +4051,13 @@ runtime.registerSchemas({
 	'sylphx.money.v1.ReportStorePurchaseUsageResponse': [
 		['storeConsumptionRequest', 'store_consumption_request', 'sylphx.money.v1.StoreConsumptionRequest'],
 		['storePurchase', 'store_purchase', 'sylphx.money.v1.StorePurchase'],
+	],
+	'sylphx.money.v1.ReservePlatformUsageHoldRequest': [
+		['payerOrg', 'payer_org'],
+		['executionKey', 'execution_key'],
+		['upperBoundPicousd', 'upper_bound_picousd'],
+		['dispatchBy', 'dispatch_by'],
+		['settleBy', 'settle_by'],
 	],
 	'sylphx.money.v1.ResolveBankReceiptRequest': [],
 	'sylphx.money.v1.ResumeCustomerSubscriptionRequest': [],
@@ -4290,6 +4379,8 @@ runtime.registerSchemas({
  * Namespace of Sylphx Money on `Sylphx`.
  */
 export class MoneyApi {
+	/** The `platform_usage_holds` collection. */
+	readonly platformUsageHolds: PlatformUsageHoldsCollection
 	/** The `bank_transfer_accounts` collection. */
 	readonly bankTransferAccounts: BankTransferAccountsCollection
 	/** The `bank_receipts` collection. */
@@ -4350,6 +4441,7 @@ export class MoneyApi {
 	readonly exchangeRates: ExchangeRatesCollection
 
 	constructor(client: runtime.Client) {
+		this.platformUsageHolds = new PlatformUsageHoldsCollection(client)
 		this.bankTransferAccounts = new BankTransferAccountsCollection(client)
 		this.bankReceipts = new BankReceiptsCollection(client)
 		this.processorEvents = new ProcessorEventsCollection(client)
@@ -4379,6 +4471,87 @@ export class MoneyApi {
 		this.revenue = new RevenueCollection(client)
 		this.revenueFacts = new RevenueFactsCollection(client)
 		this.exchangeRates = new ExchangeRatesCollection(client)
+	}
+}
+
+/** `platform_usage_holds` of Sylphx Money: Resource type `money.sylphx.com/PlatformUsageHoldReceipt`. */
+export class PlatformUsageHoldsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * ReservePlatformUsageHold is an internal platform service operation.
+	 *
+	 * `POST /v1/platform_usage_holds:reserve` · permission `money:platform_usage:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+	 */
+	async reserve(request: ReservePlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
+		return this.client.call<PlatformUsageHoldReceipt>({
+			method: 'POST',
+			path: `/v1/platform_usage_holds:reserve`,
+			body: runtime.omit(request, []),
+			bodyType: 'sylphx.money.v1.ReservePlatformUsageHoldRequest',
+			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * ClaimPlatformUsageHold is an internal platform service operation.
+	 *
+	 * `POST /v1/platform_usage_holds:claim` · permission `money:platform_usage:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+	 */
+	async claim(request: ClaimPlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
+		return this.client.call<PlatformUsageHoldReceipt>({
+			method: 'POST',
+			path: `/v1/platform_usage_holds:claim`,
+			body: runtime.omit(request, []),
+			bodyType: 'sylphx.money.v1.ClaimPlatformUsageHoldRequest',
+			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * CapturePlatformUsageHold is an internal platform service operation.
+	 *
+	 * `POST /v1/platform_usage_holds:capture` · permission `money:platform_usage:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+	 */
+	async capture(request: CapturePlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
+		return this.client.call<PlatformUsageHoldReceipt>({
+			method: 'POST',
+			path: `/v1/platform_usage_holds:capture`,
+			body: runtime.omit(request, []),
+			bodyType: 'sylphx.money.v1.CapturePlatformUsageHoldRequest',
+			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * ReleasePlatformUsageHold is an internal platform service operation.
+	 *
+	 * `POST /v1/platform_usage_holds:release` · permission `money:platform_usage:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `IDEMPOTENCY_KEY_REUSED`, `UNAVAILABLE`.
+	 */
+	async release(request: ReleasePlatformUsageHoldRequest): Promise<PlatformUsageHoldReceipt> {
+		return this.client.call<PlatformUsageHoldReceipt>({
+			method: 'POST',
+			path: `/v1/platform_usage_holds:release`,
+			body: runtime.omit(request, []),
+			bodyType: 'sylphx.money.v1.ReleasePlatformUsageHoldRequest',
+			responseType: 'sylphx.money.v1.PlatformUsageHoldReceipt',
+			mutation: true,
+		})
 	}
 }
 

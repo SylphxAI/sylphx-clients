@@ -28140,6 +28140,27 @@
         ],
         "type": "object"
       },
+      "sylphx.money.v1.CapturePlatformUsageHoldRequest": {
+        "properties": {
+          "actual_picousd": {
+            "type": "string"
+          },
+          "execution_key": {
+            "type": "string"
+          },
+          "payer_org": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "terminal_receipt_key": {
+            "description": "Stable receipt identity (include the provider/account namespace).",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.Catalog": {
         "description": "A Catalog is an environment's features, products, and prices: the desired\nstate Money keeps its merchant account's processor objects equal to, by\nlookup key. It is declared in `sylphx.toml` `[money]` or written here.",
         "properties": {
@@ -28862,6 +28883,20 @@
           "line_items",
           "success_url"
         ],
+        "type": "object"
+      },
+      "sylphx.money.v1.ClaimPlatformUsageHoldRequest": {
+        "properties": {
+          "execution_key": {
+            "type": "string"
+          },
+          "payer_org": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.money.v1.ClientVerifyStorePurchaseRequest": {
@@ -31304,6 +31339,57 @@
         },
         "type": "object"
       },
+      "sylphx.money.v1.PlatformUsageHoldReceipt": {
+        "description": "Authority to dispatch and, separately, a deadline to submit the terminal\nreceipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).",
+        "properties": {
+          "captured_picousd": {
+            "type": "string"
+          },
+          "dispatch_by": {
+            "type": "string"
+          },
+          "execution_key": {
+            "type": "string"
+          },
+          "ledger_transaction_id": {
+            "description": "Present only for a positive capture; this is the only billable journal.",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta"
+          },
+          "name": {
+            "type": "string"
+          },
+          "payer_org": {
+            "type": "string"
+          },
+          "released_picousd": {
+            "type": "string"
+          },
+          "replayed": {
+            "type": "boolean"
+          },
+          "service": {
+            "type": "string"
+          },
+          "settle_by": {
+            "type": "string"
+          },
+          "state": {
+            "description": "pending, in_flight, awaiting_settlement (receipt overdue), captured, released, or expired.",
+            "type": "string"
+          },
+          "uid": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "upper_bound_picousd": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.PortalSession": {
         "description": "A Portal Session is a hosted page where a subject manages its\nsubscriptions, payment method, and invoices.",
         "properties": {
@@ -31789,6 +31875,24 @@
         },
         "type": "object"
       },
+      "sylphx.money.v1.ReleasePlatformUsageHoldRequest": {
+        "properties": {
+          "definitive_no_charge": {
+            "description": "Required after claim. An unknown dispatch or missing receipt is not proof.",
+            "type": "boolean"
+          },
+          "execution_key": {
+            "type": "string"
+          },
+          "payer_org": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.money.v1.ReleaseUsageInvoiceCollectionRequest": {
         "description": "The request of ReleaseUsageInvoiceCollection.",
         "properties": {
@@ -31875,6 +31979,30 @@
           "store_purchase": {
             "$ref": "#/components/schemas/sylphx.money.v1.StorePurchase",
             "description": "The store purchase that was answered."
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.money.v1.ReservePlatformUsageHoldRequest": {
+        "properties": {
+          "dispatch_by": {
+            "type": "string"
+          },
+          "execution_key": {
+            "description": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
+            "type": "string"
+          },
+          "payer_org": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "settle_by": {
+            "type": "string"
+          },
+          "upper_bound_picousd": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -140346,6 +140474,379 @@
         "x-sylphx-method": "billing.plans.get",
         "x-sylphx-permission": "billing:read",
         "x-sylphx-publishable-ok": true,
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/platform_usage_holds:capture": {
+      "post": {
+        "description": "CapturePlatformUsageHold is an internal platform service operation.",
+        "operationId": "money_platform_usage_holds_capture",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "actual_picousd": {
+                    "type": "string"
+                  },
+                  "execution_key": {
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "type": "string"
+                  },
+                  "service": {
+                    "type": "string"
+                  },
+                  "terminal_receipt_key": {
+                    "description": "Stable receipt identity (include the provider/account namespace).",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "CapturePlatformUsageHold is an internal platform service operation.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.capture",
+        "x-sylphx-permission": "money:platform_usage:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/platform_usage_holds:claim": {
+      "post": {
+        "description": "ClaimPlatformUsageHold is an internal platform service operation.",
+        "operationId": "money_platform_usage_holds_claim",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "execution_key": {
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "type": "string"
+                  },
+                  "service": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ClaimPlatformUsageHold is an internal platform service operation.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.claim",
+        "x-sylphx-permission": "money:platform_usage:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/platform_usage_holds:release": {
+      "post": {
+        "description": "ReleasePlatformUsageHold is an internal platform service operation.",
+        "operationId": "money_platform_usage_holds_release",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "definitive_no_charge": {
+                    "description": "Required after claim. An unknown dispatch or missing receipt is not proof.",
+                    "type": "boolean"
+                  },
+                  "execution_key": {
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "type": "string"
+                  },
+                  "service": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ReleasePlatformUsageHold is an internal platform service operation.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.release",
+        "x-sylphx-permission": "money:platform_usage:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/platform_usage_holds:reserve": {
+      "post": {
+        "description": "ReservePlatformUsageHold is an internal platform service operation.",
+        "operationId": "money_platform_usage_holds_reserve",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "dispatch_by": {
+                    "type": "string"
+                  },
+                  "execution_key": {
+                    "description": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
+                    "type": "string"
+                  },
+                  "payer_org": {
+                    "type": "string"
+                  },
+                  "service": {
+                    "type": "string"
+                  },
+                  "settle_by": {
+                    "type": "string"
+                  },
+                  "upper_bound_picousd": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.money.v1.PlatformUsageHoldReceipt"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "ReservePlatformUsageHold is an internal platform service operation.",
+        "tags": [
+          "money"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "IDEMPOTENCY_KEY_REUSED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "money.platform_usage_holds.reserve",
+        "x-sylphx-permission": "money:platform_usage:write",
         "x-sylphx-stage": "preview"
       }
     },

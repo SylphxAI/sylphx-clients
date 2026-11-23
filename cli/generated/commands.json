@@ -15899,6 +15899,165 @@
     {
       "collections": [
         {
+          "collection": "platform_usage_holds",
+          "commands": [
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "payer_org",
+                  "flag": "--payer-org",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "service",
+                  "flag": "--service",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "execution_key",
+                  "flag": "--execution-key",
+                  "summary": "Use a durable, caller-generated platform-hold:<unique-execution-id>.",
+                  "type": "string"
+                },
+                {
+                  "field": "upper_bound_picousd",
+                  "flag": "--upper-bound-picousd",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "dispatch_by",
+                  "flag": "--dispatch-by",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "settle_by",
+                  "flag": "--settle-by",
+                  "summary": "",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/platform_usage_holds:reserve",
+              "method": "money.platform_usage_holds.reserve",
+              "permission": "money:platform_usage:write",
+              "positional": null,
+              "summary": "ReservePlatformUsageHold is an internal platform service operation.",
+              "verb": "reserve"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "payer_org",
+                  "flag": "--payer-org",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "service",
+                  "flag": "--service",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "execution_key",
+                  "flag": "--execution-key",
+                  "summary": "",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/platform_usage_holds:claim",
+              "method": "money.platform_usage_holds.claim",
+              "permission": "money:platform_usage:write",
+              "positional": null,
+              "summary": "ClaimPlatformUsageHold is an internal platform service operation.",
+              "verb": "claim"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "payer_org",
+                  "flag": "--payer-org",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "service",
+                  "flag": "--service",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "execution_key",
+                  "flag": "--execution-key",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "actual_picousd",
+                  "flag": "--actual-picousd",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "terminal_receipt_key",
+                  "flag": "--terminal-receipt-key",
+                  "summary": "Stable receipt identity (include the provider/account namespace).",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/platform_usage_holds:capture",
+              "method": "money.platform_usage_holds.capture",
+              "permission": "money:platform_usage:write",
+              "positional": null,
+              "summary": "CapturePlatformUsageHold is an internal platform service operation.",
+              "verb": "capture"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "payer_org",
+                  "flag": "--payer-org",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "service",
+                  "flag": "--service",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "execution_key",
+                  "flag": "--execution-key",
+                  "summary": "",
+                  "type": "string"
+                },
+                {
+                  "field": "definitive_no_charge",
+                  "flag": "--definitive-no-charge",
+                  "summary": "Required after claim. An unknown dispatch or missing receipt is not proof.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/platform_usage_holds:release",
+              "method": "money.platform_usage_holds.release",
+              "permission": "money:platform_usage:write",
+              "positional": null,
+              "summary": "ReleasePlatformUsageHold is an internal platform service operation.",
+              "verb": "release"
+            }
+          ],
+          "noun": "platform-usage-holds",
+          "resource_type": "money.sylphx.com/PlatformUsageHoldReceipt"
+        },
+        {
           "collection": "bank_transfer_accounts",
           "commands": [
             {
