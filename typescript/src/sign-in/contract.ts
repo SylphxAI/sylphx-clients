@@ -38,6 +38,7 @@ export class SignInRequestError extends Error {
 		message: string,
 		readonly retryAfter = 0,
 		readonly code?: 'mfa_required',
+		readonly status?: number,
 	) {
 		super(message)
 	}
@@ -83,6 +84,7 @@ export async function signInRequest<T>(
 						: 'That was not accepted. Try again, or request a new code if it expired.',
 			response.status === 429 ? Math.max(1, Number.isFinite(seconds) ? seconds || 30 : 30) : 0,
 			response.status === 401 && data?.error === 'mfa_required' ? 'mfa_required' : undefined,
+			response.status,
 		)
 	}
 	if (!data || typeof data !== 'object')

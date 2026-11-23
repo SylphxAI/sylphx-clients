@@ -38,13 +38,81 @@ function savePreference(key: string, value: string): void {
 	}
 }
 
+const englishCopy = {
+	signIn: 'Sign in to {value}',
+	checkEmail: 'Check your email',
+	codeSent: 'Sent to {value}. Your code is valid for 10 minutes.',
+	usePassword: 'Use your password',
+	continueWith: 'Continue with {value}',
+	lastUsed: 'Last used',
+	moreWays: 'More ways to continue',
+	or: 'or',
+	email: 'Email',
+	emailCodeLastUsed: 'Email code · Last used',
+	code: '6-digit code',
+	password: 'Password',
+	authenticatorCode: 'Authenticator code',
+	recoveryCode: 'Recovery code',
+	useRecoveryCode: 'Use a recovery code',
+	useAuthenticatorCode: 'Use an authenticator code',
+	retryIn: ' Try again in {value}s.',
+	continuing: 'Continuing…',
+	continue: 'Continue',
+	terms: 'Terms',
+	privacy: 'Privacy Policy',
+	consentBefore: 'By continuing, you agree to the ',
+	consentAnd: ' and ',
+	consentAfter: '.',
+	changeEmail: 'Change email',
+	resendIn: 'Resend in {value}s',
+	resendCode: 'Resend code',
+	passwordInstead: 'Use password instead',
+	emailCodeInstead: 'Use the email code instead',
+	usePasskey: 'Use a passkey',
+	passkeyOffer: 'Use Face ID next time',
+	passkeyIntro: 'Save a passkey for a faster, safer way into {value}. Your device may use your face, fingerprint or screen lock.',
+	savePasskey: 'Save a passkey',
+	notNow: 'Not now',
+	badReturn: 'The return page was not accepted. Start again from the product.',
+	codeSendPassword: 'A code could not be sent. Use your password to continue.',
+	codeSendFailed: 'A code could not be sent. Please try again.',
+	failed: 'Sign-in could not complete. Please try again.',
+	mfaRequired: 'Enter the code from your authenticator, or use a recovery code.',
+	rateLimited: 'Too many attempts. Wait a moment and try again.',
+	unavailable: 'Sign-in is unavailable right now. Please try again.',
+	notAccepted: 'That was not accepted. Try again, or request a new code if it expired.',
+	passkeyFailed: 'Could not sign in with a passkey. Try again or use another method.',
+	passkeyNotSaved: 'No passkey was saved. You can add one later in settings.',
+}
+
+/** Presentation only. Copy is never serialized into an Auth request. */
+export type ContinueSignInCopy = typeof englishCopy
+
+function format(template: string, value: string | number): string {
+	return template.replace('{value}', () => String(value))
+}
+
+class FormError extends Error {}
+
+function localizedError(problem: unknown, copy: ContinueSignInCopy, fallback: string): string {
+	if (problem instanceof FormError) return problem.message
+	if (problem instanceof SignInRequestError) {
+		if (problem.code === 'mfa_required') return copy.mfaRequired
+		if (problem.status === 429) return copy.rateLimited
+		if (problem.status !== undefined)
+			return problem.status >= 500 ? copy.unavailable : copy.notAccepted
+	}
+	return fallback
+}
+
 /** The one form, shared by embedded pages and the Account Portal. No SDK context required. */
-export function ContinueSignInForm(options: ContinueSignInOptions) {
+export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: ContinueSignInCopy }) {
+	const copy = options.copy ?? englishCopy
 	const { productName, endpoints, next, termsUrl, privacyUrl, emailOtpEnabled = true } = options
 	/* Only documents the product set are linked; an unset one is never filled in. */
 	const documents = [
-		{ href: termsUrl, label: 'Terms' },
-		{ href: privacyUrl, label: 'Privacy Policy' },
+		{ href: termsUrl, label: copy.terms },
+		{ href: privacyUrl, label: copy.privacy },
 	].filter((link): link is { href: string; label: string } => Boolean(link.href))
 	const id = useId()
 	const [step, setStep] = useState<'email' | 'code' | 'password' | 'passkey-offer'>('email')
@@ -97,7 +165,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 	function go(target = destination.current) {
 		// The server supplies the final continuation; refuse script/protocol-relative URLs.
 		if (!target.startsWith('/') || target.startsWith('//') || /[\\\u0000-\u0020]/.test(target)) {
-			setError('The return page was not accepted. Start again from the product.')
+			setError(copy.badReturn)
 			return
 		}
 		window.location.assign(target)
@@ -128,10 +196,12 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 			}
 		} else go()
 	}
-	function failed(problem: unknown) {
+	function failed(problem: unknown, fallback: string) {
 		if (!mounted.current) return
 		setError(
-			problem instanceof Error ? problem.message : 'Sign-in could not complete. Please try again.',
+			options.copy
+				? localizedError(problem, copy, fallback)
+				: problem instanceof Error ? problem.message : copy.failed,
 		)
 		if (problem instanceof SignInRequestError && problem.code === 'mfa_required')
 			setMfa((current) => current ?? 'totp')
@@ -140,7 +210,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 			setRetryAt(Date.now() + problem.retryAfter * 1000)
 		}
 	}
-	async function run(action: () => Promise<void>) {
+	async function run(action: () => Promise<void>, fallback = copy.failed) {
 		if (busyRef.current || paused) return
 		busyRef.current = true
 		ceremony.current?.abort()
@@ -149,7 +219,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 		try {
 			await action()
 		} catch (problem) {
-			failed(problem)
+			failed(problem, fallback)
 		} finally {
 			busyRef.current = false
 			if (mounted.current) setBusy(false)
@@ -216,11 +286,11 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 					// A refused email send must not strand that working continuation.
 					showPassword()
 					if (problem instanceof SignInRequestError && problem.retryAfter) throw problem
-					throw new Error('A code could not be sent. Use your password to continue.')
+					throw new FormError(copy.codeSendPassword)
 				}
 			}
 			if (answer.step !== 'email_otp')
-				throw new Error('A code could not be sent. Please try again.')
+				throw new FormError(copy.codeSendFailed)
 			if (!mounted.current) return
 			setFlow(answer.flow ?? '')
 			setHasPassword(passwordAvailable)
@@ -268,16 +338,20 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 	}
 
 	return (
-		<section className="sx-signin" aria-labelledby={`${id}-title`} aria-busy={busy}>
+		<section
+			className="sx-signin"
+			aria-labelledby={`${id}-title`}
+			aria-busy={busy}
+			data-auth-active={step !== 'email' || busy || paused ? 'true' : undefined}
+		>
 			{step === 'passkey-offer' ? (
 				<>
 					<div className="sx-signin__symbol" aria-hidden="true">
 						◎
 					</div>
-					<h1 id={`${id}-title`}>Use Face ID next time</h1>
+					<h1 id={`${id}-title`}>{copy.passkeyOffer}</h1>
 					<p className="sx-signin__intro">
-						Save a passkey for a faster, safer way into {productName}. Your device may use your
-						face, fingerprint or screen lock.
+						{format(copy.passkeyIntro, productName)}
 					</p>
 					<div role="alert" className="sx-signin__error">
 						{error}
@@ -289,10 +363,10 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 							void run(async () => {
 								await offerPasskey(endpoints.registerBegin!, endpoints.registerFinish!, productName)
 								go()
-							})
+							}, copy.passkeyNotSaved)
 						}
 					>
-						Save a passkey
+						{copy.savePasskey}
 					</button>
 					<button
 						className="sx-signin__link"
@@ -302,22 +376,22 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 							go()
 						}}
 					>
-						Not now
+						{copy.notNow}
 					</button>
 				</>
 			) : (
 				<>
 					<h1 id={`${id}-title`}>
 						{step === 'email'
-							? `Sign in to ${productName}`
+							? format(copy.signIn, productName)
 							: step === 'code'
-								? 'Check your email'
-								: 'Use your password'}
+								? copy.checkEmail
+								: copy.usePassword}
 					</h1>
 					{step !== 'email' && (
 						<p className="sx-signin__intro">
 							{step === 'code'
-								? `Sent to ${maskSignInEmail(email.trim())}. Your code is valid for 10 minutes.`
+								? format(copy.codeSent, maskSignInEmail(email.trim()))
 								: maskSignInEmail(email.trim())}
 						</p>
 					)}
@@ -335,18 +409,18 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 												onClick={() => savePreference(`${preference}:last-used`, provider.id)}
 											>
 												{Icon && <Icon width={20} height={20} aria-hidden="true" />}
-												<span>Continue with {provider.name}</span>
-												{lastUsed === provider.id && <small>Last used</small>}
+												<span>{format(copy.continueWith, provider.name)}</span>
+												{lastUsed === provider.id && <small>{copy.lastUsed}</small>}
 											</a>
 										)
 									})}
 									{providers.length > 3 && !expanded && (
 										<button className="sx-signin__link" onClick={() => setExpanded(true)}>
-											More ways to continue
+											{copy.moreWays}
 										</button>
 									)}
 									<div className="sx-signin__divider">
-										<span>or</span>
+										<span>{copy.or}</span>
 									</div>
 								</div>
 							)}
@@ -362,9 +436,9 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 						{step === 'email' ? (
 							<>
 								<div className="sx-signin__email-label">
-									<label htmlFor={`${id}-email`}>Email</label>
+									<label htmlFor={`${id}-email`}>{copy.email}</label>
 									{emailCodeLastUsed && (
-										<small id={`${id}-email-last-used`}>Email code · Last used</small>
+										<small id={`${id}-email-last-used`}>{copy.emailCodeLastUsed}</small>
 									)}
 								</div>
 								<input
@@ -393,7 +467,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 							</>
 						) : step === 'code' ? (
 							<>
-								<label htmlFor={`${id}-code`}>6-digit code</label>
+								<label htmlFor={`${id}-code`}>{copy.code}</label>
 								<input
 									key="code"
 									id={`${id}-code`}
@@ -420,7 +494,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 							</>
 						) : (
 							<>
-								<label htmlFor={`${id}-password`}>Password</label>
+								<label htmlFor={`${id}-password`}>{copy.password}</label>
 								<input
 									key="password"
 									id={`${id}-password`}
@@ -439,7 +513,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 						{mfa && step !== 'email' && (
 							<>
 								<label htmlFor={`${id}-factor`}>
-									{mfa === 'totp' ? 'Authenticator code' : 'Recovery code'}
+									{mfa === 'totp' ? copy.authenticatorCode : copy.recoveryCode}
 								</label>
 								<input
 									key={mfa}
@@ -470,36 +544,36 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 										setError('')
 									}}
 								>
-									{mfa === 'totp' ? 'Use a recovery code' : 'Use an authenticator code'}
+									{mfa === 'totp' ? copy.useRecoveryCode : copy.useAuthenticatorCode}
 								</button>
 							</>
 						)}
 						<div id={`${id}-error`} role="alert" aria-live="polite" className="sx-signin__error">
 							{error}
-							{paused && ` Try again in ${Math.max(1, Math.ceil((retryAt - now) / 1000))}s.`}
+							{paused && format(copy.retryIn, Math.max(1, Math.ceil((retryAt - now) / 1000)))}
 						</div>
 						<button className="sx-signin__primary" type="submit" disabled={busy || paused}>
-							{busy ? 'Continuing…' : 'Continue'}
+							{busy ? copy.continuing : copy.continue}
 						</button>
 						{step === 'email' && documents.length > 0 && (
 							<p className="sx-signin__terms">
-								By continuing, you agree to the{' '}
+								{copy.consentBefore}
 								{documents.map((link, index) => (
 									<Fragment key={link.label}>
-										{index > 0 && ' and '}
+										{index > 0 && copy.consentAnd}
 										<a href={link.href} target="_blank" rel="noopener noreferrer">
 											{link.label}
 										</a>
 									</Fragment>
 								))}
-								.
+								{copy.consentAfter}
 							</p>
 						)}
 					</form>
 					{step !== 'email' && (
 						<div className="sx-signin__alternatives">
 							<button className="sx-signin__link" disabled={busy || paused} onClick={changeEmail}>
-								Change email
+								{copy.changeEmail}
 							</button>
 							{step === 'code' && (
 								<button
@@ -507,7 +581,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 									disabled={busy || wait > 0}
 									onClick={() => void begin(true)}
 								>
-									{wait > 0 ? `Resend in ${wait}s` : 'Resend code'}
+									{wait > 0 ? format(copy.resendIn, wait) : copy.resendCode}
 								</button>
 							)}
 							{step === 'code' && hasPassword && (
@@ -521,7 +595,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 										setError('')
 									}}
 								>
-									Use password instead
+									{copy.passwordInstead}
 								</button>
 							)}
 							{step === 'password' && emailOtpEnabled && (
@@ -539,7 +613,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 										setError('')
 									}}
 								>
-									Use the email code instead
+									{copy.emailCodeInstead}
 								</button>
 							)}
 						</div>
@@ -562,10 +636,10 @@ export function ContinueSignInForm(options: ContinueSignInOptions) {
 											abort.signal,
 										),
 									)
-								})
+								}, copy.passkeyFailed)
 							}
 						>
-							Use a passkey{lastUsed === 'passkey' ? ' · Last used' : ''}
+							{copy.usePasskey}{lastUsed === 'passkey' && ` · ${copy.lastUsed}`}
 						</button>
 					)}
 				</>
