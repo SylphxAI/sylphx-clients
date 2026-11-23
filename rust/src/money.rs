@@ -1486,6 +1486,10 @@ pub struct ClaimPlatformUsageHoldRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub parent: String,
+    /// Check these terms atomically before a fresh claim. Absence preserves the
+    /// ordinary claim contract for platform callers that do not require a fuse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preconditions: Option<PlatformUsageHoldClaimPreconditions>,
 }
 
 /// The request of ClientVerifyStorePurchase.
@@ -4156,6 +4160,40 @@ pub struct MerchantAccount {
     pub processor_warnings: Vec<String>,
 }
 
+/// Preconditions for dispatching with an exact hold and a bounded monthly fuse.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PlatformUsageHoldClaimPreconditions {
+    /// The uid returned by ReservePlatformUsageHold.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holdUid"
+    )]
+    pub hold_uid: String,
+    /// Exact reserved upper bound, as a decimal string in pico-USD.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "upperBoundPicousd"
+    )]
+    pub upper_bound_picousd: String,
+    /// Largest permitted positive monthly fuse, in USD cents.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "maxMonthlyFuseUsdMinor"
+    )]
+    pub max_monthly_fuse_usd_minor: i64,
+}
+
 /// Authority to dispatch and, separately, a deadline to submit the terminal
 /// receipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -4239,6 +4277,16 @@ pub struct PlatformUsageHoldReceipt {
     /// Whether the operation returned an already recorded result.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub replayed: bool,
+    /// Positive only on a fresh claim that verified the requested fuse ceiling.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "verifiedMonthlyFuseUsdMinor"
+    )]
+    pub verified_monthly_fuse_usd_minor: i64,
 }
 
 /// A Portal Session is a hosted page where a subject manages its

@@ -15984,6 +15984,12 @@
                   "required": true,
                   "summary": "Stable caller-generated identity of the metered execution.",
                   "type": "string"
+                },
+                {
+                  "field": "preconditions",
+                  "flag": "--preconditions",
+                  "summary": "Check these terms atomically before a fresh claim. Absence preserves the ordinary claim contract for platform callers that do not require a fuse.",
+                  "type": "json"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*}/platform_usage_holds:claim",

@@ -652,6 +652,11 @@ export interface ClaimPlatformUsageHoldRequest {
 	executionKey: string
 	/** Authenticated platform service organization, as orgs/{org}; not the payer. */
 	parent: string
+	/**
+	 * Check these terms atomically before a fresh claim. Absence preserves the
+	 * ordinary claim contract for platform callers that do not require a fuse.
+	 */
+	preconditions?: PlatformUsageHoldClaimPreconditions
 }
 
 /** The request of ClientVerifyStorePurchase. */
@@ -1908,6 +1913,16 @@ export interface MerchantAccount {
 	readonly processorWarnings?: string[]
 }
 
+/** Preconditions for dispatching with an exact hold and a bounded monthly fuse. */
+export interface PlatformUsageHoldClaimPreconditions {
+	/** The uid returned by ReservePlatformUsageHold. */
+	holdUid?: string
+	/** Exact reserved upper bound, as a decimal string in pico-USD. */
+	upperBoundPicousd?: string
+	/** Largest permitted positive monthly fuse, in USD cents. */
+	maxMonthlyFuseUsdMinor?: string
+}
+
 /**
  * Authority to dispatch and, separately, a deadline to submit the terminal
  * receipt. Amounts are canonical decimal strings in pico-USD (10^-12 USD).
@@ -1941,6 +1956,8 @@ export interface PlatformUsageHoldReceipt {
 	ledgerTransactionId?: string
 	/** Whether the operation returned an already recorded result. */
 	replayed?: boolean
+	/** Positive only on a fresh claim that verified the requested fuse ceiling. */
+	readonly verifiedMonthlyFuseUsdMinor?: string
 }
 
 /**
@@ -3629,6 +3646,7 @@ runtime.registerSchemas({
 	'sylphx.money.v1.ClaimPlatformUsageHoldRequest': [
 		['payerOrg', 'payer_org'],
 		['executionKey', 'execution_key'],
+		['preconditions', 'preconditions', 'sylphx.money.v1.PlatformUsageHoldClaimPreconditions'],
 	],
 	'sylphx.money.v1.ClientVerifyStorePurchaseRequest': [
 		['subject', 'subject', 'sylphx.money.v1.Subject'],
@@ -3990,6 +4008,11 @@ runtime.registerSchemas({
 		['processorPermissionsCheckTime', 'processor_permissions_check_time'],
 		['processorWarnings', 'processor_warnings'],
 	],
+	'sylphx.money.v1.PlatformUsageHoldClaimPreconditions': [
+		['holdUid', 'hold_uid'],
+		['upperBoundPicousd', 'upper_bound_picousd'],
+		['maxMonthlyFuseUsdMinor', 'max_monthly_fuse_usd_minor'],
+	],
 	'sylphx.money.v1.PlatformUsageHoldReceipt': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['payerOrg', 'payer_org'],
@@ -4000,6 +4023,7 @@ runtime.registerSchemas({
 		['capturedPicousd', 'captured_picousd'],
 		['releasedPicousd', 'released_picousd'],
 		['ledgerTransactionId', 'ledger_transaction_id'],
+		['verifiedMonthlyFuseUsdMinor', 'verified_monthly_fuse_usd_minor'],
 	],
 	'sylphx.money.v1.PortalSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
