@@ -15683,9 +15683,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Records an installation; the controller confirms it with the provider."
+        "title": "Records a Connection. GitLab registration stores credential references and remains pending provider verification."
       },
-      "description": "Records an installation; the controller confirms it with the provider.",
+      "description": "Records a Connection. GitLab registration stores credential references and remains pending provider verification.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*}/connections",
       "input_schema": {
@@ -15751,6 +15751,39 @@
                     "required": [
                       "provider",
                       "login"
+                    ],
+                    "type": "object"
+                  },
+                  "gitlab": {
+                    "additionalProperties": false,
+                    "description": "GitLab project registration, mutually exclusive with other Connection kinds.\nRegistration is pending until verified by the provider integration.",
+                    "properties": {
+                      "api_token_version": {
+                        "description": "Pinned SecretVersion in this org for API and repository access.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+                      },
+                      "instance_url": {
+                        "description": "Credential-free HTTPS instance base, including an optional deployment subpath.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "project_id": {
+                        "description": "Canonical positive decimal GitLab project ID, not a repository path.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "webhook_token_version": {
+                        "description": "Pinned SecretVersion in this org for the webhook token. Use a separate Secret.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+                      }
+                    },
+                    "required": [
+                      "instance_url",
+                      "project_id",
+                      "api_token_version",
+                      "webhook_token_version"
                     ],
                     "type": "object"
                   },
@@ -15867,9 +15900,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Updates a connection's metadata."
+        "title": "Updates Connection metadata or mutable configuration, such as pinned GitLab SecretVersions."
       },
-      "description": "Updates a connection's metadata.",
+      "description": "Updates Connection metadata or mutable configuration, such as pinned GitLab SecretVersions.",
       "effect": "write",
       "http": "PATCH /v1/{connection.name=orgs/*/connections/*}",
       "input_schema": {
@@ -15935,6 +15968,39 @@
                     "required": [
                       "provider",
                       "login"
+                    ],
+                    "type": "object"
+                  },
+                  "gitlab": {
+                    "additionalProperties": false,
+                    "description": "GitLab project registration, mutually exclusive with other Connection kinds.\nRegistration is pending until verified by the provider integration.",
+                    "properties": {
+                      "api_token_version": {
+                        "description": "Pinned SecretVersion in this org for API and repository access.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+                      },
+                      "instance_url": {
+                        "description": "Credential-free HTTPS instance base, including an optional deployment subpath.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "project_id": {
+                        "description": "Canonical positive decimal GitLab project ID, not a repository path.",
+                        "type": "string",
+                        "x-sylphx-immutable": true
+                      },
+                      "webhook_token_version": {
+                        "description": "Pinned SecretVersion in this org for the webhook token. Use a separate Secret.",
+                        "type": "string",
+                        "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+                      }
+                    },
+                    "required": [
+                      "instance_url",
+                      "project_id",
+                      "api_token_version",
+                      "webhook_token_version"
                     ],
                     "type": "object"
                   },

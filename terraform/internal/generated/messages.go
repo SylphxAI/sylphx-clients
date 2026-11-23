@@ -302,6 +302,7 @@ func connectionsConnectionSpec() []def.Field {
 		{Name: "github_user", Kind: def.Message, Msg: connectionsGitHubUserConfig, Doc: "GitHub user authorization. Mutually exclusive with all other kinds. Device authorization keeps credentials sealed inside Broker, bound to the Connection name and version, for user actions only."},
 		{Name: "oauth2", Kind: def.Message, Msg: connectionsOauth2ConnectionConfig, Doc: "Generic OAuth 2.0 authorization. Mutually exclusive with `web_push` and `github_user`. Requires an `oauth2` ConnectionProvider."},
 		{Name: "s3_signing", Kind: def.Message, Msg: connectionsS3SigningConfig, Doc: "R2 object signing, mutually exclusive with other Connection kinds."},
+		{Name: "gitlab", Kind: def.Message, Msg: connectionsGitLabConfig, Doc: "GitLab project registration, mutually exclusive with other Connection kinds. Registration is pending until verified by the provider integration."},
 	}
 }
 
@@ -359,6 +360,16 @@ func connectionsGitHubUserConfig() []def.Field {
 	return []def.Field{
 		{Name: "provider", Kind: def.String, Flags: def.Required, Doc: "App provider whose OAuth client issued the authorization."},
 		{Name: "login", Kind: def.String, Flags: def.Required, Doc: "Expected verified GitHub login; never inferred from untrusted input alone."},
+	}
+}
+
+// connectionsGitLabConfig is `sylphx.connections.v1.GitLabConfig`.
+func connectionsGitLabConfig() []def.Field {
+	return []def.Field{
+		{Name: "instance_url", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "Credential-free HTTPS instance base, including an optional deployment subpath."},
+		{Name: "project_id", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "Canonical positive decimal GitLab project ID, not a repository path."},
+		{Name: "api_token_version", Kind: def.String, Flags: def.Required, Doc: "Pinned SecretVersion in this org for API and repository access."},
+		{Name: "webhook_token_version", Kind: def.String, Flags: def.Required, Doc: "Pinned SecretVersion in this org for the webhook token. Use a separate Secret."},
 	}
 }
 

@@ -10502,6 +10502,30 @@
                   "type": "string"
                 },
                 {
+                  "field": "connection.spec.gitlab.instance_url",
+                  "flag": "--spec.gitlab.instance-url",
+                  "summary": "Credential-free HTTPS instance base, including an optional deployment subpath.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.gitlab.project_id",
+                  "flag": "--spec.gitlab.project-id",
+                  "summary": "Canonical positive decimal GitLab project ID, not a repository path.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.gitlab.api_token_version",
+                  "flag": "--spec.gitlab.api-token-version",
+                  "summary": "Pinned SecretVersion in this org for API and repository access.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.gitlab.webhook_token_version",
+                  "flag": "--spec.gitlab.webhook-token-version",
+                  "summary": "Pinned SecretVersion in this org for the webhook token. Use a separate Secret.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10518,7 +10542,7 @@
                 "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
               },
               "resource_field": "connection",
-              "summary": "Records an installation; the controller confirms it with the provider.",
+              "summary": "Records a Connection. GitLab registration stores credential references and remains pending provider verification.",
               "verb": "create",
               "waits": {
                 "default": true,
@@ -10610,6 +10634,18 @@
                   "type": "string"
                 },
                 {
+                  "field": "connection.spec.gitlab.api_token_version",
+                  "flag": "--spec.gitlab.api-token-version",
+                  "summary": "Pinned SecretVersion in this org for API and repository access.",
+                  "type": "string"
+                },
+                {
+                  "field": "connection.spec.gitlab.webhook_token_version",
+                  "flag": "--spec.gitlab.webhook-token-version",
+                  "summary": "Pinned SecretVersion in this org for the webhook token. Use a separate Secret.",
+                  "type": "string"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -10627,7 +10663,7 @@
               },
               "resource_field": "connection",
               "sends_etag": true,
-              "summary": "Updates a connection's metadata.",
+              "summary": "Updates Connection metadata or mutable configuration, such as pinned GitLab SecretVersions.",
               "update_mask": "from-flags",
               "verb": "update",
               "waits": {

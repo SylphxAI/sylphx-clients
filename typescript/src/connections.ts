@@ -205,6 +205,11 @@ export interface ConnectionSpec {
 	oauth2?: Oauth2ConnectionConfig
 	/** R2 object signing, mutually exclusive with other Connection kinds. */
 	s3Signing?: S3SigningConfig
+	/**
+	 * GitLab project registration, mutually exclusive with other Connection kinds.
+	 * Registration is pending until verified by the provider integration.
+	 */
+	gitlab?: GitLabConfig
 }
 
 /**
@@ -389,6 +394,21 @@ export interface GitHubUserConfig {
 	provider?: string
 	/** Expected verified GitHub login; never inferred from untrusted input alone. */
 	login?: string
+}
+
+/**
+ * GitLabConfig binds one GitLab project to separately managed credentials.
+ * The writer must have secrets:access on each newly assigned version.
+ */
+export interface GitLabConfig {
+	/** Credential-free HTTPS instance base, including an optional deployment subpath. */
+	instanceUrl?: string
+	/** Canonical positive decimal GitLab project ID, not a repository path. */
+	projectId?: string
+	/** Pinned SecretVersion in this org for API and repository access. */
+	apiTokenVersion?: string
+	/** Pinned SecretVersion in this org for the webhook token. Use a separate Secret. */
+	webhookTokenVersion?: string
 }
 
 /** The request of ImportOauth2Credentials. */
@@ -683,6 +703,7 @@ runtime.registerSchemas({
 		['githubUser', 'github_user', 'sylphx.connections.v1.GitHubUserConfig'],
 		['oauth2', 'oauth2', 'sylphx.connections.v1.Oauth2ConnectionConfig'],
 		['s3Signing', 's3_signing', 'sylphx.connections.v1.S3SigningConfig'],
+		['gitlab', 'gitlab', 'sylphx.connections.v1.GitLabConfig'],
 	],
 	'sylphx.connections.v1.ConnectionStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -737,6 +758,12 @@ runtime.registerSchemas({
 		['nextPollTime', 'next_poll_time'],
 	],
 	'sylphx.connections.v1.GitHubUserConfig': [],
+	'sylphx.connections.v1.GitLabConfig': [
+		['instanceUrl', 'instance_url'],
+		['projectId', 'project_id'],
+		['apiTokenVersion', 'api_token_version'],
+		['webhookTokenVersion', 'webhook_token_version'],
+	],
 	'sylphx.connections.v1.ImportOauth2CredentialsRequest': [
 		['refreshToken', 'refresh_token'],
 		['accessToken', 'access_token'],
@@ -1116,7 +1143,7 @@ export class ConnectionsCollection {
 	}
 
 	/**
-	 * Records an installation; the controller confirms it with the provider.
+	 * Records a Connection. GitLab registration stores credential references and remains pending provider verification.
 	 *
 	 * `POST /v1/{parent=orgs/*}/connections` · permission `connections:write` · effect `write`
 	 *
@@ -1136,7 +1163,7 @@ export class ConnectionsCollection {
 	}
 
 	/**
-	 * Updates a connection's metadata.
+	 * Updates Connection metadata or mutable configuration, such as pinned GitLab SecretVersions.
 	 *
 	 * `PATCH /v1/{connection.name=orgs/*\/connections/*}` · permission `connections:write` · effect `write`
 	 *

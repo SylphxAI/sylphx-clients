@@ -424,6 +424,10 @@ pub struct ConnectionSpec {
     /// R2 object signing, mutually exclusive with other Connection kinds.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "s3Signing")]
     pub s3_signing: Option<S3SigningConfig>,
+    /// GitLab project registration, mutually exclusive with other Connection kinds.
+    /// Registration is pending until verified by the provider integration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gitlab: Option<GitLabConfig>,
 }
 
 /// ConnectionStatus is the observed state of a Connection, as last read back
@@ -854,6 +858,49 @@ pub struct GitHubUserConfig {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub login: String,
+}
+
+/// GitLabConfig binds one GitLab project to separately managed credentials.
+/// The writer must have secrets:access on each newly assigned version.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GitLabConfig {
+    /// Credential-free HTTPS instance base, including an optional deployment subpath.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "instanceUrl"
+    )]
+    pub instance_url: String,
+    /// Canonical positive decimal GitLab project ID, not a repository path.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "projectId"
+    )]
+    pub project_id: String,
+    /// Pinned SecretVersion in this org for API and repository access.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "apiTokenVersion"
+    )]
+    pub api_token_version: String,
+    /// Pinned SecretVersion in this org for the webhook token. Use a separate Secret.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "webhookTokenVersion"
+    )]
+    pub webhook_token_version: String,
 }
 
 /// The request of ImportOauth2Credentials.
@@ -2069,7 +2116,7 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
         Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
-    /// Records an installation; the controller confirms it with the provider.
+    /// Records a Connection. GitLab registration stores credential references and remains pending provider verification.
     ///
     /// `POST /v1/{parent=orgs/*}/connections` · permission `connections:write` · effect `write`
     ///
@@ -2098,7 +2145,7 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
         Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
-    /// Updates a connection's metadata.
+    /// Updates Connection metadata or mutable configuration, such as pinned GitLab SecretVersions.
     ///
     /// `PATCH /v1/{connection.name=orgs/*/connections/*}` · permission `connections:write` · effect `write`
     ///
