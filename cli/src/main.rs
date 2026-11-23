@@ -16,6 +16,7 @@ mod devices;
 mod docs_cmd;
 mod enable;
 mod events_listen;
+mod hosting_gitlab;
 mod invoke;
 mod names;
 mod output;
@@ -54,6 +55,7 @@ const HAND_WRITTEN: &[(&str, &str)] = &[
     ("build", "cache"),
     ("build", "source"),
     ("events", "listen"),
+    ("hosting", hosting_gitlab::COMMAND),
     ("data", "docs"),
 ];
 
@@ -327,6 +329,8 @@ fn cli(tree: &Tree) -> Command {
             // `data docs` is porcelain on the generated `data` service: a
             // Markdown tree in a search index (`docs_cmd`).
             s.subcommand(docs_cmd::command())
+        } else if s.get_name() == "hosting" {
+            s.subcommand(hosting_gitlab::command())
         } else if s.get_name() == "events" {
             // `events listen` is porcelain on the generated `events` service:
             // a topic relayed to a local URL through a temporary Queue.
@@ -731,6 +735,11 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             let (_, sm) = sub.subcommand().expect("checked");
             let creds = context::resolve(api_key.clone(), base_url.clone(), org);
             build_source::run(creds, sm, format).await
+        }
+        "hosting" if sub.subcommand_name() == Some(hosting_gitlab::COMMAND) => {
+            let (_, gm) = sub.subcommand().expect("checked");
+            let creds = context::resolve(api_key, base_url, org);
+            hosting_gitlab::run(creds, gm, org, format).await
         }
         "data" if sub.subcommand_name() == Some("docs") => {
             let (_, dm) = sub.subcommand().expect("checked");

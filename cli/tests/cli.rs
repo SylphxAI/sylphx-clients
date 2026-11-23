@@ -18,6 +18,9 @@ use tokio::net::TcpListener;
 #[path = "support/devices_capture.rs"]
 mod devices_capture;
 
+#[path = "support/hosting_gitlab.rs"]
+mod hosting_gitlab;
+
 #[tokio::test]
 async fn apply_offline_refuses_an_undeclarable_kind_without_a_backend() {
     let sb = Sandbox::new("apply-offline-refused");

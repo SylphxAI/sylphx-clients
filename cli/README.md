@@ -342,6 +342,34 @@ sylphx mcp setup                      # register it with Claude Code, Codex, Cur
   `BUILD_CACHE=false` or an existing indexed Git config preserves advanced CI
   source overrides.
 
+## Deploy from self-hosted GitLab
+
+Register the GitLab project by its numeric project ID. Use a public HTTPS
+instance base (include the installation subpath, if any). Create two separate
+Secrets and use their full, numbered SecretVersion names below: one for the
+GitLab API/repository credential and one for the webhook token. The CLI takes
+only version references here, not the token values.
+
+```sh
+# API_TOKEN_VERSION and WEBHOOK_TOKEN_VERSION hold SecretVersion names.
+sylphx connections create gitlab-example \
+  --spec.gitlab.instance-url https://gitlab.example.com \
+  --spec.gitlab.project-id 4321 \
+  --spec.gitlab.api-token-version "$API_TOKEN_VERSION" \
+  --spec.gitlab.webhook-token-version "$WEBHOOK_TOKEN_VERSION"
+sylphx hosting gitlab bind gitlab-example --branch main
+sylphx hosting gitlab status -o json
+```
+
+The Hosting commands target the environment selected by `sylphx link`,
+`SYLPHX_ENVIRONMENT`, or an explicit `--env` full name. Once `status` reports a
+non-null `gitlabBindingId`, configure a GitLab project Push events webhook at
+`https://api.sylphx.com/v1/webhooks/gitlab?connection=<gitlabBindingId>` using
+the same webhook token stored in Secrets. A null binding ID means there is no
+verified webhook binding yet. To detach the source from the environment
+without removing the Connection or Secrets, run `sylphx hosting gitlab unbind`
+(add `--yes` in scripts).
+
 ## `sylphx token --scope <scope>`
 
 Prints one token and a newline on stdout, for tools that need a credential for

@@ -80,7 +80,7 @@ pub fn commands() -> [Command; 3] {
 }
 
 /// The environment the command acts on, as a full name of ids.
-async fn environment(
+pub(crate) async fn environment(
     client: &Client,
     sub: &ArgMatches,
     org: Option<&str>,

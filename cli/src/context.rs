@@ -647,8 +647,8 @@ pub fn anonymous_client(base_url: Option<String>) -> Result<Client, String> {
     Ok(Client::new(b.build().map_err(|e| e.to_string())?))
 }
 
-/// A client for a resolved credential.
-pub fn client_for(r: &Resolved) -> Result<Client, String> {
+/// The shared API transport options for a resolved credential.
+pub fn client_builder(r: &Resolved) -> sylphx::runtime::HttpTransportBuilder {
     let mut b = HttpTransport::builder().api_key(r.key.clone());
     if let Some(u) = &r.base_url {
         b = b.base_url(u.clone());
@@ -659,7 +659,14 @@ pub fn client_for(r: &Resolved) -> Result<Client, String> {
     {
         b = b.api_version(v);
     }
-    Ok(Client::new(b.build().map_err(|e| e.to_string())?))
+    b
+}
+
+/// A client for a resolved credential.
+pub fn client_for(r: &Resolved) -> Result<Client, String> {
+    Ok(Client::new(
+        client_builder(r).build().map_err(|e| e.to_string())?,
+    ))
 }
 
 /// Resolves the credential and builds its client (`None` when signed out).

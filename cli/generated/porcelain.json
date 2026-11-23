@@ -36,6 +36,14 @@
       "listen"
     ],
     "help": [],
+    "hosting": [
+      "gitlab"
+    ],
+    "hosting gitlab": [
+      "bind",
+      "status",
+      "unbind"
+    ],
     "init": [],
     "link": [],
     "login": [],
