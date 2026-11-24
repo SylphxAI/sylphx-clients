@@ -23783,14 +23783,14 @@
         "type": "object"
       },
       "sylphx.hosting.v1.Rollout": {
-        "description": "A Rollout moves one Service generation to its Release in waves (one canary\ncell, one cell, one region, all); every step is fenced by the Service\ngeneration at the moment of write, and no wave advances without fresh\nrecorded evidence.",
+        "description": "A Rollout records one Service's staged work in a Release. Reads project\nstaged Release v2 members; members kept from an earlier Release and\nReleases that never staged are not new Service Rollouts. Release lifecycle\ndoes not assert current Service readiness, a wave, or cell observations.",
         "properties": {
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
             "description": "Resource metadata."
           },
           "name": {
-            "description": "`orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollo\nuts/{rollout}`.",
+            "description": "The full name identifies the rollout of a Release under one Service.",
             "type": "string"
           },
           "spec": {
@@ -23803,7 +23803,7 @@
             "readOnly": true
           },
           "uid": {
-            "description": "`rol_<cell><ulid>`; never reused.",
+            "description": "A `srl_` TypeID derived from the Release, scoped to this Service.",
             "readOnly": true,
             "type": "string"
           }
@@ -23856,7 +23856,7 @@
             "type": "array"
           },
           "conditions": {
-            "description": "Ready, Reconciling, Stalled.",
+            "description": "Release lifecycle conditions, not Service readiness.",
             "items": {
               "$ref": "#/components/schemas/sylphx.common.v1.Condition"
             },
@@ -23876,14 +23876,14 @@
             "type": "string"
           },
           "start_time": {
-            "description": "When the first wave started.",
+            "description": "When the controller staged the member.",
             "format": "date-time",
             "readOnly": true,
             "type": "string"
           },
           "state": {
             "$ref": "#/components/schemas/sylphx.hosting.v1.RolloutState",
-            "description": "Where the Rollout is.",
+            "description": "The Release controller lifecycle for this staged member.",
             "readOnly": true
           },
           "wave": {
@@ -123004,7 +123004,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists rollouts in a service.",
+        "description": "Lists staged rollouts in a Service, newest first. Kept members are omitted.",
         "operationId": "hosting_service_rollouts_list",
         "parameters": [
           {
@@ -123100,11 +123100,14 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Lists rollouts in a service.",
+        "summary": "Lists staged rollouts in a Service, newest first. Kept members are omitted.",
         "tags": [
           "hosting"
         ],
@@ -123112,12 +123115,12 @@
         "x-sylphx-errors": [
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
           "INVALID_FIELD",
           "PAGE_TOKEN_MISMATCH"
         ],
         "x-sylphx-method": "hosting.service_rollouts.list",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
@@ -123248,7 +123251,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollouts/{rollout}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a rollout.",
+        "description": "Gets a staged rollout of this exact Service.",
         "operationId": "hosting_service_rollouts_get",
         "parameters": [
           {
@@ -123306,6 +123309,9 @@
             },
             "description": "OK"
           },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
           "401": {
             "$ref": "#/components/responses/Problem"
           },
@@ -123319,7 +123325,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Gets a rollout.",
+        "summary": "Gets a staged rollout of this exact Service.",
         "tags": [
           "hosting"
         ],
@@ -123327,11 +123333,11 @@
         "x-sylphx-errors": [
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND"
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
         ],
         "x-sylphx-method": "hosting.service_rollouts.get",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

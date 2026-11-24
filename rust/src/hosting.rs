@@ -760,20 +760,19 @@ pub struct ResumeRolloutRequest {
     pub validate_only: bool,
 }
 
-/// A Rollout moves one Service generation to its Release in waves (one canary
-/// cell, one cell, one region, all); every step is fenced by the Service
-/// generation at the moment of write, and no wave advances without fresh
-/// recorded evidence.
+/// A Rollout records one Service's staged work in a Release. Reads project
+/// staged Release v2 members; members kept from an earlier Release and
+/// Releases that never staged are not new Service Rollouts. Release lifecycle
+/// does not assert current Service readiness, a wave, or cell observations.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct Rollout {
-    /// `orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollo
-    /// uts/{rollout}`.
+    /// The full name identifies the rollout of a Release under one Service.
     ///
     /// Field behavior: `identifier`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// `rol_<cell><ulid>`; never reused.
+    /// A `srl_` TypeID derived from the Release, scoped to this Service.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -830,12 +829,12 @@ pub struct RolloutStatus {
         alias = "observedGeneration"
     )]
     pub observed_generation: i64,
-    /// Ready, Reconciling, Stalled.
+    /// Release lifecycle conditions, not Service readiness.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conditions: Vec<crate::common::Condition>,
-    /// Where the Rollout is.
+    /// The Release controller lifecycle for this staged member.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -850,7 +849,7 @@ pub struct RolloutStatus {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cells: Vec<String>,
-    /// When the first wave started.
+    /// When the controller staged the member.
     ///
     /// Field behavior: `output_only`.
     #[serde(
@@ -1711,13 +1710,13 @@ pub enum RolloutState {
     Progressing,
     /// Held by a caller; no wave advances.
     Paused,
-    /// Every wave is serving the new Release.
+    /// The Release reached live. This is historical, not current readiness.
     Succeeded,
     /// Stopped by a caller; the previous Release keeps serving.
     Aborted,
-    /// Stopped on failed evidence; the previous Release keeps serving.
+    /// The Release controller recorded a terminal failure.
     Failed,
-    /// A newer Rollout of the same Service replaced it.
+    /// The Release was superseded before reaching live.
     Superseded,
     /// A value this SDK version does not know.
     Unknown(String),
@@ -2327,11 +2326,11 @@ pub struct ServiceRolloutsCollection<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> ServiceRolloutsCollection<'a, T> {
-    /// Gets a rollout.
+    /// Gets a staged rollout of this exact Service.
     ///
     /// `GET /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}` · permission `hosting:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
     pub async fn get(&self, request: GetRolloutRequest) -> Result<Rollout, crate::runtime::Error> {
         let path = format!(
             "/v1/{}",
@@ -2354,11 +2353,11 @@ impl<'a, T: crate::runtime::Transport> ServiceRolloutsCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists rollouts in a service.
+    /// Lists staged rollouts in a Service, newest first. Kept members are omitted.
     ///
     /// `GET /v1/{parent=orgs/*/projects/*/envs/*/services/*}/service_rollouts` · permission `hosting:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
     pub async fn list(
         &self,
         request: ListServiceRolloutsRequest,

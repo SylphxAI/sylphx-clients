@@ -350,18 +350,15 @@ export interface ResumeRolloutRequest {
 }
 
 /**
- * A Rollout moves one Service generation to its Release in waves (one canary
- * cell, one cell, one region, all); every step is fenced by the Service
- * generation at the moment of write, and no wave advances without fresh
- * recorded evidence.
+ * A Rollout records one Service's staged work in a Release. Reads project
+ * staged Release v2 members; members kept from an earlier Release and
+ * Releases that never staged are not new Service Rollouts. Release lifecycle
+ * does not assert current Service readiness, a wave, or cell observations.
  */
 export interface Rollout {
-	/**
-	 * `orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollo
-	 * uts/{rollout}`.
-	 */
+	/** The full name identifies the rollout of a Release under one Service. */
 	name?: string
-	/** `rol_<cell><ulid>`; never reused. */
+	/** A `srl_` TypeID derived from the Release, scoped to this Service. */
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
@@ -389,15 +386,15 @@ export interface RolloutSpec {
 export interface RolloutStatus {
 	/** The generation this status was computed from. */
 	readonly observedGeneration?: string
-	/** Ready, Reconciling, Stalled. */
+	/** Release lifecycle conditions, not Service readiness. */
 	readonly conditions?: common.Condition[]
-	/** Where the Rollout is. */
+	/** The Release controller lifecycle for this staged member. */
 	readonly state?: RolloutState
 	/** The wave now serving the new Release. */
 	readonly wave?: RolloutWave
 	/** The cells serving the new Release. */
 	readonly cells?: string[]
-	/** When the first wave started. */
+	/** When the controller staged the member. */
 	readonly startTime?: string
 	/** When the Rollout reached a final state. */
 	readonly endTime?: string
@@ -1239,11 +1236,11 @@ export class ServiceRolloutsCollection {
 	}
 
 	/**
-	 * Gets a rollout.
+	 * Gets a staged rollout of this exact Service.
 	 *
 	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/services/*\/service_rollouts/*}` · permission `hosting:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
 	 */
 	async get(request: GetRolloutRequest): Promise<Rollout> {
 		return this.client.call<Rollout>({
@@ -1255,11 +1252,11 @@ export class ServiceRolloutsCollection {
 	}
 
 	/**
-	 * Lists rollouts in a service.
+	 * Lists staged rollouts in a Service, newest first. Kept members are omitted.
 	 *
 	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/services/*}/service_rollouts` · permission `hosting:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
 	 */
 	async list(request: ListServiceRolloutsRequest): Promise<ListServiceRolloutsResponse> {
 		return this.client.call<ListServiceRolloutsResponse>({

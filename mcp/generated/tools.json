@@ -23415,9 +23415,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Gets a rollout."
+        "title": "Gets a staged rollout of this exact Service."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a rollout.",
+      "description": "Gets a staged rollout of this exact Service.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/envs/*/services/*/service_rollouts/*}",
       "input_schema": {
@@ -23438,7 +23438,6 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.get",
       "permission": "hosting:read",
-      "served": false,
       "tool": "hosting_service_rollouts_get"
     },
     {
@@ -23447,9 +23446,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Lists rollouts in a service."
+        "title": "Lists staged rollouts in a Service, newest first. Kept members are omitted."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists rollouts in a service.",
+      "description": "Lists staged rollouts in a Service, newest first. Kept members are omitted.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/services/*}/service_rollouts",
       "input_schema": {
@@ -23487,7 +23486,6 @@
       "long_running": false,
       "method_id": "hosting.service_rollouts.list",
       "permission": "hosting:read",
-      "served": false,
       "tool": "hosting_service_rollouts_list"
     },
     {
@@ -23540,7 +23538,7 @@
                 "type": "object"
               },
               "name": {
-                "description": "`orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollo\nuts/{rollout}`.",
+                "description": "The full name identifies the rollout of a Release under one Service.",
                 "type": "string"
               },
               "spec": {

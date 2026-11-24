@@ -2956,7 +2956,7 @@
           "wire": "paused"
         },
         {
-          "doc": "Every wave is serving the new Release.",
+          "doc": "The Release reached live. This is historical, not current readiness.",
           "number": 4,
           "proto_name": "ROLLOUT_STATE_SUCCEEDED",
           "wire": "succeeded"
@@ -2968,13 +2968,13 @@
           "wire": "aborted"
         },
         {
-          "doc": "Stopped on failed evidence; the previous Release keeps serving.",
+          "doc": "The Release controller recorded a terminal failure.",
           "number": 6,
           "proto_name": "ROLLOUT_STATE_FAILED",
           "wire": "failed"
         },
         {
-          "doc": "A newer Rollout of the same Service replaced it.",
+          "doc": "The Release was superseded before reaching live.",
           "number": 7,
           "proto_name": "ROLLOUT_STATE_SUPERSEDED",
           "wire": "superseded"
@@ -73546,14 +73546,14 @@
       "package": "sylphx.hosting.v1"
     },
     {
-      "doc": "A Rollout moves one Service generation to its Release in waves (one canary\ncell, one cell, one region, all); every step is fenced by the Service\ngeneration at the moment of write, and no wave advances without fresh\nrecorded evidence.",
+      "doc": "A Rollout records one Service's staged work in a Release. Reads project\nstaged Release v2 members; members kept from an earlier Release and\nReleases that never staged are not new Service Rollouts. Release lifecycle\ndoes not assert current Service readiness, a wave, or cell observations.",
       "fields": [
         {
           "behaviors": [
             "IDENTIFIER"
           ],
           "cli_flag": "",
-          "doc": "`orgs/{org}/projects/{project}/envs/{env}/services/{service}/service_rollo\nuts/{rollout}`.",
+          "doc": "The full name identifies the rollout of a Release under one Service.",
           "filterable": false,
           "name": "name",
           "number": 1,
@@ -73572,7 +73572,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "`rol_<cell><ulid>`; never reused.",
+          "doc": "A `srl_` TypeID derived from the Release, scoped to this Service.",
           "filterable": false,
           "name": "uid",
           "number": 2,
@@ -73720,7 +73720,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Ready, Reconciling, Stalled.",
+          "doc": "Release lifecycle conditions, not Service readiness.",
           "filterable": false,
           "name": "conditions",
           "number": 2,
@@ -73739,7 +73739,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "Where the Rollout is.",
+          "doc": "The Release controller lifecycle for this staged member.",
           "filterable": true,
           "name": "state",
           "number": 10,
@@ -73796,7 +73796,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "When the first wave started.",
+          "doc": "When the controller staged the member.",
           "filterable": false,
           "name": "start_time",
           "number": 13,
@@ -174071,12 +174071,13 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Gets a rollout.",
+              "doc": "Gets a staged rollout of this exact Service.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
-                "RESOURCE_NOT_FOUND"
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD"
               ],
               "http": {
                 "body": null,
@@ -174103,7 +174104,6 @@
               "request": "sylphx.hosting.v1.GetRolloutRequest",
               "resource_field": null,
               "response": "sylphx.hosting.v1.Rollout",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -174111,11 +174111,12 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists rollouts in a service.",
+              "doc": "Lists staged rollouts in a Service, newest first. Kept members are omitted.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
                 "INVALID_FIELD",
                 "PAGE_TOKEN_MISMATCH"
               ],
@@ -174152,7 +174153,6 @@
               "request": "sylphx.hosting.v1.ListServiceRolloutsRequest",
               "resource_field": null,
               "response": "sylphx.hosting.v1.ListServiceRolloutsResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
