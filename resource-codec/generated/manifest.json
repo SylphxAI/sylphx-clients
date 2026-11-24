@@ -1585,6 +1585,43 @@
       ]
     },
     {
+      "doc": "Supplier job state; deliberately independent of charge evidence.",
+      "name": "sylphx.broker.v1.MediaExecutionState",
+      "package": "sylphx.broker.v1",
+      "values": [
+        {
+          "doc": "Broker does not yet have a positively correlated supplier request ID.",
+          "number": 1,
+          "proto_name": "MEDIA_EXECUTION_STATE_UNRESOLVED",
+          "wire": "unresolved"
+        },
+        {
+          "doc": "Supplier has queued the request.",
+          "number": 2,
+          "proto_name": "MEDIA_EXECUTION_STATE_QUEUED",
+          "wire": "queued"
+        },
+        {
+          "doc": "Supplier is processing the request.",
+          "number": 3,
+          "proto_name": "MEDIA_EXECUTION_STATE_RUNNING",
+          "wire": "running"
+        },
+        {
+          "doc": "Supplier finished successfully; charge evidence is independent.",
+          "number": 4,
+          "proto_name": "MEDIA_EXECUTION_STATE_SUCCEEDED",
+          "wire": "succeeded"
+        },
+        {
+          "doc": "Supplier finished with a failure; charge evidence is independent.",
+          "number": 5,
+          "proto_name": "MEDIA_EXECUTION_STATE_FAILED",
+          "wire": "failed"
+        }
+      ]
+    },
+    {
       "doc": "BuildCacheAccess is what a cache token may do. A token from an uploaded\ntree or a laptop writes only the `dev` scope.",
       "name": "sylphx.build.v1.BuildCacheAccess",
       "package": "sylphx.build.v1",
@@ -40683,6 +40720,172 @@
       "package": "sylphx.broker.v1"
     },
     {
+      "doc": "Reads the exact attempt identified by the original platform-hold key.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Original immutable Broker billing SecretVersion; \"latest\" is not allowed.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "secrets.sylphx.com/SecretVersion",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Original platform-hold execution identity. No supplier ID or URL is accepted.",
+          "filterable": false,
+          "name": "execution_key",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.GetMediaExecutionRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "A scoped, no-store observation of a single Broker attempt.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Latest verified supplier state.",
+          "filterable": false,
+          "name": "state",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.broker.v1.MediaExecutionState"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Supplier request ID when positively correlated; not settlement evidence.",
+          "filterable": false,
+          "name": "supplier_request_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Original Money hold, never selected by the caller.",
+          "filterable": false,
+          "name": "hold_uid",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Immutable SKU revision pinned by the committed execution.",
+          "filterable": false,
+          "name": "sku_revision",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Present only for a terminal state with a complete, exact billed record.",
+          "filterable": false,
+          "name": "charge_evidence",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.broker.v1.MediaChargeEvidence"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Supplier result URL, only on success with verified charge evidence.\nThe calling workload must settle Money before exposing it to its user.",
+          "filterable": false,
+          "name": "video_url",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.GetMediaExecutionResponse",
+      "package": "sylphx.broker.v1"
+    },
+    {
       "doc": "The request of GetTokenExchange.",
       "fields": [
         {
@@ -41052,6 +41255,32 @@
       "package": "sylphx.broker.v1"
     },
     {
+      "doc": "One positive, request-bound supplier charge. Absence is not zero and never\nauthorizes release. Even a terminal supplier state is not billing evidence.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact positive USD charge after discounts, in pico-USD, at most the\npersisted execution's reservation. This is not a Money posting.",
+          "filterable": false,
+          "name": "supplier_cost_picousd",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.MediaChargeEvidence",
+      "package": "sylphx.broker.v1"
+    },
+    {
       "doc": "The request of OpenGitHubPullRequest.",
       "fields": [
         {
@@ -41336,7 +41565,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "Minimum whole-cent pre-hold in USD minor units; not an invoice amount.",
+          "doc": "Whole-cent sell reservation ceiling in USD minor units; not an invoice amount.",
           "filterable": false,
           "name": "max_hold_minor",
           "number": 2,
@@ -41382,6 +41611,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact audio-off supplier list price for the selected video duration in\npico-USD, before discounts. Unset for flat-rate legacy media offers.",
+          "filterable": false,
+          "name": "supplier_cost_picousd",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
           }
         }
       ],
@@ -166546,6 +166794,50 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "recover_media_execution"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Reads the status of one existing Broker video execution, using the\noriginal tenant and immutable billing SecretVersion. Broker returns a\nsuccessful video result only alongside matched positive billed evidence.\nThis call never dispatches, captures or releases Money.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "FAILED_PRECONDITION",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}",
+                    "pattern": "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*"
+                  }
+                ],
+                "query_params": [
+                  "execution_key"
+                ],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:getMediaExecution"
+              },
+              "id": "broker.secret_versions.get_media_execution",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "broker:media:status",
+              "proto": "sylphx.broker.v1.BrokerService.GetMediaExecution",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.GetMediaExecutionRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.GetMediaExecutionResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get_media_execution"
             },
             {
               "cancellable": false,

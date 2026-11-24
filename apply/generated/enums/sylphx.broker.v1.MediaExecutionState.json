@@ -1,0 +1,31 @@
+{
+  "name": "sylphx.broker.v1.MediaExecutionState",
+  "package": "sylphx.broker.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MEDIA_EXECUTION_STATE_UNRESOLVED",
+      "wire": "unresolved"
+    },
+    {
+      "number": 2,
+      "proto_name": "MEDIA_EXECUTION_STATE_QUEUED",
+      "wire": "queued"
+    },
+    {
+      "number": 3,
+      "proto_name": "MEDIA_EXECUTION_STATE_RUNNING",
+      "wire": "running"
+    },
+    {
+      "number": 4,
+      "proto_name": "MEDIA_EXECUTION_STATE_SUCCEEDED",
+      "wire": "succeeded"
+    },
+    {
+      "number": 5,
+      "proto_name": "MEDIA_EXECUTION_STATE_FAILED",
+      "wire": "failed"
+    }
+  ]
+}

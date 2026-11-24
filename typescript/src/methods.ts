@@ -2007,6 +2007,16 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'broker:sms:send',
 	},
+	'broker.secret_versions.get_media_execution': {
+		id: 'broker.secret_versions.get_media_execution',
+		httpMethod: 'GET',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:getMediaExecution',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*']],
+		queryParams: ['execution_key'],
+		longRunning: false,
+		effect: 'read',
+		permission: 'broker:media:status',
+	},
 	'broker.secret_versions.quote_media_execution': {
 		id: 'broker.secret_versions.quote_media_execution',
 		httpMethod: 'POST',

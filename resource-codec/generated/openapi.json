@@ -12149,6 +12149,62 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.GetMediaExecutionRequest": {
+        "description": "Reads the exact attempt identified by the original platform-hold key.",
+        "properties": {
+          "execution_key": {
+            "description": "Original platform-hold execution identity. No supplier ID or URL is accepted.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Original immutable Broker billing SecretVersion; \"latest\" is not allowed.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+          }
+        },
+        "required": [
+          "name",
+          "execution_key"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.GetMediaExecutionResponse": {
+        "description": "A scoped, no-store observation of a single Broker attempt.",
+        "properties": {
+          "charge_evidence": {
+            "$ref": "#/components/schemas/sylphx.broker.v1.MediaChargeEvidence",
+            "description": "Present only for a terminal state with a complete, exact billed record.",
+            "readOnly": true
+          },
+          "hold_uid": {
+            "description": "Original Money hold, never selected by the caller.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sku_revision": {
+            "description": "Immutable SKU revision pinned by the committed execution.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.broker.v1.MediaExecutionState",
+            "description": "Latest verified supplier state.",
+            "readOnly": true
+          },
+          "supplier_request_id": {
+            "description": "Supplier request ID when positively correlated; not settlement evidence.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "video_url": {
+            "description": "Supplier result URL, only on success with verified charge evidence.\nThe calling workload must settle Money before exposing it to its user.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.GetTokenExchangeRequest": {
         "description": "The request of GetTokenExchange.",
         "properties": {
@@ -12295,6 +12351,29 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.MediaChargeEvidence": {
+        "description": "One positive, request-bound supplier charge. Absence is not zero and never\nauthorizes release. Even a terminal supplier state is not billing evidence.",
+        "properties": {
+          "supplier_cost_picousd": {
+            "description": "Exact positive USD charge after discounts, in pico-USD, at most the\npersisted execution's reservation. This is not a Money posting.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.broker.v1.MediaExecutionState": {
+        "description": "Supplier job state; deliberately independent of charge evidence.",
+        "enum": [
+          "unresolved",
+          "queued",
+          "running",
+          "succeeded",
+          "failed"
+        ],
+        "type": "string"
+      },
       "sylphx.broker.v1.OpenGitHubPullRequestRequest": {
         "description": "The request of OpenGitHubPullRequest.",
         "properties": {
@@ -12385,7 +12464,7 @@
         "description": "The bounded reservation and canonical input identity; not dispatch authority.",
         "properties": {
           "max_hold_minor": {
-            "description": "Minimum whole-cent pre-hold in USD minor units; not an invoice amount.",
+            "description": "Whole-cent sell reservation ceiling in USD minor units; not an invoice amount.",
             "format": "int64",
             "type": "string"
           },
@@ -12400,6 +12479,12 @@
           },
           "sku_revision": {
             "description": "Exact revision of the bounded SKU input and reservation schedule.",
+            "type": "string"
+          },
+          "supplier_cost_picousd": {
+            "description": "Exact audio-off supplier list price for the selected video duration in\npico-USD, before discounts. Unset for flat-rate legacy media offers.",
+            "format": "int64",
+            "readOnly": true,
             "type": "string"
           }
         },
@@ -121421,6 +121506,115 @@
         ],
         "x-sylphx-method": "secrets.secret_versions.enable",
         "x-sylphx-permission": "secrets:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}:getMediaExecution": {
+      "get": {
+        "description": "Reads the status of one existing Broker video execution, using the\noriginal tenant and immutable billing SecretVersion. Broker returns a\nsuccessful video result only alongside matched positive billed evidence.\nThis call never dispatches, captures or releases Money.",
+        "operationId": "broker_secret_versions_get_media_execution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Original platform-hold execution identity. No supplier ID or URL is accepted.",
+            "in": "query",
+            "name": "execution_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.GetMediaExecutionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads the status of one existing Broker video execution, using the original tenant and immutable billing SecretVersion. Broker returns a successful video result only alongside matched positive billed evidence. This call never dispatches, captures or releases Money.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.secret_versions.get_media_execution",
+        "x-sylphx-permission": "broker:media:status",
         "x-sylphx-stage": "preview"
       }
     },

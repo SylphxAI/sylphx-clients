@@ -1,0 +1,24 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "supplier_cost_picousd",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "int64"
+      }
+    }
+  ],
+  "name": "sylphx.broker.v1.MediaChargeEvidence",
+  "package": "sylphx.broker.v1"
+}

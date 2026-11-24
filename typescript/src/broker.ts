@@ -148,6 +148,33 @@ export interface ExchangeTokenResponse {
 	issuer?: string
 }
 
+/** Reads the exact attempt identified by the original platform-hold key. */
+export interface GetMediaExecutionRequest {
+	/** Original immutable Broker billing SecretVersion; "latest" is not allowed. */
+	name: string
+	/** Original platform-hold execution identity. No supplier ID or URL is accepted. */
+	executionKey: string
+}
+
+/** A scoped, no-store observation of a single Broker attempt. */
+export interface GetMediaExecutionResponse {
+	/** Latest verified supplier state. */
+	readonly state?: MediaExecutionState
+	/** Supplier request ID when positively correlated; not settlement evidence. */
+	readonly supplierRequestId?: string
+	/** Original Money hold, never selected by the caller. */
+	readonly holdUid?: string
+	/** Immutable SKU revision pinned by the committed execution. */
+	readonly skuRevision?: string
+	/** Present only for a terminal state with a complete, exact billed record. */
+	readonly chargeEvidence?: MediaChargeEvidence
+	/**
+	 * Supplier result URL, only on success with verified charge evidence.
+	 * The calling workload must settle Money before exposing it to its user.
+	 */
+	readonly videoUrl?: string
+}
+
 /** The request of GetTokenExchange. */
 export interface GetTokenExchangeRequest {
 	/** The name of the record to get. */
@@ -217,6 +244,18 @@ export interface ListTrustPoliciesResponse {
 	nextPageToken?: string
 }
 
+/**
+ * One positive, request-bound supplier charge. Absence is not zero and never
+ * authorizes release. Even a terminal supplier state is not billing evidence.
+ */
+export interface MediaChargeEvidence {
+	/**
+	 * Exact positive USD charge after discounts, in pico-USD, at most the
+	 * persisted execution's reservation. This is not a Money posting.
+	 */
+	readonly supplierCostPicousd?: string
+}
+
 /** The request of OpenGitHubPullRequest. */
 export interface OpenGitHubPullRequestRequest {
 	/** Policy authorizing this action, not an installation-token exchange. */
@@ -262,12 +301,17 @@ export interface QuoteMediaExecutionRequest {
 export interface QuoteMediaExecutionResponse {
 	/** Exact revision of the bounded SKU input and reservation schedule. */
 	skuRevision?: string
-	/** Minimum whole-cent pre-hold in USD minor units; not an invoice amount. */
+	/** Whole-cent sell reservation ceiling in USD minor units; not an invoice amount. */
 	maxHoldMinor?: string
 	/** The same reservation amount in the Money hold API's pico-USD units. */
 	maxHoldPicousd?: string
 	/** SHA-256 of the canonical supplier input accepted by this quote. */
 	requestSha256?: string
+	/**
+	 * Exact audio-off supplier list price for the selected video duration in
+	 * pico-USD, before discounts. Unset for flat-rate legacy media offers.
+	 */
+	readonly supplierCostPicousd?: string
 }
 
 /** Looks up the acknowledgment of an existing durable Broker media execution. */
@@ -541,6 +585,9 @@ export interface UpdateTrustPolicyRequest {
 /** CredentialKind is what the Broker issues under a TrustPolicy. */
 export type CredentialKind = 'access_token' | 'runner_registration' | 'vapid_assertion' | (string & {})
 
+/** Supplier job state; deliberately independent of charge evidence. */
+export type MediaExecutionState = 'unresolved' | 'queued' | 'running' | 'succeeded' | 'failed' | (string & {})
+
 runtime.registerSchemas({
 	'sylphx.broker.v1.CheckCarrierSmsDeliveryRequest': [
 		['sendKey', 'send_key'],
@@ -572,6 +619,16 @@ runtime.registerSchemas({
 		['permissions', 'permissions', undefined, 'map'],
 		['tokenExchange', 'token_exchange'],
 	],
+	'sylphx.broker.v1.GetMediaExecutionRequest': [
+		['executionKey', 'execution_key'],
+	],
+	'sylphx.broker.v1.GetMediaExecutionResponse': [
+		['supplierRequestId', 'supplier_request_id'],
+		['holdUid', 'hold_uid'],
+		['skuRevision', 'sku_revision'],
+		['chargeEvidence', 'charge_evidence', 'sylphx.broker.v1.MediaChargeEvidence'],
+		['videoUrl', 'video_url'],
+	],
 	'sylphx.broker.v1.GetTokenExchangeRequest': [],
 	'sylphx.broker.v1.GetTrustPolicyRequest': [],
 	'sylphx.broker.v1.GitHubActionBudget': [
@@ -596,6 +653,9 @@ runtime.registerSchemas({
 		['trustPolicies', 'trust_policies', 'sylphx.broker.v1.TrustPolicy'],
 		['nextPageToken', 'next_page_token'],
 	],
+	'sylphx.broker.v1.MediaChargeEvidence': [
+		['supplierCostPicousd', 'supplier_cost_picousd'],
+	],
 	'sylphx.broker.v1.OpenGitHubPullRequestRequest': [],
 	'sylphx.broker.v1.OpenGitHubPullRequestResponse': [
 		['htmlUrl', 'html_url'],
@@ -609,6 +669,7 @@ runtime.registerSchemas({
 		['maxHoldMinor', 'max_hold_minor'],
 		['maxHoldPicousd', 'max_hold_picousd'],
 		['requestSha256', 'request_sha256'],
+		['supplierCostPicousd', 'supplier_cost_picousd'],
 	],
 	'sylphx.broker.v1.RecoverMediaExecutionRequest': [
 		['executionKey', 'execution_key'],
@@ -991,6 +1052,26 @@ export class SecretVersionsCollection {
 			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:recoverMediaExecution`,
 			query: { execution_key: request.executionKey },
 			responseType: 'sylphx.broker.v1.RecoverMediaExecutionResponse',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Reads the status of one existing Broker video execution, using the
+	 * original tenant and immutable billing SecretVersion. Broker returns a
+	 * successful video result only alongside matched positive billed evidence.
+	 * This call never dispatches, captures or releases Money.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/secrets/*\/secret_versions/*}:getMediaExecution` · permission `broker:media:status` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`.
+	 */
+	async getMediaExecution(request: GetMediaExecutionRequest): Promise<GetMediaExecutionResponse> {
+		return this.client.call<GetMediaExecutionResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:getMediaExecution`,
+			query: { execution_key: request.executionKey },
+			responseType: 'sylphx.broker.v1.GetMediaExecutionResponse',
 			mutation: false,
 		})
 	}

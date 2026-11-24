@@ -8660,6 +8660,29 @@
               "effect": "read",
               "flags": [
                 {
+                  "field": "execution_key",
+                  "flag": "--execution-key",
+                  "required": true,
+                  "summary": "Original platform-hold execution identity. No supplier ID or URL is accepted.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:getMediaExecution",
+              "method": "broker.secret_versions.get_media_execution",
+              "permission": "broker:media:status",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}"
+              },
+              "summary": "Reads the status of one existing Broker video execution, using the original tenant and immutable billing SecretVersion. Broker returns a successful video result only alongside matched positive billed evidence. This call never dispatches, captures or releases Money.",
+              "verb": "get-media-execution"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
                   "field": "endpoint",
                   "flag": "--endpoint",
                   "required": true,

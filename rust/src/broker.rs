@@ -233,6 +233,83 @@ pub struct ExchangeTokenResponse {
     pub issuer: String,
 }
 
+/// Reads the exact attempt identified by the original platform-hold key.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetMediaExecutionRequest {
+    /// Original immutable Broker billing SecretVersion; "latest" is not allowed.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Original platform-hold execution identity. No supplier ID or URL is accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+}
+
+/// A scoped, no-store observation of a single Broker attempt.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetMediaExecutionResponse {
+    /// Latest verified supplier state.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<MediaExecutionState>,
+    /// Supplier request ID when positively correlated; not settlement evidence.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "supplierRequestId"
+    )]
+    pub supplier_request_id: String,
+    /// Original Money hold, never selected by the caller.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holdUid"
+    )]
+    pub hold_uid: String,
+    /// Immutable SKU revision pinned by the committed execution.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "skuRevision"
+    )]
+    pub sku_revision: String,
+    /// Present only for a terminal state with a complete, exact billed record.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "chargeEvidence"
+    )]
+    pub charge_evidence: Option<MediaChargeEvidence>,
+    /// Supplier result URL, only on success with verified charge evidence.
+    /// The calling workload must settle Money before exposing it to its user.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "videoUrl"
+    )]
+    pub video_url: String,
+}
+
 /// The request of GetTokenExchange.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -389,6 +466,24 @@ pub struct ListTrustPoliciesResponse {
     pub next_page_token: String,
 }
 
+/// One positive, request-bound supplier charge. Absence is not zero and never
+/// authorizes release. Even a terminal supplier state is not billing evidence.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MediaChargeEvidence {
+    /// Exact positive USD charge after discounts, in pico-USD, at most the
+    /// persisted execution's reservation. This is not a Money posting.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "supplierCostPicousd"
+    )]
+    pub supplier_cost_picousd: i64,
+}
+
 /// The request of OpenGitHubPullRequest.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -486,7 +581,7 @@ pub struct QuoteMediaExecutionResponse {
         alias = "skuRevision"
     )]
     pub sku_revision: String,
-    /// Minimum whole-cent pre-hold in USD minor units; not an invoice amount.
+    /// Whole-cent sell reservation ceiling in USD minor units; not an invoice amount.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -509,6 +604,17 @@ pub struct QuoteMediaExecutionResponse {
         alias = "requestSha256"
     )]
     pub request_sha256: String,
+    /// Exact audio-off supplier list price for the selected video duration in
+    /// pico-USD, before discounts. Unset for flat-rate legacy media offers.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::runtime::opt_int64",
+        alias = "supplierCostPicousd"
+    )]
+    pub supplier_cost_picousd: Option<i64>,
 }
 
 /// Looks up the acknowledgment of an existing durable Broker media execution.
@@ -1123,6 +1229,69 @@ impl crate::runtime::QueryValue for CredentialKind {
     }
 }
 
+/// Supplier job state; deliberately independent of charge evidence.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MediaExecutionState {
+    /// Broker does not yet have a positively correlated supplier request ID.
+    Unresolved,
+    /// Supplier has queued the request.
+    Queued,
+    /// Supplier is processing the request.
+    Running,
+    /// Supplier finished successfully; charge evidence is independent.
+    Succeeded,
+    /// Supplier finished with a failure; charge evidence is independent.
+    Failed,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl MediaExecutionState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Unresolved => "unresolved",
+            Self::Queued => "queued",
+            Self::Running => "running",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "unresolved" => Self::Unresolved,
+            "queued" => Self::Queued,
+            "running" => Self::Running,
+            "succeeded" => Self::Succeeded,
+            "failed" => Self::Failed,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for MediaExecutionState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MediaExecutionState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for MediaExecutionState {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 impl<T: crate::runtime::Transport> crate::runtime::Client<T> {
     /// Sylphx Broker (`preview`).
     pub fn broker(&self) -> BrokerApi<'_, T> {
@@ -1582,6 +1751,40 @@ impl<'a, T: crate::runtime::Transport> SecretVersionsCollection<'a, T> {
     ) -> Result<RecoverMediaExecutionResponse, crate::runtime::Error> {
         let path = format!(
             "/v1/{}:recoverMediaExecution",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("execution_key", &request.execution_key);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Reads the status of one existing Broker video execution, using the
+    /// original tenant and immutable billing SecretVersion. Broker returns a
+    /// successful video result only alongside matched positive billed evidence.
+    /// This call never dispatches, captures or releases Money.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:getMediaExecution` · permission `broker:media:status` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`.
+    pub async fn get_media_execution(
+        &self,
+        request: GetMediaExecutionRequest,
+    ) -> Result<GetMediaExecutionResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:getMediaExecution",
             crate::runtime::path_param(
                 &request.name,
                 "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
