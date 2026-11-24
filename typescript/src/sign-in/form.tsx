@@ -108,7 +108,7 @@ function localizedError(problem: unknown, copy: ContinueSignInCopy, fallback: st
 }
 
 /** The one form, shared by embedded pages and the Account Portal. No SDK context required. */
-export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: ContinueSignInCopy }) {
+export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: ContinueSignInCopy; emailFirst?: boolean }) {
 	const copy = options.copy ?? englishCopy
 	const { productName, endpoints, next, termsUrl, privacyUrl, emailOtpEnabled = true } = options
 	/* Only documents the product set are linked; an unset one is never filled in. */
@@ -383,6 +383,38 @@ export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: Con
 		setStep('email')
 	}
 
+	const divider = (
+		<div className="sx-signin__divider" aria-hidden="true">
+			<span>{copy.or}</span>
+		</div>
+	)
+	const providerChoices = step === 'email' && providers.length > 0 && (
+		<div className="sx-signin__providers">
+			{options.emailFirst && divider}
+			{(expanded ? providers : providers.slice(0, 3)).map((provider) => {
+				const Icon = oauthProviderIcon(provider.id)
+				return (
+					<a
+						key={provider.id}
+						href={provider.href}
+						className="sx-signin__provider"
+						onClick={() => savePreference(`${preference}:last-used`, provider.id)}
+					>
+						{Icon && <Icon width={20} height={20} aria-hidden="true" />}
+						<span>{format(copy.continueWith, provider.name)}</span>
+						{lastUsed === provider.id && <small>{copy.lastUsed}</small>}
+					</a>
+				)
+			})}
+			{providers.length > 3 && !expanded && (
+				<button className="sx-signin__link" onClick={() => setExpanded(true)}>
+					{copy.moreWays}
+				</button>
+			)}
+			{!options.emailFirst && divider}
+		</div>
+	)
+
 	return (
 		<section
 			className="sx-signin"
@@ -441,37 +473,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: Con
 								: maskSignInEmail(email.trim())}
 						</p>
 					)}
-					{step === 'email' && (
-						<>
-							{providers.length > 0 && (
-								<div className="sx-signin__providers">
-									{(expanded ? providers : providers.slice(0, 3)).map((provider) => {
-										const Icon = oauthProviderIcon(provider.id)
-										return (
-											<a
-												key={provider.id}
-												href={provider.href}
-												className="sx-signin__provider"
-												onClick={() => savePreference(`${preference}:last-used`, provider.id)}
-											>
-												{Icon && <Icon width={20} height={20} aria-hidden="true" />}
-												<span>{format(copy.continueWith, provider.name)}</span>
-												{lastUsed === provider.id && <small>{copy.lastUsed}</small>}
-											</a>
-										)
-									})}
-									{providers.length > 3 && !expanded && (
-										<button className="sx-signin__link" onClick={() => setExpanded(true)}>
-											{copy.moreWays}
-										</button>
-									)}
-									<div className="sx-signin__divider">
-										<span>{copy.or}</span>
-									</div>
-								</div>
-							)}
-						</>
-					)}
+					{!options.emailFirst && providerChoices}
 					<form
 						onSubmit={(event) => {
 							event.preventDefault()
@@ -617,6 +619,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: Con
 							</p>
 						)}
 					</form>
+					{options.emailFirst && providerChoices}
 					{step !== 'email' && (
 						<div className="sx-signin__alternatives">
 							<button className="sx-signin__link" disabled={busy || paused} onClick={changeEmail}>
