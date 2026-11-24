@@ -12694,6 +12694,40 @@
         ],
         "type": "string"
       },
+      "sylphx.build.v1.BuildStaticPreviewRequest": {
+        "description": "BuildStaticPreviewRequest selects a Hosting binding and immutable revision.\nSource authorization, the build plan, and the lease pin are server-owned.",
+        "properties": {
+          "commit": {
+            "description": "The full lowercase Git commit SHA of the preview head.",
+            "type": "string"
+          },
+          "environment_id": {
+            "description": "The Hosting preview environment UUID.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The canonical Access project name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/Build"
+          },
+          "service": {
+            "description": "The exact service name in the checked-out manifest.",
+            "type": "string"
+          },
+          "service_id": {
+            "description": "The Hosting service UUID.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "commit",
+          "environment_id",
+          "service_id",
+          "service"
+        ],
+        "type": "object"
+      },
       "sylphx.build.v1.BuildStatus": {
         "description": "BuildStatus is the observed state of a Build.",
         "properties": {
@@ -61353,6 +61387,123 @@
           "response": "sylphx.build.v1.Build"
         },
         "x-sylphx-method": "build.builds.build_image",
+        "x-sylphx-permission": "build:run",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/builds:buildStaticPreview": {
+      "post": {
+        "description": "Builds the declared static site for a preview at its exact commit. Only\nthe project's configured preview automation principal can request this.",
+        "operationId": "build_builds_build_static_preview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "commit": {
+                    "description": "The full lowercase Git commit SHA of the preview head.",
+                    "type": "string"
+                  },
+                  "environment_id": {
+                    "description": "The Hosting preview environment UUID.",
+                    "type": "string"
+                  },
+                  "service": {
+                    "description": "The exact service name in the checked-out manifest.",
+                    "type": "string"
+                  },
+                  "service_id": {
+                    "description": "The Hosting service UUID.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "commit",
+                  "environment_id",
+                  "service_id",
+                  "service"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Builds the declared static site for a preview at its exact commit. Only the project's configured preview automation principal can request this.",
+        "tags": [
+          "build"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "IDEMPOTENCY_KEY_REUSED",
+          "RATE_LIMITED",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-lro": {
+          "metadata": "sylphx.common.v1.OperationProgress",
+          "response": "sylphx.build.v1.Build"
+        },
+        "x-sylphx-method": "build.builds.build_static_preview",
         "x-sylphx-permission": "build:run",
         "x-sylphx-stage": "preview"
       }

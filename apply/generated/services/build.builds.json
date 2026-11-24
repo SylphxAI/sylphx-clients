@@ -49,6 +49,13 @@
           "http": {
             "query_params": []
           },
+          "id": "build.builds.build_static_preview",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "build.builds.build_image",
           "kind": "custom"
         },

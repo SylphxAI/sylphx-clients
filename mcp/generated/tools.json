@@ -12992,6 +12992,57 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
+        "title": "Builds the declared static site for a preview at its exact commit. Only the project's configured preview automation principal can request this."
+      },
+      "description": "Builds the declared static site for a preview at its exact commit. Only\nthe project's configured preview automation principal can request this.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*}/builds:buildStaticPreview",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "BuildStaticPreviewRequest selects a Hosting binding and immutable revision.\nSource authorization, the build plan, and the lease pin are server-owned.",
+        "properties": {
+          "commit": {
+            "description": "The full lowercase Git commit SHA of the preview head.",
+            "type": "string"
+          },
+          "environment_id": {
+            "description": "The Hosting preview environment UUID.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The canonical Access project name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "build.sylphx.com/Build"
+          },
+          "service": {
+            "description": "The exact service name in the checked-out manifest.",
+            "type": "string"
+          },
+          "service_id": {
+            "description": "The Hosting service UUID.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "commit",
+          "environment_id",
+          "service_id",
+          "service"
+        ],
+        "type": "object"
+      },
+      "long_running": true,
+      "method_id": "build.builds.build_static_preview",
+      "permission": "build:run",
+      "tool": "build_builds_build_static_preview"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
         "title": "Builds an image, with an SBOM and signed provenance, from a commit or an uploaded tree."
       },
       "description": "Builds an image, with an SBOM and signed provenance, from a commit or an\nuploaded tree.",

@@ -8332,6 +8332,54 @@
               "effect": "write",
               "flags": [
                 {
+                  "field": "commit",
+                  "flag": "--commit",
+                  "required": true,
+                  "summary": "The full lowercase Git commit SHA of the preview head.",
+                  "type": "string"
+                },
+                {
+                  "field": "environment_id",
+                  "flag": "--environment-id",
+                  "required": true,
+                  "summary": "The Hosting preview environment UUID.",
+                  "type": "string"
+                },
+                {
+                  "field": "service_id",
+                  "flag": "--service-id",
+                  "required": true,
+                  "summary": "The Hosting service UUID.",
+                  "type": "string"
+                },
+                {
+                  "field": "service",
+                  "flag": "--service",
+                  "required": true,
+                  "summary": "The exact service name in the checked-out manifest.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*}/builds:buildStaticPreview",
+              "method": "build.builds.build_static_preview",
+              "permission": "build:run",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}"
+              },
+              "summary": "Builds the declared static site for a preview at its exact commit. Only the project's configured preview automation principal can request this.",
+              "verb": "build-static-preview",
+              "waits": {
+                "default": true,
+                "skip_flag": "--no-wait"
+              }
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
                   "field": "source",
                   "flag": "--source",
                   "summary": "A commit, read through the Broker at that exact commit.",

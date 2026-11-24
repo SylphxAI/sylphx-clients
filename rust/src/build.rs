@@ -355,6 +355,46 @@ pub struct BuildSpec {
     pub allow_hosts: Vec<String>,
 }
 
+/// BuildStaticPreviewRequest selects a Hosting binding and immutable revision.
+/// Source authorization, the build plan, and the lease pin are server-owned.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct BuildStaticPreviewRequest {
+    /// The canonical Access project name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The full lowercase Git commit SHA of the preview head.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub commit: String,
+    /// The Hosting preview environment UUID.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "environmentId"
+    )]
+    pub environment_id: String,
+    /// The Hosting service UUID.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "serviceId"
+    )]
+    pub service_id: String,
+    /// The exact service name in the checked-out manifest.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub service: String,
+}
+
 /// BuildStatus is the observed state of a Build.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1529,6 +1569,34 @@ impl<'a, T: crate::runtime::Transport> BuildsCollection<'a, T> {
     ) -> Result<crate::runtime::Operation<'a, T, Build>, crate::runtime::Error> {
         let path = format!(
             "/v1/{}/builds:run",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        let operation = self.client.call(http).await?;
+        Ok(crate::runtime::Operation::new(self.client, operation))
+    }
+
+    /// Builds the declared static site for a preview at its exact commit. Only
+    /// the project's configured preview automation principal can request this.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*}/builds:buildStaticPreview` · permission `build:run` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `RATE_LIMITED`, `UNAVAILABLE`.
+    pub async fn build_static_preview(
+        &self,
+        request: BuildStaticPreviewRequest,
+    ) -> Result<crate::runtime::Operation<'a, T, Build>, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/builds:buildStaticPreview",
             crate::runtime::path_param(&request.parent, "orgs/*/projects/*", "parent")?
         );
         let query = crate::runtime::Query::default();

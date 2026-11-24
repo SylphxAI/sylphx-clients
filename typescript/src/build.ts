@@ -170,6 +170,23 @@ export interface BuildSpec {
 	allowHosts?: string[]
 }
 
+/**
+ * BuildStaticPreviewRequest selects a Hosting binding and immutable revision.
+ * Source authorization, the build plan, and the lease pin are server-owned.
+ */
+export interface BuildStaticPreviewRequest {
+	/** The canonical Access project name. */
+	parent: string
+	/** The full lowercase Git commit SHA of the preview head. */
+	commit: string
+	/** The Hosting preview environment UUID. */
+	environmentId: string
+	/** The Hosting service UUID. */
+	serviceId: string
+	/** The exact service name in the checked-out manifest. */
+	service: string
+}
+
 /** BuildStatus is the observed state of a Build. */
 export interface BuildStatus {
 	/** The generation this status was computed from. */
@@ -527,6 +544,10 @@ runtime.registerSchemas({
 		['image', 'image', 'sylphx.build.v1.ImageTarget'],
 		['command', 'command', 'sylphx.build.v1.CommandTarget'],
 		['allowHosts', 'allow_hosts'],
+	],
+	'sylphx.build.v1.BuildStaticPreviewRequest': [
+		['environmentId', 'environment_id'],
+		['serviceId', 'service_id'],
 	],
 	'sylphx.build.v1.BuildStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -893,6 +914,26 @@ export class BuildsCollection {
 			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*', 'parent')}/builds:run`,
 			body: runtime.omit(request, ['parent']),
 			bodyType: 'sylphx.build.v1.RunBuildRequest',
+			responseType: 'sylphx.common.v1.Operation',
+			mutation: true,
+		})
+		return new runtime.Operation<Build>(this.client, operation, 'sylphx.build.v1.Build')
+	}
+
+	/**
+	 * Builds the declared static site for a preview at its exact commit. Only
+	 * the project's configured preview automation principal can request this.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*}/builds:buildStaticPreview` · permission `build:run` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `RATE_LIMITED`, `UNAVAILABLE`.
+	 */
+	async buildStaticPreview(request: BuildStaticPreviewRequest): Promise<runtime.Operation<Build>> {
+		const operation = await this.client.call<common.Operation>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*', 'parent')}/builds:buildStaticPreview`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.build.v1.BuildStaticPreviewRequest',
 			responseType: 'sylphx.common.v1.Operation',
 			mutation: true,
 		})

@@ -2177,6 +2177,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'build:run',
 	},
+	'build.builds.build_static_preview': {
+		id: 'build.builds.build_static_preview',
+		httpMethod: 'POST',
+		template: '/v1/{parent=orgs/*/projects/*}/builds:buildStaticPreview',
+		pathParams: [['parent', 'orgs/*/projects/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: true,
+		effect: 'write',
+		permission: 'build:run',
+	},
 	'build.builds.cancel': {
 		id: 'build.builds.cancel',
 		httpMethod: 'POST',

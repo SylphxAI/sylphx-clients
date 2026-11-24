@@ -42059,6 +42059,108 @@
       "package": "sylphx.build.v1"
     },
     {
+      "doc": "BuildStaticPreviewRequest selects a Hosting binding and immutable revision.\nSource authorization, the build plan, and the lease pin are server-owned.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The canonical Access project name.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "build.sylphx.com/Build",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The full lowercase Git commit SHA of the preview head.",
+          "filterable": false,
+          "name": "commit",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The Hosting preview environment UUID.",
+          "filterable": false,
+          "name": "environment_id",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The Hosting service UUID.",
+          "filterable": false,
+          "name": "service_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The exact service name in the checked-out manifest.",
+          "filterable": false,
+          "name": "service",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.build.v1.BuildStaticPreviewRequest",
+      "package": "sylphx.build.v1"
+    },
+    {
       "doc": "BuildStatus is the observed state of a Build.",
       "fields": [
         {
@@ -164946,6 +165048,51 @@
               "supports_validate_only": true,
               "validate_only_unsupported": false,
               "verb": "run"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Builds the declared static site for a preview at its exact commit. Only\nthe project's configured preview automation principal can request this.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "IDEMPOTENCY_KEY_REUSED",
+                "RATE_LIMITED",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}",
+                    "pattern": "orgs/*/projects/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*}/builds:buildStaticPreview"
+              },
+              "id": "build.builds.build_static_preview",
+              "kind": "custom",
+              "lro": {
+                "metadata": "sylphx.common.v1.OperationProgress",
+                "response": "sylphx.build.v1.Build"
+              },
+              "mcp": "default",
+              "page": null,
+              "permission": "build:run",
+              "proto": "sylphx.build.v1.BuildService.BuildStaticPreview",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.build.v1.BuildStaticPreviewRequest",
+              "resource_field": null,
+              "response": "sylphx.common.v1.Operation",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "build_static_preview"
             },
             {
               "cancellable": false,
