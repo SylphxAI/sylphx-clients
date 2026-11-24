@@ -89,6 +89,24 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "room_bot_binding",
+      "number": 6,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": false,
+      "type": {
+        "kind": "message",
+        "name": "sylphx.connections.v1.RoomBotBinding"
+      }
     }
   ],
   "name": "sylphx.connections.v1.Oauth2Authorization",

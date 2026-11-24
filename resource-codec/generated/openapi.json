@@ -16038,6 +16038,10 @@
             "type": "string",
             "writeOnly": true,
             "x-sylphx-sensitive": true
+          },
+          "room_bot_binding": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.RoomBotBinding",
+            "description": "Opts a fresh Connection into Broker-only room Bot use. Requires an\norg-wide Connections admin. Rotation must repeat the exact same binding.\nRequires an unexpired access token whose Slack workspace and bot are\nindependently verified by Broker. This prepares custody only; it does\nnot verify room membership or grant room authority."
           }
         },
         "required": [
@@ -16171,6 +16175,11 @@
             "description": "Whether the provider refused refresh and operator reauthorization is needed.",
             "readOnly": true,
             "type": "boolean"
+          },
+          "room_bot_binding": {
+            "$ref": "#/components/schemas/sylphx.connections.v1.RoomBotBinding",
+            "description": "The immutable room Bot binding, absent on ordinary OAuth Connections.",
+            "readOnly": true
           }
         },
         "type": "object"
@@ -16331,6 +16340,34 @@
           "selected"
         ],
         "type": "string"
+      },
+      "sylphx.connections.v1.RoomBotBinding": {
+        "description": "RoomBotBinding pins a managed Slack Bot to an exact room and Agent.\nIt contains only resource and provider identity metadata, never credentials.",
+        "properties": {
+          "actor": {
+            "description": "Concrete Agent actor in the room: {room}/agents/{agent}.",
+            "type": "string"
+          },
+          "room": {
+            "description": "Canonical room resource: orgs/{org}/projects/{project}/envs/{env}/rooms/{room}.",
+            "type": "string"
+          },
+          "slack_bot_id": {
+            "description": "Exact Slack bot ID expected from the Broker's identity check.",
+            "type": "string"
+          },
+          "slack_team_id": {
+            "description": "Exact Slack workspace (team) ID expected from the Broker's identity check.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "room",
+          "actor",
+          "slack_team_id",
+          "slack_bot_id"
+        ],
+        "type": "object"
       },
       "sylphx.connections.v1.S3SigningConfig": {
         "description": "S3SigningConfig admits one workload and one canonical path-style key prefix.",
@@ -58192,6 +58229,10 @@
                     "type": "string",
                     "writeOnly": true,
                     "x-sylphx-sensitive": true
+                  },
+                  "room_bot_binding": {
+                    "$ref": "#/components/schemas/sylphx.connections.v1.RoomBotBinding",
+                    "description": "Opts a fresh Connection into Broker-only room Bot use. Requires an\norg-wide Connections admin. Rotation must repeat the exact same binding.\nRequires an unexpired access token whose Slack workspace and bot are\nindependently verified by Broker. This prepares custody only; it does\nnot verify room membership or grant room authority."
                   }
                 },
                 "required": [
@@ -58232,6 +58273,9 @@
           "422": {
             "$ref": "#/components/responses/Problem"
           },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -58248,7 +58292,8 @@
           "INVALID_STATE",
           "RESOURCE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED",
-          "IDEMPOTENCY_IN_PROGRESS"
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNAVAILABLE"
         ],
         "x-sylphx-lro": {
           "metadata": "sylphx.common.v1.OperationProgress",

@@ -11365,6 +11365,12 @@
                   "repeated": true,
                   "summary": "Optional non-secret metadata merged into `spec.oauth2.provider_metadata`.",
                   "type": "key=value"
+                },
+                {
+                  "field": "room_bot_binding",
+                  "flag": "--room-bot-binding",
+                  "summary": "Opts a fresh Connection into Broker-only room Bot use. Requires an org-wide Connections admin. Rotation must repeat the exact same binding. Requires an unexpired access token whose Slack workspace and bot are independently verified by Broker. This prepares custody only; it does not verify room membership or grant room authority.",
+                  "type": "json"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/connections/*}:importOauth2Credentials",

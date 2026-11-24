@@ -15812,6 +15812,35 @@
             "type": "string",
             "writeOnly": true,
             "x-sylphx-sensitive": true
+          },
+          "room_bot_binding": {
+            "additionalProperties": false,
+            "description": "Opts a fresh Connection into Broker-only room Bot use. Requires an\norg-wide Connections admin. Rotation must repeat the exact same binding.\nRequires an unexpired access token whose Slack workspace and bot are\nindependently verified by Broker. This prepares custody only; it does\nnot verify room membership or grant room authority.",
+            "properties": {
+              "actor": {
+                "description": "Concrete Agent actor in the room: {room}/agents/{agent}.",
+                "type": "string"
+              },
+              "room": {
+                "description": "Canonical room resource: orgs/{org}/projects/{project}/envs/{env}/rooms/{room}.",
+                "type": "string"
+              },
+              "slack_bot_id": {
+                "description": "Exact Slack bot ID expected from the Broker's identity check.",
+                "type": "string"
+              },
+              "slack_team_id": {
+                "description": "Exact Slack workspace (team) ID expected from the Broker's identity check.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "room",
+              "actor",
+              "slack_team_id",
+              "slack_bot_id"
+            ],
+            "type": "object"
           }
         },
         "required": [

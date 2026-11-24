@@ -955,6 +955,17 @@ pub struct ImportOauth2CredentialsRequest {
         alias = "providerMetadata"
     )]
     pub provider_metadata: std::collections::BTreeMap<String, String>,
+    /// Opts a fresh Connection into Broker-only room Bot use. Requires an
+    /// org-wide Connections admin. Rotation must repeat the exact same binding.
+    /// Requires an unexpired access token whose Slack workspace and bot are
+    /// independently verified by Broker. This prepares custody only; it does
+    /// not verify room membership or grant room authority.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "roomBotBinding"
+    )]
+    pub room_bot_binding: Option<RoomBotBinding>,
 }
 
 /// The request of ListConnectionProviders.
@@ -1112,6 +1123,15 @@ pub struct Oauth2Authorization {
         alias = "refreshError"
     )]
     pub refresh_error: String,
+    /// The immutable room Bot binding, absent on ordinary OAuth Connections.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "roomBotBinding"
+    )]
+    pub room_bot_binding: Option<RoomBotBinding>,
 }
 
 /// Oauth2Config configures the generic OAuth 2.0 provider plugin.
@@ -1292,6 +1312,41 @@ pub struct ProviderSharingGrant {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "externalIds")]
     pub external_ids: Vec<String>,
+}
+
+/// RoomBotBinding pins a managed Slack Bot to an exact room and Agent.
+/// It contains only resource and provider identity metadata, never credentials.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RoomBotBinding {
+    /// Canonical room resource: orgs/{org}/projects/{project}/envs/{env}/rooms/{room}.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub room: String,
+    /// Concrete Agent actor in the room: {room}/agents/{agent}.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub actor: String,
+    /// Exact Slack workspace (team) ID expected from the Broker's identity check.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "slackTeamId"
+    )]
+    pub slack_team_id: String,
+    /// Exact Slack bot ID expected from the Broker's identity check.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "slackBotId"
+    )]
+    pub slack_bot_id: String,
 }
 
 /// S3SigningConfig admits one workload and one canonical path-style key prefix.
@@ -2093,7 +2148,7 @@ impl<'a, T: crate::runtime::Transport> ConnectionsCollection<'a, T> {
     ///
     /// `POST /v1/{name=orgs/*/connections/*}:importOauth2Credentials` · permission `connections:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
     pub async fn import_oauth2_credentials(
         &self,
         request: ImportOauth2CredentialsRequest,

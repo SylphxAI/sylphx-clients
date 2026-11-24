@@ -430,6 +430,14 @@ export interface ImportOauth2CredentialsRequest {
 	externalAccountId?: string
 	/** Optional non-secret metadata merged into `spec.oauth2.provider_metadata`. */
 	providerMetadata?: Record<string, string>
+	/**
+	 * Opts a fresh Connection into Broker-only room Bot use. Requires an
+	 * org-wide Connections admin. Rotation must repeat the exact same binding.
+	 * Requires an unexpired access token whose Slack workspace and bot are
+	 * independently verified by Broker. This prepares custody only; it does
+	 * not verify room membership or grant room authority.
+	 */
+	roomBotBinding?: RoomBotBinding
 }
 
 /** The request of ListConnectionProviders. */
@@ -488,6 +496,8 @@ export interface Oauth2Authorization {
 	readonly requiresReauthorization?: boolean
 	/** Non-secret failure reason when reauthorization is required. */
 	readonly refreshError?: string
+	/** The immutable room Bot binding, absent on ordinary OAuth Connections. */
+	readonly roomBotBinding?: RoomBotBinding
 }
 
 /** Oauth2Config configures the generic OAuth 2.0 provider plugin. */
@@ -580,6 +590,21 @@ export interface ProviderSharingGrant {
 	 * decimal installation ids. An empty list grants nothing.
 	 */
 	externalIds?: string[]
+}
+
+/**
+ * RoomBotBinding pins a managed Slack Bot to an exact room and Agent.
+ * It contains only resource and provider identity metadata, never credentials.
+ */
+export interface RoomBotBinding {
+	/** Canonical room resource: orgs/{org}/projects/{project}/envs/{env}/rooms/{room}. */
+	room?: string
+	/** Concrete Agent actor in the room: {room}/agents/{agent}. */
+	actor?: string
+	/** Exact Slack workspace (team) ID expected from the Broker's identity check. */
+	slackTeamId?: string
+	/** Exact Slack bot ID expected from the Broker's identity check. */
+	slackBotId?: string
 }
 
 /** S3SigningConfig admits one workload and one canonical path-style key prefix. */
@@ -770,6 +795,7 @@ runtime.registerSchemas({
 		['accessTokenExpireTime', 'access_token_expire_time'],
 		['externalAccountId', 'external_account_id'],
 		['providerMetadata', 'provider_metadata', undefined, 'map'],
+		['roomBotBinding', 'room_bot_binding', 'sylphx.connections.v1.RoomBotBinding'],
 	],
 	'sylphx.connections.v1.ListConnectionProvidersRequest': [
 		['pageSize', 'page_size'],
@@ -795,6 +821,7 @@ runtime.registerSchemas({
 		['lastRefreshTime', 'last_refresh_time'],
 		['requiresReauthorization', 'requires_reauthorization'],
 		['refreshError', 'refresh_error'],
+		['roomBotBinding', 'room_bot_binding', 'sylphx.connections.v1.RoomBotBinding'],
 	],
 	'sylphx.connections.v1.Oauth2Config': [
 		['authorizeUrl', 'authorize_url'],
@@ -821,6 +848,10 @@ runtime.registerSchemas({
 	],
 	'sylphx.connections.v1.ProviderSharingGrant': [
 		['externalIds', 'external_ids'],
+	],
+	'sylphx.connections.v1.RoomBotBinding': [
+		['slackTeamId', 'slack_team_id'],
+		['slackBotId', 'slack_bot_id'],
 	],
 	'sylphx.connections.v1.S3SigningConfig': [
 		['secretVersion', 'secret_version'],
@@ -1128,7 +1159,7 @@ export class ConnectionsCollection {
 	 *
 	 * `POST /v1/{name=orgs/*\/connections/*}:importOauth2Credentials` · permission `connections:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `INVALID_STATE`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNAVAILABLE`.
 	 */
 	async importOauth2Credentials(request: ImportOauth2CredentialsRequest): Promise<runtime.Operation<Connection>> {
 		const operation = await this.client.call<common.Operation>({

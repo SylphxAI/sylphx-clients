@@ -384,6 +384,7 @@ func connectionsOauth2Authorization() []def.Field {
 		{Name: "last_refresh_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the sealed credentials were last refreshed from the provider."},
 		{Name: "requires_reauthorization", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether the provider refused refresh and operator reauthorization is needed."},
 		{Name: "refresh_error", Kind: def.String, Flags: def.OutputOnly, Doc: "Non-secret failure reason when reauthorization is required."},
+		{Name: "room_bot_binding", Kind: def.Message, Msg: connectionsRoomBotBinding, Flags: def.OutputOnly, Doc: "The immutable room Bot binding, absent on ordinary OAuth Connections."},
 	}
 }
 
@@ -424,6 +425,16 @@ func connectionsProviderSharingGrant() []def.Field {
 	return []def.Field{
 		{Name: "organization", Kind: def.String, Flags: def.Required, Doc: "The recipient, `orgs/{org}`; wildcards are not accepted."},
 		{Name: "external_ids", Kind: def.String, Flags: def.Required, Repeated: true, Doc: "Exact provider installation ids. For GitHub these are canonical positive decimal installation ids. An empty list grants nothing."},
+	}
+}
+
+// connectionsRoomBotBinding is `sylphx.connections.v1.RoomBotBinding`.
+func connectionsRoomBotBinding() []def.Field {
+	return []def.Field{
+		{Name: "room", Kind: def.String, Flags: def.Required, Doc: "Canonical room resource: orgs/{org}/projects/{project}/envs/{env}/rooms/{room}."},
+		{Name: "actor", Kind: def.String, Flags: def.Required, Doc: "Concrete Agent actor in the room: {room}/agents/{agent}."},
+		{Name: "slack_team_id", Kind: def.String, Flags: def.Required, Doc: "Exact Slack workspace (team) ID expected from the Broker's identity check."},
+		{Name: "slack_bot_id", Kind: def.String, Flags: def.Required, Doc: "Exact Slack bot ID expected from the Broker's identity check."},
 	}
 }
 
