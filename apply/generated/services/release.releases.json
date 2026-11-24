@@ -23,16 +23,6 @@
         },
         {
           "http": {
-            "query_params": [
-              "release_id",
-              "validate_only"
-            ]
-          },
-          "id": "release.releases.create",
-          "kind": "create"
-        },
-        {
-          "http": {
             "query_params": []
           },
           "id": "release.releases.deploy",

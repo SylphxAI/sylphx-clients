@@ -24,27 +24,6 @@
         {
           "http": {
             "query_params": [
-              "service_id",
-              "validate_only"
-            ]
-          },
-          "id": "hosting.services.create",
-          "kind": "create"
-        },
-        {
-          "http": {
-            "query_params": [
-              "update_mask",
-              "allow_missing",
-              "validate_only"
-            ]
-          },
-          "id": "hosting.services.update",
-          "kind": "update"
-        },
-        {
-          "http": {
-            "query_params": [
               "etag",
               "allow_missing",
               "validate_only",

@@ -39,18 +39,6 @@ export interface CreateRolloutRequest {
 	validateOnly?: boolean
 }
 
-/** The request of CreateService. */
-export interface CreateServiceRequest {
-	/** The parent to create in. */
-	parent: string
-	/** The service to create; only spec and caller-writable metadata are read. */
-	service: Service
-	/** The id segment of the name; the server assigns one when unset. */
-	serviceId?: string
-	/** Validate and return the result without writing anything. */
-	validateOnly?: boolean
-}
-
 /** The request of CreateSourceLink. */
 export interface CreateSourceLinkRequest {
 	/** The parent to create in. */
@@ -411,11 +399,14 @@ export interface Service {
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
-	/** Desired state, omitted when no immutable public projection is available. */
+	/** Current Hosting authoring state, not a snapshot of the serving Release. */
 	spec?: ServiceSpec
 	/** Observed state. */
 	readonly status?: ServiceStatus
-	/** True when some desired inputs or serving observations are unavailable. */
+	/**
+	 * True when the supported non-secret authoring projection is incomplete.
+	 * Consult unavailable_fields separately for missing serving observations.
+	 */
 	readonly projectionIncomplete?: boolean
 	/** Field paths not established by retained evidence. */
 	readonly unavailableFields?: string[]
@@ -502,13 +493,19 @@ export interface ServiceSource {
 	branch?: string
 	/** How Build turns the source into an image. Ignored for `image`. */
 	build?: ServiceBuild
+	/** Hosting authoring mode: git or image. */
+	readonly mode?: string
+	/** Git repository in owner/name form, not an inferred SourceLink resource. */
+	readonly repository?: string
+	/** Authored image reference (possibly tagged), separate from the serving digest. */
+	readonly imageReference?: string
 }
 
-/** ServiceSpec is the caller-writable state of a Service. */
+/** ServiceSpec is the non-secret authoring projection of a Service. */
 export interface ServiceSpec {
 	/** What the Service runs. */
 	source?: ServiceSource
-	/** Overrides the image's command. */
+	/** Command override. Not returned by Hosting inventory; it can contain credentials. */
 	command?: string
 	/** The port the application listens on; the public edge stays 443. */
 	port?: number
@@ -520,18 +517,26 @@ export interface ServiceSpec {
 	scaling?: ServiceScaling
 	/** How instances are probed. */
 	health?: ServiceHealth
-	/**
-	 * Plain environment variables. Secret values bind through `secret_env`,
-	 * never here.
-	 */
+	/** Legacy value-bearing field. Hosting inventory never returns env values. */
 	env?: Record<string, string>
-	/**
-	 * Environment variables bound to Sylphx Secrets: variable name to Secret
-	 * name. The value never enters the spec.
-	 */
+	/** Legacy binding field. Hosting inventory uses secret_version_refs instead. */
 	secretEnv?: Record<string, string>
 	/** Regions to run in; default the project's home region. */
 	regions?: string[]
+	/**
+	 * Declared env names in the captured authoring configuration, not a census
+	 * of effective variables injected into a running container.
+	 */
+	readonly envNames?: string[]
+	/**
+	 * Variable name to immutable backing version UUID, from the capture. No
+	 * payload or secret-manager lookup is performed by this endpoint.
+	 */
+	readonly secretVersionRefs?: Record<string, string>
+	/** Opaque ID of the Hosting authoring configuration capture. */
+	readonly configVersion?: string
+	/** Whether the Service declares a command override (without its contents). */
+	readonly commandConfigured?: boolean
 }
 
 /** ServiceStatus is the observed state of a Service. */
@@ -557,6 +562,8 @@ export interface ServiceStatus {
 	readonly currentRelease?: string
 	/** The persisted service lifecycle, independent of observed readiness. */
 	readonly lifecycleState?: string
+	/** The workload revision verified to receive traffic for this Service. */
+	readonly revision?: string
 }
 
 /**
@@ -669,18 +676,6 @@ export interface SourceLinkStatus {
 	readonly lastDeliveryTime?: string
 }
 
-/** The request of UpdateService. */
-export interface UpdateServiceRequest {
-	/** The service to update; `name` identifies it. */
-	service: Service
-	/** The fields to write; unset writes every populated field. */
-	updateMask?: string
-	/** Create the Resource when it does not exist (declarative upsert). */
-	allowMissing?: boolean
-	/** Validate and return the result without writing anything. */
-	validateOnly?: boolean
-}
-
 /** The request of UpdateSourceLink. */
 export interface UpdateSourceLinkRequest {
 	/** The source link to update; `name` identifies it. */
@@ -749,11 +744,6 @@ runtime.registerSchemas({
 	'sylphx.hosting.v1.CreateRolloutRequest': [
 		['rollout', 'rollout', 'sylphx.hosting.v1.Rollout'],
 		['rolloutId', 'rollout_id'],
-		['validateOnly', 'validate_only'],
-	],
-	'sylphx.hosting.v1.CreateServiceRequest': [
-		['service', 'service', 'sylphx.hosting.v1.Service'],
-		['serviceId', 'service_id'],
 		['validateOnly', 'validate_only'],
 	],
 	'sylphx.hosting.v1.CreateSourceLinkRequest': [
@@ -890,6 +880,7 @@ runtime.registerSchemas({
 	'sylphx.hosting.v1.ServiceSource': [
 		['sourceLink', 'source_link'],
 		['build', 'build', 'sylphx.hosting.v1.ServiceBuild'],
+		['imageReference', 'image_reference'],
 	],
 	'sylphx.hosting.v1.ServiceSpec': [
 		['source', 'source', 'sylphx.hosting.v1.ServiceSource'],
@@ -897,6 +888,10 @@ runtime.registerSchemas({
 		['health', 'health', 'sylphx.hosting.v1.ServiceHealth'],
 		['env', 'env', undefined, 'map'],
 		['secretEnv', 'secret_env', undefined, 'map'],
+		['envNames', 'env_names'],
+		['secretVersionRefs', 'secret_version_refs', undefined, 'map'],
+		['configVersion', 'config_version'],
+		['commandConfigured', 'command_configured'],
 	],
 	'sylphx.hosting.v1.ServiceStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -936,12 +931,6 @@ runtime.registerSchemas({
 		['defaultBranch', 'default_branch'],
 		['headCommit', 'head_commit'],
 		['lastDeliveryTime', 'last_delivery_time'],
-	],
-	'sylphx.hosting.v1.UpdateServiceRequest': [
-		['service', 'service', 'sylphx.hosting.v1.Service'],
-		['updateMask', 'update_mask'],
-		['allowMissing', 'allow_missing'],
-		['validateOnly', 'validate_only'],
 	],
 	'sylphx.hosting.v1.UpdateSourceLinkRequest': [
 		['sourceLink', 'source_link', 'sylphx.hosting.v1.SourceLink'],
@@ -1166,46 +1155,6 @@ export class ServicesCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
-	}
-
-	/**
-	 * Creates a service. The Operation is done when the controller settles it.
-	 *
-	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/services` · permission `hosting:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
-	 */
-	async create(request: CreateServiceRequest): Promise<runtime.Operation<Service>> {
-		const operation = await this.client.call<common.Operation>({
-			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/services`,
-			query: { service_id: request.serviceId, validate_only: request.validateOnly },
-			body: request.service ?? {},
-			bodyType: 'sylphx.hosting.v1.Service',
-			responseType: 'sylphx.common.v1.Operation',
-			mutation: true,
-		})
-		return new runtime.Operation<Service>(this.client, operation, 'sylphx.hosting.v1.Service')
-	}
-
-	/**
-	 * Updates a service.
-	 *
-	 * `PATCH /v1/{service.name=orgs/*\/projects/*\/envs/*\/services/*}` · permission `hosting:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
-	 */
-	async update(request: UpdateServiceRequest): Promise<runtime.Operation<Service>> {
-		const operation = await this.client.call<common.Operation>({
-			method: 'PATCH',
-			path: `/v1/${runtime.pathParam(request.service?.name, 'orgs/*/projects/*/envs/*/services/*', 'service.name')}`,
-			query: { update_mask: request.updateMask, allow_missing: request.allowMissing, validate_only: request.validateOnly },
-			body: request.service ?? {},
-			bodyType: 'sylphx.hosting.v1.Service',
-			responseType: 'sylphx.common.v1.Operation',
-			mutation: true,
-		})
-		return new runtime.Operation<Service>(this.client, operation, 'sylphx.hosting.v1.Service')
 	}
 
 	/**

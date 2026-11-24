@@ -769,6 +769,9 @@ func hostingServiceSource() []def.Field {
 		{Name: "image", Kind: def.String, Flags: def.Presence, Doc: "Run this Artifact, by digest: `registry.sylphx.net/<path>@sha256:<hex>`."},
 		{Name: "branch", Kind: def.String, Doc: "The branch that ships to this Service; default the SourceLink's production branch. Ignored for `image`."},
 		{Name: "build", Kind: def.Message, Msg: hostingServiceBuild, Doc: "How Build turns the source into an image. Ignored for `image`."},
+		{Name: "mode", Kind: def.String, Flags: def.OutputOnly, Doc: "Hosting authoring mode: git or image."},
+		{Name: "repository", Kind: def.String, Flags: def.OutputOnly, Doc: "Git repository in owner/name form, not an inferred SourceLink resource."},
+		{Name: "image_reference", Kind: def.String, Flags: def.OutputOnly, Doc: "Authored image reference (possibly tagged), separate from the serving digest."},
 	}
 }
 
@@ -776,15 +779,19 @@ func hostingServiceSource() []def.Field {
 func hostingServiceSpec() []def.Field {
 	return []def.Field{
 		{Name: "source", Kind: def.Message, Msg: hostingServiceSource, Flags: def.Required, Doc: "What the Service runs."},
-		{Name: "command", Kind: def.String, Doc: "Overrides the image's command."},
+		{Name: "command", Kind: def.String, Doc: "Command override. Not returned by Hosting inventory; it can contain credentials."},
 		{Name: "port", Kind: def.Int32, Doc: "The port the application listens on; the public edge stays 443."},
 		{Name: "exposure", Kind: def.Enum, Values: []string{"public", "internal"}, Doc: "Who can reach the Service; default PUBLIC."},
 		{Name: "size", Kind: def.Enum, Values: []string{"nano", "micro", "small", "standard", "large", "xlarge", "xxlarge"}, Doc: "The size of each instance; default the plan's."},
 		{Name: "scaling", Kind: def.Message, Msg: hostingServiceScaling, Doc: "Instance bounds."},
 		{Name: "health", Kind: def.Message, Msg: hostingServiceHealth, Doc: "How instances are probed."},
-		{Name: "env", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Plain environment variables. Secret values bind through `secret_env`, never here."},
-		{Name: "secret_env", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Environment variables bound to Sylphx Secrets: variable name to Secret name. The value never enters the spec."},
+		{Name: "env", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Legacy value-bearing field. Hosting inventory never returns env values."},
+		{Name: "secret_env", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Doc: "Legacy binding field. Hosting inventory uses secret_version_refs instead."},
 		{Name: "regions", Kind: def.String, Repeated: true, Doc: "Regions to run in; default the project's home region."},
+		{Name: "env_names", Kind: def.String, Flags: def.OutputOnly, Repeated: true, Doc: "Declared env names in the captured authoring configuration, not a census of effective variables injected into a running container."},
+		{Name: "secret_version_refs", Kind: def.Map, Elem: &def.Field{Kind: def.String}, Flags: def.OutputOnly, Doc: "Variable name to immutable backing version UUID, from the capture. No payload or secret-manager lookup is performed by this endpoint."},
+		{Name: "config_version", Kind: def.String, Flags: def.OutputOnly, Doc: "Opaque ID of the Hosting authoring configuration capture."},
+		{Name: "command_configured", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether the Service declares a command override (without its contents)."},
 	}
 }
 
@@ -800,6 +807,7 @@ func hostingServiceStatus() []def.Field {
 		{Name: "ready_instances", Kind: def.Int32, Flags: def.OutputOnly, Doc: "Instances passing health, summed over cells."},
 		{Name: "current_release", Kind: def.String, Flags: def.OutputOnly, Doc: "The selected environment Release; not proof that this service runs it."},
 		{Name: "lifecycle_state", Kind: def.String, Flags: def.OutputOnly, Doc: "The persisted service lifecycle, independent of observed readiness."},
+		{Name: "revision", Kind: def.String, Flags: def.OutputOnly, Doc: "The workload revision verified to receive traffic for this Service."},
 	}
 }
 

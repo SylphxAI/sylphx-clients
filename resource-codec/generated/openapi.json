@@ -23501,33 +23501,6 @@
         ],
         "type": "object"
       },
-      "sylphx.hosting.v1.CreateServiceRequest": {
-        "description": "The request of CreateService.",
-        "properties": {
-          "parent": {
-            "description": "The parent to create in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "hosting.sylphx.com/Service"
-          },
-          "service": {
-            "$ref": "#/components/schemas/sylphx.hosting.v1.Service",
-            "description": "The service to create; only spec and caller-writable metadata are read."
-          },
-          "service_id": {
-            "description": "The id segment of the name; the server assigns one when unset.",
-            "type": "string"
-          },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "parent",
-          "service"
-        ],
-        "type": "object"
-      },
       "sylphx.hosting.v1.CreateSourceLinkRequest": {
         "description": "The request of CreateSourceLink.",
         "properties": {
@@ -24340,13 +24313,13 @@
             "type": "string"
           },
           "projection_incomplete": {
-            "description": "True when some desired inputs or serving observations are unavailable.",
+            "description": "True when the supported non-secret authoring projection is incomplete.\nConsult unavailable_fields separately for missing serving observations.",
             "readOnly": true,
             "type": "boolean"
           },
           "spec": {
             "$ref": "#/components/schemas/sylphx.hosting.v1.ServiceSpec",
-            "description": "Desired state, omitted when no immutable public projection is available."
+            "description": "Current Hosting authoring state, not a snapshot of the serving Release."
           },
           "status": {
             "$ref": "#/components/schemas/sylphx.hosting.v1.ServiceStatus",
@@ -24496,6 +24469,21 @@
             "description": "Run this Artifact, by digest: `registry.sylphx.net/<path>@sha256:<hex>`.",
             "type": "string"
           },
+          "image_reference": {
+            "description": "Authored image reference (possibly tagged), separate from the serving digest.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "mode": {
+            "description": "Hosting authoring mode: git or image.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "repository": {
+            "description": "Git repository in owner/name form, not an inferred SourceLink resource.",
+            "readOnly": true,
+            "type": "string"
+          },
           "source_link": {
             "description": "Build from this SourceLink's repository on every push to `branch`.",
             "type": "string",
@@ -24505,18 +24493,36 @@
         "type": "object"
       },
       "sylphx.hosting.v1.ServiceSpec": {
-        "description": "ServiceSpec is the caller-writable state of a Service.",
+        "description": "ServiceSpec is the non-secret authoring projection of a Service.",
         "properties": {
           "command": {
-            "description": "Overrides the image's command.",
+            "description": "Command override. Not returned by Hosting inventory; it can contain credentials.",
+            "type": "string"
+          },
+          "command_configured": {
+            "description": "Whether the Service declares a command override (without its contents).",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "config_version": {
+            "description": "Opaque ID of the Hosting authoring configuration capture.",
+            "readOnly": true,
             "type": "string"
           },
           "env": {
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Plain environment variables. Secret values bind through `secret_env`,\nnever here.",
+            "description": "Legacy value-bearing field. Hosting inventory never returns env values.",
             "type": "object"
+          },
+          "env_names": {
+            "description": "Declared env names in the captured authoring configuration, not a census\nof effective variables injected into a running container.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
           },
           "exposure": {
             "$ref": "#/components/schemas/sylphx.hosting.v1.ServiceExposure",
@@ -24548,7 +24554,15 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Environment variables bound to Sylphx Secrets: variable name to Secret\nname. The value never enters the spec.",
+            "description": "Legacy binding field. Hosting inventory uses secret_version_refs instead.",
+            "type": "object"
+          },
+          "secret_version_refs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Variable name to immutable backing version UUID, from the capture. No\npayload or secret-manager lookup is performed by this endpoint.",
+            "readOnly": true,
             "type": "object"
           },
           "size": {
@@ -24609,6 +24623,11 @@
             "readOnly": true,
             "type": "string",
             "x-sylphx-resource-reference": "release.sylphx.com/Release"
+          },
+          "revision": {
+            "description": "The workload revision verified to receive traffic for this Service.",
+            "readOnly": true,
+            "type": "string"
           },
           "rollout": {
             "description": "The Rollout in progress, if any.",
@@ -24840,31 +24859,6 @@
             "type": "string"
           }
         },
-        "type": "object"
-      },
-      "sylphx.hosting.v1.UpdateServiceRequest": {
-        "description": "The request of UpdateService.",
-        "properties": {
-          "allow_missing": {
-            "description": "Create the Resource when it does not exist (declarative upsert).",
-            "type": "boolean"
-          },
-          "service": {
-            "$ref": "#/components/schemas/sylphx.hosting.v1.Service",
-            "description": "The service to update; `name` identifies it."
-          },
-          "update_mask": {
-            "description": "The fields to write; unset writes every populated field.",
-            "type": "string"
-          },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "service"
-        ],
         "type": "object"
       },
       "sylphx.hosting.v1.UpdateSourceLinkRequest": {
@@ -43271,33 +43265,6 @@
           "cancelled"
         ],
         "type": "string"
-      },
-      "sylphx.release.v1.CreateReleaseRequest": {
-        "description": "The request of CreateRelease.",
-        "properties": {
-          "parent": {
-            "description": "The environment to create in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "release.sylphx.com/Release"
-          },
-          "release": {
-            "$ref": "#/components/schemas/sylphx.release.v1.Release",
-            "description": "The release to create; only spec and caller-writable metadata are read."
-          },
-          "release_id": {
-            "description": "The id of the new release, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
-            "type": "string"
-          },
-          "validate_only": {
-            "description": "Validate and return the result without writing anything.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "parent",
-          "release"
-        ],
-        "type": "object"
       },
       "sylphx.release.v1.DeployReleaseRequest": {
         "description": "The request of DeployRelease.",
@@ -116596,127 +116563,6 @@
         "x-sylphx-method": "release.releases.list",
         "x-sylphx-permission": "release:read",
         "x-sylphx-stage": "preview"
-      },
-      "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.",
-        "operationId": "release_releases_create",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "env",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The id of the new release, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when\nempty.",
-            "in": "query",
-            "name": "release_id",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Validate and return the result without writing anything.",
-            "in": "query",
-            "name": "validate_only",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/sylphx.release.v1.Release"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "402": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.",
-        "tags": [
-          "release"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "UNKNOWN_FIELD",
-          "INVALID_FIELD",
-          "RESOURCE_ALREADY_EXISTS",
-          "IDEMPOTENCY_KEY_REUSED",
-          "IDEMPOTENCY_IN_PROGRESS",
-          "PLAN_LIMIT_REACHED",
-          "INVALID_STATE"
-        ],
-        "x-sylphx-lro": {
-          "metadata": "sylphx.common.v1.OperationProgress",
-          "response": "sylphx.release.v1.Release"
-        },
-        "x-sylphx-method": "release.releases.create",
-        "x-sylphx-permission": "release:write",
-        "x-sylphx-served": false,
-        "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/releases/{release}": {
@@ -123066,127 +122912,6 @@
         "x-sylphx-method": "hosting.services.list",
         "x-sylphx-permission": "hosting:read",
         "x-sylphx-stage": "preview"
-      },
-      "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nCreates a service. The Operation is done when the controller settles it.",
-        "operationId": "hosting_services_create",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "env",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The id segment of the name; the server assigns one when unset.",
-            "in": "query",
-            "name": "service_id",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Validate and return the result without writing anything.",
-            "in": "query",
-            "name": "validate_only",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/sylphx.hosting.v1.Service"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "402": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "Creates a service. The Operation is done when the controller settles it.",
-        "tags": [
-          "hosting"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "UNKNOWN_FIELD",
-          "INVALID_FIELD",
-          "RESOURCE_ALREADY_EXISTS",
-          "IDEMPOTENCY_KEY_REUSED",
-          "IDEMPOTENCY_IN_PROGRESS",
-          "PLAN_LIMIT_REACHED",
-          "SPEND_LIMIT_REACHED"
-        ],
-        "x-sylphx-lro": {
-          "metadata": "sylphx.common.v1.OperationProgress",
-          "response": "sylphx.hosting.v1.Service"
-        },
-        "x-sylphx-method": "hosting.services.create",
-        "x-sylphx-permission": "hosting:write",
-        "x-sylphx-served": false,
-        "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/services/{service}": {
@@ -123401,144 +123126,6 @@
         ],
         "x-sylphx-method": "hosting.services.get",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-stage": "preview"
-      },
-      "patch": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nUpdates a service.",
-        "operationId": "hosting_services_update",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "env",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "service",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The fields to write; unset writes every populated field.",
-            "in": "query",
-            "name": "update_mask",
-            "required": false,
-            "schema": {
-              "description": "Comma-separated field paths.",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Create the Resource when it does not exist (declarative upsert).",
-            "in": "query",
-            "name": "allow_missing",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "description": "Validate and return the result without writing anything.",
-            "in": "query",
-            "name": "validate_only",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/SylphxVersion"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/sylphx.hosting.v1.Service"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/sylphx.common.v1.Operation"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "401": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "403": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "404": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "409": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "422": {
-            "$ref": "#/components/responses/Problem"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        },
-        "summary": "Updates a service.",
-        "tags": [
-          "hosting"
-        ],
-        "x-sylphx-effect": "write",
-        "x-sylphx-errors": [
-          "UNAUTHENTICATED",
-          "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND",
-          "UNKNOWN_FIELD",
-          "INVALID_FIELD",
-          "ETAG_MISMATCH",
-          "IDEMPOTENCY_KEY_REUSED",
-          "IDEMPOTENCY_IN_PROGRESS"
-        ],
-        "x-sylphx-lro": {
-          "metadata": "sylphx.common.v1.OperationProgress",
-          "response": "sylphx.hosting.v1.Service"
-        },
-        "x-sylphx-method": "hosting.services.update",
-        "x-sylphx-permission": "hosting:write",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

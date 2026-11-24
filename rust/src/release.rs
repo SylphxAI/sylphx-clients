@@ -76,37 +76,6 @@ pub struct BuildAttempt {
     pub service_id: String,
 }
 
-/// The request of CreateRelease.
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
-pub struct CreateReleaseRequest {
-    /// The environment to create in.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
-    pub parent: String,
-    /// The release to create; only spec and caller-writable metadata are read.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub release: Option<Release>,
-    /// The id of the new release, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when
-    /// empty.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "releaseId"
-    )]
-    pub release_id: String,
-    /// Validate and return the result without writing anything.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "validateOnly"
-    )]
-    pub validate_only: bool,
-}
-
 /// The request of DeployRelease.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1203,35 +1172,6 @@ impl<'a, T: crate::runtime::Transport> ReleasesCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
-    }
-
-    /// Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.
-    ///
-    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/releases` · permission `release:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `INVALID_STATE`.
-    pub async fn create(
-        &self,
-        request: CreateReleaseRequest,
-    ) -> Result<crate::runtime::Operation<'a, T, Release>, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}/releases",
-            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("release_id", &request.release_id);
-        query.push("validate_only", &request.validate_only);
-        let http = crate::runtime::HttpRequest {
-            method: "POST",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body(&request.release)?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        let operation = self.client.call(http).await?;
-        Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
     /// Deploys through the existing redeploy writer. An explicit commit can

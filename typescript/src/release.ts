@@ -32,21 +32,6 @@ export interface BuildAttempt {
 	readonly serviceId?: string
 }
 
-/** The request of CreateRelease. */
-export interface CreateReleaseRequest {
-	/** The environment to create in. */
-	parent: string
-	/** The release to create; only spec and caller-writable metadata are read. */
-	release: Release
-	/**
-	 * The id of the new release, `^[a-z]([a-z0-9_-]{0,61}[a-z0-9])?$`; the server assigns one when
-	 * empty.
-	 */
-	releaseId?: string
-	/** Validate and return the result without writing anything. */
-	validateOnly?: boolean
-}
-
 /** The request of DeployRelease. */
 export interface DeployReleaseRequest {
 	/** The environment to deploy. */
@@ -376,11 +361,6 @@ runtime.registerSchemas({
 		['endTime', 'end_time'],
 		['serviceId', 'service_id'],
 	],
-	'sylphx.release.v1.CreateReleaseRequest': [
-		['release', 'release', 'sylphx.release.v1.Release'],
-		['releaseId', 'release_id'],
-		['validateOnly', 'validate_only'],
-	],
 	'sylphx.release.v1.DeployReleaseRequest': [],
 	'sylphx.release.v1.GetReleaseRequest': [],
 	'sylphx.release.v1.GetRolloutRequest': [],
@@ -543,26 +523,6 @@ export class ReleasesCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
-	}
-
-	/**
-	 * Creates a release: admits it and rolls it out in waves. The Operation is done when the release is live or halted.
-	 *
-	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/releases` · permission `release:write` · effect `write`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `INVALID_STATE`.
-	 */
-	async create(request: CreateReleaseRequest): Promise<runtime.Operation<Release>> {
-		const operation = await this.client.call<common.Operation>({
-			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/releases`,
-			query: { release_id: request.releaseId, validate_only: request.validateOnly },
-			body: request.release ?? {},
-			bodyType: 'sylphx.release.v1.Release',
-			responseType: 'sylphx.common.v1.Operation',
-			mutation: true,
-		})
-		return new runtime.Operation<Release>(this.client, operation, 'sylphx.release.v1.Release')
 	}
 
 	/**

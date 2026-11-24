@@ -311,7 +311,10 @@ mod tests {
         assert_eq!(service.parent_pattern, ENV_PARENT);
         assert!(!service.is_singleton());
         assert!(!reg.managed_fields(service).is_empty());
-        assert!(reg.method("hosting.sylphx.com/Service", "update").is_some());
+        assert!(reg.method(&service.type_name, "get").is_some());
+        assert!(reg.method(&service.type_name, "create").is_none());
+        assert!(reg.method(&service.type_name, "update").is_none());
+        assert!(reg.method("release.sylphx.com/Release", "create").is_none());
         assert_eq!(
             service
                 .name_in("orgs/o/projects/p/envs/e", Some("web"))

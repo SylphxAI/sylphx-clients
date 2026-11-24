@@ -1399,3 +1399,45 @@ impl Defaults<'_> {
         Ok(format!("{}/{collection}/{value}", self.at(&parent).await?))
     }
 }
+
+#[cfg(test)]
+mod hosting_contract_tests {
+    use super::*;
+
+    #[test]
+    fn hosting_inventory_and_release_deploy_replace_unserved_resource_writes() {
+        let tree = tree::load();
+        let env = "orgs/org_example/projects/prj_example/envs/env_example";
+        let name = format!("{env}/services/web");
+        let cmd = cli(&tree);
+        assert!(cmd
+            .clone()
+            .try_get_matches_from([
+                "sylphx", "hosting", "services", "get", &name, "--output", "json"
+            ])
+            .is_ok());
+        assert!(cmd
+            .clone()
+            .try_get_matches_from(["sylphx", "deploy", "--env", env, "--redeploy"])
+            .is_ok());
+        assert!(cmd
+            .clone()
+            .try_get_matches_from([
+                "sylphx",
+                "api",
+                "POST",
+                "/v1/projects/prj_example/services/web/env?environmentId=env_example",
+                "-d",
+                "@env.json"
+            ])
+            .is_ok());
+        for args in [
+            ["sylphx", "hosting", "services", "update"],
+            ["sylphx", "hosting", "services", "create"],
+            ["sylphx", "release", "releases", "create"],
+        ] {
+            let error = cmd.clone().try_get_matches_from(args).unwrap_err();
+            assert_eq!(error.kind(), clap::error::ErrorKind::InvalidSubcommand);
+        }
+    }
+}

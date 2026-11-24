@@ -84,36 +84,6 @@ pub struct CreateRolloutRequest {
     pub validate_only: bool,
 }
 
-/// The request of CreateService.
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
-pub struct CreateServiceRequest {
-    /// The parent to create in.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
-    pub parent: String,
-    /// The service to create; only spec and caller-writable metadata are read.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub service: Option<Service>,
-    /// The id segment of the name; the server assigns one when unset.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "serviceId"
-    )]
-    pub service_id: String,
-    /// Validate and return the result without writing anything.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "validateOnly"
-    )]
-    pub validate_only: bool,
-}
-
 /// The request of CreateSourceLink.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -887,7 +857,7 @@ pub struct Service {
     /// Resource metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<crate::common::ResourceMeta>,
-    /// Desired state, omitted when no immutable public projection is available.
+    /// Current Hosting authoring state, not a snapshot of the serving Release.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<ServiceSpec>,
     /// Observed state.
@@ -895,15 +865,16 @@ pub struct Service {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<ServiceStatus>,
-    /// True when some desired inputs or serving observations are unavailable.
+    /// True when the supported non-secret authoring projection is incomplete.
+    /// Consult unavailable_fields separately for missing serving observations.
     ///
     /// Field behavior: `output_only`.
     #[serde(
         default,
-        skip_serializing_if = "crate::runtime::is_default",
+        skip_serializing_if = "Option::is_none",
         alias = "projectionIncomplete"
     )]
-    pub projection_incomplete: bool,
+    pub projection_incomplete: Option<bool>,
     /// Field paths not established by retained evidence.
     ///
     /// Field behavior: `output_only`.
@@ -1052,9 +1023,28 @@ pub struct ServiceSource {
     /// How Build turns the source into an image. Ignored for `image`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<ServiceBuild>,
+    /// Hosting authoring mode: git or image.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub mode: String,
+    /// Git repository in owner/name form, not an inferred SourceLink resource.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub repository: String,
+    /// Authored image reference (possibly tagged), separate from the serving digest.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "imageReference"
+    )]
+    pub image_reference: String,
 }
 
-/// ServiceSpec is the caller-writable state of a Service.
+/// ServiceSpec is the non-secret authoring projection of a Service.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ServiceSpec {
@@ -1063,7 +1053,7 @@ pub struct ServiceSpec {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<ServiceSource>,
-    /// Overrides the image's command.
+    /// Command override. Not returned by Hosting inventory; it can contain credentials.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub command: String,
     /// The port the application listens on; the public edge stays 443.
@@ -1081,12 +1071,10 @@ pub struct ServiceSpec {
     /// How instances are probed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub health: Option<ServiceHealth>,
-    /// Plain environment variables. Secret values bind through `secret_env`,
-    /// never here.
+    /// Legacy value-bearing field. Hosting inventory never returns env values.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub env: std::collections::BTreeMap<String, String>,
-    /// Environment variables bound to Sylphx Secrets: variable name to Secret
-    /// name. The value never enters the spec.
+    /// Legacy binding field. Hosting inventory uses secret_version_refs instead.
     #[serde(
         default,
         skip_serializing_if = "std::collections::BTreeMap::is_empty",
@@ -1096,6 +1084,40 @@ pub struct ServiceSpec {
     /// Regions to run in; default the project's home region.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub regions: Vec<String>,
+    /// Declared env names in the captured authoring configuration, not a census
+    /// of effective variables injected into a running container.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "envNames")]
+    pub env_names: Vec<String>,
+    /// Variable name to immutable backing version UUID, from the capture. No
+    /// payload or secret-manager lookup is performed by this endpoint.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "secretVersionRefs"
+    )]
+    pub secret_version_refs: std::collections::BTreeMap<String, String>,
+    /// Opaque ID of the Hosting authoring configuration capture.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "configVersion"
+    )]
+    pub config_version: String,
+    /// Whether the Service declares a command override (without its contents).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "commandConfigured"
+    )]
+    pub command_configured: bool,
 }
 
 /// ServiceStatus is the observed state of a Service.
@@ -1165,6 +1187,11 @@ pub struct ServiceStatus {
         alias = "lifecycleState"
     )]
     pub lifecycle_state: String,
+    /// The workload revision verified to receive traffic for this Service.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub revision: String,
 }
 
 /// One public HTTPRoute and every Host/path/backend it binds. This is an owner
@@ -1391,38 +1418,6 @@ pub struct SourceLinkStatus {
         alias = "lastDeliveryTime"
     )]
     pub last_delivery_time: String,
-}
-
-/// The request of UpdateService.
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
-pub struct UpdateServiceRequest {
-    /// The service to update; `name` identifies it.
-    ///
-    /// Field behavior: `required`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub service: Option<Service>,
-    /// The fields to write; unset writes every populated field.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "updateMask"
-    )]
-    pub update_mask: String,
-    /// Create the Resource when it does not exist (declarative upsert).
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "allowMissing"
-    )]
-    pub allow_missing: bool,
-    /// Validate and return the result without writing anything.
-    #[serde(
-        default,
-        skip_serializing_if = "crate::runtime::is_default",
-        alias = "validateOnly"
-    )]
-    pub validate_only: bool,
 }
 
 /// The request of UpdateSourceLink.
@@ -2214,73 +2209,6 @@ impl<'a, T: crate::runtime::Transport> ServicesCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
-    }
-
-    /// Creates a service. The Operation is done when the controller settles it.
-    ///
-    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/services` · permission `hosting:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `SPEND_LIMIT_REACHED`.
-    pub async fn create(
-        &self,
-        request: CreateServiceRequest,
-    ) -> Result<crate::runtime::Operation<'a, T, Service>, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}/services",
-            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("service_id", &request.service_id);
-        query.push("validate_only", &request.validate_only);
-        let http = crate::runtime::HttpRequest {
-            method: "POST",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body(&request.service)?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        let operation = self.client.call(http).await?;
-        Ok(crate::runtime::Operation::new(self.client, operation))
-    }
-
-    /// Updates a service.
-    ///
-    /// `PATCH /v1/{service.name=orgs/*/projects/*/envs/*/services/*}` · permission `hosting:write` · effect `write`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
-    pub async fn update(
-        &self,
-        request: UpdateServiceRequest,
-    ) -> Result<crate::runtime::Operation<'a, T, Service>, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                request
-                    .service
-                    .as_ref()
-                    .map(|v| v.name.as_str())
-                    .unwrap_or(""),
-                "orgs/*/projects/*/envs/*/services/*",
-                "service.name"
-            )?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("update_mask", &request.update_mask);
-        query.push("allow_missing", &request.allow_missing);
-        query.push("validate_only", &request.validate_only);
-        let http = crate::runtime::HttpRequest {
-            method: "PATCH",
-            path,
-            query: query.0,
-            body: Some(crate::runtime::body(&request.service)?),
-            mutation: true,
-            origin: None,
-            effect_ids: false,
-        };
-        let operation = self.client.call(http).await?;
-        Ok(crate::runtime::Operation::new(self.client, operation))
     }
 
     /// Deletes a service.
