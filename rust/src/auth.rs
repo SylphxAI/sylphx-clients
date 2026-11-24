@@ -2225,6 +2225,20 @@ pub struct OauthClientSpec {
         alias = "resourceUri"
     )]
     pub resource_uri: String,
+    /// Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "backchannelLogoutUri"
+    )]
+    pub backchannel_logout_uri: String,
+    /// Require a session ID in Logout Tokens. Auth always sends a session ID.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "backchannelLogoutSessionRequired"
+    )]
+    pub backchannel_logout_session_required: bool,
 }
 
 /// OauthClientStatus is the observed state of an OauthClient.

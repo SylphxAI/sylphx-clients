@@ -1026,6 +1026,10 @@ export interface OauthClientSpec {
 	 * live clients of this environment. Clear with an explicit update mask.
 	 */
 	resourceUri?: string
+	/** Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask. */
+	backchannelLogoutUri?: string
+	/** Require a session ID in Logout Tokens. Auth always sends a session ID. */
+	backchannelLogoutSessionRequired?: boolean
 }
 
 /** OauthClientStatus is the observed state of an OauthClient. */
@@ -1760,6 +1764,8 @@ runtime.registerSchemas({
 		['accessTokenTtl', 'access_token_ttl'],
 		['refreshTokenTtl', 'refresh_token_ttl'],
 		['resourceUri', 'resource_uri'],
+		['backchannelLogoutUri', 'backchannel_logout_uri'],
+		['backchannelLogoutSessionRequired', 'backchannel_logout_session_required'],
 	],
 	'sylphx.auth.v1.OauthClientStatus': [
 		['observedGeneration', 'observed_generation'],

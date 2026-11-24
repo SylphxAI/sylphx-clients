@@ -9078,6 +9078,14 @@
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
+          "backchannel_logout_session_required": {
+            "description": "Require a session ID in Logout Tokens. Auth always sends a session ID.",
+            "type": "boolean"
+          },
+          "backchannel_logout_uri": {
+            "description": "Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask.",
+            "type": "string"
+          },
           "client_type": {
             "$ref": "#/components/schemas/sylphx.auth.v1.OauthClientType",
             "description": "Confidential or public.",

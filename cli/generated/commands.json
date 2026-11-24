@@ -7072,6 +7072,18 @@
                   "type": "string"
                 },
                 {
+                  "field": "oauth_client.spec.backchannel_logout_uri",
+                  "flag": "--spec.backchannel-logout-uri",
+                  "summary": "Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask.",
+                  "type": "string"
+                },
+                {
+                  "field": "oauth_client.spec.backchannel_logout_session_required",
+                  "flag": "--spec.backchannel-logout-session-required",
+                  "summary": "Require a session ID in Logout Tokens. Auth always sends a session ID.",
+                  "type": "bool"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -7182,6 +7194,18 @@
                   "flag": "--spec.resource-uri",
                   "summary": "RFC 8707 protected-resource identifier served by this confidential client. An absolute HTTPS URI without credentials or a fragment. Unique among live clients of this environment. Clear with an explicit update mask.",
                   "type": "string"
+                },
+                {
+                  "field": "oauth_client.spec.backchannel_logout_uri",
+                  "flag": "--spec.backchannel-logout-uri",
+                  "summary": "Optional HTTPS endpoint for OpenID Connect Back-Channel Logout. Clear it with an explicit update mask.",
+                  "type": "string"
+                },
+                {
+                  "field": "oauth_client.spec.backchannel_logout_session_required",
+                  "flag": "--spec.backchannel-logout-session-required",
+                  "summary": "Require a session ID in Logout Tokens. Auth always sends a session ID.",
+                  "type": "bool"
                 },
                 {
                   "field": "allow_missing",
