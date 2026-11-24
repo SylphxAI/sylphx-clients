@@ -1,0 +1,22 @@
+{
+  "collection": "consent_records",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "ConsentRecord",
+  "message": "sylphx.auth.v1.ConsentRecord",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/consent_records/{consent_record}",
+  "plural": "consentRecords",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "consentRecord",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/ConsentRecord"
+}

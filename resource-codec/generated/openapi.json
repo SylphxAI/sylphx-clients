@@ -7305,6 +7305,78 @@
         ],
         "type": "object"
       },
+      "sylphx.auth.v1.ConsentRecord": {
+        "description": "Append-only acceptance evidence. Personal attribution is present only\nuntil the user's statutory erasure; the original agreement receipt survives.",
+        "properties": {
+          "accept_time": {
+            "description": "Server-observed acceptance time in UTC.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "doc_slug": {
+            "description": "Stable agreement kind.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "document_sha256": {
+            "description": "Exact SHA-256 of the text accepted.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "ip_address": {
+            "description": "Empty if the trusted request context did not provide an IP address.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "Canonical Resource name.",
+            "type": "string"
+          },
+          "org_id": {
+            "description": "The owning Access organization.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "The owning Access project.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "surface": {
+            "description": "The Auth ceremony that recorded acceptance.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "uid": {
+            "description": "Server-assigned immutable ID.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "user_agent": {
+            "description": "User-Agent observed on the acceptance request, if present.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "user_id": {
+            "description": "The Auth end user who accepted; absent after erasure.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "version": {
+            "description": "Accepted agreement version.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.auth.v1.CreateCustomerOrganizationRequest": {
         "description": "The request of CreateCustomerOrganization.",
         "properties": {
@@ -7415,6 +7487,29 @@
         "required": [
           "parent",
           "invitation"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.CreateLegalDocumentRequest": {
+        "description": "The request of CreateLegalDocument.",
+        "properties": {
+          "legal_document": {
+            "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocument",
+            "description": "Draft revision to create."
+          },
+          "legal_document_id": {
+            "description": "Optional legal document TypeID; Auth assigns one if omitted.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Canonical name of the parent Resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/LegalDocument"
+          }
+        },
+        "required": [
+          "parent",
+          "legal_document"
         ],
         "type": "object"
       },
@@ -8178,6 +8273,20 @@
         ],
         "type": "object"
       },
+      "sylphx.auth.v1.GetLegalDocumentRequest": {
+        "description": "The request of GetLegalDocument.",
+        "properties": {
+          "name": {
+            "description": "Canonical name of the legal revision.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/LegalDocument"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.auth.v1.GetMembershipRequest": {
         "description": "The request of GetMembership.",
         "properties": {
@@ -8454,6 +8563,155 @@
           "expired"
         ],
         "type": "string"
+      },
+      "sylphx.auth.v1.LegalDocument": {
+        "description": "One immutable revision of a project's legal agreement.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "Canonical Resource name.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocumentSpec",
+            "description": "The immutable agreement text and publication policy."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocumentStatus",
+            "description": "Computed hash and publication state.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "Server-assigned immutable ID.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.LegalDocumentSpec": {
+        "description": "Immutable content and activation settings of a legal revision.",
+        "properties": {
+          "canonical_text": {
+            "description": "Exact plain UTF-8 text shown to the user. Auth never normalizes it.",
+            "type": "string"
+          },
+          "change_summary": {
+            "description": "User-facing summary of the changes.",
+            "type": "string"
+          },
+          "doc_slug": {
+            "description": "A stable agreement kind, e.g. `terms`, `privacy`, `dpa`, `eula`.",
+            "type": "string"
+          },
+          "document_url": {
+            "description": "An external HTTPS reference. Auth's canonical text, not this link, is evidence.",
+            "type": "string"
+          },
+          "effective_time": {
+            "description": "When a published revision takes effect.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "major_reconsent_required": {
+            "description": "Whether previously accepted versions become insufficient.",
+            "type": "boolean"
+          },
+          "version": {
+            "description": "An opaque immutable version label, not used for ordering.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_slug",
+          "version",
+          "canonical_text",
+          "document_url",
+          "change_summary",
+          "effective_time"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.LegalDocumentStatus": {
+        "description": "Observed hash and publication state of a legal revision.",
+        "properties": {
+          "conditions": {
+            "description": "Observed conditions.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "document_sha256": {
+            "description": "Lowercase hex SHA-256 of the exact UTF-8 bytes of canonical_text.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "The spec generation observed by Auth.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "publish_time": {
+            "description": "Unset for drafts. No field can change after publication.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.auth.v1.ListConsentRecordsRequest": {
+        "description": "The request of ListConsentRecords.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum number of entries to return.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Token from the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Canonical name of the parent Resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/ConsentRecord"
+          },
+          "user_id": {
+            "description": "Optional end-user ID within this Auth instance.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.ListConsentRecordsResponse": {
+        "description": "The response of ListConsentRecords.",
+        "properties": {
+          "consent_records": {
+            "description": "Page of immutable consent receipts.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.ConsentRecord"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Token for the next page, empty at the end.",
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "sylphx.auth.v1.ListCustomerOrganizationsRequest": {
         "description": "The request of ListCustomerOrganizations.",
@@ -8739,6 +8997,46 @@
           },
           "next_page_token": {
             "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.auth.v1.ListLegalDocumentsRequest": {
+        "description": "The request of ListLegalDocuments.",
+        "properties": {
+          "page_size": {
+            "description": "Maximum number of entries to return.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "Token from the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "Canonical name of the parent Resource.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/LegalDocument"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.ListLegalDocumentsResponse": {
+        "description": "The response of ListLegalDocuments.",
+        "properties": {
+          "legal_documents": {
+            "description": "Page of project legal revisions.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocument"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Token for the next page, empty at the end.",
             "type": "string"
           }
         },
@@ -9394,6 +9692,20 @@
         },
         "required": [
           "locales"
+        ],
+        "type": "object"
+      },
+      "sylphx.auth.v1.PublishLegalDocumentRequest": {
+        "description": "The request of PublishLegalDocument.",
+        "properties": {
+          "name": {
+            "description": "Canonical name of the legal revision.",
+            "type": "string",
+            "x-sylphx-resource-reference": "auth.sylphx.com/LegalDocument"
+          }
+        },
+        "required": [
+          "name"
         ],
         "type": "object"
       },
@@ -79315,6 +79627,111 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/consent_records": {
+      "get": {
+        "description": "Lists immutable consent audit receipts of an Auth environment.",
+        "operationId": "auth_consent_records_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum number of entries to return.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Token from the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional end-user ID within this Auth instance.",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.ListConsentRecordsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists immutable consent audit receipts of an Auth environment.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "auth.consent_records.list",
+        "x-sylphx-permission": "auth:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/credit_grants": {
       "get": {
         "description": "Lists credit grants.",
@@ -138379,6 +138796,355 @@
         ],
         "x-sylphx-method": "workflows.runs.start_batch",
         "x-sylphx-permission": "workflows:run",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/legal_documents": {
+      "get": {
+        "description": "Lists all agreement revisions of the project.",
+        "operationId": "auth_legal_documents_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum number of entries to return.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Token from the previous page.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.ListLegalDocumentsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists all agreement revisions of the project.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH"
+        ],
+        "x-sylphx-method": "auth.legal_documents.list",
+        "x-sylphx-permission": "auth:read",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Creates an immutable draft revision.",
+        "operationId": "auth_legal_documents_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional legal document TypeID; Auth assigns one if omitted.",
+            "in": "query",
+            "name": "legal_document_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an immutable draft revision.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "RESOURCE_ALREADY_EXISTS",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "UNKNOWN_FIELD"
+        ],
+        "x-sylphx-method": "auth.legal_documents.create",
+        "x-sylphx-permission": "auth:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/legal_documents/{legal_document}": {
+      "get": {
+        "description": "Gets a legal revision, including draft or published state.",
+        "operationId": "auth_legal_documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "legal_document",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets a legal revision, including draft or published state.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND"
+        ],
+        "x-sylphx-method": "auth.legal_documents.get",
+        "x-sylphx-permission": "auth:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/legal_documents/{legal_document}:publish": {
+      "post": {
+        "description": "Publishes an immutable revision with its configured effective time.",
+        "operationId": "auth_legal_documents_publish",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "legal_document",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.auth.v1.LegalDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Publishes an immutable revision with its configured effective time.",
+        "tags": [
+          "auth"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_STATE",
+          "INVALID_FIELD",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS"
+        ],
+        "x-sylphx-method": "auth.legal_documents.publish",
+        "x-sylphx-permission": "auth:write",
         "x-sylphx-stage": "preview"
       }
     },

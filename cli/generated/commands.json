@@ -4568,6 +4568,209 @@
     {
       "collections": [
         {
+          "collection": "legal_documents",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/projects/*/legal_documents/*}",
+              "method": "auth.legal_documents.get",
+              "permission": "auth:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/legal_documents/{legal_document}"
+              },
+              "summary": "Gets a legal revision, including draft or published state.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "default_from_context": true,
+                  "field": "parent",
+                  "flag": "--parent",
+                  "pattern": "orgs/{org}/projects/{project}",
+                  "summary": "The parent to create in; defaults to the linked project or the key's scope.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.meta.labels",
+                  "flag": "--meta.labels",
+                  "repeated": true,
+                  "summary": "Caller-writable, indexed labels (AIP-122 label rules).",
+                  "type": "key=value"
+                },
+                {
+                  "field": "legal_document.meta.annotations",
+                  "flag": "--meta.annotations",
+                  "repeated": true,
+                  "summary": "Caller-writable, unindexed annotations.",
+                  "type": "key=value"
+                },
+                {
+                  "field": "legal_document.meta.display_name",
+                  "flag": "--meta.display-name",
+                  "summary": "Caller-writable human-readable name.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.spec.doc_slug",
+                  "flag": "--spec.doc-slug",
+                  "required": true,
+                  "summary": "A stable agreement kind, e.g. `terms`, `privacy`, `dpa`, `eula`.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.spec.version",
+                  "flag": "--spec.version",
+                  "required": true,
+                  "summary": "An opaque immutable version label, not used for ordering.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.spec.canonical_text",
+                  "flag": "--spec.canonical-text",
+                  "required": true,
+                  "summary": "Exact plain UTF-8 text shown to the user. Auth never normalizes it.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.spec.document_url",
+                  "flag": "--spec.document-url",
+                  "required": true,
+                  "summary": "An external HTTPS reference. Auth's canonical text, not this link, is evidence.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.spec.change_summary",
+                  "flag": "--spec.change-summary",
+                  "required": true,
+                  "summary": "User-facing summary of the changes.",
+                  "type": "string"
+                },
+                {
+                  "field": "legal_document.spec.major_reconsent_required",
+                  "flag": "--spec.major-reconsent-required",
+                  "summary": "Whether previously accepted versions become insufficient.",
+                  "type": "bool"
+                },
+                {
+                  "field": "legal_document.spec.effective_time",
+                  "flag": "--spec.effective-time",
+                  "required": true,
+                  "summary": "When a published revision takes effect.",
+                  "type": "timestamp"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*}/legal_documents",
+              "method": "auth.legal_documents.create",
+              "permission": "auth:write",
+              "positional": {
+                "arg": "ID",
+                "field": "legal_document_id",
+                "optional": true,
+                "summary": "The id segment of the new Resource's name; the server assigns one when omitted."
+              },
+              "resource_field": "legal_document",
+              "summary": "Creates an immutable draft revision.",
+              "verb": "create"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum number of entries to return.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Token from the previous page.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*}/legal_documents",
+              "method": "auth.legal_documents.list",
+              "paginates": true,
+              "permission": "auth:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}"
+              },
+              "summary": "Lists all agreement revisions of the project.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/projects/*/legal_documents/*}:publish",
+              "method": "auth.legal_documents.publish",
+              "permission": "auth:write",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/legal_documents/{legal_document}"
+              },
+              "summary": "Publishes an immutable revision with its configured effective time.",
+              "verb": "publish"
+            }
+          ],
+          "noun": "legal-documents",
+          "resource_type": "auth.sylphx.com/LegalDocument"
+        },
+        {
+          "collection": "consent_records",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "Maximum number of entries to return.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Token from the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "user_id",
+                  "flag": "--user-id",
+                  "summary": "Optional end-user ID within this Auth instance.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/consent_records",
+              "method": "auth.consent_records.list",
+              "paginates": true,
+              "permission": "auth:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists immutable consent audit receipts of an Auth environment.",
+              "verb": "list"
+            }
+          ],
+          "noun": "consent-records",
+          "resource_type": "auth.sylphx.com/ConsentRecord"
+        },
+        {
           "collection": "end_users",
           "commands": [
             {

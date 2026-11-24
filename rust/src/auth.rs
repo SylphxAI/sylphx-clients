@@ -281,6 +281,108 @@ pub struct ConfigureSocialProviderRequest {
     pub update_mask: String,
 }
 
+/// Append-only acceptance evidence. Personal attribution is present only
+/// until the user's statutory erasure; the original agreement receipt survives.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ConsentRecord {
+    /// Canonical Resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Server-assigned immutable ID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The Auth end user who accepted; absent after erasure.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "userId"
+    )]
+    pub user_id: String,
+    /// The owning Access organization.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "orgId"
+    )]
+    pub org_id: String,
+    /// The owning Access project.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "projectId"
+    )]
+    pub project_id: String,
+    /// Stable agreement kind.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "docSlug"
+    )]
+    pub doc_slug: String,
+    /// Accepted agreement version.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub version: String,
+    /// Exact SHA-256 of the text accepted.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "documentSha256"
+    )]
+    pub document_sha256: String,
+    /// Server-observed acceptance time in UTC.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "acceptTime"
+    )]
+    pub accept_time: String,
+    /// Empty if the trusted request context did not provide an IP address.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ipAddress"
+    )]
+    pub ip_address: String,
+    /// User-Agent observed on the acceptance request, if present.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "userAgent"
+    )]
+    pub user_agent: String,
+    /// The Auth ceremony that recorded acceptance.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub surface: String,
+}
+
 /// The request of CreateCustomerOrganization.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -424,6 +526,33 @@ pub struct CreateInvitationRequest {
         alias = "validateOnly"
     )]
     pub validate_only: bool,
+}
+
+/// The request of CreateLegalDocument.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateLegalDocumentRequest {
+    /// Canonical name of the parent Resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Draft revision to create.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "legalDocument"
+    )]
+    pub legal_document: Option<LegalDocument>,
+    /// Optional legal document TypeID; Auth assigns one if omitted.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "legalDocumentId"
+    )]
+    pub legal_document_id: String,
 }
 
 /// The request of CreateMembership.
@@ -1238,6 +1367,17 @@ pub struct GetInvitationRequest {
     pub name: String,
 }
 
+/// The request of GetLegalDocument.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetLegalDocumentRequest {
+    /// Canonical name of the legal revision.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetMembership.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1497,6 +1637,189 @@ pub struct Invitation {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
+}
+
+/// One immutable revision of a project's legal agreement.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct LegalDocument {
+    /// Canonical Resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Server-assigned immutable ID.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The immutable agreement text and publication policy.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<LegalDocumentSpec>,
+    /// Computed hash and publication state.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<LegalDocumentStatus>,
+}
+
+/// Immutable content and activation settings of a legal revision.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct LegalDocumentSpec {
+    /// A stable agreement kind, e.g. `terms`, `privacy`, `dpa`, `eula`.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "docSlug"
+    )]
+    pub doc_slug: String,
+    /// An opaque immutable version label, not used for ordering.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub version: String,
+    /// Exact plain UTF-8 text shown to the user. Auth never normalizes it.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "canonicalText"
+    )]
+    pub canonical_text: String,
+    /// An external HTTPS reference. Auth's canonical text, not this link, is evidence.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "documentUrl"
+    )]
+    pub document_url: String,
+    /// User-facing summary of the changes.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "changeSummary"
+    )]
+    pub change_summary: String,
+    /// Whether previously accepted versions become insufficient.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "majorReconsentRequired"
+    )]
+    pub major_reconsent_required: bool,
+    /// When a published revision takes effect.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "effectiveTime"
+    )]
+    pub effective_time: String,
+}
+
+/// Observed hash and publication state of a legal revision.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct LegalDocumentStatus {
+    /// The spec generation observed by Auth.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Observed conditions.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Lowercase hex SHA-256 of the exact UTF-8 bytes of canonical_text.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "documentSha256"
+    )]
+    pub document_sha256: String,
+    /// Unset for drafts. No field can change after publication.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "publishTime"
+    )]
+    pub publish_time: String,
+}
+
+/// The request of ListConsentRecords.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListConsentRecordsRequest {
+    /// Canonical name of the parent Resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum number of entries to return.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Token from the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+    /// Optional end-user ID within this Auth instance.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "userId"
+    )]
+    pub user_id: String,
+}
+
+/// The response of ListConsentRecords.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListConsentRecordsResponse {
+    /// Page of immutable consent receipts.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "consentRecords"
+    )]
+    pub consent_records: Vec<ConsentRecord>,
+    /// Token for the next page, empty at the end.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListCustomerOrganizations.
@@ -1808,6 +2131,51 @@ pub struct ListInvitationsResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub invitations: Vec<Invitation>,
     /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// The request of ListLegalDocuments.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListLegalDocumentsRequest {
+    /// Canonical name of the parent Resource.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Maximum number of entries to return.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// Token from the previous page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ListLegalDocuments.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListLegalDocumentsResponse {
+    /// Page of project legal revisions.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "legalDocuments"
+    )]
+    pub legal_documents: Vec<LegalDocument>,
+    /// Token for the next page, empty at the end.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -2562,6 +2930,17 @@ pub struct PortalLocaleAllowlist {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locales: Vec<String>,
+}
+
+/// The request of PublishLegalDocument.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PublishLegalDocumentRequest {
+    /// Canonical name of the legal revision.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
 }
 
 /// The request of ReactivateEndUser.
@@ -3818,6 +4197,20 @@ pub struct AuthApi<'a, T> {
 }
 
 impl<'a, T: crate::runtime::Transport> AuthApi<'a, T> {
+    /// The `legal_documents` collection.
+    pub fn legal_documents(&self) -> LegalDocumentsCollection<'a, T> {
+        LegalDocumentsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `consent_records` collection.
+    pub fn consent_records(&self) -> ConsentRecordsCollection<'a, T> {
+        ConsentRecordsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `end_users` collection.
     pub fn end_users(&self) -> EndUsersCollection<'a, T> {
         EndUsersCollection {
@@ -3892,6 +4285,196 @@ impl<'a, T: crate::runtime::Transport> AuthApi<'a, T> {
     pub fn oauth_clients(&self) -> OauthClientsCollection<'a, T> {
         OauthClientsCollection {
             client: self.client,
+        }
+    }
+}
+
+/// `legal_documents` of Sylphx Auth: Resource type `auth.sylphx.com/LegalDocument`.
+pub struct LegalDocumentsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> LegalDocumentsCollection<'a, T> {
+    /// Gets a legal revision, including draft or published state.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/legal_documents/*}` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetLegalDocumentRequest,
+    ) -> Result<LegalDocument, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/legal_documents/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Creates an immutable draft revision.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*}/legal_documents` · permission `auth:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNKNOWN_FIELD`.
+    pub async fn create(
+        &self,
+        request: CreateLegalDocumentRequest,
+    ) -> Result<LegalDocument, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/legal_documents",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("legal_document_id", &request.legal_document_id);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.legal_document)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists all agreement revisions of the project.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*}/legal_documents` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListLegalDocumentsRequest,
+    ) -> Result<ListLegalDocumentsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/legal_documents",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListLegalDocumentsRequest,
+    ) -> Result<Vec<LegalDocument>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.legal_documents);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Publishes an immutable revision with its configured effective time.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/legal_documents/*}:publish` · permission `auth:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    pub async fn publish(
+        &self,
+        request: PublishLegalDocumentRequest,
+    ) -> Result<LegalDocument, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:publish",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/legal_documents/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `consent_records` of Sylphx Auth: Resource type `auth.sylphx.com/ConsentRecord`.
+pub struct ConsentRecordsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> ConsentRecordsCollection<'a, T> {
+    /// Lists immutable consent audit receipts of an Auth environment.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/consent_records` · permission `auth:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListConsentRecordsRequest,
+    ) -> Result<ListConsentRecordsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/consent_records",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("user_id", &request.user_id);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListConsentRecordsRequest,
+    ) -> Result<Vec<ConsentRecord>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.consent_records);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
         }
     }
 }

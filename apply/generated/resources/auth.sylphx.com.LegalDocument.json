@@ -1,0 +1,22 @@
+{
+  "collection": "legal_documents",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "LegalDocument",
+  "message": "sylphx.auth.v1.LegalDocument",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}",
+  "pattern": "orgs/{org}/projects/{project}/legal_documents/{legal_document}",
+  "plural": "legalDocuments",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "auth",
+  "shape": "record",
+  "singular": "legalDocument",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "auth.sylphx.com/LegalDocument"
+}

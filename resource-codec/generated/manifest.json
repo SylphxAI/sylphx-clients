@@ -26695,6 +26695,260 @@
       "package": "sylphx.auth.v1"
     },
     {
+      "doc": "Append-only acceptance evidence. Personal attribution is present only\nuntil the user's statutory erasure; the original agreement receipt survives.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical Resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Server-assigned immutable ID.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The Auth end user who accepted; absent after erasure.",
+          "filterable": false,
+          "name": "user_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The owning Access organization.",
+          "filterable": false,
+          "name": "org_id",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The owning Access project.",
+          "filterable": false,
+          "name": "project_id",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable agreement kind.",
+          "filterable": false,
+          "name": "doc_slug",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Accepted agreement version.",
+          "filterable": false,
+          "name": "version",
+          "number": 8,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact SHA-256 of the text accepted.",
+          "filterable": false,
+          "name": "document_sha256",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Server-observed acceptance time in UTC.",
+          "filterable": false,
+          "name": "accept_time",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Empty if the trusted request context did not provide an IP address.",
+          "filterable": false,
+          "name": "ip_address",
+          "number": 11,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "User-Agent observed on the acceptance request, if present.",
+          "filterable": false,
+          "name": "user_agent",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The Auth ceremony that recorded acceptance.",
+          "filterable": false,
+          "name": "surface",
+          "number": 13,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ConsentRecord",
+      "package": "sylphx.auth.v1"
+    },
+    {
       "doc": "The request of CreateCustomerOrganization.",
       "fields": [
         {
@@ -27043,6 +27297,70 @@
         }
       ],
       "name": "sylphx.auth.v1.CreateInvitationRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of CreateLegalDocument.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical name of the parent Resource.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/LegalDocument",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Draft revision to create.",
+          "filterable": false,
+          "name": "legal_document",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.LegalDocument"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional legal document TypeID; Auth assigns one if omitted.",
+          "filterable": false,
+          "name": "legal_document_id",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.CreateLegalDocumentRequest",
       "package": "sylphx.auth.v1"
     },
     {
@@ -29293,6 +29611,32 @@
       "package": "sylphx.auth.v1"
     },
     {
+      "doc": "The request of GetLegalDocument.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical name of the legal revision.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/LegalDocument",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.GetLegalDocumentRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
       "doc": "The request of GetMembership.",
       "fields": [
         {
@@ -29961,6 +30305,455 @@
         }
       ],
       "name": "sylphx.auth.v1.Invitation",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "One immutable revision of a project's legal agreement.",
+      "fields": [
+        {
+          "behaviors": [
+            "IDENTIFIER"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical Resource name.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Server-assigned immutable ID.",
+          "filterable": false,
+          "name": "uid",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resource metadata.",
+          "filterable": false,
+          "name": "meta",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.ResourceMeta"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The immutable agreement text and publication policy.",
+          "filterable": false,
+          "name": "spec",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.LegalDocumentSpec"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Computed hash and publication state.",
+          "filterable": false,
+          "name": "status",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.LegalDocumentStatus"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.LegalDocument",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "Immutable content and activation settings of a legal revision.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "A stable agreement kind, e.g. `terms`, `privacy`, `dpa`, `eula`.",
+          "filterable": false,
+          "name": "doc_slug",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "An opaque immutable version label, not used for ordering.",
+          "filterable": false,
+          "name": "version",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact plain UTF-8 text shown to the user. Auth never normalizes it.",
+          "filterable": false,
+          "name": "canonical_text",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "An external HTTPS reference. Auth's canonical text, not this link, is evidence.",
+          "filterable": false,
+          "name": "document_url",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "User-facing summary of the changes.",
+          "filterable": false,
+          "name": "change_summary",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Whether previously accepted versions become insufficient.",
+          "filterable": false,
+          "name": "major_reconsent_required",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "When a published revision takes effect.",
+          "filterable": false,
+          "name": "effective_time",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.LegalDocumentSpec",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "Observed hash and publication state of a legal revision.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The spec generation observed by Auth.",
+          "filterable": false,
+          "name": "observed_generation",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Observed conditions.",
+          "filterable": false,
+          "name": "conditions",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.common.v1.Condition"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Lowercase hex SHA-256 of the exact UTF-8 bytes of canonical_text.",
+          "filterable": false,
+          "name": "document_sha256",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Unset for drafts. No field can change after publication.",
+          "filterable": false,
+          "name": "publish_time",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.LegalDocumentStatus",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of ListConsentRecords.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical name of the parent Resource.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/ConsentRecord",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum number of entries to return.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Token from the previous page.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional end-user ID within this Auth instance.",
+          "filterable": false,
+          "name": "user_id",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ListConsentRecordsRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The response of ListConsentRecords.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Page of immutable consent receipts.",
+          "filterable": false,
+          "name": "consent_records",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.ConsentRecord"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Token for the next page, empty at the end.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ListConsentRecordsResponse",
       "package": "sylphx.auth.v1"
     },
     {
@@ -30817,6 +31610,111 @@
         }
       ],
       "name": "sylphx.auth.v1.ListInvitationsResponse",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of ListLegalDocuments.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical name of the parent Resource.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/LegalDocument",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum number of entries to return.",
+          "filterable": false,
+          "name": "page_size",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Token from the previous page.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ListLegalDocumentsRequest",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The response of ListLegalDocuments.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Page of project legal revisions.",
+          "filterable": false,
+          "name": "legal_documents",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.LegalDocument"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Token for the next page, empty at the end.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.ListLegalDocumentsResponse",
       "package": "sylphx.auth.v1"
     },
     {
@@ -32853,6 +33751,32 @@
         }
       ],
       "name": "sylphx.auth.v1.PortalLocaleAllowlist",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The request of PublishLegalDocument.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Canonical name of the legal revision.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "auth.sylphx.com/LegalDocument",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.PublishLegalDocumentRequest",
       "package": "sylphx.auth.v1"
     },
     {
@@ -153126,6 +154050,28 @@
       "type": "auth.sylphx.com/AuthConfig"
     },
     {
+      "collection": "consent_records",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "ConsentRecord",
+      "message": "sylphx.auth.v1.ConsentRecord",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+      "pattern": "orgs/{org}/projects/{project}/envs/{env}/consent_records/{consent_record}",
+      "plural": "consentRecords",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "auth",
+      "shape": "record",
+      "singular": "consentRecord",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "auth.sylphx.com/ConsentRecord"
+    },
+    {
       "collection": "customer_organizations",
       "controller": "",
       "deletion_protection": false,
@@ -153234,6 +154180,28 @@
       "storage": "service",
       "terraform": false,
       "type": "auth.sylphx.com/Invitation"
+    },
+    {
+      "collection": "legal_documents",
+      "controller": "",
+      "deletion_protection": false,
+      "fail_mode": "",
+      "in_snapshot": false,
+      "kind": "LegalDocument",
+      "message": "sylphx.auth.v1.LegalDocument",
+      "meters": [],
+      "parent_pattern": "orgs/{org}/projects/{project}",
+      "pattern": "orgs/{org}/projects/{project}/legal_documents/{legal_document}",
+      "plural": "legalDocuments",
+      "priority_chunk": false,
+      "reconciled": false,
+      "service": "auth",
+      "shape": "record",
+      "singular": "legalDocument",
+      "stale_bound": null,
+      "storage": "service",
+      "terraform": false,
+      "type": "auth.sylphx.com/LegalDocument"
     },
     {
       "collection": "memberships",
@@ -161435,6 +162403,239 @@
     },
     {
       "collections": [
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Gets a legal revision, including draft or published state.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/legal_documents/{legal_document}",
+                    "pattern": "orgs/*/projects/*/legal_documents/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/legal_documents/*}"
+              },
+              "id": "auth.legal_documents.get",
+              "kind": "get",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "auth:read",
+              "proto": "sylphx.auth.v1.AuthService.GetLegalDocument",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.GetLegalDocumentRequest",
+              "resource_field": null,
+              "response": "sylphx.auth.v1.LegalDocument",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "get"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Creates an immutable draft revision.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "RESOURCE_ALREADY_EXISTS",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS",
+                "UNKNOWN_FIELD"
+              ],
+              "http": {
+                "body": "legal_document",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}",
+                    "pattern": "orgs/*/projects/*"
+                  }
+                ],
+                "query_params": [
+                  "legal_document_id"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*}/legal_documents"
+              },
+              "id": "auth.legal_documents.create",
+              "kind": "create",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "auth:write",
+              "proto": "sylphx.auth.v1.AuthService.CreateLegalDocument",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.CreateLegalDocumentRequest",
+              "resource_field": "legal_document",
+              "response": "sylphx.auth.v1.LegalDocument",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "create"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists all agreement revisions of the project.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}",
+                    "pattern": "orgs/*/projects/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*}/legal_documents"
+              },
+              "id": "auth.legal_documents.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "hidden",
+              "page": {
+                "item": "sylphx.auth.v1.LegalDocument",
+                "items_field": "legal_documents"
+              },
+              "permission": "auth:read",
+              "proto": "sylphx.auth.v1.AuthService.ListLegalDocuments",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.ListLegalDocumentsRequest",
+              "resource_field": null,
+              "response": "sylphx.auth.v1.ListLegalDocumentsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Publishes an immutable revision with its configured effective time.",
+              "effect": "write",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_STATE",
+                "INVALID_FIELD",
+                "IDEMPOTENCY_KEY_REUSED",
+                "IDEMPOTENCY_IN_PROGRESS"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/legal_documents/{legal_document}",
+                    "pattern": "orgs/*/projects/*/legal_documents/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/legal_documents/*}:publish"
+              },
+              "id": "auth.legal_documents.publish",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "auth:write",
+              "proto": "sylphx.auth.v1.AuthService.PublishLegalDocument",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.PublishLegalDocumentRequest",
+              "resource_field": null,
+              "response": "sylphx.auth.v1.LegalDocument",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "publish"
+            }
+          ],
+          "name": "legal_documents",
+          "resource_type": "auth.sylphx.com/LegalDocument"
+        },
+        {
+          "methods": [
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Lists immutable consent audit receipts of an Auth environment.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [
+                  "page_size",
+                  "page_token",
+                  "user_id"
+                ],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/consent_records"
+              },
+              "id": "auth.consent_records.list",
+              "kind": "list",
+              "lro": null,
+              "mcp": "hidden",
+              "page": {
+                "item": "sylphx.auth.v1.ConsentRecord",
+                "items_field": "consent_records"
+              },
+              "permission": "auth:read",
+              "proto": "sylphx.auth.v1.AuthService.ListConsentRecords",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.auth.v1.ListConsentRecordsRequest",
+              "resource_field": null,
+              "response": "sylphx.auth.v1.ListConsentRecordsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "list"
+            }
+          ],
+          "name": "consent_records",
+          "resource_type": "auth.sylphx.com/ConsentRecord"
+        },
         {
           "methods": [
             {

@@ -1,0 +1,42 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.legal_documents.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "legal_document_id"
+            ]
+          },
+          "id": "auth.legal_documents.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "auth.legal_documents.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "auth.legal_documents.publish",
+          "kind": "custom"
+        }
+      ],
+      "resource_type": "auth.sylphx.com/LegalDocument"
+    }
+  ]
+}

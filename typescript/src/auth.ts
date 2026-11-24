@@ -138,6 +138,39 @@ export interface ConfigureSocialProviderRequest {
 	updateMask?: string
 }
 
+/**
+ * Append-only acceptance evidence. Personal attribution is present only
+ * until the user's statutory erasure; the original agreement receipt survives.
+ */
+export interface ConsentRecord {
+	/** Canonical Resource name. */
+	name?: string
+	/** Server-assigned immutable ID. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** The Auth end user who accepted; absent after erasure. */
+	readonly userId?: string
+	/** The owning Access organization. */
+	readonly orgId?: string
+	/** The owning Access project. */
+	readonly projectId?: string
+	/** Stable agreement kind. */
+	readonly docSlug?: string
+	/** Accepted agreement version. */
+	readonly version?: string
+	/** Exact SHA-256 of the text accepted. */
+	readonly documentSha256?: string
+	/** Server-observed acceptance time in UTC. */
+	readonly acceptTime?: string
+	/** Empty if the trusted request context did not provide an IP address. */
+	readonly ipAddress?: string
+	/** User-Agent observed on the acceptance request, if present. */
+	readonly userAgent?: string
+	/** The Auth ceremony that recorded acceptance. */
+	readonly surface?: string
+}
+
 /** The request of CreateCustomerOrganization. */
 export interface CreateCustomerOrganizationRequest {
 	/** The parent to create in. */
@@ -206,6 +239,16 @@ export interface CreateInvitationRequest {
 	invitation: Invitation
 	/** Validate and return the result without writing anything. */
 	validateOnly?: boolean
+}
+
+/** The request of CreateLegalDocument. */
+export interface CreateLegalDocumentRequest {
+	/** Canonical name of the parent Resource. */
+	parent: string
+	/** Draft revision to create. */
+	legalDocument: LegalDocument
+	/** Optional legal document TypeID; Auth assigns one if omitted. */
+	legalDocumentId?: string
 }
 
 /** The request of CreateMembership. */
@@ -580,6 +623,12 @@ export interface GetInvitationRequest {
 	name: string
 }
 
+/** The request of GetLegalDocument. */
+export interface GetLegalDocumentRequest {
+	/** Canonical name of the legal revision. */
+	name: string
+}
+
 /** The request of GetMembership. */
 export interface GetMembershipRequest {
 	/** The name of the membership to get. */
@@ -705,6 +754,70 @@ export interface Invitation {
 	 * recheck authoritative organization and project membership before acting.
 	 */
 	metadata?: Record<string, unknown>
+}
+
+/** One immutable revision of a project's legal agreement. */
+export interface LegalDocument {
+	/** Canonical Resource name. */
+	name?: string
+	/** Server-assigned immutable ID. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** The immutable agreement text and publication policy. */
+	spec?: LegalDocumentSpec
+	/** Computed hash and publication state. */
+	readonly status?: LegalDocumentStatus
+}
+
+/** Immutable content and activation settings of a legal revision. */
+export interface LegalDocumentSpec {
+	/** A stable agreement kind, e.g. `terms`, `privacy`, `dpa`, `eula`. */
+	docSlug?: string
+	/** An opaque immutable version label, not used for ordering. */
+	version?: string
+	/** Exact plain UTF-8 text shown to the user. Auth never normalizes it. */
+	canonicalText?: string
+	/** An external HTTPS reference. Auth's canonical text, not this link, is evidence. */
+	documentUrl?: string
+	/** User-facing summary of the changes. */
+	changeSummary?: string
+	/** Whether previously accepted versions become insufficient. */
+	majorReconsentRequired?: boolean
+	/** When a published revision takes effect. */
+	effectiveTime?: string
+}
+
+/** Observed hash and publication state of a legal revision. */
+export interface LegalDocumentStatus {
+	/** The spec generation observed by Auth. */
+	readonly observedGeneration?: string
+	/** Observed conditions. */
+	readonly conditions?: common.Condition[]
+	/** Lowercase hex SHA-256 of the exact UTF-8 bytes of canonical_text. */
+	readonly documentSha256?: string
+	/** Unset for drafts. No field can change after publication. */
+	readonly publishTime?: string
+}
+
+/** The request of ListConsentRecords. */
+export interface ListConsentRecordsRequest {
+	/** Canonical name of the parent Resource. */
+	parent: string
+	/** Maximum number of entries to return. */
+	pageSize?: number
+	/** Token from the previous page. */
+	pageToken?: string
+	/** Optional end-user ID within this Auth instance. */
+	userId?: string
+}
+
+/** The response of ListConsentRecords. */
+export interface ListConsentRecordsResponse {
+	/** Page of immutable consent receipts. */
+	consentRecords?: ConsentRecord[]
+	/** Token for the next page, empty at the end. */
+	nextPageToken?: string
 }
 
 /** The request of ListCustomerOrganizations. */
@@ -839,6 +952,24 @@ export interface ListInvitationsResponse {
 	/** The page. */
 	invitations?: Invitation[]
 	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** The request of ListLegalDocuments. */
+export interface ListLegalDocumentsRequest {
+	/** Canonical name of the parent Resource. */
+	parent: string
+	/** Maximum number of entries to return. */
+	pageSize?: number
+	/** Token from the previous page. */
+	pageToken?: string
+}
+
+/** The response of ListLegalDocuments. */
+export interface ListLegalDocumentsResponse {
+	/** Page of project legal revisions. */
+	legalDocuments?: LegalDocument[]
+	/** Token for the next page, empty at the end. */
 	nextPageToken?: string
 }
 
@@ -1165,6 +1296,12 @@ export interface PortalDomainStatus {
 export interface PortalLocaleAllowlist {
 	/** Distinct tags from en, zh-Hant, zh-Hans, ja, ko, in fallback order. */
 	locales?: string[]
+}
+
+/** The request of PublishLegalDocument. */
+export interface PublishLegalDocumentRequest {
+	/** Canonical name of the legal revision. */
+	name: string
 }
 
 /** The request of ReactivateEndUser. */
@@ -1520,6 +1657,17 @@ runtime.registerSchemas({
 		['appleNativeAudiences', 'apple_native_audiences'],
 		['updateMask', 'update_mask'],
 	],
+	'sylphx.auth.v1.ConsentRecord': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['userId', 'user_id'],
+		['orgId', 'org_id'],
+		['projectId', 'project_id'],
+		['docSlug', 'doc_slug'],
+		['documentSha256', 'document_sha256'],
+		['acceptTime', 'accept_time'],
+		['ipAddress', 'ip_address'],
+		['userAgent', 'user_agent'],
+	],
 	'sylphx.auth.v1.CreateCustomerOrganizationRequest': [
 		['customerOrganizationId', 'customer_organization_id'],
 		['customerOrganization', 'customer_organization', 'sylphx.auth.v1.CustomerOrganization'],
@@ -1540,6 +1688,10 @@ runtime.registerSchemas({
 		['invitationId', 'invitation_id'],
 		['invitation', 'invitation', 'sylphx.auth.v1.Invitation'],
 		['validateOnly', 'validate_only'],
+	],
+	'sylphx.auth.v1.CreateLegalDocumentRequest': [
+		['legalDocument', 'legal_document', 'sylphx.auth.v1.LegalDocument'],
+		['legalDocumentId', 'legal_document_id'],
 	],
 	'sylphx.auth.v1.CreateMembershipRequest': [
 		['membershipId', 'membership_id'],
@@ -1644,6 +1796,7 @@ runtime.registerSchemas({
 	'sylphx.auth.v1.GetEndUserRequest': [],
 	'sylphx.auth.v1.GetIdentityRequest': [],
 	'sylphx.auth.v1.GetInvitationRequest': [],
+	'sylphx.auth.v1.GetLegalDocumentRequest': [],
 	'sylphx.auth.v1.GetMembershipRequest': [],
 	'sylphx.auth.v1.GetOauthClientRequest': [],
 	'sylphx.auth.v1.GetOrganizationRoleRequest': [],
@@ -1670,6 +1823,34 @@ runtime.registerSchemas({
 		['acceptTime', 'accept_time'],
 		['endUser', 'end_user'],
 		['metadata', 'metadata', undefined, 'json'],
+	],
+	'sylphx.auth.v1.LegalDocument': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.auth.v1.LegalDocumentSpec'],
+		['status', 'status', 'sylphx.auth.v1.LegalDocumentStatus'],
+	],
+	'sylphx.auth.v1.LegalDocumentSpec': [
+		['docSlug', 'doc_slug'],
+		['canonicalText', 'canonical_text'],
+		['documentUrl', 'document_url'],
+		['changeSummary', 'change_summary'],
+		['majorReconsentRequired', 'major_reconsent_required'],
+		['effectiveTime', 'effective_time'],
+	],
+	'sylphx.auth.v1.LegalDocumentStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['documentSha256', 'document_sha256'],
+		['publishTime', 'publish_time'],
+	],
+	'sylphx.auth.v1.ListConsentRecordsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+		['userId', 'user_id'],
+	],
+	'sylphx.auth.v1.ListConsentRecordsResponse': [
+		['consentRecords', 'consent_records', 'sylphx.auth.v1.ConsentRecord'],
+		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.auth.v1.ListCustomerOrganizationsRequest': [
 		['pageSize', 'page_size'],
@@ -1724,6 +1905,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.auth.v1.ListInvitationsResponse': [
 		['invitations', 'invitations', 'sylphx.auth.v1.Invitation'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.auth.v1.ListLegalDocumentsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.auth.v1.ListLegalDocumentsResponse': [
+		['legalDocuments', 'legal_documents', 'sylphx.auth.v1.LegalDocument'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.auth.v1.ListMembershipsRequest': [
@@ -1843,6 +2032,7 @@ runtime.registerSchemas({
 		['dnsRecords', 'dns_records', 'sylphx.auth.v1.PortalDomainDnsRecord'],
 	],
 	'sylphx.auth.v1.PortalLocaleAllowlist': [],
+	'sylphx.auth.v1.PublishLegalDocumentRequest': [],
 	'sylphx.auth.v1.ReactivateEndUserRequest': [],
 	'sylphx.auth.v1.RevokeEndUserSessionsRequest': [],
 	'sylphx.auth.v1.RevokeEndUserSessionsResponse': [
@@ -1937,6 +2127,10 @@ runtime.registerSchemas({
  * Namespace of Sylphx Auth on `Sylphx`.
  */
 export class AuthApi {
+	/** The `legal_documents` collection. */
+	readonly legalDocuments: LegalDocumentsCollection
+	/** The `consent_records` collection. */
+	readonly consentRecords: ConsentRecordsCollection
 	/** The `end_users` collection. */
 	readonly endUsers: EndUsersCollection
 	/** The `auth_configs` collection. */
@@ -1961,6 +2155,8 @@ export class AuthApi {
 	readonly oauthClients: OauthClientsCollection
 
 	constructor(client: runtime.Client) {
+		this.legalDocuments = new LegalDocumentsCollection(client)
+		this.consentRecords = new ConsentRecordsCollection(client)
 		this.endUsers = new EndUsersCollection(client)
 		this.authConfigs = new AuthConfigsCollection(client)
 		this.sessions = new SessionsCollection(client)
@@ -1972,6 +2168,133 @@ export class AuthApi {
 		this.invitations = new InvitationsCollection(client)
 		this.emailDomains = new EmailDomainsCollection(client)
 		this.oauthClients = new OauthClientsCollection(client)
+	}
+}
+
+/** `legal_documents` of Sylphx Auth: Resource type `auth.sylphx.com/LegalDocument`. */
+export class LegalDocumentsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets a legal revision, including draft or published state.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/legal_documents/*}` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetLegalDocumentRequest): Promise<LegalDocument> {
+		return this.client.call<LegalDocument>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/legal_documents/*', 'name')}`,
+			responseType: 'sylphx.auth.v1.LegalDocument',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Creates an immutable draft revision.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*}/legal_documents` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `UNKNOWN_FIELD`.
+	 */
+	async create(request: CreateLegalDocumentRequest): Promise<LegalDocument> {
+		return this.client.call<LegalDocument>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*', 'parent')}/legal_documents`,
+			query: { legal_document_id: request.legalDocumentId },
+			body: request.legalDocument ?? {},
+			bodyType: 'sylphx.auth.v1.LegalDocument',
+			responseType: 'sylphx.auth.v1.LegalDocument',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Lists all agreement revisions of the project.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*}/legal_documents` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListLegalDocumentsRequest): Promise<ListLegalDocumentsResponse> {
+		return this.client.call<ListLegalDocumentsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*', 'parent')}/legal_documents`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.auth.v1.ListLegalDocumentsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListLegalDocumentsRequest): AsyncGenerator<LegalDocument> {
+		let next: ListLegalDocumentsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.legalDocuments ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Publishes an immutable revision with its configured effective time.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/legal_documents/*}:publish` · permission `auth:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_STATE`, `INVALID_FIELD`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+	 */
+	async publish(request: PublishLegalDocumentRequest): Promise<LegalDocument> {
+		return this.client.call<LegalDocument>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/legal_documents/*', 'name')}:publish`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.auth.v1.PublishLegalDocumentRequest',
+			responseType: 'sylphx.auth.v1.LegalDocument',
+			mutation: true,
+		})
+	}
+}
+
+/** `consent_records` of Sylphx Auth: Resource type `auth.sylphx.com/ConsentRecord`. */
+export class ConsentRecordsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Lists immutable consent audit receipts of an Auth environment.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/consent_records` · permission `auth:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListConsentRecordsRequest): Promise<ListConsentRecordsResponse> {
+		return this.client.call<ListConsentRecordsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/consent_records`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, user_id: request.userId },
+			responseType: 'sylphx.auth.v1.ListConsentRecordsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListConsentRecordsRequest): AsyncGenerator<ConsentRecord> {
+		let next: ListConsentRecordsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.consentRecords ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
 	}
 }
 
