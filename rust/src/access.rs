@@ -2338,11 +2338,11 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
         }
     }
 
-    /// Creates an API key. Access assigns the id.
+    /// Creates an API key. Access assigns the id. Only environment keys can be publishable.
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/api_keys` · permission `access:keys:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
     pub async fn create(
         &self,
         request: CreateApiKeyRequest,
@@ -2351,7 +2351,7 @@ impl<'a, T: crate::runtime::Transport> ApiKeysCollection<'a, T> {
             "/v1/{}/api_keys",
             crate::runtime::path_param(
                 &request.parent,
-                "orgs/*/projects/*/envs/*|orgs/*",
+                "orgs/*/projects/*/envs/*|orgs/*|orgs/*/projects/*",
                 "parent"
             )?
         );

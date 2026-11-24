@@ -1316,16 +1316,16 @@ export class ApiKeysCollection {
 	}
 
 	/**
-	 * Creates an API key. Access assigns the id.
+	 * Creates an API key. Access assigns the id. Only environment keys can be publishable.
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/api_keys` · permission `access:keys:write` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`.
 	 */
 	async create(request: CreateApiKeyRequest): Promise<ApiKey> {
 		return this.client.call<ApiKey>({
 			method: 'POST',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*|orgs/*', 'parent')}/api_keys`,
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*|orgs/*|orgs/*/projects/*', 'parent')}/api_keys`,
 			query: { validate_only: request.validateOnly },
 			body: request.apiKey ?? {},
 			bodyType: 'sylphx.access.v1.ApiKey',

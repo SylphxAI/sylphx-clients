@@ -158832,11 +158832,12 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Creates an API key. Access assigns the id.",
+              "doc": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
                 "UNKNOWN_FIELD",
                 "INVALID_FIELD",
                 "RESOURCE_ALREADY_EXISTS",
@@ -158853,6 +158854,10 @@
                       {
                         "named_pattern": "orgs/{org}",
                         "pattern": "orgs/*"
+                      },
+                      {
+                        "named_pattern": "orgs/{org}/projects/{project}",
+                        "pattern": "orgs/*/projects/*"
                       }
                     ],
                     "field": "parent",

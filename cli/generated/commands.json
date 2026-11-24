@@ -984,7 +984,7 @@
               "permission": "access:keys:write",
               "positional": null,
               "resource_field": "api_key",
-              "summary": "Creates an API key. Access assigns the id.",
+              "summary": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
               "verb": "create"
             },
             {

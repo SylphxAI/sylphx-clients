@@ -55611,7 +55611,7 @@
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates an API key. Access assigns the id.",
+        "description": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
         "operationId": "access_api_keys_create_1",
         "parameters": [
           {
@@ -55671,6 +55671,9 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
           "409": {
             "$ref": "#/components/responses/Problem"
           },
@@ -55681,7 +55684,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Creates an API key. Access assigns the id.",
+        "summary": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
         "tags": [
           "access"
         ],
@@ -55689,6 +55692,7 @@
         "x-sylphx-errors": [
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
           "UNKNOWN_FIELD",
           "INVALID_FIELD",
           "RESOURCE_ALREADY_EXISTS",
@@ -60073,6 +60077,108 @@
         ],
         "x-sylphx-method": "access.api_keys.list",
         "x-sylphx-permission": "access:read",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
+        "operationId": "access_api_keys_create_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate and return the result without writing anything.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.access.v1.ApiKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.access.v1.ApiKey"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "402": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
+        "tags": [
+          "access"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNKNOWN_FIELD",
+          "INVALID_FIELD",
+          "RESOURCE_ALREADY_EXISTS",
+          "IDEMPOTENCY_KEY_REUSED",
+          "IDEMPOTENCY_IN_PROGRESS",
+          "PLAN_LIMIT_REACHED"
+        ],
+        "x-sylphx-method": "access.api_keys.create",
+        "x-sylphx-permission": "access:keys:write",
         "x-sylphx-stage": "preview"
       }
     },
@@ -69669,7 +69775,7 @@
         "x-sylphx-stage": "preview"
       },
       "post": {
-        "description": "Creates an API key. Access assigns the id.",
+        "description": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
         "operationId": "access_api_keys_create",
         "parameters": [
           {
@@ -69745,6 +69851,9 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
           "409": {
             "$ref": "#/components/responses/Problem"
           },
@@ -69755,7 +69864,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Creates an API key. Access assigns the id.",
+        "summary": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
         "tags": [
           "access"
         ],
@@ -69763,6 +69872,7 @@
         "x-sylphx-errors": [
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
           "UNKNOWN_FIELD",
           "INVALID_FIELD",
           "RESOURCE_ALREADY_EXISTS",

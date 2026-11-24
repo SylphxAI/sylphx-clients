@@ -8,7 +8,7 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		id: 'access.api_keys.create',
 		httpMethod: 'POST',
 		template: '/v1/{parent=orgs/*/projects/*/envs/*}/api_keys',
-		pathParams: [['parent', 'orgs/*/projects/*/envs/*|orgs/*']],
+		pathParams: [['parent', 'orgs/*/projects/*/envs/*|orgs/*|orgs/*/projects/*']],
 		queryParams: ['validate_only'],
 		body: 'api_key',
 		longRunning: false,

@@ -9,7 +9,7 @@ pub static METHODS: &[MethodSpec] = &[
         id: "access.api_keys.create",
         http_method: "POST",
         template: "/v1/{parent=orgs/*/projects/*/envs/*}/api_keys",
-        path_params: &[("parent", "orgs/*/projects/*/envs/*|orgs/*")],
+        path_params: &[("parent", "orgs/*/projects/*/envs/*|orgs/*|orgs/*/projects/*")],
         query_params: &["validate_only"],
         body: Some("api_key"),
         long_running: false,

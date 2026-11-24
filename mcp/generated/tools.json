@@ -1278,9 +1278,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Creates an API key. Access assigns the id."
+        "title": "Creates an API key. Access assigns the id. Only environment keys can be publishable."
       },
-      "description": "Creates an API key. Access assigns the id.",
+      "description": "Creates an API key. Access assigns the id. Only environment keys can be publishable.",
       "effect": "write",
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/api_keys",
       "input_schema": {
