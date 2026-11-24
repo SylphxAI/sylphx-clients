@@ -160248,6 +160248,7 @@
               "request": "sylphx.analytics.v1.BatchEventsRequest",
               "resource_field": null,
               "response": "sylphx.analytics.v1.BatchEventsResponse",
+              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "batch"
@@ -160315,7 +160316,6 @@
       "proto_services": [
         "sylphx.analytics.v1.AnalyticsService"
       ],
-      "served": false,
       "stage": "preview"
     },
     {

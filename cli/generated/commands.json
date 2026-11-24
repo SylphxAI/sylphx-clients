@@ -4154,6 +4154,76 @@
     {
       "collections": [
         {
+          "collection": "analytics_events",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "start_time",
+                  "flag": "--start-time",
+                  "required": true,
+                  "summary": "The interval start; required, at most 31 days before `end_time`.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "end_time",
+                  "flag": "--end-time",
+                  "summary": "The interval end; default now.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "event_name",
+                  "flag": "--event-name",
+                  "summary": "Only events with this name.",
+                  "type": "string"
+                },
+                {
+                  "field": "subject_id",
+                  "flag": "--subject-id",
+                  "summary": "Only events of this subject (the user id, else the anon id).",
+                  "type": "string"
+                },
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 100, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page; bound to the tenant, interval and filters.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events",
+              "method": "analytics.analytics_events.list",
+              "paginates": true,
+              "permission": "analytics:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Lists the environment's raw events in a time range, newest first.",
+              "verb": "list"
+            }
+          ],
+          "noun": "analytics-events",
+          "resource_type": "analytics.sylphx.com/AnalyticsEvent"
+        }
+      ],
+      "commands": [],
+      "display_name": "Sylphx Analytics",
+      "noun": "analytics",
+      "stage": "preview"
+    },
+    {
+      "collections": [
+        {
           "collapsed": true,
           "collection": "artifacts",
           "commands": [

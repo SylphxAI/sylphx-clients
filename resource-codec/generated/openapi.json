@@ -68737,7 +68737,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/analytics_events": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists the environment's raw events in a time range, newest first.",
+        "description": "Lists the environment's raw events in a time range, newest first.",
         "operationId": "analytics_analytics_events_list",
         "parameters": [
           {
@@ -68862,7 +68862,6 @@
         ],
         "x-sylphx-method": "analytics.analytics_events.list",
         "x-sylphx-permission": "analytics:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

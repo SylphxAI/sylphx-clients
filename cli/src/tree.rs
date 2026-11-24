@@ -758,6 +758,7 @@ mod tests {
         assert!(all_methods.contains(&"agents.agent_sessions.decide_approval"));
         assert!(!all_methods.contains(&"notify.support_cases.create"));
         for method in [
+            "analytics.analytics_events.list",
             "billing.plans.list",
             "billing.plans.get",
             "billing.meters.list",
@@ -768,16 +769,20 @@ mod tests {
                 "expected served CLI method: {method}"
             );
         }
-        for method in ["billing.billing_accounts.get", "billing.invoices.list"] {
+        for method in [
+            "analytics.analytics_events.batch",
+            "billing.billing_accounts.get",
+            "billing.invoices.list",
+        ] {
             assert!(
                 !all_methods.contains(&method),
                 "expected unserved CLI method omitted: {method}"
             );
         }
-        assert!(!tree.services.iter().any(|s| matches!(
-            s.noun.as_str(),
-            "analytics" | "entitlement" | "network" | "realtime"
-        )));
+        assert!(!tree
+            .services
+            .iter()
+            .any(|s| matches!(s.noun.as_str(), "entitlement" | "network" | "realtime")));
     }
 
     #[test]
