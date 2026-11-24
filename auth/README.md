@@ -24,6 +24,24 @@ Request URL reflects the trusted public origin, or supply `isPublicRequest`
 with your edge's trusted-origin verification. Never trust caller-supplied
 forwarded headers alone.
 
+### Sylphx Hosting
+
+Set `trustSylphxEdge: true` on the handler when **all ingress paths to it are
+restricted to managed literal-host routes** that overwrite `Sylphx-Edge`,
+`X-Forwarded-Host` and `X-Forwarded-Proto` for the matched public hostname.
+This admits the rewritten internal request URL only with `Sylphx-Edge: public`,
+a single exact forwarded host equal to the configured `origin`’s host (including
+any non-default port), and `X-Forwarded-Proto: https`. Partial or contradictory
+headers are rejected even when the request URL matches. With no edge headers,
+the request URL must match the configured HTTPS origin as before.
+
+Do not enable this on wildcard, direct-to-service, or other routes where a
+caller can supply either forwarded header. The edge marker is not a credential,
+and the HTTPS stamp is the configured public scheme, not a TLS observation.
+Remove a hand-rolled `isPublicRequest` when adopting this option; that callback
+otherwise retains precedence. Browser Origin and fetch-metadata checks, OAuth
+state checks, and redirect destinations are unchanged.
+
 | Route | Method | Input / result |
 | --- | --- | --- |
 | `/auth/config` | GET | Public capabilities only; no credentials or upstream URLs |

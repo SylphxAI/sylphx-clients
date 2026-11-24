@@ -115,7 +115,9 @@ export type SylphxAuthOptions = {
 	allowReturnTo?: (path: string) => boolean
 	flowCookie?: string
 	sessionCookie?: string
-	/** For an existing edge: check a trusted host binding on the internal request. */
+	/** Opt in only on managed literal-host routes that overwrite all three Sylphx Edge headers. */
+	trustSylphxEdge?: boolean
+	/** Override the public request check, including the built-in Sylphx Edge policy. */
 	isPublicRequest?: (request: Request) => boolean
 	/** Only for hosts with an existing authoritative session and revocation mechanism. */
 	session?: SessionAdapter
@@ -177,6 +179,7 @@ export function createSylphxAuthHandler(
 	options: SylphxAuthOptions,
 ): (request: Request) => Promise<Response> {
 	const origin = requireOrigin(options.origin)
+	const publicHost = new URL(origin).host
 	const api = requireOrigin(options.authApiOrigin)
 	const tenantAuthOrigin =
 		options.tenantAuthOrigin === undefined ? undefined : requireOrigin(options.tenantAuthOrigin)
@@ -473,9 +476,22 @@ export function createSylphxAuthHandler(
 		}
 	}
 
+	function isPublicRequest(request: Request, url: URL) {
+		if (options.trustSylphxEdge === true) {
+			const edge = request.headers.get('sylphx-edge')
+			const host = request.headers.get('x-forwarded-host')
+			const proto = request.headers.get('x-forwarded-proto')
+			if (edge !== null || host !== null || proto !== null) {
+				// Exact comparisons reject combined duplicates and never choose a list entry.
+				return edge === 'public' && host === publicHost && proto === 'https'
+			}
+		}
+		return url.origin === origin
+	}
+
 	return async (request) => {
 		const url = new URL(request.url)
-		if (!(options.isPublicRequest?.(request) ?? url.origin === origin))
+		if (!(options.isPublicRequest?.(request) ?? isPublicRequest(request, url)))
 			return problem('not_allowed', 403)
 		const { pathname } = url
 		const identity = transport(request, fetchUpstream, api)

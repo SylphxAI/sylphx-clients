@@ -4,6 +4,9 @@ A Solid package with compiled browser and SSR entry points. Install both SDKs
 and Solid in your application, then mount the same-origin `@sylphx/auth` routes
 on your application server. It owns the surrounding page, return-path allowlist,
 and legal links; this package does not import a router or an application shell.
+On Sylphx Hosting, configure `trustSylphxEdge: true` on the **server handler**
+only for managed literal-host ingress that overwrites the Edge headers; see the
+[`@sylphx/auth` Hosting setup](../auth/README.md#sylphx-hosting).
 
 ```tsx
 import { SylphxSignIn } from '@sylphx/auth-solid'

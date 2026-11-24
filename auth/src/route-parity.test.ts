@@ -7,6 +7,12 @@ import {
 } from './server.js'
 
 const origin = 'https://app.example.test'
+const revision = 'http://revision.namespace.svc.cluster.local'
+const edgeHeaders = {
+	'sylphx-edge': 'public',
+	'x-forwarded-host': 'app.example.test',
+	'x-forwarded-proto': 'https',
+}
 const api = 'https://identity.example.test'
 const instance = { id: 'test-instance', slug: 'test-tenant', environment: 'test' }
 const config = {
@@ -296,6 +302,68 @@ test('recovery is opt-in, shares the password policy, and returns a generic acce
 	)
 })
 
+test('edge trust rejects missing, mismatched and combined headers before dispatch', async () => {
+	const fetch = mock<AuthFetch>(async () => Response.json(config))
+	const auth = create(fetch, { trustSylphxEdge: true })
+	const missing = (name: string) => {
+		const headers = new Headers(edgeHeaders)
+		headers.delete(name)
+		return headers
+	}
+	const duplicate = (name: keyof typeof edgeHeaders) => {
+		const headers = new Headers(edgeHeaders)
+		headers.append(name, edgeHeaders[name])
+		return headers
+	}
+	for (const headers of [
+		missing('sylphx-edge'),
+		missing('x-forwarded-host'),
+		missing('x-forwarded-proto'),
+		{ ...edgeHeaders, 'sylphx-edge': 'Public' },
+		{ ...edgeHeaders, 'sylphx-edge': 'internal' },
+		{ ...edgeHeaders, 'x-forwarded-host': 'other.example.test' },
+		{ ...edgeHeaders, 'x-forwarded-host': 'app.example.test:443' },
+		{ ...edgeHeaders, 'x-forwarded-host': 'https://app.example.test' },
+		{ ...edgeHeaders, 'x-forwarded-host': 'app.example.test,other.example.test' },
+		{ ...edgeHeaders, 'x-forwarded-proto': 'http' },
+		duplicate('sylphx-edge'),
+		duplicate('x-forwarded-host'),
+		duplicate('x-forwarded-proto'),
+	]) {
+		for (const base of [origin, revision]) {
+			const response = await auth(new Request(`${base}/auth/config`, { headers }))
+			expect(response.status).toBe(403)
+			expect(await response.json()).toEqual({ error: 'not_allowed' })
+		}
+	}
+	const rewrite = new Request(`${revision}/auth/config`, { headers: edgeHeaders })
+	expect((await create(fetch)(rewrite)).status).toBe(403)
+	expect((await auth(new Request('http://app.example.test/auth/config'))).status).toBe(403)
+	expect(
+		(await create(fetch, { trustSylphxEdge: true, isPublicRequest: () => false })(rewrite)).status,
+	).toBe(403)
+	expect(fetch).not.toHaveBeenCalled()
+	expect((await auth(configRequest())).status).toBe(200)
+	expect((await auth(rewrite)).status).toBe(200)
+	expect((await create(fetch, { isPublicRequest: () => true })(rewrite)).status).toBe(200)
+})
+
+test('an admitted edge POST still requires the exact browser Origin and same-origin fetch context', async () => {
+	const fetch = mock<AuthFetch>(async () => Response.json(config))
+	const auth = create(fetch, { trustSylphxEdge: true })
+	const logout = (sender: string, site: string) =>
+		new Request(`${revision}/auth/logout`, {
+			method: 'POST',
+			headers: { ...edgeHeaders, origin: sender, 'sec-fetch-site': site },
+		})
+	for (const sender of ['', 'http://app.example.test', 'https://other.example.test']) {
+		expect((await auth(logout(sender, 'same-origin'))).status).toBe(403)
+	}
+	expect((await auth(logout(origin, 'cross-site'))).status).toBe(403)
+	expect((await auth(logout(origin, 'same-origin'))).status).toBe(204)
+	expect(fetch).not.toHaveBeenCalled()
+})
+
 test('direct OAuth checks navigation context before start and associates callback metadata with the flow', async () => {
 	let callback: URL | undefined
 	const authorize = 'https://accounts.google.com/o/oauth2/v2/auth?scope=openid'
@@ -312,10 +380,11 @@ test('direct OAuth checks navigation context before start and associates callbac
 		expect(context).toEqual({ method: 'oauth', provider: 'google', returnTo: next })
 		return true
 	})
-	const auth = create(fetch, { directOAuth: true, signUpSignal })
+	const auth = create(fetch, { directOAuth: true, signUpSignal, trustSylphxEdge: true })
 	const start = (site: string) =>
-		new Request(`${origin}/auth/google?returnTo=${encodeURIComponent(next)}`, {
+		new Request(`${revision}/auth/google?returnTo=${encodeURIComponent(next)}`, {
 			headers: {
+				...edgeHeaders,
 				'sec-fetch-site': site,
 				'sec-fetch-mode': 'navigate',
 				'sec-fetch-dest': 'document',
@@ -324,20 +393,26 @@ test('direct OAuth checks navigation context before start and associates callbac
 	expect((await auth(start('cross-site'))).status).toBe(403)
 	expect((await auth(new Request(`${origin}/auth/google`))).status).toBe(403)
 	const clickwrap = { signingKey: 'mock-signing-key-only-for-test-fixtures', validate: () => true }
-	expect((await create(fetch, { directOAuth: true, clickwrap })(start('same-origin'))).status).toBe(
-		403,
-	)
+	expect(
+		(
+			await create(fetch, { directOAuth: true, clickwrap, trustSylphxEdge: true })(
+				start('same-origin'),
+			)
+		).status,
+	).toBe(403)
 	expect(fetch).not.toHaveBeenCalled()
 	const res = await auth(start('same-origin'))
 	expect(res.status).toBe(303)
 	expect(res.headers.get('location')).toBe(authorize)
 	const cookie = res.headers.getSetCookie()[0]!.split(';')[0]!
+	expect(callback!.origin).toBe(origin)
 	callback!.searchParams.set('auth_ticket', 'fixture-ticket')
-	expect((await auth(new Request(callback!))).headers.get('location')).toStartWith(
-		'/login?error=signin',
-	)
+	const edgeCallback = new URL(callback!.pathname + callback!.search, revision)
+	expect(
+		(await auth(new Request(edgeCallback, { headers: edgeHeaders }))).headers.get('location'),
+	).toStartWith('/login?error=signin')
 	expect(fetch).toHaveBeenCalledTimes(2)
-	const complete = await auth(new Request(callback!, { headers: { cookie } }))
+	const complete = await auth(new Request(edgeCallback, { headers: { ...edgeHeaders, cookie } }))
 	expect(complete.headers.get('location')).toBe(next)
 	expect(complete.headers.get('x-sylphx-auth-event')).toBe('sign_up')
 	expect(complete.headers.getSetCookie()[1]).toContain('HttpOnly')
