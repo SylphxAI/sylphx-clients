@@ -5495,6 +5495,24 @@
                   "type": "string"
                 },
                 {
+                  "field": "auth_config.spec.portal.privacy_url",
+                  "flag": "--spec.portal.privacy-url",
+                  "summary": "HTTPS link to the product's privacy policy. An empty string clears it; omitting it under the spec.portal.privacy_url mask also clears it.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.terms_url",
+                  "flag": "--spec.portal.terms-url",
+                  "summary": "HTTPS link to the product's terms of service. An empty string clears it; omitting it under the spec.portal.terms_url mask also clears it.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.support_email",
+                  "flag": "--spec.portal.support-email",
+                  "summary": "Plain support email address. An empty string clears it; omitting it under the spec.portal.support_email mask also clears it.",
+                  "type": "string"
+                },
+                {
                   "field": "auth_config.spec.mail_sending_domain",
                   "flag": "--spec.mail-sending-domain",
                   "summary": "The Notify Sending Domain Auth mail is sent from; unset uses the Sylphx default.",

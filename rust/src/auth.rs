@@ -2842,6 +2842,22 @@ pub struct PortalConfig {
     /// The hosted sign-in and account portal presentation for this environment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub appearance: Option<PortalAppearance>,
+    /// HTTPS link to the product's privacy policy. An empty string clears it;
+    /// omitting it under the spec.portal.privacy_url mask also clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "privacyUrl")]
+    pub privacy_url: Option<String>,
+    /// HTTPS link to the product's terms of service. An empty string clears it;
+    /// omitting it under the spec.portal.terms_url mask also clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "termsUrl")]
+    pub terms_url: Option<String>,
+    /// Plain support email address. An empty string clears it; omitting it
+    /// under the spec.portal.support_email mask also clears it.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "supportEmail"
+    )]
+    pub support_email: Option<String>,
 }
 
 /// One DNS record a customer can publish for a hosted portal.

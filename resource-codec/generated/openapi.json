@@ -9607,13 +9607,25 @@
             "description": "The primary color, `#rrggbb`.",
             "type": "string"
           },
+          "privacy_url": {
+            "description": "HTTPS link to the product's privacy policy. An empty string clears it;\nomitting it under the spec.portal.privacy_url mask also clears it.",
+            "type": "string"
+          },
           "product_title": {
             "description": "The product name shown to end users.",
+            "type": "string"
+          },
+          "support_email": {
+            "description": "Plain support email address. An empty string clears it; omitting it\nunder the spec.portal.support_email mask also clears it.",
             "type": "string"
           },
           "sylphx_branding": {
             "description": "Show Sylphx branding.",
             "type": "boolean"
+          },
+          "terms_url": {
+            "description": "HTTPS link to the product's terms of service. An empty string clears it;\nomitting it under the spec.portal.terms_url mask also clears it.",
+            "type": "string"
           }
         },
         "type": "object"

@@ -1264,6 +1264,21 @@ export interface PortalConfig {
 	sylphxBranding?: boolean
 	/** The hosted sign-in and account portal presentation for this environment. */
 	appearance?: PortalAppearance
+	/**
+	 * HTTPS link to the product's privacy policy. An empty string clears it;
+	 * omitting it under the spec.portal.privacy_url mask also clears it.
+	 */
+	privacyUrl?: string
+	/**
+	 * HTTPS link to the product's terms of service. An empty string clears it;
+	 * omitting it under the spec.portal.terms_url mask also clears it.
+	 */
+	termsUrl?: string
+	/**
+	 * Plain support email address. An empty string clears it; omitting it
+	 * under the spec.portal.support_email mask also clears it.
+	 */
+	supportEmail?: string
 }
 
 /** One DNS record a customer can publish for a hosted portal. */
@@ -2020,6 +2035,9 @@ runtime.registerSchemas({
 		['primaryColor', 'primary_color'],
 		['sylphxBranding', 'sylphx_branding'],
 		['appearance', 'appearance', 'sylphx.auth.v1.PortalAppearance'],
+		['privacyUrl', 'privacy_url'],
+		['termsUrl', 'terms_url'],
+		['supportEmail', 'support_email'],
 	],
 	'sylphx.auth.v1.PortalDomainDnsRecord': [
 		['dnsName', 'dns_name'],
