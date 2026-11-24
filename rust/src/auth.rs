@@ -2304,6 +2304,77 @@ pub struct PasskeyPolicy {
     pub aaguid_allowlist: Vec<String>,
 }
 
+/// Tenant-configured hosted portal appearance. Unset fields retain portal defaults.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PortalAppearance {
+    /// Page canvas in the light palette: #RGB or #RRGGBB.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "backgroundColor"
+    )]
+    pub background_color: Option<String>,
+    /// Card surface in the light palette: #RGB or #RRGGBB.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "surfaceColor"
+    )]
+    pub surface_color: Option<String>,
+    /// Text in the light palette: #RGB or #RRGGBB; meets 4.5:1 on both surfaces.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "foregroundColor"
+    )]
+    pub foreground_color: Option<String>,
+    /// Primary action fill: #RGB or #RRGGBB.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "accentColor"
+    )]
+    pub accent_color: Option<String>,
+    /// Primary action text: #RGB or #RRGGBB; meets 4.5:1 on the accent fill.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "accentForegroundColor"
+    )]
+    pub accent_foreground_color: Option<String>,
+    /// One local font family name, no font downloads or CSS syntax.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "displayFont"
+    )]
+    pub display_font: Option<String>,
+    /// One local font family name, no font downloads or CSS syntax.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bodyFont")]
+    pub body_font: Option<String>,
+    /// One of light, dark, or auto. Unset behaves as auto.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "colorScheme"
+    )]
+    pub color_scheme: Option<String>,
+    /// Optional locale subset; the first tag is its default.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "allowedLocales"
+    )]
+    pub allowed_locales: Option<PortalLocaleAllowlist>,
+    /// An HTTPS favicon URL.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "faviconUrl")]
+    pub favicon_url: Option<String>,
+    /// An HTTPS destination for the portal's return link.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "homeUrl")]
+    pub home_url: Option<String>,
+}
+
 /// Account Portal origin and branding.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -2344,6 +2415,20 @@ pub struct PortalConfig {
         alias = "sylphxBranding"
     )]
     pub sylphx_branding: bool,
+    /// The hosted sign-in and account portal presentation for this environment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance: Option<PortalAppearance>,
+}
+
+/// A present allowlist must contain at least one supported portal locale.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PortalLocaleAllowlist {
+    /// Distinct tags from en, zh-Hant, zh-Hans, ja, ko, in fallback order.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub locales: Vec<String>,
 }
 
 /// The request of ReactivateEndUser.

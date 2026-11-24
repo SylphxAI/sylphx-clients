@@ -1063,6 +1063,32 @@ export interface PasskeyPolicy {
 	aaguidAllowlist?: string[]
 }
 
+/** Tenant-configured hosted portal appearance. Unset fields retain portal defaults. */
+export interface PortalAppearance {
+	/** Page canvas in the light palette: #RGB or #RRGGBB. */
+	backgroundColor?: string
+	/** Card surface in the light palette: #RGB or #RRGGBB. */
+	surfaceColor?: string
+	/** Text in the light palette: #RGB or #RRGGBB; meets 4.5:1 on both surfaces. */
+	foregroundColor?: string
+	/** Primary action fill: #RGB or #RRGGBB. */
+	accentColor?: string
+	/** Primary action text: #RGB or #RRGGBB; meets 4.5:1 on the accent fill. */
+	accentForegroundColor?: string
+	/** One local font family name, no font downloads or CSS syntax. */
+	displayFont?: string
+	/** One local font family name, no font downloads or CSS syntax. */
+	bodyFont?: string
+	/** One of light, dark, or auto. Unset behaves as auto. */
+	colorScheme?: string
+	/** Optional locale subset; the first tag is its default. */
+	allowedLocales?: PortalLocaleAllowlist
+	/** An HTTPS favicon URL. */
+	faviconUrl?: string
+	/** An HTTPS destination for the portal's return link. */
+	homeUrl?: string
+}
+
 /** Account Portal origin and branding. */
 export interface PortalConfig {
 	/**
@@ -1078,6 +1104,14 @@ export interface PortalConfig {
 	primaryColor?: string
 	/** Show Sylphx branding. */
 	sylphxBranding?: boolean
+	/** The hosted sign-in and account portal presentation for this environment. */
+	appearance?: PortalAppearance
+}
+
+/** A present allowlist must contain at least one supported portal locale. */
+export interface PortalLocaleAllowlist {
+	/** Distinct tags from en, zh-Hant, zh-Hans, ja, ko, in fallback order. */
+	locales?: string[]
 }
 
 /** The request of ReactivateEndUser. */
@@ -1713,13 +1747,28 @@ runtime.registerSchemas({
 		['deviceBound', 'device_bound'],
 		['aaguidAllowlist', 'aaguid_allowlist'],
 	],
+	'sylphx.auth.v1.PortalAppearance': [
+		['backgroundColor', 'background_color'],
+		['surfaceColor', 'surface_color'],
+		['foregroundColor', 'foreground_color'],
+		['accentColor', 'accent_color'],
+		['accentForegroundColor', 'accent_foreground_color'],
+		['displayFont', 'display_font'],
+		['bodyFont', 'body_font'],
+		['colorScheme', 'color_scheme'],
+		['allowedLocales', 'allowed_locales', 'sylphx.auth.v1.PortalLocaleAllowlist'],
+		['faviconUrl', 'favicon_url'],
+		['homeUrl', 'home_url'],
+	],
 	'sylphx.auth.v1.PortalConfig': [
 		['customDomain', 'custom_domain'],
 		['productTitle', 'product_title'],
 		['logoUri', 'logo_uri'],
 		['primaryColor', 'primary_color'],
 		['sylphxBranding', 'sylphx_branding'],
+		['appearance', 'appearance', 'sylphx.auth.v1.PortalAppearance'],
 	],
+	'sylphx.auth.v1.PortalLocaleAllowlist': [],
 	'sylphx.auth.v1.ReactivateEndUserRequest': [],
 	'sylphx.auth.v1.RevokeEndUserSessionsRequest': [],
 	'sylphx.auth.v1.RevokeEndUserSessionsResponse': [

@@ -32174,6 +32174,222 @@
       "package": "sylphx.auth.v1"
     },
     {
+      "doc": "Tenant-configured hosted portal appearance. Unset fields retain portal defaults.",
+      "fields": [
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Page canvas in the light palette: #RGB or #RRGGBB.",
+          "filterable": false,
+          "name": "background_color",
+          "number": 1,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Card surface in the light palette: #RGB or #RRGGBB.",
+          "filterable": false,
+          "name": "surface_color",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Text in the light palette: #RGB or #RRGGBB; meets 4.5:1 on both surfaces.",
+          "filterable": false,
+          "name": "foreground_color",
+          "number": 3,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Primary action fill: #RGB or #RRGGBB.",
+          "filterable": false,
+          "name": "accent_color",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Primary action text: #RGB or #RRGGBB; meets 4.5:1 on the accent fill.",
+          "filterable": false,
+          "name": "accent_foreground_color",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "One local font family name, no font downloads or CSS syntax.",
+          "filterable": false,
+          "name": "display_font",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "One local font family name, no font downloads or CSS syntax.",
+          "filterable": false,
+          "name": "body_font",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "One of light, dark, or auto. Unset behaves as auto.",
+          "filterable": false,
+          "name": "color_scheme",
+          "number": 8,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Optional locale subset; the first tag is its default.",
+          "filterable": false,
+          "name": "allowed_locales",
+          "number": 9,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.PortalLocaleAllowlist"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "An HTTPS favicon URL.",
+          "filterable": false,
+          "name": "favicon_url",
+          "number": 10,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "An HTTPS destination for the portal's return link.",
+          "filterable": false,
+          "name": "home_url",
+          "number": 11,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.PortalAppearance",
+      "package": "sylphx.auth.v1"
+    },
+    {
       "doc": "Account Portal origin and branding.",
       "fields": [
         {
@@ -32270,9 +32486,54 @@
             "kind": "scalar",
             "scalar": "bool"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The hosted sign-in and account portal presentation for this environment.",
+          "filterable": false,
+          "name": "appearance",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.PortalAppearance"
+          }
         }
       ],
       "name": "sylphx.auth.v1.PortalConfig",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "A present allowlist must contain at least one supported portal locale.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Distinct tags from en, zh-Hant, zh-Hans, ja, ko, in fallback order.",
+          "filterable": false,
+          "name": "locales",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.PortalLocaleAllowlist",
       "package": "sylphx.auth.v1"
     },
     {

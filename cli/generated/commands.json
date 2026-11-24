@@ -5155,6 +5155,73 @@
                   "type": "bool"
                 },
                 {
+                  "field": "auth_config.spec.portal.appearance.background_color",
+                  "flag": "--spec.portal.appearance.background-color",
+                  "summary": "Page canvas in the light palette: #RGB or #RRGGBB.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.surface_color",
+                  "flag": "--spec.portal.appearance.surface-color",
+                  "summary": "Card surface in the light palette: #RGB or #RRGGBB.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.foreground_color",
+                  "flag": "--spec.portal.appearance.foreground-color",
+                  "summary": "Text in the light palette: #RGB or #RRGGBB; meets 4.5:1 on both surfaces.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.accent_color",
+                  "flag": "--spec.portal.appearance.accent-color",
+                  "summary": "Primary action fill: #RGB or #RRGGBB.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.accent_foreground_color",
+                  "flag": "--spec.portal.appearance.accent-foreground-color",
+                  "summary": "Primary action text: #RGB or #RRGGBB; meets 4.5:1 on the accent fill.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.display_font",
+                  "flag": "--spec.portal.appearance.display-font",
+                  "summary": "One local font family name, no font downloads or CSS syntax.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.body_font",
+                  "flag": "--spec.portal.appearance.body-font",
+                  "summary": "One local font family name, no font downloads or CSS syntax.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.color_scheme",
+                  "flag": "--spec.portal.appearance.color-scheme",
+                  "summary": "One of light, dark, or auto. Unset behaves as auto.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.allowed_locales.locales",
+                  "flag": "--spec.portal.appearance.allowed-locales.locales",
+                  "repeated": true,
+                  "summary": "Distinct tags from en, zh-Hant, zh-Hans, ja, ko, in fallback order.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.favicon_url",
+                  "flag": "--spec.portal.appearance.favicon-url",
+                  "summary": "An HTTPS favicon URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "auth_config.spec.portal.appearance.home_url",
+                  "flag": "--spec.portal.appearance.home-url",
+                  "summary": "An HTTPS destination for the portal's return link.",
+                  "type": "string"
+                },
+                {
                   "field": "auth_config.spec.mail_sending_domain",
                   "flag": "--spec.mail-sending-domain",
                   "summary": "The Notify Sending Domain Auth mail is sent from; unset uses the Sylphx default.",
