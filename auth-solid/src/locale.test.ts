@@ -14,6 +14,9 @@ test('chooses the first supported canonical locale and infers Chinese script and
 		[['zh-Hans-TW'], 'zh-Hans'],
 		[['zh-Hant-CN'], 'zh-Hant-TW'],
 		[['EN-gb', 'ja'], 'en'],
+		[['ko'], 'ko'],
+		[['fr-FR', 'KO-kr', 'ja'], 'ko'],
+		[['ja-JP', 'ko-KR'], 'ja'],
 	] as const
 	for (const [preferences, locale] of cases) expect(resolveAuthLocale(preferences)).toBe(locale)
 })

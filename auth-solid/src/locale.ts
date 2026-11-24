@@ -12,7 +12,8 @@ export function resolveAuthLocale(preferences: readonly string[]): AuthLocale {
 			continue
 		}
 		if (Object.hasOwn(catalogs, locale.baseName)) return locale.baseName as AuthLocale
-		if (locale.language === 'en' || locale.language === 'ja') return locale.language
+		if (locale.language === 'en' || locale.language === 'ja' || locale.language === 'ko')
+			return locale.language
 		if (locale.language === 'zh') {
 			const script = locale.maximize().script
 			if (script === 'Hans') return 'zh-Hans'
