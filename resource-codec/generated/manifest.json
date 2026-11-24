@@ -9810,6 +9810,108 @@
       "package": "sylphx.agents.v1"
     },
     {
+      "doc": "Immutable identity of one Room-bound RunAgent attempt. The Session owns execution.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable run identity, also the id of the output message.",
+          "filterable": false,
+          "name": "id",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Workspace supplied by the Room authority.",
+          "filterable": false,
+          "name": "workspace_id",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Room supplied by the Room authority.",
+          "filterable": false,
+          "name": "room_id",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The pinned Agent name.",
+          "filterable": false,
+          "name": "agent",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "agents.sylphx.com/Agent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Session executing this attempt.",
+          "filterable": false,
+          "name": "session",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "agents.sylphx.com/AgentSession",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.agents.v1.AgentRun",
+      "package": "sylphx.agents.v1"
+    },
+    {
       "doc": "An AgentSession is a durable conversation with one pinned AgentVersion.\nIts conversation is its SessionEvent log. Each turn runs as one Sylphx\nWorkflows Run, and each model call and tool call is a step keyed by\n`(session, turn, step)`, assigned by the runtime and never taken from the\nmodel's tool-call id. An idle session holds no Run and no compute.",
       "fields": [
         {
@@ -18400,6 +18502,44 @@
             "kind": "message",
             "name": "sylphx.agents.v1.OrganizationLayer"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Immutable Room of this attempt, workspaces/{workspace}/rooms/{room}.\nA Room-bound call requires an environment grant restricted to both\nthis exact Room and the addressed Agent. Omit for non-Room tasks.",
+          "filterable": false,
+          "name": "room",
+          "number": 23,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Opaque, already-authorized references to artifacts for the Room output.\nThe workspace engine owns artifact authorization and publication.",
+          "filterable": false,
+          "name": "artifact_refs",
+          "number": 24,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.agents.v1.RunAgentRequest",
@@ -18482,6 +18622,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "The immutable AgentRun binding, present only on a Room-bound attempt.",
+          "filterable": false,
+          "name": "agent_run",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.agents.v1.AgentRun"
           }
         }
       ],

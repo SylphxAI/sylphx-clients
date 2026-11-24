@@ -2093,6 +2093,19 @@
                   "flag": "--organization-layer",
                   "summary": "The organization layer the caller binds at assignment, read from its own versioned store. The session pins it; see AgentSession.organization_layer.",
                   "type": "json"
+                },
+                {
+                  "field": "room",
+                  "flag": "--room",
+                  "summary": "Immutable Room of this attempt, workspaces/{workspace}/rooms/{room}. A Room-bound call requires an environment grant restricted to both this exact Room and the addressed Agent. Omit for non-Room tasks.",
+                  "type": "string"
+                },
+                {
+                  "field": "artifact_refs",
+                  "flag": "--artifact-refs",
+                  "repeated": true,
+                  "summary": "Opaque, already-authorized references to artifacts for the Room output. The workspace engine owns artifact authorization and publication.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/agents/*}:run",

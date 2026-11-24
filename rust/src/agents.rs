@@ -99,6 +99,45 @@ pub struct AgentModels {
     pub light: String,
 }
 
+/// Immutable identity of one Room-bound RunAgent attempt. The Session owns execution.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AgentRun {
+    /// Stable run identity, also the id of the output message.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub id: String,
+    /// Workspace supplied by the Room authority.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "workspaceId"
+    )]
+    pub workspace_id: String,
+    /// Room supplied by the Room authority.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "roomId"
+    )]
+    pub room_id: String,
+    /// The pinned Agent name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub agent: String,
+    /// Session executing this attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub session: String,
+}
+
 /// An AgentSession is a durable conversation with one pinned AgentVersion.
 /// Its conversation is its SessionEvent log. Each turn runs as one Sylphx
 /// Workflows Run, and each model call and tool call is a step keyed by
@@ -3275,6 +3314,15 @@ pub struct RunAgentRequest {
         alias = "organizationLayer"
     )]
     pub organization_layer: Option<OrganizationLayer>,
+    /// Immutable Room of this attempt, workspaces/{workspace}/rooms/{room}.
+    /// A Room-bound call requires an environment grant restricted to both
+    /// this exact Room and the addressed Agent. Omit for non-Room tasks.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub room: String,
+    /// Opaque, already-authorized references to artifacts for the Room output.
+    /// The workspace engine owns artifact authorization and publication.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "artifactRefs")]
+    pub artifact_refs: Vec<String>,
 }
 
 /// Durable acceptance, not task completion or sandbox readiness.
@@ -3305,6 +3353,11 @@ pub struct RunAgentResponse {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub cleanup: String,
+    /// The immutable AgentRun binding, present only on a Room-bound attempt.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "agentRun")]
+    pub agent_run: Option<AgentRun>,
 }
 
 /// A public lease fact recorded at allocation and confirmed physical release.

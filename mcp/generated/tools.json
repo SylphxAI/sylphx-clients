@@ -3241,6 +3241,13 @@
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
           },
+          "artifact_refs": {
+            "description": "Opaque, already-authorized references to artifacts for the Room output.\nThe workspace engine owns artifact authorization and publication.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "completion": {
             "additionalProperties": false,
             "description": "The pinned tool call used by the runtime to deliver the terminal result.",
@@ -3580,6 +3587,10 @@
               "interval"
             ],
             "type": "object"
+          },
+          "room": {
+            "description": "Immutable Room of this attempt, workspaces/{workspace}/rooms/{room}.\nA Room-bound call requires an environment grant restricted to both\nthis exact Room and the addressed Agent. Omit for non-Room tasks.",
+            "type": "string"
           },
           "runtime_credential_handle": {
             "description": "Same-session handle to a caller-owned scoped Access credential. Runtime only,\nnever installed in the guest or sent to the model.",
@@ -51734,6 +51745,13 @@
             "type": "string",
             "x-sylphx-resource-reference": "agents.sylphx.com/AgentVersion"
           },
+          "artifact_refs": {
+            "description": "Opaque, already-authorized references to artifacts for the Room output.\nThe workspace engine owns artifact authorization and publication.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "completion": {
             "additionalProperties": false,
             "description": "The pinned tool call used by the runtime to deliver the terminal result.",
@@ -52073,6 +52091,10 @@
               "interval"
             ],
             "type": "object"
+          },
+          "room": {
+            "description": "Immutable Room of this attempt, workspaces/{workspace}/rooms/{room}.\nA Room-bound call requires an environment grant restricted to both\nthis exact Room and the addressed Agent. Omit for non-Room tasks.",
+            "type": "string"
           },
           "runtime_credential_handle": {
             "description": "Same-session handle to a caller-owned scoped Access credential. Runtime only,\nnever installed in the guest or sent to the model.",

@@ -61,6 +61,20 @@ export interface AgentModels {
 	light?: string
 }
 
+/** Immutable identity of one Room-bound RunAgent attempt. The Session owns execution. */
+export interface AgentRun {
+	/** Stable run identity, also the id of the output message. */
+	readonly id?: string
+	/** Workspace supplied by the Room authority. */
+	readonly workspaceId?: string
+	/** Room supplied by the Room authority. */
+	readonly roomId?: string
+	/** The pinned Agent name. */
+	readonly agent?: string
+	/** Session executing this attempt. */
+	readonly session?: string
+}
+
 /**
  * An AgentSession is a durable conversation with one pinned AgentVersion.
  * Its conversation is its SessionEvent log. Each turn runs as one Sylphx
@@ -1561,6 +1575,17 @@ export interface RunAgentRequest {
 	 * versioned store. The session pins it; see AgentSession.organization_layer.
 	 */
 	organizationLayer?: OrganizationLayer
+	/**
+	 * Immutable Room of this attempt, workspaces/{workspace}/rooms/{room}.
+	 * A Room-bound call requires an environment grant restricted to both
+	 * this exact Room and the addressed Agent. Omit for non-Room tasks.
+	 */
+	room?: string
+	/**
+	 * Opaque, already-authorized references to artifacts for the Room output.
+	 * The workspace engine owns artifact authorization and publication.
+	 */
+	artifactRefs?: string[]
 }
 
 /** Durable acceptance, not task completion or sandbox readiness. */
@@ -1573,6 +1598,8 @@ export interface RunAgentResponse {
 	readonly delivery?: string
 	/** Lease-cleanup progress; released requires terminal lease evidence. */
 	readonly cleanup?: string
+	/** The immutable AgentRun binding, present only on a Room-bound attempt. */
+	readonly agentRun?: AgentRun
 }
 
 /** A public lease fact recorded at allocation and confirmed physical release. */
@@ -2071,6 +2098,10 @@ runtime.registerSchemas({
 	],
 	'sylphx.agents.v1.AgentBudget': [],
 	'sylphx.agents.v1.AgentModels': [],
+	'sylphx.agents.v1.AgentRun': [
+		['workspaceId', 'workspace_id'],
+		['roomId', 'room_id'],
+	],
 	'sylphx.agents.v1.AgentSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['agentVersion', 'agent_version'],
@@ -2475,10 +2506,12 @@ runtime.registerSchemas({
 		['itemKey', 'item_key'],
 		['ownerPool', 'owner_pool'],
 		['organizationLayer', 'organization_layer', 'sylphx.agents.v1.OrganizationLayer'],
+		['artifactRefs', 'artifact_refs'],
 	],
 	'sylphx.agents.v1.RunAgentResponse': [
 		['session', 'session', 'sylphx.agents.v1.AgentSession'],
 		['initialEvent', 'initial_event', 'sylphx.agents.v1.SessionEvent'],
+		['agentRun', 'agent_run', 'sylphx.agents.v1.AgentRun'],
 	],
 	'sylphx.agents.v1.SandboxActivity': [
 		['sandboxSeconds', 'sandbox_seconds'],
