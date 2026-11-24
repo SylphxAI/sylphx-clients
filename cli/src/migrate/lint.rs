@@ -444,5 +444,9 @@ pub(super) fn check(m: &Migration) -> Checked<'_> {
         }
     }
     out.diagnostics.sort_by_key(|d| (d.line, d.rule_id));
+    if m.legacy_lint_reviewed {
+        // The exact source and complete findings have already been checked.
+        out.diagnostics.clear();
+    }
     out
 }

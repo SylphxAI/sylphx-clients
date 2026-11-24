@@ -420,6 +420,11 @@ fn describe(e: &Error) -> String {
 }
 
 async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
+    // Local migration commands do not use Cloud credentials or org inference.
+    let (name, sub) = m.subcommand().expect("subcommand_required");
+    if name == "migrate" {
+        return migrate::run(sub).await;
+    }
     let format = Format::parse(
         m.get_one::<String>("output")
             .map(String::as_str)
@@ -442,10 +447,8 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
                 )
             })
     };
-    let (name, sub) = m.subcommand().expect("subcommand_required");
     match name {
         "apply" => apply::run(sub, api_key, base_url, org, format).await,
-        "migrate" => migrate::run(sub).await,
         "login" => {
             login(
                 api_key.clone(),

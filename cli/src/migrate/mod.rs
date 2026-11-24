@@ -1,4 +1,5 @@
 //! Local PostgreSQL migration porcelain. No Cloud API or legacy executable.
+mod baseline;
 mod history;
 mod lint;
 mod postgres;
@@ -24,6 +25,7 @@ struct Migration {
     file: String,
     sql: String,
     sha256: String,
+    legacy_lint_reviewed: bool,
 }
 
 pub(crate) fn command() -> Command {
@@ -46,6 +48,14 @@ pub(crate) fn command() -> Command {
                 .conflicts_with("config")
                 .value_name("PATH")
                 .help("Use this SQL directory instead of a manifest"),
+        )
+        .arg(
+            Arg::new("legacy-lint-baseline")
+                .long("legacy-lint-baseline")
+                .global(true)
+                .value_parser(value_parser!(PathBuf))
+                .value_name("PATH")
+                .help("Validate a checksum-pinned baseline for reviewed legacy lint findings"),
         )
         .subcommands([
             Command::new("plan").about("Read target history and list local SQL pending execution"),
@@ -145,6 +155,7 @@ fn load(dir: &Path) -> Result<Files> {
                     file,
                     sql,
                     sha256,
+                    legacy_lint_reviewed: false,
                 },
             )
             .is_some()
@@ -175,7 +186,10 @@ pub(crate) async fn run(args: &ArgMatches) -> std::result::Result<(), Failure> {
         )
         .map_err(Failure::Usage)?,
     };
-    let files = load(&dir).map_err(Failure::Usage)?;
+    let mut files = load(&dir).map_err(Failure::Usage)?;
+    if let Some(path) = args.get_one::<PathBuf>("legacy-lint-baseline") {
+        baseline::verify(path, &mut files).map_err(Failure::Usage)?;
+    }
     if action == "lint" {
         let diagnostics = files
             .values()

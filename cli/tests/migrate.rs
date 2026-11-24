@@ -96,6 +96,60 @@ COMMIT;", vec!["MIG108", "MIG107", "MIG108"], "CREATE TABLE t (x int); CREATE IN
     }
 }
 
+#[test]
+fn legacy_baseline_pins_exact_bytes_and_findings_without_weakening_new_sql() {
+    let project = Project::new();
+    let file = "1_reviewed.sql";
+    let sql = "DO $body$ BEGIN NULL; END $body$;";
+    let sha = |sql: &str| format!("{:x}", Sha256::digest(sql.as_bytes()));
+    project.write(file, sql);
+    let config = project.0.join("sylphx.toml");
+    let baseline = project.0.join("review.json");
+    let pin = |sql, line, rule| {
+        fs::write(
+            &baseline,
+            json!([{"file":file, "sha256":sha(sql), "findings":[{"line":line, "rule_id":rule}]}])
+                .to_string(),
+        )
+        .unwrap();
+    };
+    let lint = || {
+        Command::new(env!("CARGO_BIN_EXE_sylphx"))
+            .args(["migrate", "lint", "--config"])
+            .arg(&config)
+            .arg("--legacy-lint-baseline")
+            .arg(&baseline)
+            .env_remove("DATABASE_URL")
+            .output()
+            .unwrap()
+    };
+    assert_eq!(
+        read(project.run("lint", None), 1)["diagnostics"][0]["rule_id"],
+        "MIG002"
+    );
+    pin(sql, 1, "MIG002");
+    assert_eq!(read(lint(), 0), json!({"diagnostics": []}));
+    project.write("2_unreviewed.sql", sql);
+    let report = read(lint(), 1);
+    assert_eq!(report["diagnostics"].as_array().unwrap().len(), 1);
+    assert_eq!(report["diagnostics"][0]["file"], "2_unreviewed.sql");
+    project.write(file, &format!("{sql} -- changed"));
+    let drift = lint();
+    assert_eq!(drift.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&drift.stderr).contains("checksum drift"));
+    project.write(file, sql);
+    pin(sql, 2, "MIG002");
+    let mismatch = lint();
+    assert_eq!(mismatch.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&mismatch.stderr).contains("findings differ"));
+    let destructive = "DROP TABLE example;";
+    project.write(file, destructive);
+    pin(destructive, 1, "MIG105");
+    let unsupported = lint();
+    assert_eq!(unsupported.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&unsupported.stderr).contains("not eligible"));
+}
+
 #[tokio::test]
 #[ignore = "requires disposable PostgreSQL admin URL: SYLPHX_MIGRATE_TEST_DATABASE_URL"]
 async fn postgres_migration_proof() {
