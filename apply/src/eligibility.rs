@@ -181,18 +181,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_list_is_the_pilot_kind_only() {
+    fn workflow_is_declarable() {
         let d = Declarable::embedded();
-        assert_eq!(d.kinds().collect::<Vec<_>>(), Vec::<&str>::new());
+        assert!(check_kind(Registry::embedded(), &d, "workflows.sylphx.com/Workflow").is_ok());
     }
 
     #[test]
     fn every_listed_kind_in_the_registry_passes_the_computed_rule() {
         let reg = Registry::embedded();
         for kind in Declarable::embedded().kinds() {
-            if let Some(rt) = reg.resource(kind) {
-                computed(reg, rt).unwrap_or_else(|e| panic!("{kind}: {e}"));
-            }
+            check_kind(reg, &Declarable::embedded(), kind)
+                .unwrap_or_else(|e| panic!("{kind}: {e}"));
         }
     }
 

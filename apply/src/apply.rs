@@ -255,6 +255,7 @@ struct Write {
     mask: Vec<String>,
     allow_missing: bool,
     l_etag: String,
+    create_only: bool,
     l_hash: Option<String>,
     l_release: Option<String>,
 }
@@ -671,6 +672,7 @@ impl<'a, W: Wire> Applier<'a, W> {
                     body: self.desired_body(&name, d, &keep, Some(&n_hash)),
                     mask: write_mask,
                     allow_missing: true,
+                    create_only: l.is_none() && !rt.is_singleton(),
                     l_etag: l.map(|l| l.etag.clone()).unwrap_or_default(),
                     l_hash: l.map(|l| resource_hash(self.reg, rt, &l.value)),
                     l_release: l
@@ -800,6 +802,7 @@ impl<'a, W: Wire> Applier<'a, W> {
                 format!("meta.annotations.{ANN_RELEASE}"),
             ],
             allow_missing: false,
+            create_only: false,
             l_etag: l.etag.clone(),
             l_hash: Some(resource_hash(self.reg, rt, &l.value)),
             l_release: annotation(&l.value, ANN_RELEASE).map(str::to_string),
@@ -904,6 +907,7 @@ impl<'a, W: Wire> Applier<'a, W> {
             }
             token = page
                 .get("next_page_token")
+                .or_else(|| page.get("nextPageToken"))
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_string();
@@ -1068,7 +1072,9 @@ impl<'a, W: Wire> Applier<'a, W> {
             format!("{}{}{}", self.run_id, w.name, w.l_etag).as_bytes(),
         ));
         let mut headers = vec![("Idempotency-Key".to_string(), key)];
-        if !w.l_etag.is_empty() {
+        if w.create_only {
+            headers.push(("If-None-Match".to_string(), "*".to_string()));
+        } else if !w.l_etag.is_empty() {
             headers.push(("If-Match".to_string(), w.l_etag.clone()));
         }
         let answer: Value = wire::client(self.wire, headers)

@@ -569,3 +569,76 @@ async fn an_invalid_file_is_not_planned() {
     assert!(matches!(e, ApplyError::Invalid(_)));
     assert!(fake.state.lock().unwrap().log.is_empty());
 }
+
+#[tokio::test]
+async fn orphan_discovery_follows_both_page_token_spellings() {
+    use crate::wire::Wire;
+    use sylphx::{Error, HttpRequest, HttpResponse};
+
+    struct Pages;
+    impl Wire for Pages {
+        async fn send(
+            &self,
+            req: HttpRequest,
+            _headers: Vec<(String, String)>,
+        ) -> Result<HttpResponse, Error> {
+            assert_eq!(req.method, "GET");
+            if req.path == format!("/v1/{}", name()) {
+                return Ok(HttpResponse {
+                    status: 404,
+                    request_id: None,
+                    body: b"{}".to_vec(),
+                });
+            }
+            assert_eq!(req.path, format!("/v1/{ENV}/things"));
+            assert!(req
+                .query
+                .iter()
+                .any(|(k, v)| k == "filter" && v == r#"meta.labels.sylphx-managed-by = "apply""#));
+            let token = req
+                .query
+                .iter()
+                .find(|(k, _)| k == "page_token")
+                .map(|(_, v)| v.as_str());
+            let (id, next_key, next) = match token {
+                None => ("first", "nextPageToken", "page-two"),
+                Some("page-two") => ("second", "next_page_token", "page-three"),
+                Some("page-three") => ("third", "nextPageToken", ""),
+                _ => panic!("unexpected token: {token:?}"),
+            };
+            Ok(HttpResponse {
+                status: 200,
+                request_id: None,
+                body: serde_json::to_vec(&json!({
+                    "things": [{"name": format!("{ENV}/things/{id}")}], (next_key): next
+                }))
+                .unwrap(),
+            })
+        }
+    }
+    let reg = fixtures::registry();
+    let dec = fixtures::declarable();
+    let declarations = Declarations::from_toml(&format!(
+        r#"[[removed]]
+kind = "{THING}"
+name = "main"
+"#
+    ))
+    .unwrap();
+    let plan = Applier::new(&reg, &dec, &Pages, opts(Some(R1)))
+        .plan(&declarations, &[])
+        .await
+        .unwrap();
+    assert_eq!(
+        plan.items
+            .iter()
+            .filter(|i| i.action == Action::Orphan)
+            .map(|i| (i.action, i.name.rsplit('/').next().unwrap()))
+            .collect::<Vec<_>>(),
+        [
+            (Action::Orphan, "first"),
+            (Action::Orphan, "second"),
+            (Action::Orphan, "third")
+        ]
+    );
+}
