@@ -1250,8 +1250,8 @@ export interface S3PresignRules {
 	 */
 	methods?: string[]
 	/**
-	 * A single `PUT` carries at most this many bytes (5 GiB); larger bodies
-	 * use multipart.
+	 * The maximum size of a single PUT in bytes (512 MiB). The assembled
+	 * object in a multipart upload has the same limit.
 	 */
 	maxSinglePutBytes?: string
 	/**
@@ -1262,7 +1262,7 @@ export interface S3PresignRules {
 	 * part but the last is at least this many bytes (5 MiB).
 	 */
 	minPartBytes?: string
-	/** A part is at most this many bytes (5 GiB). */
+	/** The maximum size of a single multipart part in bytes (512 MiB). */
 	maxPartBytes?: string
 	/** An upload has at most this many parts (10000, numbered from 1). */
 	maxParts?: number

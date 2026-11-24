@@ -18745,7 +18745,7 @@
             "type": "string"
           },
           "max_part_bytes": {
-            "description": "A part is at most this many bytes (5 GiB).",
+            "description": "The maximum size of a single multipart part in bytes (512 MiB).",
             "format": "int64",
             "type": "string"
           },
@@ -18755,7 +18755,7 @@
             "type": "integer"
           },
           "max_single_put_bytes": {
-            "description": "A single `PUT` carries at most this many bytes (5 GiB); larger bodies\nuse multipart.",
+            "description": "The maximum size of a single PUT in bytes (512 MiB). The assembled\nobject in a multipart upload has the same limit.",
             "format": "int64",
             "type": "string"
           },

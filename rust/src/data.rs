@@ -2674,8 +2674,8 @@ pub struct S3PresignRules {
     /// `PUT` to write in one request.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub methods: Vec<String>,
-    /// A single `PUT` carries at most this many bytes (5 GiB); larger bodies
-    /// use multipart.
+    /// The maximum size of a single PUT in bytes (512 MiB). The assembled
+    /// object in a multipart upload has the same limit.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -2695,7 +2695,7 @@ pub struct S3PresignRules {
         alias = "minPartBytes"
     )]
     pub min_part_bytes: i64,
-    /// A part is at most this many bytes (5 GiB).
+    /// The maximum size of a single multipart part in bytes (512 MiB).
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",

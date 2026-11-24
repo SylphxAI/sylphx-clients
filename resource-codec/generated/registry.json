@@ -59085,7 +59085,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "A single `PUT` carries at most this many bytes (5 GiB); larger bodies\nuse multipart.",
+          "doc": "The maximum size of a single PUT in bytes (512 MiB). The assembled\nobject in a multipart upload has the same limit.",
           "filterable": false,
           "name": "max_single_put_bytes",
           "number": 3,
@@ -59119,7 +59119,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "A part is at most this many bytes (5 GiB).",
+          "doc": "The maximum size of a single multipart part in bytes (512 MiB).",
           "filterable": false,
           "name": "max_part_bytes",
           "number": 5,
