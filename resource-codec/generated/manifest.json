@@ -32474,7 +32474,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "A verified Network Domain serving the portal; unset uses the default\norigin.",
+          "doc": "The desired customer DNS hostname for the hosted Account Portal (no\nscheme, port, or path). Set or clear it in a separate update; to clear,\nmask this field and leave it empty. The hostname is not used until the\nPortalDomainVerified condition is true.",
           "filterable": false,
           "name": "custom_domain",
           "number": 1,
@@ -161828,6 +161828,8 @@
                 "UNKNOWN_FIELD",
                 "INVALID_FIELD",
                 "ETAG_MISMATCH",
+                "RESOURCE_ALREADY_EXISTS",
+                "INVALID_STATE",
                 "IDEMPOTENCY_KEY_REUSED",
                 "IDEMPOTENCY_IN_PROGRESS"
               ],

@@ -2410,8 +2410,10 @@ pub struct PortalAppearance {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct PortalConfig {
-    /// A verified Network Domain serving the portal; unset uses the default
-    /// origin.
+    /// The desired customer DNS hostname for the hosted Account Portal (no
+    /// scheme, port, or path). Set or clear it in a separate update; to clear,
+    /// mask this field and leave it empty. The hostname is not used until the
+    /// PortalDomainVerified condition is true.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4251,7 +4253,7 @@ impl<'a, T: crate::runtime::Transport> AuthConfigsCollection<'a, T> {
     ///
     /// `PATCH /v1/{auth_config.name=orgs/*/projects/*/envs/*/auth_configs/*}` · permission `auth:write` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `ETAG_MISMATCH`, `RESOURCE_ALREADY_EXISTS`, `INVALID_STATE`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`.
     pub async fn update(
         &self,
         request: UpdateAuthConfigRequest,

@@ -8652,7 +8652,7 @@
                         "type": "object"
                       },
                       "custom_domain": {
-                        "description": "A verified Network Domain serving the portal; unset uses the default\norigin.",
+                        "description": "The desired customer DNS hostname for the hosted Account Portal (no\nscheme, port, or path). Set or clear it in a separate update; to clear,\nmask this field and leave it empty. The hostname is not used until the\nPortalDomainVerified condition is true.",
                         "type": "string"
                       },
                       "logo_uri": {

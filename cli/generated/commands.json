@@ -5197,7 +5197,7 @@
                 {
                   "field": "auth_config.spec.portal.custom_domain",
                   "flag": "--spec.portal.custom-domain",
-                  "summary": "A verified Network Domain serving the portal; unset uses the default origin.",
+                  "summary": "The desired customer DNS hostname for the hosted Account Portal (no scheme, port, or path). Set or clear it in a separate update; to clear, mask this field and leave it empty. The hostname is not used until the PortalDomainVerified condition is true.",
                   "type": "string"
                 },
                 {

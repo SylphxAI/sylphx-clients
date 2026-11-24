@@ -9285,7 +9285,7 @@
             "description": "The hosted sign-in and account portal presentation for this environment."
           },
           "custom_domain": {
-            "description": "A verified Network Domain serving the portal; unset uses the default\norigin.",
+            "description": "The desired customer DNS hostname for the hosted Account Portal (no\nscheme, port, or path). Set or clear it in a separate update; to clear,\nmask this field and leave it empty. The hostname is not used until the\nPortalDomainVerified condition is true.",
             "type": "string"
           },
           "logo_uri": {
@@ -71232,6 +71232,8 @@
           "UNKNOWN_FIELD",
           "INVALID_FIELD",
           "ETAG_MISMATCH",
+          "RESOURCE_ALREADY_EXISTS",
+          "INVALID_STATE",
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS"
         ],
