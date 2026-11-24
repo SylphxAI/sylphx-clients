@@ -15,7 +15,9 @@ export {
 export {
 	createSignalBrowser,
 	type SignalBrowserOptions,
+	type SignalEventInput,
 	type SignalGoogleConsent,
+	type SignalIngestOptions,
 } from './signal/browser.js'
 export {
 	type ConsentChoice,

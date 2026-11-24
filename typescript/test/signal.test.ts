@@ -9,6 +9,8 @@ import {
 	type SignalAttribution,
 	type SignalConsent,
 	type SignalConsentChoice,
+	type SignalEventInput,
+	type SignalIngestOptions,
 } from '../src/signal.js'
 
 const denied: SignalConsent = {
@@ -320,7 +322,10 @@ afterEach(() => {
 function browser() {
 	const values = new Map<string, string>()
 	const reads: string[] = []
+	const writes: [string, string][] = []
+	const removals: string[] = []
 	let cookieReads = 0
+	let cookieWrites = 0
 	const location = { href: 'https://example.com/landing?fbclid=Same%2EClick&utm_source=source' }
 	const win = Object.assign(new EventTarget(), {
 		location,
@@ -330,9 +335,11 @@ function browser() {
 				return values.get(name) ?? null
 			},
 			setItem: (name: string, value: string) => {
+				writes.push([name, value])
 				values.set(name, value)
 			},
 			removeItem: (name: string) => {
+				removals.push(name)
 				values.delete(name)
 			},
 		},
@@ -345,8 +352,20 @@ function browser() {
 			cookieReads++
 			return cookie
 		},
+		set cookie(_value: string) {
+			cookieWrites++
+		},
 	})
-	return { values, reads, nav, location, cookieReads: () => cookieReads }
+	return {
+		values,
+		reads,
+		writes,
+		removals,
+		nav,
+		location,
+		cookieReads: () => cookieReads,
+		cookieWrites: () => cookieWrites,
+	}
 }
 
 for (const region of ['EU', 'UK']) {
@@ -463,5 +482,338 @@ test('late geo detection cannot override an explicit opt-out', async () => {
 	await signal.ready
 	expect(signal.getConsent()).toEqual(denied)
 	expect(signal.capture()).toEqual({})
+	signal.dispose()
+})
+
+const consentStorageSlot = 'sylphx.signal.v1.consent'
+const touchStorageSlot = 'sylphx.signal.v1.touch'
+const utms = {
+	utm_source: 'newsletter',
+	utm_medium: 'email',
+	utm_campaign: 'launch',
+	utm_term: 'search',
+	utm_content: 'banner',
+	utm_id: 'campaign-1',
+	utm_source_platform: 'web',
+	utm_creative_format: 'image',
+	utm_marketing_tactic: 'acquisition',
+}
+const clicks = { gclid: 'GoogleClick', gbraid: 'Braid', wbraid: 'WebBraid', fbclid: 'MetaClick' }
+
+function ingestTransport(status = 202) {
+	const calls: { url: string; init?: RequestInit }[] = []
+	const ingest: SignalIngestOptions = {
+		apiKey: key,
+		fetch: (async (url, init) => {
+			calls.push({ url: String(url), init })
+			return new Response(null, { status })
+		}) as typeof fetch,
+	}
+	return {
+		ingest,
+		calls,
+		batches: () => calls.map(({ init }) => JSON.parse(String(init?.body))),
+	}
+}
+
+for (const choice of ['granted', 'analytics_only'] as const) {
+	test('SPA preserves campaign parameters in memory and filters them on ' + choice, async () => {
+		const { location, writes, removals, values, cookieWrites, cookieReads } = browser()
+		const { ingest, calls, batches } = ingestTransport()
+		let uuids = 0
+		override('crypto', { randomUUID: () => 'id-' + ++uuids })
+		location.href = 'https://example.com/landing?' + new URLSearchParams(utms)
+		const signal = createSignalBrowser({ region: 'EU', ingest })
+		location.href = 'https://example.com/signup?' + new URLSearchParams(clicks)
+		expect(signal.capture()).toEqual({})
+		expect(await signal.track({ eventName: 'before_consent' })).toBe(false)
+		expect(await signal.pageView()).toBe(false)
+		location.href = 'https://example.com/checkout?utm_content=banner'
+		expect(signal.capture()).toEqual({})
+		expect(writes).toEqual([])
+		expect(removals).toEqual([])
+		expect(calls).toEqual([])
+		expect(uuids).toBe(0)
+		signal.setConsent(choice)
+		const expected = choice === 'granted' ? { ...utms, ...clicks } : utms
+		const capture = signal.capture()
+		expect(capture).toEqual(
+			choice === 'granted' ? { ...expected, capturedAt: expect.any(Number) } : expected,
+		)
+		expect(JSON.parse(values.get(touchStorageSlot)!).touch).toEqual(capture)
+		expect(calls).toHaveLength(0) // Pending view was for /signup, not /checkout.
+		await signal.track({ eventName: 'checkout_started' })
+		await signal.track({ eventName: 'checkout_confirmed' })
+		const events = batches().flatMap((batch) => batch.events)
+		expect(events.map((event) => event.properties)).toEqual([expected, expected])
+		expect(events.map((event) => [event.event_id, event.distinct_id, event.session_id])).toEqual([
+			['id-1', 'id-2', 'id-3'],
+			['id-4', 'id-2', 'id-3'],
+		])
+		expect(new Set(writes.map(([name]) => name))).toEqual(
+			new Set([consentStorageSlot, touchStorageSlot]),
+		)
+		expect(cookieWrites()).toBe(0)
+		expect(cookieReads()).toBe(0)
+		signal.dispose()
+	})
+}
+
+test('explicit denial clears pending campaign and pageview, and survives ROW reload', async () => {
+	const { location, writes, values, removals } = browser()
+	const { ingest, calls } = ingestTransport()
+	values.set(touchStorageSlot, 'prior touch')
+	const signal = createSignalBrowser({ region: 'UK', ingest })
+	await signal.pageView()
+	signal.setConsent('denied')
+	expect(writes).toEqual([[consentStorageSlot, 'denied']])
+	expect(removals).toEqual([touchStorageSlot])
+	expect(await signal.track({ eventName: 'blocked' })).toBe(false)
+	const reopened = createSignalBrowser({ region: 'ROW', ingest })
+	expect(reopened.getConsent()).toEqual(denied)
+	expect(await reopened.pageView()).toBe(false)
+	reopened.dispose()
+	location.href = 'https://example.com/checkout'
+	signal.setConsent('granted')
+	expect(signal.capture()).toEqual({})
+	expect(values.has(touchStorageSlot)).toBe(false)
+	expect(calls).toHaveLength(0)
+	signal.dispose()
+})
+
+for (const via of ['navigator', 'server'] as const) {
+	test('passive GPC blocks events and writes, and clears touch via ' + via, async () => {
+		const { values, location, nav, writes, removals, cookieWrites } = browser()
+		const { ingest, calls, batches } = ingestTransport()
+		values.set(touchStorageSlot, 'prior touch')
+		if (via === 'navigator') {
+			const pending = createSignalBrowser({ region: 'EU', ingest })
+			await pending.pageView()
+			nav.globalPrivacyControl = true
+			expect(await pending.track({ eventName: 'blocked' })).toBe(false)
+			nav.globalPrivacyControl = false
+			location.href = 'https://example.com/checkout'
+			pending.setConsent('granted')
+			expect(pending.capture()).toEqual({})
+			expect(writes).toEqual([[consentStorageSlot, 'granted']])
+			pending.dispose()
+			writes.length = 0
+			nav.globalPrivacyControl = true
+		} else values.set(consentStorageSlot, 'granted')
+		const signal = createSignalBrowser({ region: 'ROW', gpc: via === 'server', ingest })
+		expect(signal.capture()).toEqual({})
+		expect(await signal.pageView()).toBe(false)
+		expect(await signal.track({ eventName: 'blocked' })).toBe(false)
+		expect(calls).toHaveLength(0)
+		expect(writes).toEqual([])
+		expect(removals).toEqual([touchStorageSlot])
+		expect(cookieWrites()).toBe(0)
+		signal.dispose()
+		nav.globalPrivacyControl = false
+		const optedIn = createSignalBrowser({ region: 'ROW', ingest })
+		await optedIn.track({ eventName: 'after_gpc' })
+		expect(batches()[0].events[0].properties).toEqual(
+			via === 'navigator'
+				? {}
+				: {
+						utm_source: 'source',
+						fbclid: 'Same.Click',
+					},
+		)
+		optedIn.dispose()
+	})
+}
+
+test('emits exactly one page_view per navigation, not per effect call', async () => {
+	const { location, writes, values } = browser()
+	const { ingest, calls, batches } = ingestTransport()
+	location.href = 'https://example.com/landing?variant=a#initial'
+	const signal = createSignalBrowser({ region: 'EU', ingest })
+	expect(await signal.pageView(undefined, { ignored: 'before consent' })).toBe(false)
+	expect(await signal.pageView('/landing?variant=a#rerender')).toBe(false)
+	expect(calls).toHaveLength(0)
+	expect(writes).toEqual([])
+	signal.setConsent('granted')
+	expect(calls).toHaveLength(1)
+	expect(await Promise.all([signal.pageView(), signal.pageView()])).toEqual([false, false])
+	expect(calls).toHaveLength(1)
+	location.href = 'https://example.com/pricing?variant=b'
+	expect(await Promise.all([signal.pageView(), signal.pageView()])).toEqual([true, false])
+	expect(calls).toHaveLength(2)
+	location.href = 'https://example.com/landing?variant=a'
+	expect(await signal.pageView()).toBe(true)
+	expect(await signal.pageView()).toBe(false)
+	expect(batches().map(({ events }) => [events[0].event_name, events[0].properties])).toEqual([
+		['page_view', { path: '/landing?variant=a' }],
+		['page_view', { path: '/pricing?variant=b' }],
+		['page_view', { path: '/landing?variant=a' }],
+	])
+	expect([...values.keys()]).toEqual([consentStorageSlot])
+	signal.dispose()
+})
+
+test('ROW region resolution promotes only the current pending path and retains attribution', async () => {
+	const { location, writes } = browser()
+	let resolveTrace!: (response: Response) => void
+	override(
+		'fetch',
+		() =>
+			new Promise<Response>((resolve) => {
+				resolveTrace = resolve
+			}),
+	)
+	const { ingest, calls, batches } = ingestTransport()
+	const signal = createSignalBrowser({ ingest })
+	await signal.pageView()
+	location.href = 'https://example.com/pricing'
+	await signal.pageView()
+	expect(writes).toEqual([])
+	expect(calls).toHaveLength(0)
+	resolveTrace(new Response('loc=US\n'))
+	await signal.ready
+	expect(await signal.pageView()).toBe(false)
+	expect(calls).toHaveLength(1)
+	expect(batches()[0].events[0]).toMatchObject({
+		event_name: 'page_view',
+		properties: { path: '/pricing', utm_source: 'source', fbclid: 'Same.Click' },
+	})
+	expect(writes.map(([name]) => name)).toEqual([touchStorageSlot])
+	signal.dispose()
+})
+
+test('track sends the exact Signal wire payload and authenticated keepalive request', async () => {
+	const { writes, cookieReads, cookieWrites } = browser()
+	const { ingest, calls, batches } = ingestTransport()
+	const signal = createSignalBrowser({
+		region: 'ROW',
+		ingest: { ...ingest, distinctId: 'anon-1', sessionId: 'session-1' },
+	})
+	const event: SignalEventInput = {
+		eventName: 'checkout.started',
+		eventId: 'event:001',
+		eventTime: '2026-01-02T03:04:05.123Z',
+		properties: { utm_source: 'caller', tier: 'starter' },
+		numericValue: 42,
+		isError: false,
+		latencyMs: 5,
+	}
+	expect(await signal.track(event)).toBe(true)
+	expect(calls).toEqual([
+		{
+			url: 'https://api.sylphx.com/v1/analytics/events:batch',
+			init: {
+				method: 'POST',
+				keepalive: true,
+				credentials: 'omit',
+				redirect: 'error',
+				referrerPolicy: 'no-referrer',
+				headers: { 'X-Sylphx-Key': key, 'Content-Type': 'application/json' },
+				body: expect.any(String),
+			},
+		},
+	])
+	expect(batches()).toEqual([
+		{
+			consent: 'granted',
+			events: [
+				{
+					event_id: 'event:001',
+					event_name: 'checkout.started',
+					distinct_id: 'anon-1',
+					session_id: 'session-1',
+					event_time: '2026-01-02T03:04:05.123Z',
+					properties: { fbclid: 'Same.Click', utm_source: 'caller', tier: 'starter' },
+					numeric_value: 42,
+					is_error: false,
+					latency_ms: 5,
+				},
+			],
+		},
+	])
+	expect(writes.map(([name]) => name)).toEqual([touchStorageSlot])
+	expect(cookieReads()).toBe(0)
+	expect(cookieWrites()).toBe(0)
+	signal.dispose()
+})
+
+test('page_view strips ad IDs from analytics-only path while preserving the route and UTMs', async () => {
+	const { location } = browser()
+	const { ingest, batches } = ingestTransport()
+	location.href = 'https://example.com/?gclid=GoogleClick&utm_source=ad#fragment'
+	const signal = createSignalBrowser({ region: 'EU', ingest })
+	await signal.pageView()
+	signal.setConsent('analytics_only')
+	expect(await signal.pageView()).toBe(false)
+	expect(batches()[0].events[0].properties).toEqual({ path: '/?utm_source=ad', utm_source: 'ad' })
+	signal.dispose()
+})
+
+test('ingest fails closed for absent configuration, unsafe endpoints and invalid event identifiers', async () => {
+	browser()
+	const { ingest, calls } = ingestTransport()
+	for (const invalid of [
+		undefined,
+		{ ...ingest, apiKey: 'unsafe-key' },
+		...[
+			'http://api.example.com',
+			'https://user@api.example.com',
+			'https://api.example.com/path',
+			'https://api.example.com/?',
+			'https://api.example.com/#',
+			'not-a-url',
+		].map((baseUrl) => ({ ...ingest, baseUrl })),
+	]) {
+		const disabled = createSignalBrowser({ region: 'ROW', ingest: invalid })
+		expect(await disabled.track({ eventName: 'visit' })).toBe(false)
+		expect(await disabled.pageView()).toBe(false)
+		disabled.dispose()
+	}
+	const signal = createSignalBrowser({
+		region: 'ROW',
+		ingest: { ...ingest, baseUrl: 'https://api.example.com:8443' },
+	})
+	for (const event of [
+		{ eventName: '' },
+		{ eventName: '$pageview' },
+		{ eventName: 'x'.repeat(129) },
+		{ eventName: 'visit', eventId: '' },
+		{ eventName: 'visit', eventId: 'not valid' },
+	])
+		expect(await signal.track(event)).toBe(false)
+	expect(await signal.pageView('https://other.example.com')).toBe(false)
+	expect(calls).toHaveLength(0)
+	expect(await signal.track({ eventName: 'visit' })).toBe(true)
+	expect(calls[0]?.url).toBe('https://api.example.com:8443/v1/analytics/events:batch')
+	signal.dispose()
+})
+
+test('a transport failure is false and cannot cause a duplicate view attempt', async () => {
+	browser()
+	const { ingest, calls } = ingestTransport(503)
+	const signal = createSignalBrowser({ region: 'ROW', ingest })
+	expect(await signal.pageView()).toBe(false)
+	expect(await signal.pageView()).toBe(false)
+	expect(calls).toHaveLength(1)
+	signal.dispose()
+})
+
+test('rechecks consent after serializing caller properties and never sends after a GPC change', async () => {
+	const { nav, values, removals } = browser()
+	const { ingest, calls } = ingestTransport()
+	const signal = createSignalBrowser({ region: 'ROW', ingest })
+	expect(
+		await signal.track({
+			eventName: 'visit',
+			properties: {
+				get stage() {
+					nav.globalPrivacyControl = true
+					return 'blocked'
+				},
+			},
+		}),
+	).toBe(false)
+	expect(calls).toHaveLength(0)
+	expect(removals).toEqual([touchStorageSlot])
+	expect(values.has(touchStorageSlot)).toBe(false)
 	signal.dispose()
 })

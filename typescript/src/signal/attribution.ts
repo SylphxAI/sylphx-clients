@@ -60,7 +60,12 @@ export function cleanAttribution(value: unknown, includeAds = true): SignalAttri
 	return result
 }
 
-/** Read known campaign parameters only. Call after checking consent. */
+/** Remove known ad IDs from an analytics-only page view URL. */
+export function stripSignalClickIds(url: URL) {
+	for (const field of clickFields) if (url.searchParams.has(field)) url.searchParams.delete(field)
+}
+
+/** Read known campaign parameters only. Call after checking the applicable privacy policy. */
 export function parseSignalAttribution(
 	url: URL,
 	capturedAt = Date.now(),
