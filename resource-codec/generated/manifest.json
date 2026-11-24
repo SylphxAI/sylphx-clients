@@ -31790,10 +31790,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Allowed grants.",
+          "doc": "Allowed grants. May be empty for a client that only serves a protected resource.",
           "filterable": false,
           "name": "grant_types",
           "number": 4,
@@ -31900,6 +31900,25 @@
           "type": {
             "kind": "well_known",
             "wkt": "duration"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "RFC 8707 protected-resource identifier served by this confidential client.\nAn absolute HTTPS URI without credentials or a fragment. Unique among\nlive clients of this environment. Clear with an explicit update mask.",
+          "filterable": false,
+          "name": "resource_uri",
+          "number": 10,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],

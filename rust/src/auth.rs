@@ -2158,9 +2158,7 @@ pub struct OauthClientSpec {
     /// Exact redirect URIs.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "redirectUris")]
     pub redirect_uris: Vec<String>,
-    /// Allowed grants.
-    ///
-    /// Field behavior: `required`.
+    /// Allowed grants. May be empty for a client that only serves a protected resource.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "grantTypes")]
     pub grant_types: Vec<GrantType>,
     /// Scopes the client may request.
@@ -2194,6 +2192,15 @@ pub struct OauthClientSpec {
         alias = "refreshTokenTtl"
     )]
     pub refresh_token_ttl: String,
+    /// RFC 8707 protected-resource identifier served by this confidential client.
+    /// An absolute HTTPS URI without credentials or a fragment. Unique among
+    /// live clients of this environment. Clear with an explicit update mask.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "resourceUri"
+    )]
+    pub resource_uri: String,
 }
 
 /// OauthClientStatus is the observed state of an OauthClient.

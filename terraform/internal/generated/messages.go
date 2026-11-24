@@ -110,12 +110,13 @@ func authOauthClientSpec() []def.Field {
 		{Name: "client_type", Kind: def.Enum, Values: []string{"confidential", "public"}, Flags: def.Required | def.Immutable, Doc: "Confidential or public."},
 		{Name: "token_endpoint_auth_method", Kind: def.Enum, Values: []string{"none", "client_secret_basic", "private_key_jwt"}, Flags: def.Required, Doc: "How the client authenticates at the token endpoint."},
 		{Name: "redirect_uris", Kind: def.String, Repeated: true, Doc: "Exact redirect URIs."},
-		{Name: "grant_types", Kind: def.Enum, Values: []string{"authorization_code", "refresh_token", "device_code", "client_credentials"}, Flags: def.Required, Repeated: true, Doc: "Allowed grants."},
+		{Name: "grant_types", Kind: def.Enum, Values: []string{"authorization_code", "refresh_token", "device_code", "client_credentials"}, Repeated: true, Doc: "Allowed grants. May be empty for a client that only serves a protected resource."},
 		{Name: "scopes", Kind: def.String, Repeated: true, Doc: "Scopes the client may request."},
 		{Name: "jwks_uri", Kind: def.String, Doc: "The client's JWKS URI, for `private_key_jwt`."},
 		{Name: "dpop_required", Kind: def.Bool, Doc: "Require DPoP-bound tokens (RFC 9449)."},
 		{Name: "access_token_ttl", Kind: def.Duration, Doc: "Access token lifetime; default 1h."},
 		{Name: "refresh_token_ttl", Kind: def.Duration, Doc: "Refresh token lifetime; default 30d."},
+		{Name: "resource_uri", Kind: def.String, Doc: "RFC 8707 protected-resource identifier served by this confidential client. An absolute HTTPS URI without credentials or a fragment. Unique among live clients of this environment. Clear with an explicit update mask."},
 	}
 }
 

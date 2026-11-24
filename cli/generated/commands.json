@@ -6941,8 +6941,7 @@
                   "field": "oauth_client.spec.grant_types",
                   "flag": "--spec.grant-types",
                   "repeated": true,
-                  "required": true,
-                  "summary": "Allowed grants.",
+                  "summary": "Allowed grants. May be empty for a client that only serves a protected resource.",
                   "type": "enum",
                   "values": [
                     "authorization_code",
@@ -6981,6 +6980,12 @@
                   "flag": "--spec.refresh-token-ttl",
                   "summary": "Refresh token lifetime; default 30d.",
                   "type": "duration"
+                },
+                {
+                  "field": "oauth_client.spec.resource_uri",
+                  "flag": "--spec.resource-uri",
+                  "summary": "RFC 8707 protected-resource identifier served by this confidential client. An absolute HTTPS URI without credentials or a fragment. Unique among live clients of this environment. Clear with an explicit update mask.",
+                  "type": "string"
                 },
                 {
                   "field": "validate_only",
@@ -7048,8 +7053,7 @@
                   "field": "oauth_client.spec.grant_types",
                   "flag": "--spec.grant-types",
                   "repeated": true,
-                  "required": true,
-                  "summary": "Allowed grants.",
+                  "summary": "Allowed grants. May be empty for a client that only serves a protected resource.",
                   "type": "enum",
                   "values": [
                     "authorization_code",
@@ -7088,6 +7092,12 @@
                   "flag": "--spec.refresh-token-ttl",
                   "summary": "Refresh token lifetime; default 30d.",
                   "type": "duration"
+                },
+                {
+                  "field": "oauth_client.spec.resource_uri",
+                  "flag": "--spec.resource-uri",
+                  "summary": "RFC 8707 protected-resource identifier served by this confidential client. An absolute HTTPS URI without credentials or a fragment. Unique among live clients of this environment. Clear with an explicit update mask.",
+                  "type": "string"
                 },
                 {
                   "field": "allow_missing",

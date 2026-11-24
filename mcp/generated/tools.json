@@ -10943,7 +10943,7 @@
                     "type": "boolean"
                   },
                   "grant_types": {
-                    "description": "Allowed grants.",
+                    "description": "Allowed grants. May be empty for a client that only serves a protected resource.",
                     "items": {
                       "description": "An OAuth grant.",
                       "enum": [
@@ -10972,6 +10972,10 @@
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
+                  "resource_uri": {
+                    "description": "RFC 8707 protected-resource identifier served by this confidential client.\nAn absolute HTTPS URI without credentials or a fragment. Unique among\nlive clients of this environment. Clear with an explicit update mask.",
+                    "type": "string"
+                  },
                   "scopes": {
                     "description": "Scopes the client may request.",
                     "items": {
@@ -10991,8 +10995,7 @@
                 },
                 "required": [
                   "client_type",
-                  "token_endpoint_auth_method",
-                  "grant_types"
+                  "token_endpoint_auth_method"
                 ],
                 "type": "object"
               }
@@ -11102,7 +11105,7 @@
                     "type": "boolean"
                   },
                   "grant_types": {
-                    "description": "Allowed grants.",
+                    "description": "Allowed grants. May be empty for a client that only serves a protected resource.",
                     "items": {
                       "description": "An OAuth grant.",
                       "enum": [
@@ -11131,6 +11134,10 @@
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
+                  "resource_uri": {
+                    "description": "RFC 8707 protected-resource identifier served by this confidential client.\nAn absolute HTTPS URI without credentials or a fragment. Unique among\nlive clients of this environment. Clear with an explicit update mask.",
+                    "type": "string"
+                  },
                   "scopes": {
                     "description": "Scopes the client may request.",
                     "items": {
@@ -11150,8 +11157,7 @@
                 },
                 "required": [
                   "client_type",
-                  "token_endpoint_auth_method",
-                  "grant_types"
+                  "token_endpoint_auth_method"
                 ],
                 "type": "object"
               }

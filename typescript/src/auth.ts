@@ -995,7 +995,7 @@ export interface OauthClientSpec {
 	tokenEndpointAuthMethod?: TokenEndpointAuthMethod
 	/** Exact redirect URIs. */
 	redirectUris?: string[]
-	/** Allowed grants. */
+	/** Allowed grants. May be empty for a client that only serves a protected resource. */
 	grantTypes?: GrantType[]
 	/** Scopes the client may request. */
 	scopes?: string[]
@@ -1007,6 +1007,12 @@ export interface OauthClientSpec {
 	accessTokenTtl?: string
 	/** Refresh token lifetime; default 30d. */
 	refreshTokenTtl?: string
+	/**
+	 * RFC 8707 protected-resource identifier served by this confidential client.
+	 * An absolute HTTPS URI without credentials or a fragment. Unique among
+	 * live clients of this environment. Clear with an explicit update mask.
+	 */
+	resourceUri?: string
 }
 
 /** OauthClientStatus is the observed state of an OauthClient. */
@@ -1731,6 +1737,7 @@ runtime.registerSchemas({
 		['dpopRequired', 'dpop_required'],
 		['accessTokenTtl', 'access_token_ttl'],
 		['refreshTokenTtl', 'refresh_token_ttl'],
+		['resourceUri', 'resource_uri'],
 	],
 	'sylphx.auth.v1.OauthClientStatus': [
 		['observedGeneration', 'observed_generation'],
