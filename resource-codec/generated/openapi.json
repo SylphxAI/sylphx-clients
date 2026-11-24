@@ -11934,6 +11934,11 @@
       "sylphx.broker.v1.RecoverMediaExecutionResponse": {
         "description": "Acknowledgment only. Empty means unresolved, never no-charge.",
         "properties": {
+          "hold_uid": {
+            "description": "Money hold UID recorded by the Broker execution fence. This is not\npermission to claim, settle, or release the hold.",
+            "readOnly": true,
+            "type": "string"
+          },
           "receipt": {
             "description": "Opaque supplier request ID, present only when positively correlated.",
             "type": "string"
@@ -12155,6 +12160,11 @@
       "sylphx.broker.v1.SubmitMediaExecutionResponse": {
         "description": "Acknowledgment only; an empty receipt is unresolved, never no-charge.",
         "properties": {
+          "hold_uid": {
+            "description": "Money hold UID recorded by the Broker execution fence. This is not\npermission to claim, settle, or release the hold.",
+            "readOnly": true,
+            "type": "string"
+          },
           "receipt": {
             "description": "Opaque supplier request ID, returned only after durable acknowledgment.",
             "type": "string"

@@ -538,6 +538,16 @@ pub struct RecoverMediaExecutionResponse {
     /// Opaque supplier request ID, present only when positively correlated.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub receipt: String,
+    /// Money hold UID recorded by the Broker execution fence. This is not
+    /// permission to claim, settle, or release the hold.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holdUid"
+    )]
+    pub hold_uid: String,
 }
 
 /// The request of RevokeTokenExchange.
@@ -788,6 +798,16 @@ pub struct SubmitMediaExecutionResponse {
     /// Opaque supplier request ID, returned only after durable acknowledgment.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub receipt: String,
+    /// Money hold UID recorded by the Broker execution fence. This is not
+    /// permission to claim, settle, or release the hold.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "holdUid"
+    )]
+    pub hold_uid: String,
 }
 
 /// A TokenExchange is the record of one credential the Broker issued under a

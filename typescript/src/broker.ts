@@ -282,6 +282,11 @@ export interface RecoverMediaExecutionRequest {
 export interface RecoverMediaExecutionResponse {
 	/** Opaque supplier request ID, present only when positively correlated. */
 	receipt?: string
+	/**
+	 * Money hold UID recorded by the Broker execution fence. This is not
+	 * permission to claim, settle, or release the hold.
+	 */
+	readonly holdUid?: string
 }
 
 /** The request of RevokeTokenExchange. */
@@ -384,6 +389,11 @@ export interface SubmitMediaExecutionRequest {
 export interface SubmitMediaExecutionResponse {
 	/** Opaque supplier request ID, returned only after durable acknowledgment. */
 	receipt?: string
+	/**
+	 * Money hold UID recorded by the Broker execution fence. This is not
+	 * permission to claim, settle, or release the hold.
+	 */
+	readonly holdUid?: string
 }
 
 /**
@@ -603,7 +613,9 @@ runtime.registerSchemas({
 	'sylphx.broker.v1.RecoverMediaExecutionRequest': [
 		['executionKey', 'execution_key'],
 	],
-	'sylphx.broker.v1.RecoverMediaExecutionResponse': [],
+	'sylphx.broker.v1.RecoverMediaExecutionResponse': [
+		['holdUid', 'hold_uid'],
+	],
 	'sylphx.broker.v1.RevokeTokenExchangeRequest': [],
 	'sylphx.broker.v1.SendCarrierSmsRequest': [
 		['senderNumber', 'sender_number'],
@@ -631,7 +643,9 @@ runtime.registerSchemas({
 		['skuRevision', 'sku_revision'],
 		['requestSha256', 'request_sha256'],
 	],
-	'sylphx.broker.v1.SubmitMediaExecutionResponse': [],
+	'sylphx.broker.v1.SubmitMediaExecutionResponse': [
+		['holdUid', 'hold_uid'],
+	],
 	'sylphx.broker.v1.TokenExchange': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['permissions', 'permissions', undefined, 'map'],
