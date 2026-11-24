@@ -762,7 +762,16 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
             ) {
                 return compute_schedules(api_key, base_url, org, method, &mm, format).await;
             }
-            invoke::generated(&client().await?, method, &mm, m, format).await
+            let result = invoke::generated(&client().await?, method, &mm, m, format).await;
+            if service == "runners" {
+                if let Err(Failure::Api(error @ Error::Api { status: 501, .. })) = &result {
+                    return Err(Failure::Refused(format!(
+                        "{}\nCI runner management is not available at this API yet. Verify the API endpoint and retry when it is enabled.",
+                        describe(error),
+                    )));
+                }
+            }
+            result
         }
     }
 }

@@ -124,6 +124,23 @@ pub(crate) async fn generated(
     }
     let file_args = Value::Object(args.clone());
     let (mut values, mask) = tree::flag_values(method, mm)?;
+    if matches!(
+        method.method.as_str(),
+        "runners.scale_sets.create" | "runners.scale_sets.update"
+    ) {
+        let path = "scale_set.spec.max_runners";
+        let max = values
+            .iter()
+            .find(|(field, _)| field == path)
+            .map(|(_, value)| value)
+            .or_else(|| tree::get_path(&file_args, path));
+        if max.is_some_and(|value| !value.as_i64().is_some_and(|n| (0..=1000).contains(&n))) {
+            return Err(Failure::Usage(
+                "--max-runners must be a whole number from 0 to 1000 (0 uses the plan limit)"
+                    .into(),
+            ));
+        }
+    }
     if configures_social {
         for (field, value) in &mut values {
             if field == "client_secret" {
@@ -146,7 +163,14 @@ pub(crate) async fn generated(
                 };
                 return Err(Failure::Usage(format!(
                     "{} conflicts with --from-file at {field}{detail}",
-                    flag.flag
+                    if method.method == "runners.scale_sets.create"
+                        && field == "scale_set.spec.runner_class"
+                        && mm.get_one::<String>("runner-machine").is_some()
+                    {
+                        "--machine"
+                    } else {
+                        &flag.flag
+                    }
                 )));
             }
         }

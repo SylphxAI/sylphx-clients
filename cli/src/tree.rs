@@ -183,6 +183,12 @@ pub fn method_command(m: &MethodCmd) -> Command {
             "output or `sylphx sandboxes leases list` in the run’s environment.",
         ));
     }
+    if m.method == "runners.scale_sets.create" {
+        cmd = cmd.long_about(concat!(
+            "Creates a hosted CI scale set using a verified GitHub App installation or GitLab project connection. ",
+            "Pass its resource name with --connection. The connection and machine class are immutable.",
+        ));
+    }
     if let Some(p) = &m.positional {
         let mut arg = Arg::new("__positional").value_name(p.arg.clone());
         arg = arg.required(!(p.optional || p.default_from_context));
@@ -212,7 +218,23 @@ pub fn method_command(m: &MethodCmd) -> Command {
                 arg = arg.value_parser(clap::builder::PossibleValuesParser::new(values.clone()));
             }
         }
+        if m.method.starts_with("runners.scale_sets.") {
+            arg = match f.field.as_str() {
+                "scale_set.spec.connection" => arg.visible_alias("connection"),
+                "scale_set.spec.max_runners" => arg.visible_alias("max-runners"),
+                _ => arg,
+            };
+        }
         cmd = cmd.arg(arg);
+    }
+    if m.method == "runners.scale_sets.create" {
+        cmd = cmd.arg(
+            Arg::new("runner-machine")
+                .long("machine")
+                .value_parser(["standard", "large", "xlarge"])
+                .conflicts_with("spec.runner-class")
+                .help("Hosted Linux machine class; an alternative to --spec.runner-class"),
+        );
     }
     cmd
 }
@@ -422,6 +444,14 @@ pub fn flag_values(
             }
         }
         out.push((f.field.clone(), value));
+    }
+    if m.method == "runners.scale_sets.create" {
+        if let Some(machine) = matches.get_one::<String>("runner-machine") {
+            out.push((
+                "scale_set.spec.runner_class".to_string(),
+                json!(format!("sylphx-linux-{machine}")),
+            ));
+        }
     }
     Ok((out, mask))
 }
@@ -746,8 +776,59 @@ mod tests {
         }
         assert!(!tree.services.iter().any(|s| matches!(
             s.noun.as_str(),
-            "analytics" | "entitlement" | "network" | "realtime" | "runners"
+            "analytics" | "entitlement" | "network" | "realtime"
         )));
+    }
+
+    #[test]
+    fn runner_flags_write_canonical_connection_machine_and_cap_fields() {
+        let method: MethodCmd = serde_json::from_value(json!({
+            "verb": "create", "method": "runners.scale_sets.create",
+            "summary": "Creates a scale set", "http": "POST /v1/{parent=orgs/*}/scale_sets",
+            "effect": "write", "resource_field": "scale_set",
+            "flags": [
+                {"flag": "--spec.connection", "field": "scale_set.spec.connection", "type": "string", "required": true},
+                {"flag": "--spec.runner-class", "field": "scale_set.spec.runner_class", "type": "string", "required": true},
+                {"flag": "--spec.max-runners", "field": "scale_set.spec.max_runners", "type": "int"}
+            ]
+        })).unwrap();
+        for (connection, machine) in [
+            ("github", "standard"),
+            ("gitlab", "large"),
+            ("gitlab", "xlarge"),
+        ] {
+            let name = format!("orgs/org_example/connections/{connection}");
+            let matches = method_command(&method)
+                .try_get_matches_from([
+                    "create",
+                    "--connection",
+                    &name,
+                    "--machine",
+                    machine,
+                    "--max-runners",
+                    "20",
+                ])
+                .unwrap();
+            let (values, _) = flag_values(&method, &matches).unwrap();
+            assert!(values.contains(&("scale_set.spec.connection".into(), json!(name))));
+            assert!(values.contains(&(
+                "scale_set.spec.runner_class".into(),
+                json!(format!("sylphx-linux-{machine}"))
+            )));
+            assert!(values.contains(&("scale_set.spec.max_runners".into(), json!(20))));
+        }
+        assert!(method_command(&method)
+            .try_get_matches_from([
+                "create",
+                "--machine",
+                "xlarge",
+                "--spec.runner-class",
+                "sylphx-linux-large",
+            ])
+            .is_err());
+        assert!(method_command(&method)
+            .try_get_matches_from(["create", "--machine", "not-a-class",])
+            .is_err());
     }
 
     /// `MethodPolicy.porcelain` and collapsed stutter collections mount cleanly
