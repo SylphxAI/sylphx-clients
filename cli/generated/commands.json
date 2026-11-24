@@ -11987,11 +11987,12 @@
                 {
                   "field": "profile",
                   "flag": "--profile",
-                  "summary": "POOLED (default) or DIRECT.",
+                  "summary": "POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only the tenant reader login and its TLS standby endpoint. If no replica or reader is configured the call fails with INVALID_STATE.",
                   "type": "enum",
                   "values": [
                     "pooled",
-                    "direct"
+                    "direct",
+                    "read_replica"
                   ]
                 }
               ],

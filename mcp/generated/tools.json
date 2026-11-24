@@ -16725,10 +16725,11 @@
             "x-sylphx-resource-reference": "data.sylphx.com/Database"
           },
           "profile": {
-            "description": "POOLED (default) or DIRECT.",
+            "description": "POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only\nthe tenant reader login and its TLS standby endpoint. If no replica or\nreader is configured the call fails with INVALID_STATE.",
             "enum": [
               "pooled",
-              "direct"
+              "direct",
+              "read_replica"
             ],
             "type": "string"
           }

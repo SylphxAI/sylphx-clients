@@ -11,6 +11,11 @@
       "number": 2,
       "proto_name": "CONNECTION_PROFILE_DIRECT",
       "wire": "direct"
+    },
+    {
+      "number": 3,
+      "proto_name": "CONNECTION_PROFILE_READ_REPLICA",
+      "wire": "read_replica"
     }
   ]
 }

@@ -16608,7 +16608,7 @@
           },
           "profile": {
             "$ref": "#/components/schemas/sylphx.data.v1.ConnectionProfile",
-            "description": "POOLED (default) or DIRECT."
+            "description": "POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only\nthe tenant reader login and its TLS standby endpoint. If no replica or\nreader is configured the call fails with INVALID_STATE."
           }
         },
         "required": [
@@ -16621,7 +16621,7 @@
         "properties": {
           "connection_info": {
             "$ref": "#/components/schemas/sylphx.data.v1.ConnectionInfo",
-            "description": "How to connect."
+            "description": "How to connect. For READ_REPLICA, uri and direct_uri are both the\nsame standby URL; neither is a primary connection."
           }
         },
         "type": "object"
@@ -16716,7 +16716,8 @@
         "description": "ConnectionProfile is which Postgres path a connection takes.",
         "enum": [
           "pooled",
-          "direct"
+          "direct",
+          "read_replica"
         ],
         "type": "string"
       },
@@ -83683,7 +83684,7 @@
                 "properties": {
                   "profile": {
                     "$ref": "#/components/schemas/sylphx.data.v1.ConnectionProfile",
-                    "description": "POOLED (default) or DIRECT."
+                    "description": "POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only\nthe tenant reader login and its TLS standby endpoint. If no replica or\nreader is configured the call fails with INVALID_STATE."
                   }
                 },
                 "type": "object"

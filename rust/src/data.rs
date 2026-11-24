@@ -324,7 +324,9 @@ pub struct ConnectDatabaseRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// POOLED (default) or DIRECT.
+    /// POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only
+    /// the tenant reader login and its TLS standby endpoint. If no replica or
+    /// reader is configured the call fails with INVALID_STATE.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile: Option<ConnectionProfile>,
 }
@@ -333,7 +335,8 @@ pub struct ConnectDatabaseRequest {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ConnectDatabaseResponse {
-    /// How to connect.
+    /// How to connect. For READ_REPLICA, uri and direct_uri are both the
+    /// same standby URL; neither is a primary connection.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -3553,6 +3556,9 @@ pub enum ConnectionProfile {
     /// Straight to the primary: migrations, `pg_dump`, `LISTEN`/`NOTIFY`, session
     /// `SET`.
     Direct,
+    /// Direct to a read-only standby of a dedicated PostgreSQL database.
+    /// Requires a provisioned tenant reader; never falls back to the writer.
+    ReadReplica,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -3563,6 +3569,7 @@ impl ConnectionProfile {
         match self {
             Self::Pooled => "pooled",
             Self::Direct => "direct",
+            Self::ReadReplica => "read_replica",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -3572,6 +3579,7 @@ impl ConnectionProfile {
         match s {
             "pooled" => Self::Pooled,
             "direct" => Self::Direct,
+            "read_replica" => Self::ReadReplica,
             other => Self::Unknown(other.to_string()),
         }
     }

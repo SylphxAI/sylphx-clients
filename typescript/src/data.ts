@@ -190,13 +190,20 @@ export interface ConnectBucketResponse {
 export interface ConnectDatabaseRequest {
 	/** The name of the database. */
 	name: string
-	/** POOLED (default) or DIRECT. */
+	/**
+	 * POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only
+	 * the tenant reader login and its TLS standby endpoint. If no replica or
+	 * reader is configured the call fails with INVALID_STATE.
+	 */
 	profile?: ConnectionProfile
 }
 
 /** The response of ConnectDatabase. */
 export interface ConnectDatabaseResponse {
-	/** How to connect. */
+	/**
+	 * How to connect. For READ_REPLICA, uri and direct_uri are both the
+	 * same standby URL; neither is a primary connection.
+	 */
 	connectionInfo?: ConnectionInfo
 }
 
@@ -1568,7 +1575,7 @@ export type CatalogReadinessReason = 'catalog_ready' | 'credential_missing' | 'a
 export type CatalogReadinessState = 'healthy' | 'unhealthy' | 'unknown' | (string & {})
 
 /** ConnectionProfile is which Postgres path a connection takes. */
-export type ConnectionProfile = 'pooled' | 'direct' | (string & {})
+export type ConnectionProfile = 'pooled' | 'direct' | 'read_replica' | (string & {})
 
 /** DatastoreState is whether a datastore is serving. */
 export type DatastoreState = 'provisioning' | 'active' | 'idle' | 'moving' | 'deleting' | (string & {})

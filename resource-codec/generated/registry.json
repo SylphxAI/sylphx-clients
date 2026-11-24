@@ -2570,6 +2570,12 @@
           "number": 2,
           "proto_name": "CONNECTION_PROFILE_DIRECT",
           "wire": "direct"
+        },
+        {
+          "doc": "Direct to a read-only standby of a dedicated PostgreSQL database.\nRequires a provisioned tenant reader; never falls back to the writer.",
+          "number": 3,
+          "proto_name": "CONNECTION_PROFILE_READ_REPLICA",
+          "wire": "read_replica"
         }
       ]
     },
@@ -53063,7 +53069,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "POOLED (default) or DIRECT.",
+          "doc": "POOLED (default), DIRECT, or READ_REPLICA. READ_REPLICA returns only\nthe tenant reader login and its TLS standby endpoint. If no replica or\nreader is configured the call fails with INVALID_STATE.",
           "filterable": false,
           "name": "profile",
           "number": 2,
@@ -53087,7 +53093,7 @@
         {
           "behaviors": [],
           "cli_flag": "",
-          "doc": "How to connect.",
+          "doc": "How to connect. For READ_REPLICA, uri and direct_uri are both the\nsame standby URL; neither is a primary connection.",
           "filterable": false,
           "name": "connection_info",
           "number": 1,
