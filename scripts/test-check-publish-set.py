@@ -35,7 +35,7 @@ class PublishSetTests(unittest.TestCase):
         self.metadata["packages"].append({
             "id": "dependency", "name": "dependency", "version": "1.0.0", "publish": None,
         })
-        self.assertEqual(len(module.ordered_packages(self.metadata)), 7)
+        self.assertEqual(len(module.ordered_packages(self.metadata)), len(module.PUBLISH_ORDER))
 
     def test_missing_or_unlisted_publishable_member_fails(self):
         for name in ("sylphx-cli", "new-client"):

@@ -19,6 +19,7 @@ PUBLISH_ORDER = (
     "sylphx-apply",
     "sylphx-mcp",
     "sylphx-build-lease",
+    "sylphx-migrate",
     "sylphx-cli",
 )
 

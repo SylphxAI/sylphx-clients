@@ -1,32 +1,13 @@
-//! Local PostgreSQL migration porcelain. No Cloud API or legacy executable.
-mod baseline;
-mod history;
-mod lint;
-mod postgres;
-mod sql;
-
+//! Local PostgreSQL migration porcelain.
+use crate::Failure;
+use clap::{value_parser, Arg, ArgMatches, Command};
+use serde::Deserialize;
 use std::{
-    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
-
-use clap::{value_parser, Arg, ArgMatches, Command};
-use serde::Deserialize;
-use sha2::{Digest, Sha256};
-
-use crate::Failure;
-
+use sylphx_migrate::{Apply, ReleaseTarget, SourceTree};
 type Result<T> = std::result::Result<T, String>;
-type Files = BTreeMap<i64, Migration>;
-
-struct Migration {
-    id: i64,
-    file: String,
-    sql: String,
-    sha256: String,
-    legacy_lint_reviewed: bool,
-}
 
 pub(crate) fn command() -> Command {
     Command::new("migrate")
@@ -58,9 +39,18 @@ pub(crate) fn command() -> Command {
                 .help("Validate a checksum-pinned baseline for reviewed legacy lint findings"),
         )
         .subcommands([
-            Command::new("plan").about("Read target history and list local SQL pending execution"),
+            Command::new("plan")
+                .about("Read target history and list local SQL pending execution")
+                .arg(
+                    Arg::new("release")
+                        .long("release")
+                        .action(clap::ArgAction::SetTrue)
+                        .hide(true),
+                ),
             Command::new("lint").about("Lint every SQL file without contacting PostgreSQL"),
-            Command::new("apply").about("Lint and execute pending SQL against DATABASE_URL"),
+            Command::new("apply")
+                .about("Lint and execute pending SQL against DATABASE_URL")
+                .arg(Arg::new("release-seal").long("release-seal").hide(true)),
             Command::new("status").about("Read target history and reconcile it with local SQL"),
         ])
 }
@@ -103,69 +93,6 @@ fn config_dir(path: &Path) -> Result<PathBuf> {
     Ok(path.parent().unwrap_or_else(|| Path::new(".")).join(dir))
 }
 
-fn valid_id(raw: &str) -> Option<i64> {
-    let id = raw.parse::<i64>().ok()?;
-    (id > 0 && id.to_string() == raw).then_some(id)
-}
-
-fn load(dir: &Path) -> Result<Files> {
-    let invalid = |e| format!("cannot load migration directory {}: {e}", dir.display());
-    let mut files = Files::new();
-    // File name order is used only for legacy Atlas reconciliation. Reading
-    // once pins the exact bytes that will be linted, executed and recorded.
-    let mut entries = fs::read_dir(dir)
-        .map_err(invalid)?
-        .collect::<std::io::Result<Vec<_>>>()
-        .map_err(invalid)?;
-    entries.sort_by_key(|e| e.file_name());
-    for entry in entries {
-        let file = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| "non-UTF-8 migration filename")?;
-        let Some(stem) = file.strip_suffix(".sql") else {
-            continue;
-        };
-        // SQLx reversible migrations use .up.sql and .down.sql. Forward only.
-        let (name, down) = if let Some(name) = stem.strip_suffix(".down") {
-            (name, true)
-        } else {
-            (stem.strip_suffix(".up").unwrap_or(stem), false)
-        };
-        let (id, slug) = name
-            .split_once('_')
-            .ok_or_else(|| format!("expected <id>_<name>.sql: {file}"))?;
-        let id =
-            valid_id(id).ok_or_else(|| format!("invalid positive decimal migration ID: {file}"))?;
-        if slug.is_empty() || !entry.file_type().map_err(invalid)?.is_file() {
-            return Err(format!(
-                "migration must be a named regular file (not a symlink): {file}"
-            ));
-        }
-        if down {
-            continue;
-        }
-        let sql = fs::read_to_string(entry.path()).map_err(invalid)?;
-        let sha256 = format!("{:x}", Sha256::digest(sql.as_bytes()));
-        if files
-            .insert(
-                id,
-                Migration {
-                    id,
-                    file,
-                    sql,
-                    sha256,
-                    legacy_lint_reviewed: false,
-                },
-            )
-            .is_some()
-        {
-            return Err(format!("duplicate migration ID {id}"));
-        }
-    }
-    Ok(files)
-}
-
 fn write_json<T: serde::Serialize>(value: &T) -> std::result::Result<(), Failure> {
     println!(
         "{}",
@@ -186,15 +113,14 @@ pub(crate) async fn run(args: &ArgMatches) -> std::result::Result<(), Failure> {
         )
         .map_err(Failure::Usage)?,
     };
-    let mut files = load(&dir).map_err(Failure::Usage)?;
-    if let Some(path) = args.get_one::<PathBuf>("legacy-lint-baseline") {
-        baseline::verify(path, &mut files).map_err(Failure::Usage)?;
-    }
+    let files = SourceTree::load(
+        &dir,
+        args.get_one::<PathBuf>("legacy-lint-baseline")
+            .map(PathBuf::as_path),
+    )
+    .map_err(Failure::Usage)?;
     if action == "lint" {
-        let diagnostics = files
-            .values()
-            .flat_map(|file| lint::check(file).diagnostics)
-            .collect::<Vec<_>>();
+        let diagnostics = files.lint();
         write_json(&serde_json::json!({"diagnostics": diagnostics}))?;
         return if diagnostics.is_empty() {
             Ok(())
@@ -202,25 +128,49 @@ pub(crate) async fn run(args: &ArgMatches) -> std::result::Result<(), Failure> {
             Err(Failure::Exit(1))
         };
     }
-    let url = std::env::var("DATABASE_URL").map_err(|_| {
-        Failure::Usage("set DATABASE_URL for the intended PostgreSQL target".into())
-    })?;
-    let mut db = postgres::connect(&url).await.map_err(Failure::Refused)?;
-    if action == "apply" {
-        match postgres::apply(&mut db, &files)
+    let seal = if action == "apply" {
+        args.get_one::<String>("release-seal")
+    } else {
+        None
+    };
+    let release_plan = action == "plan" && args.get_flag("release");
+    let key = if release_plan || seal.is_some() {
+        "MIGRATOR_DATABASE_URL"
+    } else {
+        "DATABASE_URL"
+    };
+    let url = std::env::var(key)
+        .map_err(|_| Failure::Usage(format!("set {key} for the intended PostgreSQL target")))?;
+    let target = (release_plan || seal.is_some())
+        .then(|| ReleaseTarget::parse(&url))
+        .transpose()
+        .map_err(Failure::Refused)?;
+    let mut db = sylphx_migrate::connect(&url)
+        .await
+        .map_err(Failure::Refused)?;
+    if release_plan {
+        let plan = files
+            .release_plan(&mut db, target.as_ref().expect("release target"))
             .await
-            .map_err(Failure::Refused)?
-        {
-            postgres::Apply::Applied(report) => write_json(&report),
-            postgres::Apply::LintFailed(diagnostics) => {
+            .map_err(Failure::Refused)?;
+        let pending: Vec<_> = plan.pending.iter().map(|(file, _)| file).collect();
+        return write_json(&serde_json::json!({"seal": plan.seal, "pending": pending}));
+    }
+    if action == "apply" {
+        let result = if let Some((target, seal)) = target.as_ref().zip(seal) {
+            files.apply_release(&mut db, target, seal).await
+        } else {
+            files.apply(&mut db).await
+        };
+        match result.map_err(Failure::Refused)? {
+            Apply::Applied(report) => write_json(&report),
+            Apply::LintFailed(diagnostics) => {
                 write_json(&serde_json::json!({"diagnostics": diagnostics}))?;
                 Err(Failure::Exit(1))
             }
         }
     } else {
-        let report = postgres::inspect(&mut db, &files)
-            .await
-            .map_err(Failure::Refused)?;
+        let report = files.inspect(&mut db).await.map_err(Failure::Refused)?;
         if action == "plan" {
             write_json(&report.pending)
         } else {

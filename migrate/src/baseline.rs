@@ -1,5 +1,5 @@
 //! Opt-in review of immutable legacy diagnostics; no blanket policy switch.
-use std::{collections::BTreeSet, fs, path::Path};
+use std::collections::BTreeSet;
 
 use serde::Deserialize;
 
@@ -20,9 +20,8 @@ struct Finding {
     rule_id: String,
 }
 
-pub(super) fn verify(path: &Path, files: &mut Files) -> Result<()> {
-    let bytes = fs::read(path).map_err(|e| format!("cannot read legacy lint baseline: {e}"))?;
-    let entries: Vec<Entry> = serde_json::from_slice(&bytes)
+pub(super) fn verify(bytes: &[u8], files: &mut Files) -> Result<()> {
+    let entries: Vec<Entry> = serde_json::from_slice(bytes)
         .map_err(|_| "invalid legacy lint baseline; expected a JSON array of reviewed files")?;
     let mut seen = BTreeSet::new();
     for entry in entries {

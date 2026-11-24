@@ -2979,6 +2979,7 @@ dependencies = [
  "sylphx-apply",
  "sylphx-build-lease",
  "sylphx-mcp",
+ "sylphx-migrate",
  "sylphx-resource-codec",
  "tokio",
  "toml",
@@ -3008,6 +3009,19 @@ dependencies = [
  "serde_json",
  "tokio",
  "toml_edit 0.23.10+spec-1.0.0",
+]
+
+[[package]]
+name = "sylphx-migrate"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "tokio",
+ "url",
 ]
 
 [[package]]

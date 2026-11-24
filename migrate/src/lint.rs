@@ -15,7 +15,7 @@ type Tokens<'a> = [Token<'a>];
 type Object = Vec<String>;
 
 #[derive(Debug, Serialize)]
-pub(super) struct Diagnostic<'a> {
+pub struct Diagnostic<'a> {
     pub(super) file: &'a str,
     pub(super) line: usize,
     pub(super) rule_id: &'static str,

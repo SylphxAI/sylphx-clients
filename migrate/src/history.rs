@@ -9,7 +9,7 @@ use super::{Files, Migration, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum Source {
+pub enum Source {
     Sylphx,
     Atlas,
     Sqlx,
@@ -45,17 +45,17 @@ impl Source {
 }
 
 pub(super) struct Recorded {
-    pub(super) sha256: String,
-    pub(super) source: Source,
+    pub sha256: String,
+    pub source: Source,
     pub(super) done: bool,
 }
 
 #[derive(Serialize)]
-pub(super) struct File<'a> {
-    pub(super) id: String,
-    pub(super) file: &'a str,
-    pub(super) sha256: &'a str,
-    pub(super) source: Option<Source>,
+pub struct File<'a> {
+    pub id: String,
+    pub file: &'a str,
+    pub sha256: &'a str,
+    pub source: Option<Source>,
 }
 
 impl<'a> File<'a> {
@@ -70,9 +70,9 @@ impl<'a> File<'a> {
 }
 
 #[derive(Serialize)]
-pub(super) struct Report<'a> {
-    pub(super) applied: Vec<File<'a>>,
-    pub(super) pending: Vec<File<'a>>,
+pub struct Report<'a> {
+    pub applied: Vec<File<'a>>,
+    pub pending: Vec<File<'a>>,
     // Rows to insert, already verified; not mixed into the status JSON.
     #[serde(skip)]
     pub(super) imports: Vec<(i64, Source)>,
@@ -109,7 +109,7 @@ pub(super) fn reconcile<'a>(
     // Atlas v1.3.0 stores the cumulative SHA-256 of name+bytes, not a
     // per-file hash. Verify the historical applied set in Atlas filename order,
     // excluding new pending files. Never consult or generate atlas.sum.
-    if !initialized {
+    {
         let mut prefix = Sha256::new();
         let mut applied = atlas
             .iter()

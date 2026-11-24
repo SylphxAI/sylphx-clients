@@ -9,7 +9,7 @@ use sqlx::{
 use super::{
     history::{self, Recorded, Report, Source},
     lint::{self, Diagnostic},
-    valid_id, Files, Migration, Result,
+    valid_id, Files, Migration, ReleaseTarget, Result, SourceTree,
 };
 
 const LEDGER: &str = "public._sylphx_migrations";
@@ -23,7 +23,7 @@ const ATLAS: [&str; 2] = [
 const LOCK: i64 = 0x7379_6c70_6878_6d67;
 const ATLAS_DEFAULT_LOCK: i64 = 2_686_470_616;
 
-pub(super) async fn connect(url: &str) -> Result<PgConnection> {
+pub async fn connect(url: &str) -> Result<PgConnection> {
     let options = url
         .parse::<PgConnectOptions>()
         .map_err(|_| "invalid PostgreSQL DATABASE_URL")?;
@@ -135,7 +135,7 @@ pub(super) async fn inspect<'a>(db: &mut PgConnection, files: &'a Files) -> Resu
     Ok(report)
 }
 
-pub(super) enum Apply<'a> {
+pub enum Apply<'a> {
     Applied(Report<'a>),
     LintFailed(Vec<Diagnostic<'a>>),
 }
@@ -154,13 +154,22 @@ async fn record<'e>(
     Ok(())
 }
 
-pub(super) async fn apply<'a>(db: &mut PgConnection, files: &'a Files) -> Result<Apply<'a>> {
-    tokio::time::timeout(Duration::from_secs(600), apply_locked(db, files))
+pub(super) async fn apply<'a>(
+    db: &mut PgConnection,
+    tree: &'a SourceTree,
+    release: Option<(&ReleaseTarget, &str)>,
+) -> Result<Apply<'a>> {
+    tokio::time::timeout(Duration::from_secs(600), apply_locked(db, tree, release))
         .await
         .map_err(|_| "migration run exceeded 10m; inspect the ledger before retrying".to_string())?
 }
 
-async fn apply_locked<'a>(db: &mut PgConnection, files: &'a Files) -> Result<Apply<'a>> {
+async fn apply_locked<'a>(
+    db: &mut PgConnection,
+    tree: &'a SourceTree,
+    release: Option<(&ReleaseTarget, &str)>,
+) -> Result<Apply<'a>> {
+    let files = &tree.files;
     // A legacy writer must be fenced before cutover (it doesn't read this
     // ledger). Additionally refuse overlap with a currently running default
     // Atlas process, as well as all Sylphx runner sessions.
@@ -188,7 +197,15 @@ async fn apply_locked<'a>(db: &mut PgConnection, files: &'a Files) -> Result<App
         .begin_with("BEGIN ISOLATION LEVEL REPEATABLE READ")
         .await
         .map_err(|_| "cannot start migration ledger transaction")?;
+    if let Some((target, _)) = release {
+        target.check_session(&mut tx).await?;
+    }
     let (initialized, report) = history(&mut tx, files).await?;
+    if let Some((target, expected)) = release {
+        if tree.seal(target, &report)? != expected {
+            return Err("native migration plan changed before apply; no writes made".into());
+        }
+    }
     let mut diagnostics = Vec::new();
     let mut pending = Vec::new();
     for m in files
