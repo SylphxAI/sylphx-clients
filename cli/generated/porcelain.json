@@ -51,6 +51,12 @@
     "mcp": [
       "setup"
     ],
+    "migrate": [
+      "apply",
+      "lint",
+      "plan",
+      "status"
+    ],
     "org": [
       "use"
     ],

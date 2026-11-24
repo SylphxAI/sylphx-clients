@@ -18,6 +18,7 @@ mod enable;
 mod events_listen;
 mod hosting_gitlab;
 mod invoke;
+mod migrate;
 mod names;
 mod output;
 mod porcelain;
@@ -289,6 +290,7 @@ fn cli(tree: &Tree) -> Command {
         )
         .subcommand(devices::command())
         .subcommands(release_cmd::commands())
+        .subcommand(migrate::command())
         .subcommand(porcelain::command())
         .subcommand(
             Command::new("completion")
@@ -443,6 +445,7 @@ async fn run(tree: &Tree, m: &ArgMatches) -> Result<(), Failure> {
     let (name, sub) = m.subcommand().expect("subcommand_required");
     match name {
         "apply" => apply::run(sub, api_key, base_url, org, format).await,
+        "migrate" => migrate::run(sub).await,
         "login" => {
             login(
                 api_key.clone(),
