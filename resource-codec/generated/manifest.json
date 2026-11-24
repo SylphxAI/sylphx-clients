@@ -26510,6 +26510,25 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Hosting's observed state and DNS instructions for the current custom portal claim.",
+          "filterable": false,
+          "name": "portal_domain",
+          "number": 12,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.PortalDomainStatus"
+          }
         }
       ],
       "name": "sylphx.auth.v1.AuthConfigStatus",
@@ -32623,6 +32642,191 @@
         }
       ],
       "name": "sylphx.auth.v1.PortalConfig",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "One DNS record a customer can publish for a hosted portal.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "TXT, CNAME or ALIAS.",
+          "filterable": false,
+          "name": "type",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Fully qualified DNS record name.",
+          "filterable": false,
+          "name": "dns_name",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Exact record value.",
+          "filterable": false,
+          "name": "value",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Recommended TTL, in seconds.",
+          "filterable": false,
+          "name": "ttl",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "duration"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.PortalDomainDnsRecord",
+      "package": "sylphx.auth.v1"
+    },
+    {
+      "doc": "The DNS, edge certificate and route observations for an AuthConfig portal domain.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Hosting's status for the current claim: AwaitingDnsProof, Bound, Conflict, or Unavailable.",
+          "filterable": false,
+          "name": "binding_status",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "DNS routing state, once the hostname is bound.",
+          "filterable": false,
+          "name": "dns_status",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Edge TLS provisioning state, once the hostname is bound.",
+          "filterable": false,
+          "name": "edge_ssl_status",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether Hosting has observed the current route generation.",
+          "filterable": false,
+          "name": "route_active",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Records to publish. TXT proves control; CNAME or ALIAS points at the edge.",
+          "filterable": false,
+          "name": "dns_records",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.auth.v1.PortalDomainDnsRecord"
+          }
+        }
+      ],
+      "name": "sylphx.auth.v1.PortalDomainStatus",
       "package": "sylphx.auth.v1"
     },
     {

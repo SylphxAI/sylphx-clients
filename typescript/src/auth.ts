@@ -103,6 +103,8 @@ export interface AuthConfigStatus {
 	readonly portalOrigin?: string
 	/** The OAuth issuer URI; tokens verify from its JWKS. */
 	readonly issuerUri?: string
+	/** Hosting's observed state and DNS instructions for the current custom portal claim. */
+	readonly portalDomain?: PortalDomainStatus
 }
 
 /** The request of ConfigureSocialProvider. */
@@ -1133,6 +1135,32 @@ export interface PortalConfig {
 	appearance?: PortalAppearance
 }
 
+/** One DNS record a customer can publish for a hosted portal. */
+export interface PortalDomainDnsRecord {
+	/** TXT, CNAME or ALIAS. */
+	readonly type?: string
+	/** Fully qualified DNS record name. */
+	readonly dnsName?: string
+	/** Exact record value. */
+	readonly value?: string
+	/** Recommended TTL, in seconds. */
+	readonly ttl?: string
+}
+
+/** The DNS, edge certificate and route observations for an AuthConfig portal domain. */
+export interface PortalDomainStatus {
+	/** Hosting's status for the current claim: AwaitingDnsProof, Bound, Conflict, or Unavailable. */
+	readonly bindingStatus?: string
+	/** DNS routing state, once the hostname is bound. */
+	readonly dnsStatus?: string
+	/** Edge TLS provisioning state, once the hostname is bound. */
+	readonly edgeSslStatus?: string
+	/** Whether Hosting has observed the current route generation. */
+	readonly routeActive?: boolean
+	/** Records to publish. TXT proves control; CNAME or ALIAS points at the edge. */
+	readonly dnsRecords?: PortalDomainDnsRecord[]
+}
+
 /** A present allowlist must contain at least one supported portal locale. */
 export interface PortalLocaleAllowlist {
 	/** Distinct tags from en, zh-Hant, zh-Hans, ja, ko, in fallback order. */
@@ -1483,6 +1511,7 @@ runtime.registerSchemas({
 		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
 		['portalOrigin', 'portal_origin'],
 		['issuerUri', 'issuer_uri'],
+		['portalDomain', 'portal_domain', 'sylphx.auth.v1.PortalDomainStatus'],
 	],
 	'sylphx.auth.v1.ConfigureSocialProviderRequest': [
 		['clientId', 'client_id'],
@@ -1802,6 +1831,16 @@ runtime.registerSchemas({
 		['primaryColor', 'primary_color'],
 		['sylphxBranding', 'sylphx_branding'],
 		['appearance', 'appearance', 'sylphx.auth.v1.PortalAppearance'],
+	],
+	'sylphx.auth.v1.PortalDomainDnsRecord': [
+		['dnsName', 'dns_name'],
+	],
+	'sylphx.auth.v1.PortalDomainStatus': [
+		['bindingStatus', 'binding_status'],
+		['dnsStatus', 'dns_status'],
+		['edgeSslStatus', 'edge_ssl_status'],
+		['routeActive', 'route_active'],
+		['dnsRecords', 'dns_records', 'sylphx.auth.v1.PortalDomainDnsRecord'],
 	],
 	'sylphx.auth.v1.PortalLocaleAllowlist': [],
 	'sylphx.auth.v1.ReactivateEndUserRequest': [],

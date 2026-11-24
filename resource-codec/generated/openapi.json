@@ -7226,6 +7226,11 @@
             "readOnly": true,
             "type": "string"
           },
+          "portal_domain": {
+            "$ref": "#/components/schemas/sylphx.auth.v1.PortalDomainStatus",
+            "description": "Hosting's observed state and DNS instructions for the current custom portal claim.",
+            "readOnly": true
+          },
           "portal_origin": {
             "description": "The Account Portal origin in use.",
             "readOnly": true,
@@ -9310,6 +9315,67 @@
           },
           "sylphx_branding": {
             "description": "Show Sylphx branding.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.auth.v1.PortalDomainDnsRecord": {
+        "description": "One DNS record a customer can publish for a hosted portal.",
+        "properties": {
+          "dns_name": {
+            "description": "Fully qualified DNS record name.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "ttl": {
+            "description": "Recommended TTL, in seconds.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "type": {
+            "description": "TXT, CNAME or ALIAS.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "value": {
+            "description": "Exact record value.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.auth.v1.PortalDomainStatus": {
+        "description": "The DNS, edge certificate and route observations for an AuthConfig portal domain.",
+        "properties": {
+          "binding_status": {
+            "description": "Hosting's status for the current claim: AwaitingDnsProof, Bound, Conflict, or Unavailable.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "dns_records": {
+            "description": "Records to publish. TXT proves control; CNAME or ALIAS points at the edge.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.auth.v1.PortalDomainDnsRecord"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "dns_status": {
+            "description": "DNS routing state, once the hostname is bound.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "edge_ssl_status": {
+            "description": "Edge TLS provisioning state, once the hostname is bound.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "route_active": {
+            "description": "Whether Hosting has observed the current route generation.",
+            "readOnly": true,
             "type": "boolean"
           }
         },

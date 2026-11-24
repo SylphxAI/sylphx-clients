@@ -207,6 +207,15 @@ pub struct AuthConfigStatus {
         alias = "issuerUri"
     )]
     pub issuer_uri: String,
+    /// Hosting's observed state and DNS instructions for the current custom portal claim.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "portalDomain"
+    )]
+    pub portal_domain: Option<PortalDomainStatus>,
 }
 
 /// The request of ConfigureSocialProvider.
@@ -2465,6 +2474,83 @@ pub struct PortalConfig {
     /// The hosted sign-in and account portal presentation for this environment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub appearance: Option<PortalAppearance>,
+}
+
+/// One DNS record a customer can publish for a hosted portal.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PortalDomainDnsRecord {
+    /// TXT, CNAME or ALIAS.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub r#type: String,
+    /// Fully qualified DNS record name.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dnsName"
+    )]
+    pub dns_name: String,
+    /// Exact record value.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub value: String,
+    /// Recommended TTL, in seconds.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub ttl: String,
+}
+
+/// The DNS, edge certificate and route observations for an AuthConfig portal domain.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct PortalDomainStatus {
+    /// Hosting's status for the current claim: AwaitingDnsProof, Bound, Conflict, or Unavailable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bindingStatus"
+    )]
+    pub binding_status: String,
+    /// DNS routing state, once the hostname is bound.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "dnsStatus"
+    )]
+    pub dns_status: String,
+    /// Edge TLS provisioning state, once the hostname is bound.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "edgeSslStatus"
+    )]
+    pub edge_ssl_status: String,
+    /// Whether Hosting has observed the current route generation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "routeActive"
+    )]
+    pub route_active: bool,
+    /// Records to publish. TXT proves control; CNAME or ALIAS points at the edge.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "dnsRecords")]
+    pub dns_records: Vec<PortalDomainDnsRecord>,
 }
 
 /// A present allowlist must contain at least one supported portal locale.
