@@ -617,6 +617,11 @@ export interface S3SigningConfig {
 	origin?: string
 	/** Bucket and an object namespace; slash-terminated, no leading slash. */
 	objectPrefix?: string
+	/**
+	 * Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/.
+	 * When enabled, both create and replacement PUTs sign application/json.
+	 */
+	allowActorHeadReplacement?: boolean
 }
 
 /** The request of UpdateConnectionProvider. */
@@ -856,6 +861,7 @@ runtime.registerSchemas({
 	'sylphx.connections.v1.S3SigningConfig': [
 		['secretVersion', 'secret_version'],
 		['objectPrefix', 'object_prefix'],
+		['allowActorHeadReplacement', 'allow_actor_head_replacement'],
 	],
 	'sylphx.connections.v1.UpdateConnectionProviderRequest': [
 		['connectionProvider', 'connection_provider', 'sylphx.connections.v1.ConnectionProvider'],

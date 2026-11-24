@@ -739,14 +739,15 @@ pub struct SignS3RequestRequest {
         alias = "objectKey"
     )]
     pub object_key: String,
-    /// '*' for PUT; unset for GET.
+    /// '*' for create-only PUT; unset for GET or replacement PUT. Actor-head
+    /// Connections require Content-Type: application/json on both kinds of PUT.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
         alias = "ifNoneMatch"
     )]
     pub if_none_match: String,
-    /// Lowercase hex SHA-256; for GET, the digest of an empty body.
+    /// Lowercase hex SHA-256 of the exact body; for GET, the empty-body digest.
     ///
     /// Field behavior: `required`.
     #[serde(
@@ -755,6 +756,11 @@ pub struct SignS3RequestRequest {
         alias = "payloadSha256"
     )]
     pub payload_sha256: String,
+    /// Replacement PUT on an opted-in actor-head Connection only. One quoted,
+    /// nonempty strong ASCII ETag (at most 256 bytes including quotes); no lists.
+    /// Mutually exclusive with if_none_match; unset for GET.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "ifMatch")]
+    pub if_match: Option<String>,
 }
 
 /// Send this proof only with the exact signed request. Response is not cached.

@@ -12644,8 +12644,12 @@
       "sylphx.broker.v1.SignS3RequestRequest": {
         "description": "One object operation. No query parameters or arbitrary signed headers.",
         "properties": {
+          "if_match": {
+            "description": "Replacement PUT on an opted-in actor-head Connection only. One quoted,\nnonempty strong ASCII ETag (at most 256 bytes including quotes); no lists.\nMutually exclusive with if_none_match; unset for GET.",
+            "type": "string"
+          },
           "if_none_match": {
-            "description": "'*' for PUT; unset for GET.",
+            "description": "'*' for create-only PUT; unset for GET or replacement PUT. Actor-head\nConnections require Content-Type: application/json on both kinds of PUT.",
             "type": "string"
           },
           "method": {
@@ -12666,7 +12670,7 @@
             "type": "string"
           },
           "payload_sha256": {
-            "description": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+            "description": "Lowercase hex SHA-256 of the exact body; for GET, the empty-body digest.",
             "type": "string"
           }
         },
@@ -16372,6 +16376,10 @@
       "sylphx.connections.v1.S3SigningConfig": {
         "description": "S3SigningConfig admits one workload and one canonical path-style key prefix.",
         "properties": {
+          "allow_actor_head_replacement": {
+            "description": "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/.\nWhen enabled, both create and replacement PUTs sign application/json.",
+            "type": "boolean"
+          },
           "object_prefix": {
             "description": "Bucket and an object namespace; slash-terminated, no leading slash.",
             "type": "string"
@@ -58341,8 +58349,12 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "if_match": {
+                    "description": "Replacement PUT on an opted-in actor-head Connection only. One quoted,\nnonempty strong ASCII ETag (at most 256 bytes including quotes); no lists.\nMutually exclusive with if_none_match; unset for GET.",
+                    "type": "string"
+                  },
                   "if_none_match": {
-                    "description": "'*' for PUT; unset for GET.",
+                    "description": "'*' for create-only PUT; unset for GET or replacement PUT. Actor-head\nConnections require Content-Type: application/json on both kinds of PUT.",
                     "type": "string"
                   },
                   "method": {
@@ -58358,7 +58370,7 @@
                     "type": "string"
                   },
                   "payload_sha256": {
-                    "description": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+                    "description": "Lowercase hex SHA-256 of the exact body; for GET, the empty-body digest.",
                     "type": "string"
                   }
                 },

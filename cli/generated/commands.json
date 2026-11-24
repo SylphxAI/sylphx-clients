@@ -8571,14 +8571,20 @@
                 {
                   "field": "if_none_match",
                   "flag": "--if-none-match",
-                  "summary": "'*' for PUT; unset for GET.",
+                  "summary": "'*' for create-only PUT; unset for GET or replacement PUT. Actor-head Connections require Content-Type: application/json on both kinds of PUT.",
                   "type": "string"
                 },
                 {
                   "field": "payload_sha256",
                   "flag": "--payload-sha256",
                   "required": true,
-                  "summary": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+                  "summary": "Lowercase hex SHA-256 of the exact body; for GET, the empty-body digest.",
+                  "type": "string"
+                },
+                {
+                  "field": "if_match",
+                  "flag": "--if-match",
+                  "summary": "Replacement PUT on an opted-in actor-head Connection only. One quoted, nonempty strong ASCII ETag (at most 256 bytes including quotes); no lists. Mutually exclusive with if_none_match; unset for GET.",
                   "type": "string"
                 }
               ],
@@ -11494,6 +11500,12 @@
                   "type": "string"
                 },
                 {
+                  "field": "connection.spec.s3_signing.allow_actor_head_replacement",
+                  "flag": "--spec.s3-signing.allow-actor-head-replacement",
+                  "summary": "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/. When enabled, both create and replacement PUTs sign application/json.",
+                  "type": "bool"
+                },
+                {
                   "field": "connection.spec.gitlab.instance_url",
                   "flag": "--spec.gitlab.instance-url",
                   "summary": "Credential-free HTTPS instance base, including an optional deployment subpath.",
@@ -11624,6 +11636,12 @@
                   "flag": "--spec.s3-signing.object-prefix",
                   "summary": "Bucket and an object namespace; slash-terminated, no leading slash.",
                   "type": "string"
+                },
+                {
+                  "field": "connection.spec.s3_signing.allow_actor_head_replacement",
+                  "flag": "--spec.s3-signing.allow-actor-head-replacement",
+                  "summary": "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/. When enabled, both create and replacement PUTs sign application/json.",
+                  "type": "bool"
                 },
                 {
                   "field": "connection.spec.gitlab.api_token_version",

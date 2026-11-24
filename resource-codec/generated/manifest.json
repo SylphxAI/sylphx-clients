@@ -42157,7 +42157,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "'*' for PUT; unset for GET.",
+          "doc": "'*' for create-only PUT; unset for GET or replacement PUT. Actor-head\nConnections require Content-Type: application/json on both kinds of PUT.",
           "filterable": false,
           "name": "if_none_match",
           "number": 5,
@@ -42176,12 +42176,31 @@
             "REQUIRED"
           ],
           "cli_flag": "",
-          "doc": "Lowercase hex SHA-256; for GET, the digest of an empty body.",
+          "doc": "Lowercase hex SHA-256 of the exact body; for GET, the empty-body digest.",
           "filterable": false,
           "name": "payload_sha256",
           "number": 6,
           "oneof": null,
           "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Replacement PUT on an opted-in actor-head Connection only. One quoted,\nnonempty strong ASCII ETag (at most 256 bytes including quotes); no lists.\nMutually exclusive with if_none_match; unset for GET.",
+          "filterable": false,
+          "name": "if_match",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
           "repeated": false,
           "resource_reference": null,
           "sensitive": false,
@@ -52628,6 +52647,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/.\nWhen enabled, both create and replacement PUTs sign application/json.",
+          "filterable": false,
+          "name": "allow_actor_head_replacement",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],

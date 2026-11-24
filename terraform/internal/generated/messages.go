@@ -445,6 +445,7 @@ func connectionsS3SigningConfig() []def.Field {
 		{Name: "secret_version", Kind: def.String, Flags: def.Required, Doc: "Pinned same-org SecretVersion containing the R2 signing key pair."},
 		{Name: "origin", Kind: def.String, Flags: def.Required, Doc: "Canonical R2 HTTPS origin (no path, port, query or fragment)."},
 		{Name: "object_prefix", Kind: def.String, Flags: def.Required, Doc: "Bucket and an object namespace; slash-terminated, no leading slash."},
+		{Name: "allow_actor_head_replacement", Kind: def.Bool, Doc: "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/. When enabled, both create and replacement PUTs sign application/json."},
 	}
 }
 

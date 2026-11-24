@@ -1381,6 +1381,14 @@ pub struct S3SigningConfig {
         alias = "objectPrefix"
     )]
     pub object_prefix: String,
+    /// Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/.
+    /// When enabled, both create and replacement PUTs sign application/json.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "allowActorHeadReplacement"
+    )]
+    pub allow_actor_head_replacement: bool,
 }
 
 /// The request of UpdateConnectionProvider.

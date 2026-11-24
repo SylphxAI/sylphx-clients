@@ -370,10 +370,19 @@ export interface SignS3RequestRequest {
 	origin: string
 	/** Path-style bucket and key, without the initial slash. */
 	objectKey: string
-	/** '*' for PUT; unset for GET. */
+	/**
+	 * '*' for create-only PUT; unset for GET or replacement PUT. Actor-head
+	 * Connections require Content-Type: application/json on both kinds of PUT.
+	 */
 	ifNoneMatch?: string
-	/** Lowercase hex SHA-256; for GET, the digest of an empty body. */
+	/** Lowercase hex SHA-256 of the exact body; for GET, the empty-body digest. */
 	payloadSha256: string
+	/**
+	 * Replacement PUT on an opted-in actor-head Connection only. One quoted,
+	 * nonempty strong ASCII ETag (at most 256 bytes including quotes); no lists.
+	 * Mutually exclusive with if_none_match; unset for GET.
+	 */
+	ifMatch?: string
 }
 
 /** Send this proof only with the exact signed request. Response is not cached. */
@@ -687,6 +696,7 @@ runtime.registerSchemas({
 		['objectKey', 'object_key'],
 		['ifNoneMatch', 'if_none_match'],
 		['payloadSha256', 'payload_sha256'],
+		['ifMatch', 'if_match'],
 	],
 	'sylphx.broker.v1.SignS3RequestResponse': [
 		['amzDate', 'amz_date'],

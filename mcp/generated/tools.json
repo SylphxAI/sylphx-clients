@@ -15992,6 +15992,10 @@
                     "additionalProperties": false,
                     "description": "R2 object signing, mutually exclusive with other Connection kinds.",
                     "properties": {
+                      "allow_actor_head_replacement": {
+                        "description": "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/.\nWhen enabled, both create and replacement PUTs sign application/json.",
+                        "type": "boolean"
+                      },
                       "object_prefix": {
                         "description": "Bucket and an object namespace; slash-terminated, no leading slash.",
                         "type": "string"
@@ -16209,6 +16213,10 @@
                     "additionalProperties": false,
                     "description": "R2 object signing, mutually exclusive with other Connection kinds.",
                     "properties": {
+                      "allow_actor_head_replacement": {
+                        "description": "Opt in to If-Match replacement PUTs, only for <bucket>/actor-heads/v1/.\nWhen enabled, both create and replacement PUTs sign application/json.",
+                        "type": "boolean"
+                      },
                       "object_prefix": {
                         "description": "Bucket and an object namespace; slash-terminated, no leading slash.",
                         "type": "string"
