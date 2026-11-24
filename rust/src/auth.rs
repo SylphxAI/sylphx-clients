@@ -246,6 +246,30 @@ pub struct ConfigureSocialProviderRequest {
         alias = "clientSecret"
     )]
     pub client_secret: Option<String>,
+    /// Additional allowed Google OAuth client IDs. Custom Google only. Omit to
+    /// preserve them for an unchanged client_id.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "googleNativeAudiences"
+    )]
+    pub google_native_audiences: Vec<String>,
+    /// Allowed Apple native bundle IDs. Custom Apple only. Omit to preserve them.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "appleNativeAudiences"
+    )]
+    pub apple_native_audiences: Vec<String>,
+    /// Native audience paths to update. Include the provider's audience field
+    /// here with an empty or omitted list to clear it. Without a mask, a nonempty
+    /// list replaces the existing list. Credentials are configured independently.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
 }
 
 /// The request of CreateCustomerOrganization.
@@ -2722,6 +2746,24 @@ pub struct SocialProvider {
         alias = "clientSecretConfigured"
     )]
     pub client_secret_configured: bool,
+    /// Additional OAuth client IDs configured for native Google sign-in.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "googleNativeAudiences"
+    )]
+    pub google_native_audiences: Vec<String>,
+    /// Bundle IDs configured for native Sign in with Apple.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "appleNativeAudiences"
+    )]
+    pub apple_native_audiences: Vec<String>,
 }
 
 /// The request of SuspendEndUser.

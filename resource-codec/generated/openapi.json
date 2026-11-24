@@ -7251,6 +7251,13 @@
       "sylphx.auth.v1.ConfigureSocialProviderRequest": {
         "description": "The request of ConfigureSocialProvider.",
         "properties": {
+          "apple_native_audiences": {
+            "description": "Allowed Apple native bundle IDs. Custom Apple only. Omit to preserve them.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "client_id": {
             "description": "The OAuth client ID, required for custom credentials, omitted for shared.",
             "type": "string"
@@ -7265,6 +7272,13 @@
             "description": "shared (Sylphx's client) or custom (your own client).",
             "type": "string"
           },
+          "google_native_audiences": {
+            "description": "Additional allowed Google OAuth client IDs. Custom Google only. Omit to\npreserve them for an unchanged client_id.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "name": {
             "description": "The name of the environment's Auth config (id default).",
             "type": "string",
@@ -7272,6 +7286,10 @@
           },
           "provider": {
             "description": "A built-in provider ID from GetAuthConfig.",
+            "type": "string"
+          },
+          "update_mask": {
+            "description": "Native audience paths to update. Include the provider's audience field\nhere with an empty or omitted list to clear it. Without a mask, a nonempty\nlist replaces the existing list. Credentials are configured independently.",
             "type": "string"
           }
         },
@@ -9534,6 +9552,14 @@
       "sylphx.auth.v1.SocialProvider": {
         "description": "One social sign-in provider of an environment's Auth.",
         "properties": {
+          "apple_native_audiences": {
+            "description": "Bundle IDs configured for native Sign in with Apple.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
           "client_id": {
             "description": "The configured custom OAuth client ID, empty when using the shared client.",
             "readOnly": true,
@@ -9552,6 +9578,14 @@
           "enabled": {
             "description": "Whether the provider is offered. Turning one on needs credentials:\nSylphx's shared client for that provider, or your own.",
             "type": "boolean"
+          },
+          "google_native_audiences": {
+            "description": "Additional OAuth client IDs configured for native Google sign-in.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
           },
           "provider": {
             "description": "The built-in provider ID (for example, google or github).",
@@ -71255,6 +71289,13 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "apple_native_audiences": {
+                    "description": "Allowed Apple native bundle IDs. Custom Apple only. Omit to preserve them.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "client_id": {
                     "description": "The OAuth client ID, required for custom credentials, omitted for shared.",
                     "type": "string"
@@ -71269,8 +71310,19 @@
                     "description": "shared (Sylphx's client) or custom (your own client).",
                     "type": "string"
                   },
+                  "google_native_audiences": {
+                    "description": "Additional allowed Google OAuth client IDs. Custom Google only. Omit to\npreserve them for an unchanged client_id.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "provider": {
                     "description": "A built-in provider ID from GetAuthConfig.",
+                    "type": "string"
+                  },
+                  "update_mask": {
+                    "description": "Native audience paths to update. Include the provider's audience field\nhere with an empty or omitted list to clear it. Without a mask, a nonempty\nlist replaces the existing list. Credentials are configured independently.",
                     "type": "string"
                   }
                 },

@@ -121,6 +121,19 @@ export interface ConfigureSocialProviderRequest {
 	 * with team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).
 	 */
 	clientSecret?: string
+	/**
+	 * Additional allowed Google OAuth client IDs. Custom Google only. Omit to
+	 * preserve them for an unchanged client_id.
+	 */
+	googleNativeAudiences?: string[]
+	/** Allowed Apple native bundle IDs. Custom Apple only. Omit to preserve them. */
+	appleNativeAudiences?: string[]
+	/**
+	 * Native audience paths to update. Include the provider's audience field
+	 * here with an empty or omitted list to clear it. Without a mask, a nonempty
+	 * list replaces the existing list. Credentials are configured independently.
+	 */
+	updateMask?: string
 }
 
 /** The request of CreateCustomerOrganization. */
@@ -1241,6 +1254,10 @@ export interface SocialProvider {
 	readonly clientId?: string
 	/** Whether a custom client secret is configured. Its value is never returned. */
 	readonly clientSecretConfigured?: boolean
+	/** Additional OAuth client IDs configured for native Google sign-in. */
+	readonly googleNativeAudiences?: string[]
+	/** Bundle IDs configured for native Sign in with Apple. */
+	readonly appleNativeAudiences?: string[]
 }
 
 /** The request of SuspendEndUser. */
@@ -1464,6 +1481,9 @@ runtime.registerSchemas({
 	'sylphx.auth.v1.ConfigureSocialProviderRequest': [
 		['clientId', 'client_id'],
 		['clientSecret', 'client_secret'],
+		['googleNativeAudiences', 'google_native_audiences'],
+		['appleNativeAudiences', 'apple_native_audiences'],
+		['updateMask', 'update_mask'],
 	],
 	'sylphx.auth.v1.CreateCustomerOrganizationRequest': [
 		['customerOrganizationId', 'customer_organization_id'],
@@ -1808,6 +1828,8 @@ runtime.registerSchemas({
 		['sharedAvailable', 'shared_available'],
 		['clientId', 'client_id'],
 		['clientSecretConfigured', 'client_secret_configured'],
+		['googleNativeAudiences', 'google_native_audiences'],
+		['appleNativeAudiences', 'apple_native_audiences'],
 	],
 	'sylphx.auth.v1.SuspendEndUserRequest': [],
 	'sylphx.auth.v1.TrustedIssuer': [

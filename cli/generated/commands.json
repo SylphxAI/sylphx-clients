@@ -5373,6 +5373,20 @@
                   "sensitive": true,
                   "summary": "The write-only client secret. Required for a new client ID; omit to keep the existing secret for an unchanged ID. For Apple, supply the JSON object with team_id, key_id and private_key. The CLI accepts @FILE or - (stdin).",
                   "type": "string"
+                },
+                {
+                  "field": "google_native_audiences",
+                  "flag": "--google-native-audiences",
+                  "repeated": true,
+                  "summary": "Additional allowed Google OAuth client IDs. Custom Google only. Omit to preserve them for an unchanged client_id.",
+                  "type": "string"
+                },
+                {
+                  "field": "apple_native_audiences",
+                  "flag": "--apple-native-audiences",
+                  "repeated": true,
+                  "summary": "Allowed Apple native bundle IDs. Custom Apple only. Omit to preserve them.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/auth_configs/*}:configureSocialProvider",
