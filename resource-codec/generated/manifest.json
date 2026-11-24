@@ -164082,7 +164082,6 @@
               "request": "sylphx.billing.v1.GetBillingAccountRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.BillingAccount",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -164131,7 +164130,6 @@
               "request": "sylphx.billing.v1.ListBillingAccountsRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.ListBillingAccountsResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -164220,7 +164218,6 @@
               "request": "sylphx.billing.v1.SetupPaymentMethodRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.SetupPaymentMethodResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "setup_payment_method"
@@ -164266,7 +164263,6 @@
               "request": "sylphx.billing.v1.GetInvoiceRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.Invoice",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -164309,7 +164305,6 @@
               "request": "sylphx.billing.v1.RecordInvoicePaymentRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.Invoice",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "record_payment"
@@ -164358,7 +164353,6 @@
               "request": "sylphx.billing.v1.ListInvoicesRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.ListInvoicesResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -164404,7 +164398,6 @@
               "request": "sylphx.billing.v1.GetUsageReportRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.UsageReport",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -164453,7 +164446,6 @@
               "request": "sylphx.billing.v1.ListUsageReportsRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.ListUsageReportsResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
@@ -164493,7 +164485,6 @@
               "request": "sylphx.billing.v1.QueryUsageReportsRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.QueryUsageReportsResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "query"
@@ -164539,7 +164530,6 @@
               "request": "sylphx.billing.v1.GetBudgetLeaseRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.BudgetLease",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -164588,7 +164578,6 @@
               "request": "sylphx.billing.v1.ListBudgetLeasesRequest",
               "resource_field": null,
               "response": "sylphx.billing.v1.ListBudgetLeasesResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"

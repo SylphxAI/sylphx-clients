@@ -55639,7 +55639,7 @@
     },
     "/v1/orgs/{org}/billing_accounts": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's billing accounts: exactly one, `default`.",
+        "description": "Lists an org's billing accounts: exactly one, `default`.",
         "operationId": "billing_billing_accounts_list",
         "parameters": [
           {
@@ -55728,13 +55728,12 @@
         ],
         "x-sylphx-method": "billing.billing_accounts.list",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/billing_accounts/{billing_account}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a billing account.",
+        "description": "Gets a billing account.",
         "operationId": "billing_billing_accounts_get",
         "parameters": [
           {
@@ -55793,7 +55792,6 @@
         ],
         "x-sylphx-method": "billing.billing_accounts.get",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {
@@ -55908,7 +55906,7 @@
     },
     "/v1/orgs/{org}/billing_accounts/{billing_account}:setupPaymentMethod": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nStarts saving a payment method for the org: returns a client secret the\nconsole confirms with Stripe.js, so card data never reaches Sylphx. The\nsaved method becomes the account's default and is charged off-session\nfor each finalized invoice.",
+        "description": "Starts saving a payment method for the org: returns a client secret the\nconsole confirms with Stripe.js, so card data never reaches Sylphx. The\nsaved method becomes the account's default and is charged off-session\nfor each finalized invoice.",
         "operationId": "billing_billing_accounts_setup_payment_method",
         "parameters": [
           {
@@ -55985,13 +55983,12 @@
         ],
         "x-sylphx-method": "billing.billing_accounts.setup_payment_method",
         "x-sylphx-permission": "billing:admin",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/budget_leases": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's budget leases.",
+        "description": "Lists an org's budget leases.",
         "operationId": "billing_budget_leases_list",
         "parameters": [
           {
@@ -56080,13 +56077,12 @@
         ],
         "x-sylphx-method": "billing.budget_leases.list",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/budget_leases/{budget_lease}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a budget lease.",
+        "description": "Gets a budget lease.",
         "operationId": "billing_budget_leases_get",
         "parameters": [
           {
@@ -56145,7 +56141,6 @@
         ],
         "x-sylphx-method": "billing.budget_leases.get",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -58241,7 +58236,7 @@
     },
     "/v1/orgs/{org}/invoices": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's invoices.",
+        "description": "Lists an org's invoices.",
         "operationId": "billing_invoices_list",
         "parameters": [
           {
@@ -58330,13 +58325,12 @@
         ],
         "x-sylphx-method": "billing.invoices.list",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/invoices/{invoice}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an invoice.",
+        "description": "Gets an invoice.",
         "operationId": "billing_invoices_get",
         "parameters": [
           {
@@ -58395,13 +58389,12 @@
         ],
         "x-sylphx-method": "billing.invoices.get",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/invoices/{invoice}:recordPayment": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nA seller operator records an externally verified full invoice payment.\nThe platform-only scope cannot be granted by customer owners/admins.\nThe invoice name identifies the customer, not the seller. References are\nimmutable and idempotent per org and method; conflicting reuse is refused.",
+        "description": "A seller operator records an externally verified full invoice payment.\nThe platform-only scope cannot be granted by customer owners/admins.\nThe invoice name identifies the customer, not the seller. References are\nimmutable and idempotent per org and method; conflicting reuse is refused.",
         "operationId": "billing_invoices_record_payment",
         "parameters": [
           {
@@ -58504,7 +58497,6 @@
         ],
         "x-sylphx-method": "billing.invoices.record_payment",
         "x-sylphx-permission": "billing:payments:record",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
@@ -141654,7 +141646,7 @@
     },
     "/v1/orgs/{org}/usage_reports": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists an org's usage reports, one per billing period.",
+        "description": "Lists an org's usage reports, one per billing period.",
         "operationId": "billing_usage_reports_list",
         "parameters": [
           {
@@ -141743,13 +141735,12 @@
         ],
         "x-sylphx-method": "billing.usage_reports.list",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/usage_reports/{usage_report}": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets an usage report.",
+        "description": "Gets an usage report.",
         "operationId": "billing_usage_reports_get",
         "parameters": [
           {
@@ -141808,13 +141799,12 @@
         ],
         "x-sylphx-method": "billing.usage_reports.get",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },
     "/v1/orgs/{org}/usage_reports:query": {
       "post": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nQueries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
+        "description": "Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
         "operationId": "billing_usage_reports_query",
         "parameters": [
           {
@@ -141929,7 +141919,6 @@
         ],
         "x-sylphx-method": "billing.usage_reports.query",
         "x-sylphx-permission": "billing:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       }
     },

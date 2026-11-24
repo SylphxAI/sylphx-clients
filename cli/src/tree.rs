@@ -763,6 +763,17 @@ mod tests {
             "billing.plans.get",
             "billing.meters.list",
             "billing.meters.get",
+            "billing.billing_accounts.get",
+            "billing.billing_accounts.list",
+            "billing.billing_accounts.setup_payment_method",
+            "billing.invoices.get",
+            "billing.invoices.list",
+            "billing.invoices.record_payment",
+            "billing.usage_reports.get",
+            "billing.usage_reports.list",
+            "billing.usage_reports.query",
+            "billing.budget_leases.get",
+            "billing.budget_leases.list",
         ] {
             assert!(
                 all_methods.contains(&method),
@@ -771,8 +782,7 @@ mod tests {
         }
         for method in [
             "analytics.analytics_events.batch",
-            "billing.billing_accounts.get",
-            "billing.invoices.list",
+            "billing.billing_accounts.update",
         ] {
             assert!(
                 !all_methods.contains(&method),

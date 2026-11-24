@@ -7410,6 +7410,389 @@
           ],
           "noun": "plans",
           "resource_type": "billing.sylphx.com/Plan"
+        },
+        {
+          "collection": "billing_accounts",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/billing_accounts/*}",
+              "method": "billing.billing_accounts.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/billing_accounts/{billing_account}"
+              },
+              "summary": "Gets a billing account.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over labels and filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*}/billing_accounts",
+              "method": "billing.billing_accounts.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Lists an org's billing accounts: exactly one, `default`.",
+              "verb": "list"
+            },
+            {
+              "effect": "write",
+              "flags": [],
+              "http": "POST /v1/{name=orgs/*/billing_accounts/*}:setupPaymentMethod",
+              "method": "billing.billing_accounts.setup_payment_method",
+              "permission": "billing:admin",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/billing_accounts/{billing_account}"
+              },
+              "summary": "Starts saving a payment method for the org: returns a client secret the console confirms with Stripe.js, so card data never reaches Sylphx. The saved method becomes the account's default and is charged off-session for each finalized invoice.",
+              "verb": "setup-payment-method"
+            }
+          ],
+          "noun": "billing-accounts",
+          "resource_type": "billing.sylphx.com/BillingAccount"
+        },
+        {
+          "collection": "invoices",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/invoices/*}",
+              "method": "billing.invoices.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/invoices/{invoice}"
+              },
+              "summary": "Gets an invoice.",
+              "verb": "get"
+            },
+            {
+              "effect": "write",
+              "flags": [
+                {
+                  "field": "payment_method",
+                  "flag": "--payment-method",
+                  "required": true,
+                  "summary": "card or invoice debits cash; internal_settlement debits a dedicated noncash journal account, never cash or promotional/customer credit.",
+                  "type": "string"
+                },
+                {
+                  "field": "settlement_reference",
+                  "flag": "--settlement-reference",
+                  "required": true,
+                  "summary": "Bank/provider/journal reference, 1..200 bytes, unique per org and method.",
+                  "type": "string"
+                },
+                {
+                  "field": "amount",
+                  "flag": "--amount",
+                  "required": true,
+                  "summary": "Positive exact full outstanding balance in USD integer minor units.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/invoices/*}:recordPayment",
+              "method": "billing.invoices.record_payment",
+              "permission": "billing:payments:record",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/invoices/{invoice}"
+              },
+              "summary": "A seller operator records an externally verified full invoice payment. The platform-only scope cannot be granted by customer owners/admins. The invoice name identifies the customer, not the seller. References are immutable and idempotent per org and method; conflicting reuse is refused.",
+              "verb": "record-payment"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over labels and filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*}/invoices",
+              "method": "billing.invoices.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Lists an org's invoices.",
+              "verb": "list"
+            }
+          ],
+          "noun": "invoices",
+          "resource_type": "billing.sylphx.com/Invoice"
+        },
+        {
+          "collection": "usage_reports",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/usage_reports/*}",
+              "method": "billing.usage_reports.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/usage_reports/{usage_report}"
+              },
+              "summary": "Gets an usage report.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over labels and filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*}/usage_reports",
+              "method": "billing.usage_reports.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Lists an org's usage reports, one per billing period.",
+              "verb": "list"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "start_time",
+                  "flag": "--start-time",
+                  "required": true,
+                  "summary": "The start of the range, inclusive.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "end_time",
+                  "flag": "--end-time",
+                  "required": true,
+                  "summary": "The end of the range, exclusive; at most 400 days after `start_time`.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "granularity",
+                  "flag": "--granularity",
+                  "required": true,
+                  "summary": "The bucket width.",
+                  "type": "enum",
+                  "values": [
+                    "hour",
+                    "day",
+                    "period"
+                  ]
+                },
+                {
+                  "field": "projects",
+                  "flag": "--projects",
+                  "repeated": true,
+                  "summary": "Only these projects; empty means every project.",
+                  "type": "string"
+                },
+                {
+                  "field": "meters",
+                  "flag": "--meters",
+                  "repeated": true,
+                  "summary": "Only these meter ids; empty means every meter.",
+                  "type": "string"
+                },
+                {
+                  "field": "group_projects",
+                  "flag": "--group-projects",
+                  "summary": "Group by project in addition to meter.",
+                  "type": "bool"
+                },
+                {
+                  "field": "group_dimensions",
+                  "flag": "--group-dimensions",
+                  "repeated": true,
+                  "summary": "Dimension keys to group by, for example `model`.",
+                  "type": "string"
+                },
+                {
+                  "field": "group_end_customers",
+                  "flag": "--group-end-customers",
+                  "summary": "Group by optional opaque end-customer attribution, not a price dimension.",
+                  "type": "bool"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*}/usage_reports:query",
+              "method": "billing.usage_reports.query",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Queries usage over any time range, bucketed and grouped: the usage summary the console charts. Reads rollups; never raw events.",
+              "verb": "query"
+            }
+          ],
+          "noun": "usage-reports",
+          "resource_type": "billing.sylphx.com/UsageReport"
+        },
+        {
+          "collection": "budget_leases",
+          "commands": [
+            {
+              "effect": "read",
+              "flags": [],
+              "http": "GET /v1/{name=orgs/*/budget_leases/*}",
+              "method": "billing.budget_leases.get",
+              "permission": "billing:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/budget_leases/{budget_lease}"
+              },
+              "summary": "Gets a budget lease.",
+              "verb": "get"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_size",
+                  "flag": "--page-size",
+                  "summary": "At most this many; default 50, clamped to 1000.",
+                  "type": "int"
+                },
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "`next_page_token` of the previous page.",
+                  "type": "string"
+                },
+                {
+                  "field": "filter",
+                  "flag": "--filter",
+                  "summary": "AIP-160 filter over labels and filterable fields.",
+                  "type": "string"
+                },
+                {
+                  "field": "order_by",
+                  "flag": "--order-by",
+                  "summary": "AIP-132 ordering over filterable fields.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{parent=orgs/*}/budget_leases",
+              "method": "billing.budget_leases.list",
+              "paginates": true,
+              "permission": "billing:read",
+              "positional": {
+                "arg": "PARENT",
+                "default_from_context": true,
+                "field": "parent",
+                "optional": true,
+                "pattern": "orgs/{org}"
+              },
+              "summary": "Lists an org's budget leases.",
+              "verb": "list"
+            }
+          ],
+          "noun": "budget-leases",
+          "resource_type": "billing.sylphx.com/BudgetLease"
         }
       ],
       "commands": [],

@@ -11428,7 +11428,7 @@
         "readOnlyHint": true,
         "title": "Gets a billing account."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a billing account.",
+      "description": "Gets a billing account.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/billing_accounts/*}",
       "input_schema": {
@@ -11449,7 +11449,6 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.get",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_billing_accounts_get"
     },
     {
@@ -11460,7 +11459,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's billing accounts: exactly one, `default`."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's billing accounts: exactly one, `default`.",
+      "description": "Lists an org's billing accounts: exactly one, `default`.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/billing_accounts",
       "input_schema": {
@@ -11498,7 +11497,6 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.list",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_billing_accounts_list"
     },
     {
@@ -11659,7 +11657,7 @@
         "readOnlyHint": false,
         "title": "Starts saving a payment method for the org: returns a client secret the console confirms with Stripe.js, so card data never reaches Sylphx. The saved method becomes the account's default and is charged off-session for each finalized invoice."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Starts saving a payment method for the org: returns a client secret the\nconsole confirms with Stripe.js, so card data never reaches Sylphx. The\nsaved method becomes the account's default and is charged off-session\nfor each finalized invoice.",
+      "description": "Starts saving a payment method for the org: returns a client secret the\nconsole confirms with Stripe.js, so card data never reaches Sylphx. The\nsaved method becomes the account's default and is charged off-session\nfor each finalized invoice.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/billing_accounts/*}:setupPaymentMethod",
       "input_schema": {
@@ -11680,7 +11678,6 @@
       "long_running": false,
       "method_id": "billing.billing_accounts.setup_payment_method",
       "permission": "billing:admin",
-      "served": false,
       "tool": "billing_billing_accounts_setup_payment_method"
     },
     {
@@ -11691,7 +11688,7 @@
         "readOnlyHint": true,
         "title": "Gets an invoice."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an invoice.",
+      "description": "Gets an invoice.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/invoices/*}",
       "input_schema": {
@@ -11712,7 +11709,6 @@
       "long_running": false,
       "method_id": "billing.invoices.get",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_invoices_get"
     },
     {
@@ -11723,7 +11719,7 @@
         "readOnlyHint": false,
         "title": "A seller operator records an externally verified full invoice payment. The platform-only scope cannot be granted by customer owners/admins. The invoice name identifies the customer, not the seller. References are immutable and idempotent per org and method; conflicting reuse is refused."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). A seller operator records an externally verified full invoice payment.\nThe platform-only scope cannot be granted by customer owners/admins.\nThe invoice name identifies the customer, not the seller. References are\nimmutable and idempotent per org and method; conflicting reuse is refused.",
+      "description": "A seller operator records an externally verified full invoice payment.\nThe platform-only scope cannot be granted by customer owners/admins.\nThe invoice name identifies the customer, not the seller. References are\nimmutable and idempotent per org and method; conflicting reuse is refused.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/invoices/*}:recordPayment",
       "input_schema": {
@@ -11775,7 +11771,6 @@
       "long_running": false,
       "method_id": "billing.invoices.record_payment",
       "permission": "billing:payments:record",
-      "served": false,
       "tool": "billing_invoices_record_payment"
     },
     {
@@ -11786,7 +11781,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's invoices."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's invoices.",
+      "description": "Lists an org's invoices.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/invoices",
       "input_schema": {
@@ -11824,7 +11819,6 @@
       "long_running": false,
       "method_id": "billing.invoices.list",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_invoices_list"
     },
     {
@@ -11835,7 +11829,7 @@
         "readOnlyHint": true,
         "title": "Gets an usage report."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets an usage report.",
+      "description": "Gets an usage report.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/usage_reports/*}",
       "input_schema": {
@@ -11856,7 +11850,6 @@
       "long_running": false,
       "method_id": "billing.usage_reports.get",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_usage_reports_get"
     },
     {
@@ -11867,7 +11860,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's usage reports, one per billing period."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's usage reports, one per billing period.",
+      "description": "Lists an org's usage reports, one per billing period.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/usage_reports",
       "input_schema": {
@@ -11905,7 +11898,6 @@
       "long_running": false,
       "method_id": "billing.usage_reports.list",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_usage_reports_list"
     },
     {
@@ -11916,7 +11908,7 @@
         "readOnlyHint": true,
         "title": "Queries usage over any time range, bucketed and grouped: the usage summary the console charts. Reads rollups; never raw events."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
+      "description": "Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
       "effect": "read",
       "http": "POST /v1/{parent=orgs/*}/usage_reports:query",
       "input_schema": {
@@ -11989,7 +11981,6 @@
       "long_running": false,
       "method_id": "billing.usage_reports.query",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_usage_reports_query"
     },
     {
@@ -12000,7 +11991,7 @@
         "readOnlyHint": true,
         "title": "Gets a budget lease."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a budget lease.",
+      "description": "Gets a budget lease.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/budget_leases/*}",
       "input_schema": {
@@ -12021,7 +12012,6 @@
       "long_running": false,
       "method_id": "billing.budget_leases.get",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_budget_leases_get"
     },
     {
@@ -12032,7 +12022,7 @@
         "readOnlyHint": true,
         "title": "Lists an org's budget leases."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists an org's budget leases.",
+      "description": "Lists an org's budget leases.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*}/budget_leases",
       "input_schema": {
@@ -12070,7 +12060,6 @@
       "long_running": false,
       "method_id": "billing.budget_leases.list",
       "permission": "billing:read",
-      "served": false,
       "tool": "billing_budget_leases_list"
     },
     {
@@ -53251,6 +53240,112 @@
       },
       "name": "analytics_analytics_events_list",
       "x-sylphx-method": "analytics.analytics_events.list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a billing account."
+      },
+      "description": "Gets a billing account.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of GetBillingAccount.",
+        "properties": {
+          "name": {
+            "description": "The name of the billing account to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "billing.sylphx.com/BillingAccount"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "name": "billing_billing_accounts_get",
+      "x-sylphx-method": "billing.billing_accounts.get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Queries usage over any time range, bucketed and grouped: the usage summary the console charts. Reads rollups; never raw events."
+      },
+      "description": "Queries usage over any time range, bucketed and grouped: the usage\nsummary the console charts. Reads rollups; never raw events.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of QueryUsageReports.",
+        "properties": {
+          "end_time": {
+            "description": "The end of the range, exclusive; at most 400 days after `start_time`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "granularity": {
+            "description": "The bucket width.",
+            "enum": [
+              "hour",
+              "day",
+              "period"
+            ],
+            "type": "string"
+          },
+          "group_dimensions": {
+            "description": "Dimension keys to group by, for example `model`.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "group_end_customers": {
+            "description": "Group by optional opaque end-customer attribution, not a price dimension.",
+            "type": "boolean"
+          },
+          "group_projects": {
+            "description": "Group by project in addition to meter.",
+            "type": "boolean"
+          },
+          "meters": {
+            "description": "Only these meter ids; empty means every meter.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "parent": {
+            "description": "The org to query.",
+            "type": "string",
+            "x-sylphx-resource-reference": "billing.sylphx.com/UsageReport"
+          },
+          "projects": {
+            "description": "Only these projects; empty means every project.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-sylphx-resource-reference": "access.sylphx.com/Project"
+          },
+          "start_time": {
+            "description": "The start of the range, inclusive.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "start_time",
+          "end_time",
+          "granularity"
+        ],
+        "type": "object"
+      },
+      "name": "billing_usage_reports_query",
+      "x-sylphx-method": "billing.usage_reports.query"
     },
     {
       "annotations": {
