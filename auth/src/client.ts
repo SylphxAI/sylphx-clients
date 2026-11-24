@@ -52,3 +52,10 @@ function relativePath(value: unknown): string | undefined {
 export function safeReturnTo(value: unknown, fallback = '/'): string {
 	return relativePath(value) ?? relativePath(fallback) ?? '/'
 }
+
+/** Resolve the canonical same-origin mount used by the handler and widget. */
+export function authRoutePrefix(value = '/auth'): string {
+	if (!/^\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+$/.test(value))
+		throw new TypeError('Expected a canonical Auth route prefix')
+	return value
+}

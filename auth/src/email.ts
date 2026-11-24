@@ -9,7 +9,6 @@ import {
 	reply,
 	token,
 } from './http.js'
-import type { IssueSession } from './server.js'
 
 const CODE = /^[0-9]{6}$/
 
@@ -28,7 +27,10 @@ export async function emailEntry(
 		origin: string
 		loginPath: string
 		instance: Record<string, string>
-		session: IssueSession
+		mode: 'server' | 'browser'
+		allowRegistration: boolean
+		redeem(ticket: string): Promise<Data | undefined>
+		session(data: Data): Promise<Response>
 	},
 ) {
 	const { origin, instance, session: issue } = ctx
@@ -38,7 +40,7 @@ export async function emailEntry(
 	const password = field(input, 'password', 1024)
 	const code = field(input, 'code', 128)
 	let path: string
-	let body: Data = { session_mode: 'browser' }
+	let body: Data = { session_mode: ctx.mode }
 	const challengeId = field(input, 'challengeId', 200)
 	const secret = field(input, 'verification', 256)
 	const verification =
@@ -55,6 +57,7 @@ export async function emailEntry(
 			break
 		}
 		case 'signup': {
+			if (!ctx.allowRegistration) return problem('method_unavailable', 403)
 			if (
 				!email ||
 				!password ||
@@ -161,9 +164,12 @@ export async function emailEntry(
 			credentials: data.allowed_credential_ids,
 		})
 	if (action === 'otp_start' || action === 'passkey_start') return problem('unavailable', 502)
-	const session = obj(data.session)
+	const ticket = data.ticket
+	const result = ctx.mode === 'server' ? token(ticket) && (await ctx.redeem(ticket)) : data
+	if (!result) return problem('session_unavailable', 502)
+	const session = obj(result.session)
 	const credential = session.token
-	const user = obj(data.user)
+	const user = obj(result.user)
 	if (!token(credential) || !token(user.id)) return problem('unavailable', 502)
 	if (verification && (action === 'verify_signup' || action === 'mfa')) {
 		// Require both the password session and mail proof. Auth binds them to
@@ -175,7 +181,7 @@ export async function emailEntry(
 		const result = await json(confirmed)
 		if (!confirmed.ok || obj(result.verification).principal_id !== user.id)
 			return refused(confirmed, 'verification_failed')
+		user.email_verified = true
 	} else if (user.email_verified !== true) return problem('verify_email', 403)
-	const cookies = await issue({ token: credential, expiresAt: session.expires_at })
-	return cookies ? reply({ next }, 200, cookies) : problem('session_unavailable', 502)
+	return issue(result)
 }

@@ -55,3 +55,22 @@ The widget does not change the language of email sent by the Auth service.
 Headless clients can render `signInMessages[locale].errors[errorCode]` when
 `controller.errorCode()` is nonempty. The existing `controller.error()` still
 returns English for callers that have not switched to catalogs.
+
+### Server-rendered methods, clickwrap, and passkeys
+
+Load the public config route from a server loader and pass its JSON as
+`initialConfig`, using the same value on SSR and hydration. This renders the
+configured Google and email entries in the first HTML, before JavaScript runs.
+The interactive widget still needs JavaScript; omitting the seed preserves the
+client config fetch. Set the same `routePrefix` as the server handler if you
+mount it anywhere other than `/auth`.
+
+Render your consent UI using `agreement` or your own layout. Use
+`getAcceptance={() => agreed() ? { terms: termsVersion, privacy: privacyVersion } : undefined}`
+so requests send only the versions the user actually accepted. Configure
+server-side `clickwrap` to enforce those versions; the UI alone is not a gate.
+
+Set `conditionalPasskey` to opt into discoverable credential autofill on the
+first sign-in screen. The identifier input uses `username webauthn` when
+passkeys are configured. Unsupported or canceled conditional requests fall
+back to the existing explicit passkey and other enabled sign-in controls.

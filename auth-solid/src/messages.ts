@@ -57,6 +57,7 @@ export type SignInMessages = {
 		use_existing: string
 		invalid_credentials: string
 		verify_email: string
+		acceptance_required: string
 		verification_failed: string
 		invalid_code: string
 		method_unavailable: string
@@ -127,6 +128,7 @@ export const catalogs = {
 			use_existing:
 				'Try the method you originally used to sign in. This provider couldn’t confirm your email.',
 			invalid_credentials: 'That email and password didn’t match. Check both and try again.',
+			acceptance_required: 'Accept the current terms to continue.',
 			verify_email: 'Confirm your email from the link in your inbox before signing in.',
 			verification_failed:
 				'This confirmation link couldn’t be used. Check that you opened the latest link.',
@@ -196,6 +198,7 @@ export const catalogs = {
 			cancelled: '登入已取消。你可以隨時再試。',
 			use_existing: '這項登入服務未能確認你的電郵地址。請改用原來的登入方式。',
 			invalid_credentials: '電郵地址與密碼不符。請核對後再試。',
+			acceptance_required: '請同意現行條款後繼續。',
 			verify_email: '請先開啟確認電郵內的連結，確認電郵地址後再登入。',
 			verification_failed: '此連結無法使用。請開啟最新一封確認電郵內的連結。',
 			invalid_code: '驗證碼無法使用。請核對後再試。',
@@ -264,6 +267,7 @@ export const catalogs = {
 			cancelled: '登入已取消。你可以隨時再試。',
 			use_existing: '這項登入服務無法確認你的電子郵件地址。請改用原本的登入方式。',
 			invalid_credentials: '電子郵件地址和密碼不符。請檢查後再試一次。',
+			acceptance_required: '請同意目前的條款後繼續。',
 			verify_email: '請先開啟確認信中的連結，確認電子郵件地址後再登入。',
 			verification_failed: '這個確認連結無法使用。請確認你開啟的是最新一封確認信中的連結。',
 			invalid_code: '這組驗證碼無法使用。請檢查後再試一次。',
@@ -332,6 +336,7 @@ export const catalogs = {
 			cancelled: '登录已取消。你可以随时重试。',
 			use_existing: '此登录服务无法确认你的邮箱地址。请改用原来的登录方式。',
 			invalid_credentials: '邮箱地址和密码不匹配。请检查后重试。',
+			acceptance_required: '请同意当前条款后继续。',
 			verify_email: '请先打开确认邮件中的链接，确认邮箱地址后再登录。',
 			verification_failed: '此链接无法使用。请打开最新一封确认邮件中的链接。',
 			invalid_code: '此验证码无法使用。请检查后重试。',
@@ -402,6 +407,7 @@ export const catalogs = {
 				'このサービスではメールアドレスを確認できませんでした。最初に使った方法でログインしてください。',
 			invalid_credentials:
 				'メールアドレスとパスワードが一致しません。両方を確認して、もう一度お試しください。',
+			acceptance_required: '続行するには、現在の利用規約に同意してください。',
 			verify_email:
 				'確認メール内のリンクを開き、メールアドレスを確認してからログインしてください。',
 			verification_failed: 'この確認リンクは使えません。最新の確認メールのリンクをお試しください。',
@@ -474,6 +480,7 @@ export const catalogs = {
 				'이 로그인 서비스에서 이메일 주소를 확인할 수 없습니다. 처음 사용한 방법으로 로그인하세요.',
 			invalid_credentials:
 				'이메일 주소 또는 비밀번호가 올바르지 않습니다. 확인한 뒤 다시 시도하세요.',
+			acceptance_required: '계속하려면 현재 약관에 동의하세요.',
 			verify_email: '로그인하기 전에 받은 이메일의 링크를 열어 이메일 주소를 확인하세요.',
 			verification_failed:
 				'이 확인 링크를 사용할 수 없습니다. 가장 최근에 받은 링크를 열어 보세요.',

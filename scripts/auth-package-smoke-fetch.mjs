@@ -42,7 +42,7 @@ const handle = createSylphxAuthHandler({
 			case `${api}/v1/client/tickets:redeem`:
 				assert.deepEqual(JSON.parse(init.body), { ticket })
 				return Response.json({
-					user: { email_verified: true },
+					user: { id: 'principal-fixture', email_verified: true },
 					session: {
 						token: 'fixture-session',
 						expires_at: new Date(Date.now() + 60_000).toISOString(),

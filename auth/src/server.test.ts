@@ -78,7 +78,7 @@ test('white-label starts at the discovered pinned mount and exchanges only the a
 		if (redeemed) return Response.json({}, { status: 401 })
 		redeemed = true
 		return Response.json({
-			user: { email_verified: true },
+			user: { id: 'principal-fixture', email_verified: true },
 			session: {
 				token: 'fixture-session',
 				expires_at: new Date(Date.now() + 60_000).toISOString(),

@@ -94,6 +94,7 @@ export type SylphxSignInProps = SignInControllerOptions & {
 export function SylphxSignIn(props: SylphxSignInProps) {
 	const controller = createSignInController(props)
 	const {
+		emailRoute,
 		config,
 		configFailed,
 		loadConfig,
@@ -240,7 +241,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 										</Show>
 										<form
 											method="post"
-											action="/auth/email"
+											action={emailRoute}
 											class={className('form')}
 											onSubmit={(event) => {
 												event.preventDefault()
@@ -255,7 +256,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 												id={id('email')}
 												type="email"
 												name="email"
-												autocomplete="username"
+												autocomplete={config()?.passkey ? 'username webauthn' : 'username'}
 												required
 												maxlength={254}
 												value={email()}
@@ -311,7 +312,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 					<Match when={step() === 'password' || step() === 'signup' || step() === 'confirm'}>
 						<form
 							method="post"
-							action="/auth/email"
+							action={emailRoute}
 							class={className('form')}
 							onSubmit={(event) => {
 								event.preventDefault()
@@ -326,7 +327,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 										hidden
 										name="username"
 										value={email()}
-										autocomplete="username"
+										autocomplete={config()?.passkey ? 'username webauthn' : 'username'}
 										readonly
 									/>
 								}
@@ -337,7 +338,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 									id={id('account-email')}
 									type="email"
 									name="username"
-									autocomplete="username"
+									autocomplete={config()?.passkey ? 'username webauthn' : 'username'}
 									required
 									maxlength={254}
 									value={email()}
@@ -400,7 +401,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 					<Match when={step() === 'otp'}>
 						<form
 							method="post"
-							action="/auth/email"
+							action={emailRoute}
 							class={className('form')}
 							onSubmit={(event) => {
 								event.preventDefault()
@@ -468,7 +469,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 					<Match when={step() === 'mfa'}>
 						<form
 							method="post"
-							action="/auth/email"
+							action={emailRoute}
 							class={className('form')}
 							onSubmit={(event) => {
 								event.preventDefault()

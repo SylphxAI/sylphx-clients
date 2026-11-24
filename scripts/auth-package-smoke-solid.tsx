@@ -8,6 +8,16 @@ const props: SylphxSignInProps = {
 	next: safeReturnTo(options.defaultReturnTo),
 	search: '',
 	locale: 'en',
+	routePrefix: '/account/auth',
+	conditionalPasskey: true,
+	initialConfig: {
+		providers: ['google'],
+		password: false,
+		signup: false,
+		otp: true,
+		passkey: true,
+	},
+	getAcceptance: () => ({ terms: 'v2' }),
 }
 
 export function page() {

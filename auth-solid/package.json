@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/auth-solid",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"type": "module",
 	"exports": {
 		".": {
@@ -20,7 +20,7 @@
 		"build": "tsc -p tsconfig.build.json && node build.mjs"
 	},
 	"dependencies": {
-		"@sylphx/auth": "0.1.0"
+		"@sylphx/auth": "0.1.1"
 	},
 	"peerDependencies": {
 		"solid-js": "^1.9.20"

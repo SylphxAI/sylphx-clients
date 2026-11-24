@@ -104,3 +104,30 @@ test('uses the provider-specific start route with next only and refuses other de
 	expect(auth.error()).toBe(unavailable)
 	auth.dispose()
 })
+
+test('a server seed is immediately available and clickwrap travels on prefixed requests', async () => {
+	const fetch = spyOn(globalThis, 'fetch')
+		.mockResolvedValueOnce(Response.json({ authorize: 'https://example.invalid/authorize' }))
+		.mockResolvedValueOnce(Response.json({ flow: 'fixture-flow' }))
+	const value = { terms: 'v2', privacy: '2026-11-24' }
+	const auth = createRoot((dispose) => ({
+		...createSignInController({
+			next,
+			search: '',
+			initialConfig: config,
+			routePrefix: '/account/auth',
+			getAcceptance: () => value,
+		}),
+		dispose,
+	}))
+	expect(auth.config()).toEqual(config)
+	expect(fetch).not.toHaveBeenCalled()
+	await auth.social('google')
+	auth.setEmail(email)
+	await auth.continueWithEmail()
+	expect(fetch.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body))])).toEqual([
+		['/account/auth/start/google', { next, acceptance: value }],
+		['/account/auth/email', { next, action: 'otp_start', email, acceptance: value }],
+	])
+	auth.dispose()
+})

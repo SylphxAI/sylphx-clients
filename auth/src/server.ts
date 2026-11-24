@@ -1,4 +1,13 @@
 import {
+	type AcceptanceVersions,
+	acceptanceSigner,
+	type ClickwrapPolicy,
+	decodeAcceptance,
+	encodeAcceptance,
+	readAcceptance,
+} from './acceptance.js'
+import {
+	authRoutePrefix,
 	type EntryConfig,
 	isProvider,
 	type Provider,
@@ -29,6 +38,7 @@ import {
 	transport,
 } from './http.js'
 
+export type { AcceptanceVersions, ClickwrapPolicy } from './acceptance.js'
 export type { AuthCookie, AuthFetch } from './http.js'
 export { jsonBody as readAuthJson } from './http.js'
 export { exchangeManagementSession } from './session.js'
@@ -36,8 +46,21 @@ export { exchangeManagementSession } from './session.js'
 export type IdentitySession = { token: string; expiresAt: unknown }
 export type IssueSession = (session: IdentitySession) => Promise<readonly AuthCookie[] | undefined>
 
-type SessionAdapter = {
-	issue(session: IdentitySession, request: Request): ReturnType<IssueSession>
+export type VerifiedIdentity = {
+	id: string
+	email?: string
+	name?: string
+	username?: string
+	emailVerified: true
+}
+export type VerifiedIdentitySession = IdentitySession & {
+	sessionId?: string
+	user: VerifiedIdentity
+	isNewUser: boolean
+	acceptance?: AcceptanceVersions
+}
+export type SessionAdapter = {
+	issue(session: VerifiedIdentitySession, request: Request): ReturnType<IssueSession>
 	logout(request: Request): Promise<Response>
 }
 export type SylphxAuthOptions = {
@@ -52,6 +75,12 @@ export type SylphxAuthOptions = {
 	/** Transitional alias for a preexisting client that posts action and provider to /auth/start. */
 	legacyStart?: boolean
 	loginPath?: string
+	/** Same-origin mount pathname, e.g. /account/auth. Defaults to /auth. */
+	routePrefix?: string
+	/** Disable new password registration, not password sign-in. */
+	allowPasswordRegistration?: boolean
+	/** App-owned policy. Ignored unless configured; when configured, fails closed. */
+	clickwrap?: ClickwrapPolicy
 	defaultReturnTo?: string
 	allowReturnTo?: (path: string) => boolean
 	flowCookie?: string
@@ -61,11 +90,12 @@ export type SylphxAuthOptions = {
 	/** Only for hosts with an existing authoritative session and revocation mechanism. */
 	session?: SessionAdapter
 	fetch?: AuthFetch
-}
+} & (
+	| { sessionMode?: 'browser'; sessionSecret?: never }
+	| { sessionMode: 'server'; sessionSecret: string }
+)
 
 const FLOW_AGE = 600
-const START = '/auth/start/'
-const CALLBACK = '/auth/callback'
 
 function secureUrl(value: unknown): URL | undefined {
 	if (typeof value !== 'string') return
@@ -125,6 +155,23 @@ export function createSylphxAuthHandler(
 	if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(slug) || !id || !environment)
 		throw new TypeError('Expected an Auth instance')
 	const instance = { instance: slug }
+	const prefix = authRoutePrefix(options.routePrefix)
+	const startRoute = `${prefix}/start`
+	const callbackRoute = `${prefix}/callback`
+	const configRoute = `${prefix}/config`
+	const emailRoute = `${prefix}/email`
+	const logoutRoute = `${prefix}/logout`
+	const mode = options.sessionMode ?? 'browser'
+	const secret = options.sessionSecret
+	if (
+		mode === 'server' &&
+		(!token(secret) ||
+			(!secret.startsWith('sylphx_sk_') && !secret.startsWith('identity_org_key_')))
+	)
+		throw new TypeError('Expected an instance secret key for server mode')
+	const clickwrap = options.clickwrap
+	const signer = clickwrap && acceptanceSigner(clickwrap.signingKey)
+	const allowRegistration = options.allowPasswordRegistration !== false
 	const loginPath = safeReturnTo(options.loginPath, '/login')
 	if (/[?#]/.test(loginPath)) throw new TypeError('Expected a login pathname')
 	const fallback = safeReturnTo(options.defaultReturnTo)
@@ -140,7 +187,25 @@ export function createSylphxAuthHandler(
 	)
 		throw new TypeError('Use separate host-only cookie names')
 	const clearFlow: AuthCookie = [flowName, '', 0]
-	const callback = origin + CALLBACK
+	const callback = origin + callbackRoute
+	const signable = (value: string) => JSON.stringify([callback, id, value])
+
+	function accepted(versions: AcceptanceVersions | undefined, request: Request) {
+		return clickwrap ? versions && clickwrap.validate(versions, request) : true
+	}
+
+	async function redeem(identity: Identity, ticket: string) {
+		const res = await identity('/v1/client/tickets:redeem', {
+			query: instance,
+			body: { ticket },
+			...(mode === 'server' && secret && { bearer: secret }),
+		})
+		if (!res.ok) {
+			discard(res)
+			return undefined
+		}
+		return json(res)
+	}
 	const fetchUpstream = options.fetch ?? ((url, init) => fetch(url, init))
 	const social = [...new Set(options.providers ?? Object.keys(providers).filter(isProvider))]
 
@@ -171,25 +236,38 @@ export function createSylphxAuthHandler(
 		const config: EntryConfig = {
 			providers: [...redirects.keys()],
 			password: methods.password === true,
-			signup: methods.sign_up === true && methods.password === true,
+			signup: allowRegistration && methods.sign_up === true && methods.password === true,
 			otp: methods.email_otp === true,
 			passkey: methods.passkey === true,
 		}
 		return { config, redirects }
 	}
 
-	async function start(identity: Identity, provider: unknown, next: string) {
+	async function start(
+		identity: Identity,
+		provider: unknown,
+		next: string,
+		acceptance: AcceptanceVersions | undefined,
+	) {
 		if (!isProvider(provider) || !social.includes(provider)) return problem('unknown_provider', 400)
 		const { redirects } = await discover(identity)
 		const start = redirects.get(provider)
 		if (start === undefined) return problem('method_unavailable', 403)
 		const state = random()
+		const expires = Math.floor(Date.now() / 1000) + FLOW_AGE
+		const path = encodeURIComponent(next.slice(1)).replaceAll('.', '%2E')
+		let value = [state, expires, path].join('.')
+		if (signer && acceptance) {
+			value += `.${encodeAcceptance(acceptance)}`
+			value += `.${await signer.sign(signable(value))}`
+			if (value.length > 3600) return problem('invalid_input', 400)
+		}
 		const target = new URL(callback)
 		target.searchParams.set('flow', state)
 		// Auth owns upstream PKCE S256, nonce and Apple's form_post. This
 		// app's GET callback only receives Auth's one-use sign-in ticket.
 		const res = await identity(start?.url ?? `/v1/client/oauth/${provider}/start`, {
-			query: { ...instance, redirect_url: target.href, session_mode: 'browser' },
+			query: { ...instance, redirect_url: target.href, session_mode: mode },
 			manual: true,
 		})
 		const authorize =
@@ -201,13 +279,11 @@ export function createSylphxAuthHandler(
 			if (callbacks.length !== 1 || callbacks[0] !== start.redirectUri)
 				return problem('method_unavailable', 503)
 		}
-		const expires = Math.floor(Date.now() / 1000) + FLOW_AGE
-		const path = encodeURIComponent(next.slice(1)).replaceAll('.', '%2E')
-		return reply({ authorize }, 200, [[flowName, [state, expires, path].join('.'), FLOW_AGE]])
+		return reply({ authorize }, 200, [[flowName, value, FLOW_AGE]])
 	}
 
-	function issue(request: Request): IssueSession {
-		return async (session) => {
+	function issue(request: Request) {
+		return async (session: VerifiedIdentitySession) => {
 			const cookies = options.session
 				? await options.session.issue(session, request)
 				: sessionCookie(session)
@@ -221,9 +297,8 @@ export function createSylphxAuthHandler(
 	}
 
 	function sessionCookie(session: IdentitySession): AuthCookie[] | undefined {
-		const expires = typeof session.expiresAt === 'string' ? Date.parse(session.expiresAt) : NaN
-		const age = Math.floor((expires - Date.now()) / 1000)
-		return Number.isFinite(age) && age >= 1 ? [[sessionName, session.token, age]] : undefined
+		const age = Math.floor(expirySeconds(session.expiresAt) - Date.now() / 1000)
+		return Number.isSafeInteger(age) && age >= 1 ? [[sessionName, session.token, age]] : undefined
 	}
 
 	async function logout(request: Request, identity: Identity) {
@@ -242,10 +317,12 @@ export function createSylphxAuthHandler(
 		return new Response(null, { status: 204, headers: headers([clearFlow, [sessionName, '', 0]]) })
 	}
 
-	function readFlow(request: Request) {
-		const parts = readCookie(request, flowName)?.split('.')
-		if (parts?.length !== 3) return
-		const [state, deadline, path] = parts
+	async function readFlow(request: Request) {
+		const value = readCookie(request, flowName)
+		if (!value || (signer && value.length > 3600)) return
+		const parts = value.split('.')
+		if (parts.length !== (signer ? 5 : 3)) return
+		const [state, deadline, path, encoded, mac] = parts
 		const now = Math.floor(Date.now() / 1000)
 		if (
 			!state ||
@@ -257,14 +334,25 @@ export function createSylphxAuthHandler(
 		)
 			return
 		try {
-			return { state, next: nextPath(`/${decodeURIComponent(path ?? '')}`) }
+			let acceptance: AcceptanceVersions | undefined
+			if (signer) {
+				if (
+					!encoded ||
+					!mac ||
+					!(await signer.verify(signable(value.slice(0, -mac.length - 1)), mac))
+				)
+					return
+				acceptance = decodeAcceptance(encoded)
+				if (!acceptance) return
+			}
+			return { state, next: nextPath(`/${decodeURIComponent(path ?? '')}`), acceptance }
 		} catch {
 			return undefined
 		}
 	}
 
 	async function complete(request: Request, url: URL, identity: Identity) {
-		const flow = readFlow(request)
+		const flow = await readFlow(request)
 		const fail = (error = 'signin') =>
 			redirect(`${loginPath}?${new URLSearchParams({ error, next: flow?.next ?? fallback })}`, [
 				clearFlow,
@@ -292,12 +380,14 @@ export function createSylphxAuthHandler(
 		const ticket = tickets[0]
 		if (tickets.length !== 1 || !token(ticket)) return fail()
 		try {
-			const res = await identity('/v1/client/tickets:redeem', { query: instance, body: { ticket } })
-			const data = await json(res)
-			const session = obj(data.session)
-			if (!res.ok || !token(session.token)) return fail()
+			if ((await accepted(flow.acceptance, request)) !== true) return fail('acceptance_required')
+			const data = await redeem(identity, ticket)
+			if (!data) return fail()
 			if (obj(data.user).email_verified !== true) return fail('use_existing')
-			const cookies = await issue(request)({ token: session.token, expiresAt: session.expires_at })
+			const session = verifiedSession(data, flow.acceptance)
+			if (!session) return fail()
+			if ((await accepted(flow.acceptance, request)) !== true) return fail('acceptance_required')
+			const cookies = await issue(request)(session)
 			return cookies ? redirect(flow.next, [clearFlow, ...cookies]) : fail()
 		} catch {
 			return fail()
@@ -310,16 +400,16 @@ export function createSylphxAuthHandler(
 			return problem('not_allowed', 403)
 		const { pathname } = url
 		const identity = transport(request, fetchUpstream, api)
-		if (pathname === CALLBACK)
+		if (pathname === callbackRoute)
 			return request.method === 'GET' ? complete(request, url, identity) : problem('not_found', 404)
-		const legacy = options.legacyStart && pathname === '/auth/start'
+		const legacy = options.legacyStart && pathname === startRoute
 		if (
 			!legacy &&
-			!['/auth/config', '/auth/email', '/auth/logout'].includes(pathname) &&
-			!pathname.startsWith(START)
+			![configRoute, emailRoute, logoutRoute].includes(pathname) &&
+			!pathname.startsWith(`${startRoute}/`)
 		)
 			return problem('not_found', 404)
-		const method = pathname === '/auth/config' ? 'GET' : 'POST'
+		const method = pathname === configRoute ? 'GET' : 'POST'
 		const requestOrigin = request.headers.get('origin')
 		const site = request.headers.get('sec-fetch-site')
 		if (
@@ -329,8 +419,8 @@ export function createSylphxAuthHandler(
 		)
 			return problem('not_allowed', 403)
 		try {
-			if (pathname === '/auth/config') return reply((await discover(identity)).config)
-			if (pathname === '/auth/logout') return await logout(request, identity)
+			if (pathname === configRoute) return reply((await discover(identity)).config)
+			if (pathname === logoutRoute) return await logout(request, identity)
 			if (!/^application\/json(?:\s*;.*)?$/i.test(request.headers.get('content-type') ?? ''))
 				return problem('invalid_input', 415)
 			let input: Data
@@ -339,15 +429,27 @@ export function createSylphxAuthHandler(
 			} catch {
 				return problem('invalid_input', 400)
 			}
+			const acceptance = clickwrap ? readAcceptance(input.acceptance) : undefined
+			if ((await accepted(acceptance, request)) !== true) return problem('acceptance_required', 403)
 			const next = nextPath(field(input, 'next', 1024))
-			if (pathname.startsWith(START))
-				return await start(identity, pathname.slice(START.length), next)
-			if (legacy && input.action === 'social') return await start(identity, input.provider, next)
+			if (pathname.startsWith(`${startRoute}/`))
+				return await start(identity, pathname.slice(startRoute.length + 1), next, acceptance)
+			if (legacy && input.action === 'social')
+				return await start(identity, input.provider, next, acceptance)
 			return await emailEntry(identity, input, next, {
 				origin,
 				loginPath,
 				instance,
-				session: issue(request),
+				mode,
+				allowRegistration,
+				redeem: (ticket) => redeem(identity, ticket),
+				session: async (data) => {
+					if ((await accepted(acceptance, request)) !== true)
+						return problem('acceptance_required', 403)
+					const session = verifiedSession(data, acceptance)
+					const cookies = session && (await issue(request)(session))
+					return cookies ? reply({ next }, 200, cookies) : problem('session_unavailable', 502)
+				},
 			})
 		} catch {
 			return problem('unavailable', 503)
@@ -359,4 +461,39 @@ function sameState(a: string, b: string) {
 	let difference = 0
 	for (let i = 0; i < 43; i++) difference |= a.charCodeAt(i) ^ b.charCodeAt(i)
 	return difference === 0
+}
+
+function verifiedSession(
+	data: Data,
+	acceptance: AcceptanceVersions | undefined,
+): VerifiedIdentitySession | undefined {
+	const session = obj(data.session)
+	const user = obj(data.user)
+	if (!token(session.token) || !token(user.id) || user.email_verified !== true) return
+	return {
+		token: session.token,
+		expiresAt: session.expires_at,
+		...(token(session.id) && { sessionId: session.id }),
+		user: {
+			id: user.id,
+			emailVerified: true,
+			...(typeof user.email === 'string' && { email: user.email }),
+			...(typeof user.name === 'string' && { name: user.name }),
+			...(typeof user.username === 'string' && { username: user.username }),
+		},
+		isNewUser: data.is_new_user === true,
+		...(acceptance && { acceptance }),
+	}
+}
+
+function expirySeconds(value: unknown): number {
+	if (typeof value === 'number' || (typeof value === 'string' && /^[0-9]+$/.test(value))) {
+		const seconds = Number(value)
+		// Limit Unix seconds to year 9999, matching the ISO envelope and rejecting millisecond epochs.
+		return Number.isSafeInteger(seconds) && seconds <= 253_402_300_799 ? seconds : NaN
+	}
+	if (typeof value !== 'string') return NaN
+	if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(value))
+		return NaN
+	return Date.parse(value) / 1000
 }

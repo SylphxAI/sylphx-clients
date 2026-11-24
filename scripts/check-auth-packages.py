@@ -115,6 +115,8 @@ def pack(source, staging, destination, env, manifest, dependency=None):
          "--registry", REGISTRY], staging, env)
     if dependency is not None:
         check_installed(dependency, staging / "node_modules", AUTH)
+    run(["bun", "run", "typecheck"], staging, env)
+    run(["bun", "run", "test"], staging, env)
     run(["bun", "run", "build"], staging, env)
     if dependency is not None:
         staged_manifest.write_bytes(original)
