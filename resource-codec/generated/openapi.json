@@ -9402,7 +9402,7 @@
             "type": "string"
           },
           "grace_period": {
-            "description": "How long the old secret keeps verifying; default 24h.",
+            "description": "Overlap from 0s (no overlap) to 86400s; default 86400s (24h).",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },
@@ -105707,7 +105707,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/oauth_clients/{oauth_client}:rollSecret": {
       "post": {
-        "description": "Issues a new client secret, returned once; the old one verifies until\n`grace_period` ends.",
+        "description": "Issues a new client secret, returned once; the old one verifies until\n`grace_period` ends. Rotation is refused during an existing overlap.\nReusing an Idempotency-Key never returns the secret or rotates again.",
         "operationId": "auth_oauth_clients_roll_secret",
         "parameters": [
           {
@@ -105759,7 +105759,7 @@
                     "type": "string"
                   },
                   "grace_period": {
-                    "description": "How long the old secret keeps verifying; default 24h.",
+                    "description": "Overlap from 0s (no overlap) to 86400s; default 86400s (24h).",
                     "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
                     "type": "string"
                   },
@@ -105807,7 +105807,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Issues a new client secret, returned once; the old one verifies until `grace_period` ends.",
+        "summary": "Issues a new client secret, returned once; the old one verifies until `grace_period` ends. Rotation is refused during an existing overlap. Reusing an Idempotency-Key never returns the secret or rotates again.",
         "tags": [
           "auth"
         ],

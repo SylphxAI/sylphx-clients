@@ -7255,7 +7255,7 @@
                 {
                   "field": "grace_period",
                   "flag": "--grace-period",
-                  "summary": "How long the old secret keeps verifying; default 24h.",
+                  "summary": "Overlap from 0s (no overlap) to 86400s; default 86400s (24h).",
                   "type": "duration"
                 },
                 {
@@ -7280,7 +7280,7 @@
                 "field": "name",
                 "pattern": "orgs/{org}/projects/{project}/envs/{env}/oauth_clients/{oauth_client}"
               },
-              "summary": "Issues a new client secret, returned once; the old one verifies until `grace_period` ends.",
+              "summary": "Issues a new client secret, returned once; the old one verifies until `grace_period` ends. Rotation is refused during an existing overlap. Reusing an Idempotency-Key never returns the secret or rotates again.",
               "verb": "roll-secret"
             }
           ],

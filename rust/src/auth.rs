@@ -2533,7 +2533,7 @@ pub struct RollOauthClientSecretRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// How long the old secret keeps verifying; default 24h.
+    /// Overlap from 0s (no overlap) to 86400s; default 86400s (24h).
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -5833,7 +5833,8 @@ impl<'a, T: crate::runtime::Transport> OauthClientsCollection<'a, T> {
     }
 
     /// Issues a new client secret, returned once; the old one verifies until
-    /// `grace_period` ends.
+    /// `grace_period` ends. Rotation is refused during an existing overlap.
+    /// Reusing an Idempotency-Key never returns the secret or rotates again.
     ///
     /// `POST /v1/{name=orgs/*/projects/*/envs/*/oauth_clients/*}:rollSecret` · permission `auth:write` · effect `write`
     ///

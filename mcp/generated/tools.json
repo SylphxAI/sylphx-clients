@@ -11240,9 +11240,9 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
-        "title": "Issues a new client secret, returned once; the old one verifies until `grace_period` ends."
+        "title": "Issues a new client secret, returned once; the old one verifies until `grace_period` ends. Rotation is refused during an existing overlap. Reusing an Idempotency-Key never returns the secret or rotates again."
       },
-      "description": "Issues a new client secret, returned once; the old one verifies until\n`grace_period` ends.",
+      "description": "Issues a new client secret, returned once; the old one verifies until\n`grace_period` ends. Rotation is refused during an existing overlap.\nReusing an Idempotency-Key never returns the secret or rotates again.",
       "effect": "write",
       "http": "POST /v1/{name=orgs/*/projects/*/envs/*/oauth_clients/*}:rollSecret",
       "input_schema": {
@@ -11254,7 +11254,7 @@
             "type": "string"
           },
           "grace_period": {
-            "description": "How long the old secret keeps verifying; default 24h.",
+            "description": "Overlap from 0s (no overlap) to 86400s; default 86400s (24h).",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?s$",
             "type": "string"
           },

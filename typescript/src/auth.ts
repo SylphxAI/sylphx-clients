@@ -1171,7 +1171,7 @@ export interface RevokeSessionRequest {
 export interface RollOauthClientSecretRequest {
 	/** The name of the OAuth client. */
 	name: string
-	/** How long the old secret keeps verifying; default 24h. */
+	/** Overlap from 0s (no overlap) to 86400s; default 86400s (24h). */
 	gracePeriod?: string
 	/** Act only if the current etag matches. */
 	etag?: string
@@ -3148,7 +3148,8 @@ export class OauthClientsCollection {
 
 	/**
 	 * Issues a new client secret, returned once; the old one verifies until
-	 * `grace_period` ends.
+	 * `grace_period` ends. Rotation is refused during an existing overlap.
+	 * Reusing an Idempotency-Key never returns the secret or rotates again.
 	 *
 	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/oauth_clients/*}:rollSecret` · permission `auth:write` · effect `write`
 	 *

@@ -32787,7 +32787,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "How long the old secret keeps verifying; default 24h.",
+          "doc": "Overlap from 0s (no overlap) to 86400s; default 86400s (24h).",
           "filterable": false,
           "name": "grace_period",
           "number": 2,
@@ -163810,9 +163810,10 @@
               "verb": "delete"
             },
             {
+              "backend_idempotency": true,
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Issues a new client secret, returned once; the old one verifies until\n`grace_period` ends.",
+              "doc": "Issues a new client secret, returned once; the old one verifies until\n`grace_period` ends. Rotation is refused during an existing overlap.\nReusing an Idempotency-Key never returns the secret or rotates again.",
               "effect": "write",
               "errors": [
                 "UNAUTHENTICATED",
