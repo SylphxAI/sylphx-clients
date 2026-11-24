@@ -1955,6 +1955,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'broker:sms:send',
 	},
+	'broker.secret_versions.quote_media_execution': {
+		id: 'broker.secret_versions.quote_media_execution',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:quoteMediaExecution',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'read',
+		permission: 'broker:media:quote',
+	},
 	'broker.secret_versions.recover_media_execution': {
 		id: 'broker.secret_versions.recover_media_execution',
 		httpMethod: 'GET',

@@ -245,6 +245,31 @@ export interface OpenGitHubPullRequestResponse {
 	head?: GitHubPullRequestHead
 }
 
+/** Quotes one exact allowlisted media input. No effects are performed. */
+export interface QuoteMediaExecutionRequest {
+	/** Exact SecretVersion for the scoped Broker account; no alias is accepted. */
+	name: string
+	/** Exact provider endpoint identifier, not a URL. */
+	endpoint: string
+	/**
+	 * Original JSON object containing bounded inline images and parameters.
+	 * Supplied as text so duplicate fields cannot be collapsed before validation.
+	 */
+	inputJson: string
+}
+
+/** The bounded reservation and canonical input identity; not dispatch authority. */
+export interface QuoteMediaExecutionResponse {
+	/** Exact revision of the bounded SKU input and reservation schedule. */
+	skuRevision?: string
+	/** Minimum whole-cent pre-hold in USD minor units; not an invoice amount. */
+	maxHoldMinor?: string
+	/** The same reservation amount in the Money hold API's pico-USD units. */
+	maxHoldPicousd?: string
+	/** SHA-256 of the canonical supplier input accepted by this quote. */
+	requestSha256?: string
+}
+
 /** Looks up the acknowledgment of an existing durable Broker media execution. */
 export interface RecoverMediaExecutionRequest {
 	/** Original immutable Broker billing SecretVersion; "latest" is not allowed. */
@@ -541,6 +566,15 @@ runtime.registerSchemas({
 	'sylphx.broker.v1.OpenGitHubPullRequestResponse': [
 		['htmlUrl', 'html_url'],
 		['head', 'head', 'sylphx.broker.v1.GitHubPullRequestHead'],
+	],
+	'sylphx.broker.v1.QuoteMediaExecutionRequest': [
+		['inputJson', 'input_json'],
+	],
+	'sylphx.broker.v1.QuoteMediaExecutionResponse': [
+		['skuRevision', 'sku_revision'],
+		['maxHoldMinor', 'max_hold_minor'],
+		['maxHoldPicousd', 'max_hold_picousd'],
+		['requestSha256', 'request_sha256'],
 	],
 	'sylphx.broker.v1.RecoverMediaExecutionRequest': [
 		['executionKey', 'execution_key'],
@@ -912,6 +946,26 @@ export class SecretVersionsCollection {
 			query: { execution_key: request.executionKey },
 			responseType: 'sylphx.broker.v1.RecoverMediaExecutionResponse',
 			mutation: false,
+		})
+	}
+
+	/**
+	 * Validates one bounded media input and quotes the minimum Money reservation.
+	 * This operation is pure: it reads no credentials, reserves no money and
+	 * cannot send a supplier request. A quote is not dispatch authority.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/secrets/*\/secret_versions/*}:quoteMediaExecution` · permission `broker:media:quote` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async quoteMediaExecution(request: QuoteMediaExecutionRequest): Promise<QuoteMediaExecutionResponse> {
+		return this.client.call<QuoteMediaExecutionResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:quoteMediaExecution`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.QuoteMediaExecutionRequest',
+			responseType: 'sylphx.broker.v1.QuoteMediaExecutionResponse',
+			mutation: true,
 		})
 	}
 }

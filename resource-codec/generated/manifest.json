@@ -39703,6 +39703,145 @@
       "package": "sylphx.broker.v1"
     },
     {
+      "doc": "Quotes one exact allowlisted media input. No effects are performed.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact SecretVersion for the scoped Broker account; no alias is accepted.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "secrets.sylphx.com/SecretVersion",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Exact provider endpoint identifier, not a URL.",
+          "filterable": false,
+          "name": "endpoint",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Original JSON object containing bounded inline images and parameters.\nSupplied as text so duplicate fields cannot be collapsed before validation.",
+          "filterable": false,
+          "name": "input_json",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": true,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.QuoteMediaExecutionRequest",
+      "package": "sylphx.broker.v1"
+    },
+    {
+      "doc": "The bounded reservation and canonical input identity; not dispatch authority.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Exact revision of the bounded SKU input and reservation schedule.",
+          "filterable": false,
+          "name": "sku_revision",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Minimum whole-cent pre-hold in USD minor units; not an invoice amount.",
+          "filterable": false,
+          "name": "max_hold_minor",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The same reservation amount in the Money hold API's pico-USD units.",
+          "filterable": false,
+          "name": "max_hold_picousd",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "SHA-256 of the canonical supplier input accepted by this quote.",
+          "filterable": false,
+          "name": "request_sha256",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.broker.v1.QuoteMediaExecutionResponse",
+      "package": "sylphx.broker.v1"
+    },
+    {
       "doc": "Looks up the acknowledgment of an existing durable Broker media execution.",
       "fields": [
         {
@@ -164381,6 +164520,46 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "recover_media_execution"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Validates one bounded media input and quotes the minimum Money reservation.\nThis operation is pure: it reads no credentials, reserves no money and\ncannot send a supplier request. A quote is not dispatch authority.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}",
+                    "pattern": "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:quoteMediaExecution"
+              },
+              "id": "broker.secret_versions.quote_media_execution",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "hidden",
+              "page": null,
+              "permission": "broker:media:quote",
+              "proto": "sylphx.broker.v1.BrokerService.QuoteMediaExecution",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.broker.v1.QuoteMediaExecutionRequest",
+              "resource_field": null,
+              "response": "sylphx.broker.v1.QuoteMediaExecutionResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "quote_media_execution"
             }
           ],
           "name": "secret_versions",

@@ -449,6 +449,68 @@ pub struct OpenGitHubPullRequestResponse {
     pub head: Option<GitHubPullRequestHead>,
 }
 
+/// Quotes one exact allowlisted media input. No effects are performed.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QuoteMediaExecutionRequest {
+    /// Exact SecretVersion for the scoped Broker account; no alias is accepted.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Exact provider endpoint identifier, not a URL.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub endpoint: String,
+    /// Original JSON object containing bounded inline images and parameters.
+    /// Supplied as text so duplicate fields cannot be collapsed before validation.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "inputJson"
+    )]
+    pub input_json: String,
+}
+
+/// The bounded reservation and canonical input identity; not dispatch authority.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QuoteMediaExecutionResponse {
+    /// Exact revision of the bounded SKU input and reservation schedule.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "skuRevision"
+    )]
+    pub sku_revision: String,
+    /// Minimum whole-cent pre-hold in USD minor units; not an invoice amount.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "maxHoldMinor"
+    )]
+    pub max_hold_minor: i64,
+    /// The same reservation amount in the Money hold API's pico-USD units.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "maxHoldPicousd"
+    )]
+    pub max_hold_picousd: i64,
+    /// SHA-256 of the canonical supplier input accepted by this quote.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestSha256"
+    )]
+    pub request_sha256: String,
+}
+
 /// Looks up the acknowledgment of an existing durable Broker media execution.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1444,6 +1506,38 @@ impl<'a, T: crate::runtime::Transport> SecretVersionsCollection<'a, T> {
             query: query.0,
             body: None,
             mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Validates one bounded media input and quotes the minimum Money reservation.
+    /// This operation is pure: it reads no credentials, reserves no money and
+    /// cannot send a supplier request. A quote is not dispatch authority.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:quoteMediaExecution` · permission `broker:media:quote` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn quote_media_execution(
+        &self,
+        request: QuoteMediaExecutionRequest,
+    ) -> Result<QuoteMediaExecutionResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:quoteMediaExecution",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
             origin: None,
             effect_ids: false,
         };

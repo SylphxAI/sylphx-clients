@@ -11863,6 +11863,55 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.QuoteMediaExecutionRequest": {
+        "description": "Quotes one exact allowlisted media input. No effects are performed.",
+        "properties": {
+          "endpoint": {
+            "description": "Exact provider endpoint identifier, not a URL.",
+            "type": "string"
+          },
+          "input_json": {
+            "description": "Original JSON object containing bounded inline images and parameters.\nSupplied as text so duplicate fields cannot be collapsed before validation.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "name": {
+            "description": "Exact SecretVersion for the scoped Broker account; no alias is accepted.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+          }
+        },
+        "required": [
+          "name",
+          "endpoint",
+          "input_json"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.QuoteMediaExecutionResponse": {
+        "description": "The bounded reservation and canonical input identity; not dispatch authority.",
+        "properties": {
+          "max_hold_minor": {
+            "description": "Minimum whole-cent pre-hold in USD minor units; not an invoice amount.",
+            "format": "int64",
+            "type": "string"
+          },
+          "max_hold_picousd": {
+            "description": "The same reservation amount in the Money hold API's pico-USD units.",
+            "format": "int64",
+            "type": "string"
+          },
+          "request_sha256": {
+            "description": "SHA-256 of the canonical supplier input accepted by this quote.",
+            "type": "string"
+          },
+          "sku_revision": {
+            "description": "Exact revision of the bounded SKU input and reservation schedule.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.RecoverMediaExecutionRequest": {
         "description": "Looks up the acknowledgment of an existing durable Broker media execution.",
         "properties": {
@@ -120699,6 +120748,126 @@
         ],
         "x-sylphx-method": "secrets.secret_versions.enable",
         "x-sylphx-permission": "secrets:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}:quoteMediaExecution": {
+      "post": {
+        "description": "Validates one bounded media input and quotes the minimum Money reservation.\nThis operation is pure: it reads no credentials, reserves no money and\ncannot send a supplier request. A quote is not dispatch authority.",
+        "operationId": "broker_secret_versions_quote_media_execution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "endpoint": {
+                    "description": "Exact provider endpoint identifier, not a URL.",
+                    "type": "string"
+                  },
+                  "input_json": {
+                    "description": "Original JSON object containing bounded inline images and parameters.\nSupplied as text so duplicate fields cannot be collapsed before validation.",
+                    "type": "string",
+                    "x-sylphx-sensitive": true
+                  }
+                },
+                "required": [
+                  "endpoint",
+                  "input_json"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.QuoteMediaExecutionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Validates one bounded media input and quotes the minimum Money reservation. This operation is pure: it reads no credentials, reserves no money and cannot send a supplier request. A quote is not dispatch authority.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.secret_versions.quote_media_execution",
+        "x-sylphx-permission": "broker:media:quote",
         "x-sylphx-stage": "preview"
       }
     },

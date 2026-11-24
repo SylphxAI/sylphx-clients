@@ -7884,6 +7884,37 @@
               },
               "summary": "Recovers the supplier acknowledgment for one existing Broker media attempt. Uses the original tenant and pinned billing SecretVersion. Missing or incomplete evidence never authorizes dispatch, capture or release.",
               "verb": "recover-media-execution"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "endpoint",
+                  "flag": "--endpoint",
+                  "required": true,
+                  "summary": "Exact provider endpoint identifier, not a URL.",
+                  "type": "string"
+                },
+                {
+                  "field": "input_json",
+                  "flag": "--input-json",
+                  "required": true,
+                  "sensitive": true,
+                  "summary": "Original JSON object containing bounded inline images and parameters. Supplied as text so duplicate fields cannot be collapsed before validation.",
+                  "type": "string"
+                }
+              ],
+              "http": "POST /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:quoteMediaExecution",
+              "method": "broker.secret_versions.quote_media_execution",
+              "permission": "broker:media:quote",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}"
+              },
+              "summary": "Validates one bounded media input and quotes the minimum Money reservation. This operation is pure: it reads no credentials, reserves no money and cannot send a supplier request. A quote is not dispatch authority.",
+              "verb": "quote-media-execution"
             }
           ],
           "noun": "secret-versions",
