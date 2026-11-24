@@ -362,6 +362,30 @@ export interface SignVapidAssertionResponse {
 	expireTime?: string
 }
 
+/** Requests one bounded media execution using an authorized Broker account. */
+export interface SubmitMediaExecutionRequest {
+	/** The exact recovery SecretVersion bound to the Broker account. */
+	name: string
+	/** Original durable platform-hold execution key. */
+	executionKey: string
+	/** Exact approved supplier endpoint identifier, not a URL. */
+	endpoint: string
+	/** Original bounded input, encoded as JSON text so duplicates can be refused. */
+	inputJson: string
+	/** Original durable job creation time in RFC 3339, at microsecond precision. */
+	jobCreateTime: string
+	/** Exact SKU revision returned by the preflight quote for this job. */
+	skuRevision: string
+	/** Canonical input SHA-256 returned by the preflight quote for this job. */
+	requestSha256: string
+}
+
+/** Acknowledgment only; an empty receipt is unresolved, never no-charge. */
+export interface SubmitMediaExecutionResponse {
+	/** Opaque supplier request ID, returned only after durable acknowledgment. */
+	receipt?: string
+}
+
 /**
  * A TokenExchange is the record of one credential the Broker issued under a
  * TrustPolicy: who asked, for which Agent, on which repository, with which
@@ -600,6 +624,14 @@ runtime.registerSchemas({
 		['applicationServerKey', 'application_server_key'],
 		['expireTime', 'expire_time'],
 	],
+	'sylphx.broker.v1.SubmitMediaExecutionRequest': [
+		['executionKey', 'execution_key'],
+		['inputJson', 'input_json'],
+		['jobCreateTime', 'job_create_time'],
+		['skuRevision', 'sku_revision'],
+		['requestSha256', 'request_sha256'],
+	],
+	'sylphx.broker.v1.SubmitMediaExecutionResponse': [],
 	'sylphx.broker.v1.TokenExchange': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['permissions', 'permissions', undefined, 'map'],
@@ -965,6 +997,27 @@ export class SecretVersionsCollection {
 			body: runtime.omit(request, ['name']),
 			bodyType: 'sylphx.broker.v1.QuoteMediaExecutionRequest',
 			responseType: 'sylphx.broker.v1.QuoteMediaExecutionResponse',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Submits one bounded media execution for an exact configured account.
+	 * The input is revalidated before Money reserves or claims any funds.
+	 * A missing acknowledgment is unresolved. Retry only with the original
+	 * execution key; never replace that key to recover the same execution.
+	 *
+	 * `POST /v1/{name=orgs/*\/projects/*\/envs/*\/secrets/*\/secret_versions/*}:submitMediaExecution` · permission `broker:media:submit` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`.
+	 */
+	async submitMediaExecution(request: SubmitMediaExecutionRequest): Promise<SubmitMediaExecutionResponse> {
+		return this.client.call<SubmitMediaExecutionResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*', 'name')}:submitMediaExecution`,
+			body: runtime.omit(request, ['name']),
+			bodyType: 'sylphx.broker.v1.SubmitMediaExecutionRequest',
+			responseType: 'sylphx.broker.v1.SubmitMediaExecutionResponse',
 			mutation: true,
 		})
 	}

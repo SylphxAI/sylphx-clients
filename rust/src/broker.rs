@@ -720,6 +720,76 @@ pub struct SignVapidAssertionResponse {
     pub expire_time: String,
 }
 
+/// Requests one bounded media execution using an authorized Broker account.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SubmitMediaExecutionRequest {
+    /// The exact recovery SecretVersion bound to the Broker account.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Original durable platform-hold execution key.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "executionKey"
+    )]
+    pub execution_key: String,
+    /// Exact approved supplier endpoint identifier, not a URL.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub endpoint: String,
+    /// Original bounded input, encoded as JSON text so duplicates can be refused.
+    ///
+    /// Field behavior: `required`, `sensitive`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "inputJson"
+    )]
+    pub input_json: String,
+    /// Original durable job creation time in RFC 3339, at microsecond precision.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "jobCreateTime"
+    )]
+    pub job_create_time: String,
+    /// Exact SKU revision returned by the preflight quote for this job.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "skuRevision"
+    )]
+    pub sku_revision: String,
+    /// Canonical input SHA-256 returned by the preflight quote for this job.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "requestSha256"
+    )]
+    pub request_sha256: String,
+}
+
+/// Acknowledgment only; an empty receipt is unresolved, never no-charge.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct SubmitMediaExecutionResponse {
+    /// Opaque supplier request ID, returned only after durable acknowledgment.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub receipt: String,
+}
+
 /// A TokenExchange is the record of one credential the Broker issued under a
 /// TrustPolicy: who asked, for which Agent, on which repository, with which
 /// permissions, until when. The credential itself is never returned again;
@@ -1525,6 +1595,39 @@ impl<'a, T: crate::runtime::Transport> SecretVersionsCollection<'a, T> {
     ) -> Result<QuoteMediaExecutionResponse, crate::runtime::Error> {
         let path = format!(
             "/v1/{}:quoteMediaExecution",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["name"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Submits one bounded media execution for an exact configured account.
+    /// The input is revalidated before Money reserves or claims any funds.
+    /// A missing acknowledgment is unresolved. Retry only with the original
+    /// execution key; never replace that key to recover the same execution.
+    ///
+    /// `POST /v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:submitMediaExecution` · permission `broker:media:submit` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `FAILED_PRECONDITION`, `UNAVAILABLE`.
+    pub async fn submit_media_execution(
+        &self,
+        request: SubmitMediaExecutionRequest,
+    ) -> Result<SubmitMediaExecutionResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:submitMediaExecution",
             crate::runtime::path_param(
                 &request.name,
                 "orgs/*/projects/*/envs/*/secrets/*/secret_versions/*",

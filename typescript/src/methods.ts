@@ -1987,6 +1987,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'write',
 		permission: 'broker:sms:send',
 	},
+	'broker.secret_versions.submit_media_execution': {
+		id: 'broker.secret_versions.submit_media_execution',
+		httpMethod: 'POST',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/secrets/*/secret_versions/*}:submitMediaExecution',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/secrets/*/secret_versions/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'write',
+		permission: 'broker:media:submit',
+	},
 	'broker.token_exchanges.get': {
 		id: 'broker.token_exchanges.get',
 		httpMethod: 'GET',

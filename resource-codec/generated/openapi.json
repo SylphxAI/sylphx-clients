@@ -12106,6 +12106,62 @@
         },
         "type": "object"
       },
+      "sylphx.broker.v1.SubmitMediaExecutionRequest": {
+        "description": "Requests one bounded media execution using an authorized Broker account.",
+        "properties": {
+          "endpoint": {
+            "description": "Exact approved supplier endpoint identifier, not a URL.",
+            "type": "string"
+          },
+          "execution_key": {
+            "description": "Original durable platform-hold execution key.",
+            "type": "string"
+          },
+          "input_json": {
+            "description": "Original bounded input, encoded as JSON text so duplicates can be refused.",
+            "type": "string",
+            "x-sylphx-sensitive": true
+          },
+          "job_create_time": {
+            "description": "Original durable job creation time in RFC 3339, at microsecond precision.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "description": "The exact recovery SecretVersion bound to the Broker account.",
+            "type": "string",
+            "x-sylphx-resource-reference": "secrets.sylphx.com/SecretVersion"
+          },
+          "request_sha256": {
+            "description": "Canonical input SHA-256 returned by the preflight quote for this job.",
+            "type": "string"
+          },
+          "sku_revision": {
+            "description": "Exact SKU revision returned by the preflight quote for this job.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "execution_key",
+          "endpoint",
+          "input_json",
+          "job_create_time",
+          "sku_revision",
+          "request_sha256"
+        ],
+        "type": "object"
+      },
+      "sylphx.broker.v1.SubmitMediaExecutionResponse": {
+        "description": "Acknowledgment only; an empty receipt is unresolved, never no-charge.",
+        "properties": {
+          "receipt": {
+            "description": "Opaque supplier request ID, returned only after durable acknowledgment.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.broker.v1.TokenExchange": {
         "description": "A TokenExchange is the record of one credential the Broker issued under a\nTrustPolicy: who asked, for which Agent, on which repository, with which\npermissions, until when. The credential itself is never returned again;\nthe record keeps only its SHA-256. The Broker holds the credential sealed\nuntil it is revoked or expires, so `:revoke` needs nothing from the caller.",
         "properties": {
@@ -121272,6 +121328,151 @@
         ],
         "x-sylphx-method": "broker.secret_versions.send_carrier_sms",
         "x-sylphx-permission": "broker:sms:send",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/secrets/{secret}/secret_versions/{secret_version}:submitMediaExecution": {
+      "post": {
+        "description": "Submits one bounded media execution for an exact configured account.\nThe input is revalidated before Money reserves or claims any funds.\nA missing acknowledgment is unresolved. Retry only with the original\nexecution key; never replace that key to recover the same execution.",
+        "operationId": "broker_secret_versions_submit_media_execution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "endpoint": {
+                    "description": "Exact approved supplier endpoint identifier, not a URL.",
+                    "type": "string"
+                  },
+                  "execution_key": {
+                    "description": "Original durable platform-hold execution key.",
+                    "type": "string"
+                  },
+                  "input_json": {
+                    "description": "Original bounded input, encoded as JSON text so duplicates can be refused.",
+                    "type": "string",
+                    "x-sylphx-sensitive": true
+                  },
+                  "job_create_time": {
+                    "description": "Original durable job creation time in RFC 3339, at microsecond precision.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "request_sha256": {
+                    "description": "Canonical input SHA-256 returned by the preflight quote for this job.",
+                    "type": "string"
+                  },
+                  "sku_revision": {
+                    "description": "Exact SKU revision returned by the preflight quote for this job.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "execution_key",
+                  "endpoint",
+                  "input_json",
+                  "job_create_time",
+                  "sku_revision",
+                  "request_sha256"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.broker.v1.SubmitMediaExecutionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Submits one bounded media execution for an exact configured account. The input is revalidated before Money reserves or claims any funds. A missing acknowledgment is unresolved. Retry only with the original execution key; never replace that key to recover the same execution.",
+        "tags": [
+          "broker"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "INVALID_FIELD",
+          "FAILED_PRECONDITION",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "broker.secret_versions.submit_media_execution",
+        "x-sylphx-permission": "broker:media:submit",
         "x-sylphx-stage": "preview"
       }
     },
