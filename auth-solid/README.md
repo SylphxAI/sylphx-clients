@@ -39,7 +39,7 @@ associations and manage focus in the custom view. Unmount aborts pending work.
 ### Language
 
 The component ships English, Traditional Chinese for Hong Kong and Taiwan,
-Simplified Chinese, and Japanese. It renders a language selector below the
+Simplified Chinese, Japanese, Korean, Spanish (`es`), and Brazilian Portuguese (`pt-BR`). It renders a language selector below the
 form and preserves values and progress when the language changes. Set
 `showLocaleSelector={false}` if the host already provides a selector.
 
@@ -50,7 +50,10 @@ those hints, SSR starts in English and the browser's language preferences are
 used after mount. Unsupported or malformed tags fall through to the next hint,
 then English. `resolveAuthLocale` exposes the same negotiation for hosts.
 Supply custom headings, descriptions and legal copy in the active language.
-The widget does not change the language of email sent by the Auth service.
+Use `messages` for partial catalog overrides (including individual error strings).
+Supply an explicit BCP 47 `locale` with your catalog for additional languages;
+missing strings fall back to the nearest bundled catalog or English. The
+widget does not change the language of email sent by the Auth service.
 
 Headless clients can render `signInMessages[locale].errors[errorCode]` when
 `controller.errorCode()` is nonempty. The existing `controller.error()` still
@@ -67,10 +70,28 @@ mount it anywhere other than `/auth`.
 
 Render your consent UI using `agreement` or your own layout. Use
 `getAcceptance={() => agreed() ? { terms: termsVersion, privacy: privacyVersion } : undefined}`
-so requests send only the versions the user actually accepted. Configure
+so requests send only the versions the user actually accepted. Set
+`requireAgreement` and provide a reactive `agreementAccepted` boolean to disable
+and block authentication actions until the checkbox is checked. Configure
 server-side `clickwrap` to enforce those versions; the UI alone is not a gate.
 
 Set `conditionalPasskey` to opt into discoverable credential autofill on the
 first sign-in screen. The identifier input uses `username webauthn` when
 passkeys are configured. Unsupported or canceled conditional requests fall
 back to the existing explicit passkey and other enabled sign-in controls.
+
+When both email OTP and password are configured, the password option is
+available without starting OTP. If `recovery` is enabled in server config, the
+password screen offers the host's recovery flow. The confirmation screen hides
+mail proof from the URL and allows an independent passkey sign-in when enabled;
+a passkey is not submitted as email proof or as a substitute for MFA.
+
+Use `lastUsed="google"` (or another provider, `password`, `otp`, or `passkey`)
+to label the method from a host-controlled, non-authoritative hint. Use
+`beforeOAuthNavigate` for an optional app hook after validating the provider
+destination and before navigation. Do not put secrets in client hints.
+
+Render `<SylphxPasskeyEnroll enabled={config.passkeyEnrollment === true} />`
+in a signed-in view. It supports the same `routePrefix`, `locale` and `messages`
+options. The handler and Identity, not the visibility of this component,
+authorize enrollment and enforce recent authentication.

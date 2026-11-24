@@ -99,3 +99,55 @@ server loader and pass its JSON as the widget's `initialConfig`. Use
 `allowPasswordRegistration: false` to hide and refuse new password signup via
 this handler; password sign-in, confirmation of prior registrations, OTP and
 OAuth remain available according to the instance's capabilities.
+
+## Instance keys and entry policy
+
+Pass `publishableKey: env.SYLPHX_PUBLISHABLE_KEY` instead of `instance` to
+resolve the tenant via its Access publishable key. The handler uses the bearer
+header on Identity client calls, never the public config response, browser
+URL, or tenant portal. You can provide both to additionally pin the resolved
+ID, slug and environment. Confidential ticket redemption still uses only the
+server key.
+
+Set `allowedMethods: ['oauth', 'otp', 'passkey']`, for example, to suppress and
+reject password sign-in, password MFA, registration, and recovery. An empty
+array denies all sign-in methods. The allowlist is local to this handler.
+
+An unverified password sign-in is denied by default. To continue a legacy mail
+proof flow, use `issueUnverifiedPassword` to return a short-lived, proof-only
+cookie. Never grant normal application permissions based on this callback;
+verify the mailed proof against the same principal before upgrading the
+session. The normal `session.issue` callback is never invoked in this case.
+
+## App session integration
+
+- `session.issue` also receives `method`, `provider` (OAuth only), and normalized
+  `returnTo`. Optional `signUpSignal(context, request)` emits only the fixed
+  `X-Sylphx-Auth-Event: sign_up` response header, and only on confirmed new-user
+  sign-in with no GPC header. Return true only after checking affirmative,
+  current consent. It emits no user or session identifiers, and never changes
+  the HttpOnly session headers. Redirect response headers are not exposed to
+  browser JS; consume the marker server-side for OAuth.
+- `readAuthSessionCookie(request, { sessionCookie, legacyCookies })` reads
+  the preferred credential for your app's auth middleware. A canonical cookie
+  takes precedence; malformed or duplicate candidates do not cause fallback.
+  Validate the credential with its authoritative issuer before authorizing
+  requests or migrating it. Your middleware can then rotate it into the
+  canonical cookie without extending its lifetime. The default logout route
+  revokes the presented Identity session and clears the configured names;
+  a custom adapter owns revocation and cleanup of its own cookies.
+- `passkeyEnrollment: true` enables POST `/auth/passkey/enroll` using the
+  canonical or configured legacy Identity session cookie. Hosts with their own
+  session store can provide an async resolver for an Identity credential after
+  authenticating the app session. Identity checks the tenant, verified email,
+  recent session and WebAuthn proof. Use `SylphxPasskeyEnroll` in a signed-in view.
+- `recoverPassword({ email, returnTo }, request)` enables the recovery-start
+  action. Handle the send without disclosing account existence, enforce rate
+  limits, and validate the mailed proof in your reset page. Identity's recovery
+  operations require their own authorization; this hook does not proxy them
+  using a publishable key or issue a session.
+- `directOAuth: true` enables GET `/auth/:provider?returnTo=/account` from a
+  same-origin top-level browser navigation. External requests, background
+  fetches and requests without browser navigation headers cannot start it.
+  Apps using server-side clickwrap must use POST `/auth/start/:provider` to
+  bind acceptance to the OAuth flow.

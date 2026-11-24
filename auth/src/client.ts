@@ -7,12 +7,15 @@ export const providers = {
 } as const
 
 export type Provider = keyof typeof providers
+export type AuthMethod = 'oauth' | 'password' | 'otp' | 'passkey'
 export type EntryConfig = {
 	providers: Provider[]
 	password: boolean
 	signup: boolean
 	otp: boolean
 	passkey: boolean
+	recovery?: boolean
+	passkeyEnrollment?: boolean
 }
 export function isProvider(id: unknown): id is Provider {
 	return typeof id === 'string' && Object.hasOwn(providers, id)

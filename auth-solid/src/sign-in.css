@@ -138,3 +138,12 @@
 	outline-offset: 2px;
 }
 .auth-sign-in-panel:is(:lang(zh), :lang(ja)) .auth-sign-in-title { letter-spacing: normal; line-height: 1.3; }
+.auth-sign-in-last-used {
+	font-size: .75rem;
+	font-weight: normal;
+	margin-inline-start: .4em;
+	border: 1px solid currentColor;
+	border-radius: .75em;
+	padding: .1em .45em;
+}
+.auth-sign-in-primary, .auth-sign-in-secondary { flex-wrap: wrap; }

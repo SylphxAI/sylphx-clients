@@ -51,6 +51,15 @@ export type SignInMessages = {
 	useAuthenticator: string
 	useRecovery: string
 	language: string
+	lastUsed: string
+	forgotPassword: string
+	recoverAccount: string
+	recoverDescription: string
+	sendResetLink: string
+	recoverySent: string
+	recoverySentDescription: string
+	addPasskey: string
+	passkeyAdded: string
 	errors: {
 		signin: string
 		cancelled: string
@@ -68,8 +77,20 @@ export type SignInMessages = {
 	}
 }
 
+import { es, ptBR } from './messages-iberian.js'
+
 export const catalogs = {
 	en: {
+		lastUsed: 'Last used',
+		forgotPassword: 'Forgot your password?',
+		recoverAccount: 'Reset your password',
+		recoverDescription: 'Enter the email address for your account.',
+		sendResetLink: 'Send reset link',
+		recoverySent: 'Check your inbox',
+		recoverySentDescription:
+			'If an account exists for this address, you’ll receive a password reset link.',
+		addPasskey: 'Add a passkey',
+		passkeyAdded: 'Passkey added',
 		signIn: 'Sign in',
 		enterPassword: 'Enter your password',
 		createYourAccount: 'Create your account',
@@ -141,6 +162,15 @@ export const catalogs = {
 		},
 	},
 	'zh-Hant-HK': {
+		lastUsed: '上次使用',
+		forgotPassword: '忘記密碼？',
+		recoverAccount: '重設密碼',
+		recoverDescription: '請輸入帳戶的電郵地址。',
+		sendResetLink: '傳送重設連結',
+		recoverySent: '查閱收件箱',
+		recoverySentDescription: '如這個電郵地址已連結帳戶，你將收到密碼重設連結。',
+		addPasskey: '新增通行密鑰',
+		passkeyAdded: '已新增通行密鑰',
 		signIn: '登入',
 		enterPassword: '輸入密碼',
 		createYourAccount: '建立帳戶',
@@ -210,6 +240,15 @@ export const catalogs = {
 		},
 	},
 	'zh-Hant-TW': {
+		lastUsed: '上次使用',
+		forgotPassword: '忘記密碼？',
+		recoverAccount: '重設密碼',
+		recoverDescription: '請輸入帳戶的電子郵件地址。',
+		sendResetLink: '傳送重設連結',
+		recoverySent: '查看收件匣',
+		recoverySentDescription: '如果這個電子郵件地址已連結帳戶，你會收到密碼重設連結。',
+		addPasskey: '新增通行密鑰',
+		passkeyAdded: '已新增通行密鑰',
 		signIn: '登入',
 		enterPassword: '輸入密碼',
 		createYourAccount: '建立帳號',
@@ -279,6 +318,15 @@ export const catalogs = {
 		},
 	},
 	'zh-Hans': {
+		lastUsed: '上次使用',
+		forgotPassword: '忘记密码？',
+		recoverAccount: '重置密码',
+		recoverDescription: '请输入账户的电子邮箱。',
+		sendResetLink: '发送重置链接',
+		recoverySent: '查看收件箱',
+		recoverySentDescription: '如果此邮箱关联了账户，你将收到密码重置链接。',
+		addPasskey: '添加通行密钥',
+		passkeyAdded: '已添加通行密钥',
 		signIn: '登录',
 		enterPassword: '输入密码',
 		createYourAccount: '创建账号',
@@ -348,6 +396,15 @@ export const catalogs = {
 		},
 	},
 	ja: {
+		lastUsed: '前回使用',
+		forgotPassword: 'パスワードをお忘れですか？',
+		recoverAccount: 'パスワードを再設定',
+		recoverDescription: 'アカウントのメールアドレスを入力してください。',
+		sendResetLink: '再設定リンクを送信',
+		recoverySent: 'メールを確認',
+		recoverySentDescription: '該当するアカウントがある場合、再設定リンクが届きます。',
+		addPasskey: 'パスキーを追加',
+		passkeyAdded: 'パスキーを追加しました',
 		signIn: 'ログイン',
 		enterPassword: 'パスワードを入力',
 		createYourAccount: 'アカウントを作成',
@@ -421,6 +478,15 @@ export const catalogs = {
 		},
 	},
 	ko: {
+		lastUsed: '최근 사용',
+		forgotPassword: '비밀번호를 잊으셨나요?',
+		recoverAccount: '비밀번호 재설정',
+		recoverDescription: '계정의 이메일 주소를 입력하세요.',
+		sendResetLink: '재설정 링크 보내기',
+		recoverySent: '받은편지함을 확인하세요',
+		recoverySentDescription: '이 주소에 연결된 계정이 있다면 비밀번호 재설정 링크가 전송됩니다.',
+		addPasskey: '패스키 추가',
+		passkeyAdded: '패스키가 추가되었습니다',
 		signIn: '로그인',
 		enterPassword: '비밀번호를 입력하세요',
 		createYourAccount: '계정 만들기',
@@ -492,6 +558,8 @@ export const catalogs = {
 			unavailable: '연결하지 못했습니다. 잠시 후 다시 시도하세요.',
 		},
 	},
+	es,
+	'pt-BR': ptBR,
 } satisfies Record<string, SignInMessages>
 
 export type AuthLocale = keyof typeof catalogs
@@ -503,4 +571,18 @@ export const localeNames = {
 	'zh-Hans': '简体中文',
 	ja: '日本語',
 	ko: '한국어',
+	es: 'Español',
+	'pt-BR': 'Português (Brasil)',
 } satisfies Record<AuthLocale, string>
+
+export type SignInMessagesOverride = Partial<Omit<SignInMessages, 'errors'>> & {
+	errors?: Partial<SignInMessages['errors']>
+}
+
+export function resolveSignInMessages(
+	locale: AuthLocale,
+	messages?: SignInMessagesOverride,
+): SignInMessages {
+	const base = catalogs[locale]
+	return messages ? { ...base, ...messages, errors: { ...base.errors, ...messages.errors } } : base
+}

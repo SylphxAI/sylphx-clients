@@ -7,15 +7,17 @@ import {
 	readAcceptance,
 } from './acceptance.js'
 import {
+	type AuthMethod,
 	authRoutePrefix,
-	type EntryConfig,
 	isProvider,
 	type Provider,
 	providerDestination,
 	providers,
 	safeReturnTo,
 } from './client.js'
+import { bindInstance, emailMethods, entryConfig, type InstanceBinding } from './discovery.js'
 import { emailEntry } from './email.js'
+import { enrollPasskey } from './enrollment.js'
 import {
 	type AuthCookie,
 	type AuthFetch,
@@ -37,11 +39,14 @@ import {
 	token,
 	transport,
 } from './http.js'
+import { readAuthSessionCookie } from './session-cookie.js'
 
 export type { AcceptanceVersions, ClickwrapPolicy } from './acceptance.js'
+export type { AuthMethod } from './client.js'
 export type { AuthCookie, AuthFetch } from './http.js'
 export { jsonBody as readAuthJson } from './http.js'
 export { exchangeManagementSession } from './session.js'
+export { readAuthSessionCookie, type SessionCookieSource } from './session-cookie.js'
 
 export type IdentitySession = { token: string; expiresAt: unknown }
 export type IssueSession = (session: IdentitySession) => Promise<readonly AuthCookie[] | undefined>
@@ -53,12 +58,19 @@ export type VerifiedIdentity = {
 	username?: string
 	emailVerified: true
 }
-export type VerifiedIdentitySession = IdentitySession & {
-	sessionId?: string
-	user: VerifiedIdentity
-	isNewUser: boolean
-	acceptance?: AcceptanceVersions
+export type AuthIssueContext = { method: AuthMethod; provider?: Provider; returnTo: string }
+export type VerifiedIdentitySession = IdentitySession &
+	AuthIssueContext & {
+		sessionId?: string
+		user: VerifiedIdentity
+		isNewUser: boolean
+		acceptance?: AcceptanceVersions
+	}
+export type UnverifiedPasswordSession = Omit<VerifiedIdentitySession, 'user' | 'method'> & {
+	method: 'password'
+	user: Omit<VerifiedIdentity, 'emailVerified'> & { emailVerified: false }
 }
+
 export type SessionAdapter = {
 	issue(session: VerifiedIdentitySession, request: Request): ReturnType<IssueSession>
 	logout(request: Request): Promise<Response>
@@ -68,7 +80,25 @@ export type SylphxAuthOptions = {
 	origin: string
 	/** Trusted Auth API origin. Only the handler sees this value. */
 	authApiOrigin: string
-	instance: { slug: string; id: string; environment: string }
+	allowedMethods?: readonly AuthMethod[]
+	/** Separate app-owned handoff for proof-pending sessions; never calls the verified issuer. */
+	issueUnverifiedPassword?: (
+		session: UnverifiedPasswordSession,
+		request: Request,
+	) => ReturnType<IssueSession>
+	/** Host sends the generic recovery message and owns mailed proof completion. */
+	recoverPassword?: (input: { email: string; returnTo: string }, request: Request) => Promise<void>
+	/** Opt in to same-origin top-level GET /<provider>; clickwrap deployments use POST. */
+	directOAuth?: boolean
+	/** Non-sensitive marker emitted only for a new user after host consent and absent GPC. */
+	signUpSignal?: (
+		context: Readonly<AuthIssueContext>,
+		request: Request,
+	) => boolean | Promise<boolean>
+	/** Fallback names when the canonical cookie is absent; issuer must still authenticate it. */
+	legacyCookies?: readonly string[]
+	/** Resolve an Identity session token from an authenticated app session for enrollment. */
+	passkeyEnrollment?: true | ((request: Request) => Promise<string | undefined>)
 	/** Pin the origin of the tenant's verified Account Portal for BYO OAuth. Auth discovers its mount path. */
 	tenantAuthOrigin?: string
 	providers?: readonly Provider[]
@@ -90,10 +120,11 @@ export type SylphxAuthOptions = {
 	/** Only for hosts with an existing authoritative session and revocation mechanism. */
 	session?: SessionAdapter
 	fetch?: AuthFetch
-} & (
-	| { sessionMode?: 'browser'; sessionSecret?: never }
-	| { sessionMode: 'server'; sessionSecret: string }
-)
+} & InstanceBinding &
+	(
+		| { sessionMode?: 'browser'; sessionSecret?: never }
+		| { sessionMode: 'server'; sessionSecret: string }
+	)
 
 const FLOW_AGE = 600
 
@@ -151,15 +182,15 @@ export function createSylphxAuthHandler(
 		options.tenantAuthOrigin === undefined ? undefined : requireOrigin(options.tenantAuthOrigin)
 	if (tenantAuthOrigin && tenantAuthOrigin === api)
 		throw new TypeError('Use the tenant Auth origin, not the Auth API origin')
-	const { slug, id, environment } = options.instance
-	if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(slug) || !id || !environment)
-		throw new TypeError('Expected an Auth instance')
-	const instance = { instance: slug }
+	const binding = bindInstance(options)
+	const allowed = options.allowedMethods && new Set(options.allowedMethods)
+	const allows = (method: AuthMethod) => !allowed || allowed.has(method)
 	const prefix = authRoutePrefix(options.routePrefix)
 	const startRoute = `${prefix}/start`
 	const callbackRoute = `${prefix}/callback`
 	const configRoute = `${prefix}/config`
 	const emailRoute = `${prefix}/email`
+	const enrollmentRoute = `${prefix}/passkey/enroll`
 	const logoutRoute = `${prefix}/logout`
 	const mode = options.sessionMode ?? 'browser'
 	const secret = options.sessionSecret
@@ -188,7 +219,13 @@ export function createSylphxAuthHandler(
 		throw new TypeError('Use separate host-only cookie names')
 	const clearFlow: AuthCookie = [flowName, '', 0]
 	const callback = origin + callbackRoute
-	const signable = (value: string) => JSON.stringify([callback, id, value])
+	const signable = (value: string) =>
+		JSON.stringify([callback, options.instance?.id ?? options.publishableKey, value])
+	const legacyCookies = (options.legacyCookies ?? []).map(cookieName)
+	if (new Set([flowName, sessionName, ...legacyCookies]).size !== legacyCookies.length + 2)
+		throw new TypeError('Use distinct session and flow cookie names')
+	const sessionSource = (request: Request) =>
+		readAuthSessionCookie(request, { sessionCookie: sessionName, legacyCookies })
 
 	function accepted(versions: AcceptanceVersions | undefined, request: Request) {
 		return clickwrap ? versions && clickwrap.validate(versions, request) : true
@@ -196,7 +233,7 @@ export function createSylphxAuthHandler(
 
 	async function redeem(identity: Identity, ticket: string) {
 		const res = await identity('/v1/client/tickets:redeem', {
-			query: instance,
+			...binding.scope,
 			body: { ticket },
 			...(mode === 'server' && secret && { bearer: secret }),
 		})
@@ -210,37 +247,23 @@ export function createSylphxAuthHandler(
 	const social = [...new Set(options.providers ?? Object.keys(providers).filter(isProvider))]
 
 	async function discover(identity: Identity) {
-		const res = await identity('/v1/client/config', { query: instance })
-		const data = await json(res)
-		const resolved = obj(data.instance)
-		if (
-			!res.ok ||
-			resolved.id !== id ||
-			resolved.slug !== slug ||
-			resolved.environment !== environment
-		)
-			throw new Error('Unexpected authentication instance')
-		const methods = obj(data.methods)
+		const { data, instance } = await binding.discover(identity)
 		const redirects = new Map<Provider, ReturnType<typeof portalStart> | null>()
 		const rows = Array.isArray(data.social) ? data.social.map(obj) : []
-		for (const provider of social) {
+		for (const provider of allows('oauth') ? social : []) {
 			const entries = rows.filter((row) => row.provider === provider)
 			if (entries.length !== 1) continue
 			const row = entries[0]!
 			if (row.credentials === 'shared') redirects.set(provider, null)
 			else if (row.credentials === 'custom') {
-				const start = portalStart(provider, row, data, tenantAuthOrigin, slug)
+				const start = portalStart(provider, row, data, tenantAuthOrigin, instance.slug)
 				if (start) redirects.set(provider, start)
 			}
 		}
-		const config: EntryConfig = {
-			providers: [...redirects.keys()],
-			password: methods.password === true,
-			signup: allowRegistration && methods.sign_up === true && methods.password === true,
-			otp: methods.email_otp === true,
-			passkey: methods.passkey === true,
-		}
-		return { config, redirects }
+		const config = entryConfig(obj(data.methods), [...redirects.keys()], allows, allowRegistration)
+		if (options.recoverPassword) config.recovery = config.password
+		if (options.passkeyEnrollment) config.passkeyEnrollment = config.passkey
+		return { config, redirects, instance }
 	}
 
 	async function start(
@@ -248,15 +271,18 @@ export function createSylphxAuthHandler(
 		provider: unknown,
 		next: string,
 		acceptance: AcceptanceVersions | undefined,
+		navigate = false,
 	) {
 		if (!isProvider(provider) || !social.includes(provider)) return problem('unknown_provider', 400)
-		const { redirects } = await discover(identity)
+		if (!allows('oauth')) return problem('method_unavailable', 403)
+		const { redirects, instance } = await discover(identity)
 		const start = redirects.get(provider)
 		if (start === undefined) return problem('method_unavailable', 403)
 		const state = random()
 		const expires = Math.floor(Date.now() / 1000) + FLOW_AGE
-		const path = encodeURIComponent(next.slice(1)).replaceAll('.', '%2E')
-		let value = [state, expires, path].join('.')
+		const encode = (value: string) => encodeURIComponent(value).replaceAll('.', '%2E')
+		const path = encode(next.slice(1))
+		let value = [state, expires, path, provider, encode(instance.id)].join('.')
 		if (signer && acceptance) {
 			value += `.${encodeAcceptance(acceptance)}`
 			value += `.${await signer.sign(signable(value))}`
@@ -267,7 +293,12 @@ export function createSylphxAuthHandler(
 		// Auth owns upstream PKCE S256, nonce and Apple's form_post. This
 		// app's GET callback only receives Auth's one-use sign-in ticket.
 		const res = await identity(start?.url ?? `/v1/client/oauth/${provider}/start`, {
-			query: { ...instance, redirect_url: target.href, session_mode: mode },
+			...(start ? {} : binding.scope),
+			query: {
+				...(start ? { instance: instance.slug } : binding.scope.query),
+				redirect_url: target.href,
+				session_mode: mode,
+			},
 			manual: true,
 		})
 		const authorize =
@@ -279,21 +310,39 @@ export function createSylphxAuthHandler(
 			if (callbacks.length !== 1 || callbacks[0] !== start.redirectUri)
 				return problem('method_unavailable', 503)
 		}
-		return reply({ authorize }, 200, [[flowName, value, FLOW_AGE]])
+		const cookies: AuthCookie[] = [[flowName, value, FLOW_AGE]]
+		return navigate ? redirect(authorize, cookies) : reply({ authorize }, 200, cookies)
 	}
 
-	function issue(request: Request) {
-		return async (session: VerifiedIdentitySession) => {
-			const cookies = options.session
-				? await options.session.issue(session, request)
-				: sessionCookie(session)
-			if (!cookies?.length) return
-			for (const [name, value, age] of cookies) {
-				if (cookieName(name) === flowName || !token(value) || !Number.isSafeInteger(age) || age < 1)
-					return
-			}
-			return cookies
+	function validatedCookies(cookies: readonly AuthCookie[] | undefined) {
+		if (!cookies?.length) return
+		const seen = new Set([flowName])
+		for (const [name, value, age] of cookies) {
+			if (seen.has(cookieName(name)) || !token(value) || !Number.isSafeInteger(age) || age < 1)
+				return
+			seen.add(name)
 		}
+		return cookies
+	}
+
+	async function issue(
+		request: Request,
+		session: VerifiedIdentitySession,
+		context: AuthIssueContext,
+	) {
+		const cookies = validatedCookies(
+			options.session ? await options.session.issue(session, request) : sessionCookie(session),
+		)
+		if (!cookies) return
+		let signUp = false
+		if (session.isNewUser && !request.headers.has('sec-gpc')) {
+			try {
+				signUp = (await options.signUpSignal?.(context, request)) === true
+			} catch {
+				// Optional analytics must not prevent sign-in.
+			}
+		}
+		return { cookies, signUp }
 	}
 
 	function sessionCookie(session: IdentitySession): AuthCookie[] | undefined {
@@ -308,23 +357,31 @@ export function createSylphxAuthHandler(
 			if (res.ok) out.append('Set-Cookie', headers([clearFlow]).getSetCookie()[0]!)
 			return new Response(res.body, { status: res.status, headers: out })
 		}
-		const credential = readCookie(request, sessionName)
+		const credential = sessionSource(request)?.value
 		if (token(credential)) {
 			const res = await identity('/v1/client/sign-out', { method: 'POST', bearer: credential })
 			discard(res)
 			if (res.status !== 204) return problem('unavailable', 503)
 		}
-		return new Response(null, { status: 204, headers: headers([clearFlow, [sessionName, '', 0]]) })
+		return new Response(null, {
+			status: 204,
+			headers: headers([
+				clearFlow,
+				...[sessionName, ...legacyCookies].map((name): AuthCookie => [name, '', 0]),
+			]),
+		})
 	}
 
 	async function readFlow(request: Request) {
 		const value = readCookie(request, flowName)
 		if (!value || (signer && value.length > 3600)) return
 		const parts = value.split('.')
-		if (parts.length !== (signer ? 5 : 3)) return
-		const [state, deadline, path, encoded, mac] = parts
+		if (parts.length !== (signer ? 7 : 5)) return
+		const [state, deadline, path, provider, instanceId, encoded, mac] = parts
 		const now = Math.floor(Date.now() / 1000)
 		if (
+			!isProvider(provider) ||
+			!instanceId ||
 			!state ||
 			!RANDOM.test(state) ||
 			!deadline ||
@@ -345,7 +402,13 @@ export function createSylphxAuthHandler(
 				acceptance = decodeAcceptance(encoded)
 				if (!acceptance) return
 			}
-			return { state, next: nextPath(`/${decodeURIComponent(path ?? '')}`), acceptance }
+			return {
+				state,
+				provider,
+				instanceId: decodeURIComponent(instanceId),
+				next: nextPath(`/${decodeURIComponent(path ?? '')}`),
+				acceptance,
+			}
 		} catch {
 			return undefined
 		}
@@ -381,14 +444,30 @@ export function createSylphxAuthHandler(
 		if (tickets.length !== 1 || !token(ticket)) return fail()
 		try {
 			if ((await accepted(flow.acceptance, request)) !== true) return fail('acceptance_required')
+			if (!allows('oauth') || !social.includes(flow.provider)) return fail()
+			const pinned = options.publishableKey
+				? (await binding.discover(identity)).instance
+				: options.instance!
+			if (flow.instanceId !== pinned.id) return fail()
 			const data = await redeem(identity, ticket)
 			if (!data) return fail()
-			if (obj(data.user).email_verified !== true) return fail('use_existing')
-			const session = verifiedSession(data, flow.acceptance)
+			const context: AuthIssueContext = {
+				method: 'oauth',
+				provider: flow.provider,
+				returnTo: flow.next,
+			}
+			const session = identitySession(data, flow.acceptance, context)
 			if (!session) return fail()
+			if (!session.user.emailVerified) return fail('use_existing')
 			if ((await accepted(flow.acceptance, request)) !== true) return fail('acceptance_required')
-			const cookies = await issue(request)(session)
-			return cookies ? redirect(flow.next, [clearFlow, ...cookies]) : fail()
+			const issued = await issue(
+				request,
+				{ ...session, user: { ...session.user, emailVerified: true } },
+				context,
+			)
+			return issued
+				? signUpHeader(redirect(flow.next, [clearFlow, ...issued.cookies]), issued.signUp)
+				: fail()
 		} catch {
 			return fail()
 		}
@@ -402,23 +481,37 @@ export function createSylphxAuthHandler(
 		const identity = transport(request, fetchUpstream, api)
 		if (pathname === callbackRoute)
 			return request.method === 'GET' ? complete(request, url, identity) : problem('not_found', 404)
+		const direct =
+			options.directOAuth &&
+			pathname.startsWith(`${prefix}/`) &&
+			isProvider(pathname.slice(prefix.length + 1))
 		const legacy = options.legacyStart && pathname === startRoute
 		if (
+			!direct &&
 			!legacy &&
-			![configRoute, emailRoute, logoutRoute].includes(pathname) &&
+			![configRoute, emailRoute, logoutRoute, enrollmentRoute].includes(pathname) &&
 			!pathname.startsWith(`${startRoute}/`)
 		)
 			return problem('not_found', 404)
-		const method = pathname === configRoute ? 'GET' : 'POST'
+		const method = pathname === configRoute || direct ? 'GET' : 'POST'
 		const requestOrigin = request.headers.get('origin')
 		const site = request.headers.get('sec-fetch-site')
 		if (
 			request.method !== method ||
 			(site && site !== 'same-origin') ||
+			(direct &&
+				(site !== 'same-origin' ||
+					request.headers.get('sec-fetch-mode') !== 'navigate' ||
+					request.headers.get('sec-fetch-dest') !== 'document')) ||
 			(method === 'POST' ? requestOrigin !== origin : requestOrigin && requestOrigin !== origin)
 		)
 			return problem('not_allowed', 403)
 		try {
+			if (direct) {
+				if (clickwrap) return problem('acceptance_required', 403)
+				const next = nextPath(url.searchParams.get('returnTo') ?? url.searchParams.get('next'))
+				return await start(identity, pathname.slice(prefix.length + 1), next, undefined, true)
+			}
 			if (pathname === configRoute) return reply((await discover(identity)).config)
 			if (pathname === logoutRoute) return await logout(request, identity)
 			if (!/^application\/json(?:\s*;.*)?$/i.test(request.headers.get('content-type') ?? ''))
@@ -429,6 +522,18 @@ export function createSylphxAuthHandler(
 			} catch {
 				return problem('invalid_input', 400)
 			}
+			if (pathname === enrollmentRoute) {
+				if (!options.passkeyEnrollment || !allows('passkey'))
+					return problem('method_unavailable', 403)
+				const credential =
+					options.passkeyEnrollment === true
+						? sessionSource(request)?.value
+						: await options.passkeyEnrollment(request)
+				if (!token(credential)) return problem('not_allowed', 403)
+				const { config, instance } = await discover(identity)
+				if (!config.passkey) return problem('method_unavailable', 403)
+				return await enrollPasskey(identity, credential, instance.id, origin, input)
+			}
 			const acceptance = clickwrap ? readAcceptance(input.acceptance) : undefined
 			if ((await accepted(acceptance, request)) !== true) return problem('acceptance_required', 403)
 			const next = nextPath(field(input, 'next', 1024))
@@ -436,19 +541,63 @@ export function createSylphxAuthHandler(
 				return await start(identity, pathname.slice(startRoute.length + 1), next, acceptance)
 			if (legacy && input.action === 'social')
 				return await start(identity, input.provider, next, acceptance)
+			if (typeof input.action !== 'string' || !Object.hasOwn(emailMethods, input.action))
+				return problem('not_found', 404)
+			const method = emailMethods[input.action as keyof typeof emailMethods]
+			if (!allows(method) || (input.action === 'recovery_start' && !options.recoverPassword))
+				return problem('method_unavailable', 403)
+			if (
+				allowed ||
+				(options.instance && options.publishableKey) ||
+				input.action === 'recovery_start'
+			) {
+				const { config } = await discover(identity)
+				if (!config[method] || (input.action === 'signup' && !config.signup))
+					return problem('method_unavailable', 403)
+			}
+			if (input.action === 'recovery_start') {
+				if (!options.recoverPassword) return problem('method_unavailable', 403)
+				const email = field(input, 'email', 254)?.trim()
+				if (!email || !/^[^\s@]+@[^\s@]+$/.test(email)) return problem('invalid_input', 400)
+				await options.recoverPassword({ email, returnTo: next }, request)
+				return reply({ step: 'recovery_sent' }, 202)
+			}
 			return await emailEntry(identity, input, next, {
 				origin,
 				loginPath,
-				instance,
 				mode,
 				allowRegistration,
+				scope: binding.scope,
 				redeem: (ticket) => redeem(identity, ticket),
-				session: async (data) => {
+				session: async (data, method, legacyPassword) => {
 					if ((await accepted(acceptance, request)) !== true)
 						return problem('acceptance_required', 403)
-					const session = verifiedSession(data, acceptance)
-					const cookies = session && (await issue(request)(session))
-					return cookies ? reply({ next }, 200, cookies) : problem('session_unavailable', 502)
+					const context: AuthIssueContext = { method, returnTo: next }
+					const session = identitySession(data, acceptance, context)
+					if (!session) return problem('session_unavailable', 502)
+					if (session.user.emailVerified === false) {
+						if (!legacyPassword || !options.issueUnverifiedPassword)
+							return problem('verify_email', 403)
+						const cookies = validatedCookies(
+							await options.issueUnverifiedPassword(
+								{
+									...session,
+									method: 'password',
+									user: { ...session.user, emailVerified: false },
+								},
+								request,
+							),
+						)
+						return cookies ? reply({ next }, 200, cookies) : problem('verify_email', 403)
+					}
+					const issued = await issue(
+						request,
+						{ ...session, user: { ...session.user, emailVerified: true } },
+						context,
+					)
+					return issued
+						? signUpHeader(reply({ next }, 200, issued.cookies), issued.signUp)
+						: problem('session_unavailable', 502)
 				},
 			})
 		} catch {
@@ -463,20 +612,22 @@ function sameState(a: string, b: string) {
 	return difference === 0
 }
 
-function verifiedSession(
+function identitySession(
 	data: Data,
 	acceptance: AcceptanceVersions | undefined,
-): VerifiedIdentitySession | undefined {
+	context: AuthIssueContext,
+) {
 	const session = obj(data.session)
 	const user = obj(data.user)
-	if (!token(session.token) || !token(user.id) || user.email_verified !== true) return
+	if (!token(session.token) || !token(user.id) || typeof user.email_verified !== 'boolean') return
 	return {
+		...context,
 		token: session.token,
 		expiresAt: session.expires_at,
 		...(token(session.id) && { sessionId: session.id }),
 		user: {
 			id: user.id,
-			emailVerified: true,
+			emailVerified: user.email_verified,
 			...(typeof user.email === 'string' && { email: user.email }),
 			...(typeof user.name === 'string' && { name: user.name }),
 			...(typeof user.username === 'string' && { username: user.username }),
@@ -484,6 +635,11 @@ function verifiedSession(
 		isNewUser: data.is_new_user === true,
 		...(acceptance && { acceptance }),
 	}
+}
+
+function signUpHeader(response: Response, emit: boolean) {
+	if (emit) response.headers.set('X-Sylphx-Auth-Event', 'sign_up')
+	return response
 }
 
 function expirySeconds(value: unknown): number {

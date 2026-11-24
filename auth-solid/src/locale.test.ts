@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { authSecondsFormat, resolveAuthLocale } from './locale.js'
-import { catalogs, localeNames } from './messages.js'
+import { catalogs, localeNames, resolveSignInMessages } from './messages.js'
 
 test('chooses the first supported canonical locale and infers Chinese script and region', () => {
 	const cases = [
@@ -15,6 +15,10 @@ test('chooses the first supported canonical locale and infers Chinese script and
 		[['zh-Hant-CN'], 'zh-Hant-TW'],
 		[['EN-gb', 'ja'], 'en'],
 		[['ko'], 'ko'],
+		[['es'], 'es'],
+		[['es-MX'], 'es'],
+		[['pt-br'], 'pt-BR'],
+		[['pt-PT', 'es'], 'es'],
 		[['fr-FR', 'KO-kr', 'ja'], 'ko'],
 		[['ja-JP', 'ko-KR'], 'ja'],
 	] as const
@@ -34,4 +38,18 @@ test('has complete same-language catalogs and localizes countdown units', () => 
 	expect(authSecondsFormat('en').format(30)).toBe('30 sec')
 	expect(authSecondsFormat('ja').format(30)).toBe('30 秒')
 	expect(authSecondsFormat('zh-Hans').format(30)).toBe('30秒')
+})
+
+test('supports partial overrides without replacing the selected locale or its other errors', () => {
+	expect(catalogs.es.signIn).toBe('Inicia sesión')
+	expect(catalogs['pt-BR'].signIn).toBe('Entrar')
+	const host = resolveSignInMessages('pt-BR', {
+		signIn: 'Minha conta',
+		errors: { invalid_code: 'Confira o código.' },
+	})
+	expect(host.signIn).toBe('Minha conta')
+	expect(host.email).toBe('Endereço de e-mail')
+	expect(host.errors.invalid_code).toBe('Confira o código.')
+	expect(host.errors.unavailable).toBe(catalogs['pt-BR'].errors.unavailable)
+	expect(catalogs['pt-BR'].signIn).toBe('Entrar')
 })

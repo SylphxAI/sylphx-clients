@@ -12,7 +12,12 @@ export function resolveAuthLocale(preferences: readonly string[]): AuthLocale {
 			continue
 		}
 		if (Object.hasOwn(catalogs, locale.baseName)) return locale.baseName as AuthLocale
-		if (locale.language === 'en' || locale.language === 'ja' || locale.language === 'ko')
+		if (
+			locale.language === 'en' ||
+			locale.language === 'ja' ||
+			locale.language === 'ko' ||
+			locale.language === 'es'
+		)
 			return locale.language
 		if (locale.language === 'zh') {
 			const script = locale.maximize().script
@@ -25,6 +30,6 @@ export function resolveAuthLocale(preferences: readonly string[]): AuthLocale {
 }
 
 /** Format a countdown without assuming digit shapes, spacing or translated unit order. */
-export function authSecondsFormat(locale: AuthLocale): Intl.NumberFormat {
+export function authSecondsFormat(locale: string): Intl.NumberFormat {
 	return new Intl.NumberFormat(locale, { style: 'unit', unit: 'second', unitDisplay: 'short' })
 }

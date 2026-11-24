@@ -131,3 +131,78 @@ test('a server seed is immediately available and clickwrap travels on prefixed r
 	])
 	auth.dispose()
 })
+
+test('gates auth actions without agreement and admits the same action once accepted', async () => {
+	let accepted = false
+	const fetch = spyOn(globalThis, 'fetch').mockResolvedValueOnce(Response.json({ flow: 'fixture' }))
+	const auth = createRoot((dispose) => ({
+		...createSignInController({
+			next,
+			search: '',
+			initialConfig: config,
+			requireAgreement: true,
+			get agreementAccepted() {
+				return accepted
+			},
+		}),
+		dispose,
+	}))
+	auth.setEmail(email)
+	await auth.continueWithEmail()
+	await auth.social('google')
+	expect(fetch).not.toHaveBeenCalled()
+	expect(auth.errorCode()).toBe('acceptance_required')
+	accepted = true
+	await auth.continueWithEmail()
+	expect(auth.step()).toBe('otp')
+	expect(fetch).toHaveBeenCalledTimes(1)
+	auth.dispose()
+})
+
+test('password sign-in remains available before OTP and after OTP send returns 503', async () => {
+	const fetch = spyOn(globalThis, 'fetch')
+		.mockResolvedValueOnce(Response.json({ error: 'unavailable' }, { status: 503 }))
+		.mockResolvedValueOnce(Response.json({ error: 'invalid_credentials' }, { status: 400 }))
+	const auth = createRoot((dispose) => ({
+		...createSignInController({ next, search: '', initialConfig: config }),
+		dispose,
+	}))
+	auth.setEmail(email)
+	await auth.continueWithEmail('password')
+	expect(auth.step()).toBe('password')
+	expect(fetch).not.toHaveBeenCalled()
+	auth.go('choose')
+	await auth.continueWithEmail()
+	expect(auth.errorCode()).toBe('unavailable')
+	expect(auth.step()).toBe('choose')
+	await auth.continueWithEmail('password')
+	await auth.submitPassword('fixture-only')
+	expect(fetch.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).action)).toEqual([
+		'otp_start',
+		'password',
+	])
+	expect(auth.errorCode()).toBe('invalid_credentials')
+	auth.dispose()
+})
+
+test('recovery submit only dispatches from the enabled recovery step', async () => {
+	const fetch = spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+		Response.json({ step: 'recovery_sent' }, { status: 202 }),
+	)
+	const auth = createRoot((dispose) => ({
+		...createSignInController({ next, search: '', initialConfig: { ...config, recovery: true } }),
+		dispose,
+	}))
+	await auth.sendRecovery()
+	expect(fetch).not.toHaveBeenCalled()
+	auth.go('recover')
+	auth.setEmail(email)
+	await auth.sendRecovery()
+	expect(auth.step()).toBe('recovery_sent')
+	expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({
+		action: 'recovery_start',
+		email,
+		next,
+	})
+	auth.dispose()
+})

@@ -11,13 +11,20 @@ import {
 	Switch,
 } from 'solid-js'
 import { authSecondsFormat, resolveAuthLocale } from './locale.js'
-import { type AuthLocale, catalogs, localeNames } from './messages.js'
+import {
+	type AuthLocale,
+	localeNames,
+	resolveSignInMessages,
+	type SignInMessagesOverride,
+} from './messages.js'
 import { AppleIcon, FacebookIcon, GitHubIcon, GoogleIcon, MicrosoftIcon } from './provider-icons.js'
 import {
 	createSignInController,
 	type SignInControllerOptions,
 	type SignInStep,
 } from './sign-in-controller.js'
+
+import { signInLanguage } from './sign-in-messages.js'
 
 const locales = Object.keys(localeNames) as AuthLocale[]
 
@@ -50,6 +57,7 @@ export type SignInClass =
 	| 'cells'
 	| 'actions'
 	| 'agreement'
+	| 'last-used'
 	| 'locale'
 
 export type SignInToken =
@@ -81,6 +89,10 @@ export type SylphxSignInProps = SignInControllerOptions & {
 	kicker?: JSX.Element
 	/** Optional agreement copy and links supplied by the host. */
 	agreement?: JSX.Element
+	/** App-supplied non-authoritative preference from a completed sign-in. */
+	lastUsed?: Provider | 'password' | 'otp' | 'passkey'
+	/** Overrides normal strings and individual error messages. */
+	messages?: SignInMessagesOverride
 	appearance?: SignInAppearance
 	/** Controlled locale, or seed SSR with `localePreferences` and auto-detect in the browser. */
 	locale?: string
@@ -103,6 +115,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 		setEmail,
 		errorCode,
 		busy,
+		agreementAllowed,
 		showPassword,
 		setShowPassword,
 		canPasskey,
@@ -114,6 +127,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 		continueWithEmail,
 		social,
 		sendCode,
+		sendRecovery,
 		verifyCode,
 		passkey,
 		submitPassword,
@@ -126,8 +140,10 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 			? (selected() ?? detected() ?? resolveAuthLocale(props.localePreferences ?? []))
 			: resolveAuthLocale([props.locale, ...(props.localePreferences ?? [])]),
 	)
-	const text = () => catalogs[locale()]
-	const seconds = createMemo(() => authSecondsFormat(locale()))
+	const text = createMemo(() => resolveSignInMessages(locale(), props.messages))
+	const language = () => signInLanguage(locale(), props.locale, props.messages)
+	const seconds = createMemo(() => authSecondsFormat(language()))
+	const disabled = () => !!busy() || !agreementAllowed()
 	const error = () => {
 		const code = errorCode()
 		return code ? text().errors[code] : ''
@@ -144,6 +160,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 		if (props.appearance?.unstyled) return custom
 		return custom ? `auth-sign-in-${part} ${custom}` : `auth-sign-in-${part}`
 	}
+	const [showPasswordEmail, setShowPasswordEmail] = createSignal(false)
 	let emailInput: HTMLInputElement | undefined
 	function focusOnChange(input: HTMLInputElement) {
 		queueMicrotask(() => input.focus())
@@ -153,12 +170,30 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 		if (to === 'choose') queueMicrotask(() => emailInput?.focus())
 	}
 
+	const lastUsed = (method: NonNullable<SylphxSignInProps['lastUsed']>) => (
+		<Show when={props.lastUsed === method}>
+			<span class={className('last-used')}>{text().lastUsed}</span>
+		</Show>
+	)
+	const passkeyAction = () => (
+		<Show when={config()?.passkey && canPasskey()}>
+			<button
+				type="button"
+				class={className('link')}
+				disabled={disabled()}
+				onClick={() => void passkey()}
+			>
+				{busy() === 'passkey' ? text().waitingPasskey : text().usePasskey}
+				{lastUsed('passkey')}
+			</button>
+		</Show>
+	)
 	return (
 		<section
 			class={className('panel')}
 			style={props.appearance?.tokens}
 			aria-labelledby={id('title')}
-			lang={locale()}
+			lang={language()}
 		>
 			<div class={className('content')}>
 				<Show when={props.kicker}>
@@ -174,6 +209,8 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							confirm: text().confirmEmail,
 							otp: text().checkInbox,
 							mfa: text().verifyIdentity,
+							recover: text().recoverAccount,
+							recovery_sent: text().recoverySent,
 						}[step()]
 					}
 				</h1>
@@ -187,6 +224,8 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							confirm: text().confirmEmailDescription,
 							otp: text().enterEmailCode(email()),
 							mfa: recovery() ? text().enterRecovery : text().enterAuthenticator,
+							recover: text().recoverDescription,
+							recovery_sent: text().recoverySentDescription,
 						}[step()]
 					}
 				</p>
@@ -223,13 +262,14 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 													<button
 														type="button"
 														class={className('secondary')}
-														disabled={!!busy()}
+														disabled={disabled()}
 														onClick={() => void social(provider)}
 													>
 														{Icon && <Icon />}
 														{busy() === providers[provider][0]
 															? text().openingProvider(providers[provider][0])
 															: text().continueProvider(providers[provider][0])}
+														{lastUsed(provider)}
 													</button>
 												)
 											}}
@@ -262,25 +302,31 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 												value={email()}
 												onInput={(event) => setEmail(event.currentTarget.value)}
 											/>
-											<button type="submit" class={className('primary')} disabled={!!busy()}>
+											<button type="submit" class={className('primary')} disabled={disabled()}>
 												{busy() === 'email'
 													? text().sendingCode
 													: methods().otp
 														? text().emailCodeAction
 														: text().continueEmail}
+												{lastUsed(methods().otp ? 'otp' : 'password')}
 											</button>
 										</form>
 									</Show>
-									<Show when={methods().passkey && canPasskey()}>
+									<Show when={methods().otp && methods().password}>
 										<button
 											type="button"
 											class={className('link')}
 											disabled={!!busy()}
-											onClick={() => void passkey()}
+											onClick={() => {
+												setShowPasswordEmail(!email().trim() || !emailInput?.validity.valid)
+												void continueWithEmail('password')
+											}}
 										>
-											{busy() === 'passkey' ? text().waitingPasskey : text().usePasskey}
+											{text().usePassword}
+											{lastUsed('password')}
 										</button>
 									</Show>
+									{passkeyAction()}
 									<Show when={methods().signup}>
 										<p class={className('switch')}>
 											{text().newHere}{' '}
@@ -320,7 +366,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							}}
 						>
 							<Show
-								when={step() !== 'password'}
+								when={step() !== 'password' || showPasswordEmail()}
 								fallback={
 									<input
 										tabindex="-1"
@@ -349,7 +395,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							<div class={className('password')}>
 								<input
 									ref={(input) => {
-										if (step() === 'password') focusOnChange(input)
+										if (step() === 'password' && !showPasswordEmail()) focusOnChange(input)
 									}}
 									id={id('password')}
 									type={showPassword() ? 'text' : 'password'}
@@ -374,7 +420,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 									{text().minimumPassword}
 								</p>
 							</Show>
-							<button type="submit" class={className('primary')} disabled={!!busy()}>
+							<button type="submit" class={className('primary')} disabled={disabled()}>
 								{busy()
 									? text().working
 									: step() === 'signup'
@@ -384,6 +430,17 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 											: text().signIn}
 							</button>
 						</form>
+						<Show when={step() === 'password' && config()?.recovery}>
+							<button
+								type="button"
+								class={className('link')}
+								disabled={!!busy()}
+								onClick={() => go('recover')}
+							>
+								{text().forgotPassword}
+							</button>
+						</Show>
+						<Show when={step() === 'confirm'}>{passkeyAction()}</Show>
 						<button
 							type="button"
 							class={className('link')}
@@ -391,6 +448,45 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							onClick={() => go('choose')}
 						>
 							{step() === 'password' ? text().changeEmailOrMethod : text().backToSignIn}
+						</button>
+					</Match>
+					<Match when={step() === 'recover'}>
+						<form
+							method="post"
+							action={emailRoute}
+							class={className('form')}
+							onSubmit={(event) => {
+								event.preventDefault()
+								void sendRecovery()
+							}}
+						>
+							<label for={id('recovery-email')}>{text().email}</label>
+							<input
+								ref={focusOnChange}
+								id={id('recovery-email')}
+								type="email"
+								autocomplete="email"
+								required
+								maxlength={254}
+								value={email()}
+								onInput={(event) => setEmail(event.currentTarget.value)}
+							/>
+							<button type="submit" class={className('primary')} disabled={disabled()}>
+								{busy() ? text().working : text().sendResetLink}
+							</button>
+						</form>
+						<button
+							type="button"
+							class={className('link')}
+							disabled={!!busy()}
+							onClick={() => go('choose')}
+						>
+							{text().backToSignIn}
+						</button>
+					</Match>
+					<Match when={step() === 'recovery_sent'}>
+						<button type="button" class={className('secondary')} onClick={() => go('choose')}>
+							{text().backToSignIn}
 						</button>
 					</Match>
 					<Match when={step() === 'check_email'}>
@@ -432,7 +528,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							<button
 								type="submit"
 								class={className('primary')}
-								disabled={!!busy() || code().length !== 6}
+								disabled={disabled() || code().length !== 6}
 							>
 								{busy() === 'verify' ? text().checkingCode : text().verifyCode}
 							</button>
@@ -441,7 +537,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 							<button
 								type="button"
 								class={className('link')}
-								disabled={!!busy() || wait() > 0}
+								disabled={disabled() || wait() > 0}
 								onClick={() => void sendCode()}
 							>
 								{wait() ? text().resendIn(seconds().format(wait())) : text().resendCode}
@@ -488,7 +584,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 								required
 								maxlength={recovery() ? 128 : 6}
 							/>
-							<button type="submit" class={className('primary')} disabled={!!busy()}>
+							<button type="submit" class={className('primary')} disabled={disabled()}>
 								{busy() ? text().checkingCode : text().verifyAndSignIn}
 							</button>
 						</form>
@@ -540,7 +636,7 @@ export function SylphxSignIn(props: SylphxSignInProps) {
 					</div>
 				</Show>
 				<Show when={props.agreement}>
-					<p class={className('agreement')}>{props.agreement}</p>
+					<div class={className('agreement')}>{props.agreement}</div>
 				</Show>
 			</div>
 		</section>

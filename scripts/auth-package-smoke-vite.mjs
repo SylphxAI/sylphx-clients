@@ -25,6 +25,9 @@ assert.match(rendered, /<section[^>]*class="auth-sign-in-panel"/)
 assert.match(rendered, /<h1[^>]*>Package sign-in fixture<\/h1>/)
 assert.match(rendered, /Continue with Google/)
 assert.match(rendered, /Email me a code/)
+assert.match(rendered, /Use password instead|Use password/)
+assert.match(rendered, /Last used/)
+assert.match(rendered, /<button[^>]*type="submit"[^>]* disabled>/)
 assert.match(rendered, /<input[^>]*autocomplete="username webauthn"/)
 assert.match(rendered, /<form[^>]*action="\/account\/auth\/email"/)
 assert.doesNotMatch(rendered, /Loading sign-in/)
@@ -46,6 +49,19 @@ const requests = []
 let conditionalSignal
 let explicitSignal
 let verify
+let enrollmentAttempts = 0
+let enrolled
+navigator.credentials.create = async ({ publicKey }) => {
+	if (publicKey.rp.id !== location.hostname || publicKey.authenticatorSelection.userVerification !== 'required' || publicKey.authenticatorSelection.residentKey !== 'required') {
+		throw new Error('Wrong enrollment parameters')
+	}
+	const bytes = new Uint8Array([1, 2, 3]).buffer
+	const response = Object.create(AuthenticatorAttestationResponse.prototype)
+	Object.defineProperties(response, { clientDataJSON: { value: bytes }, attestationObject: { value: bytes }, getTransports: { value: () => ['internal'] } })
+	const credential = Object.create(PublicKeyCredential.prototype)
+	Object.defineProperties(credential, { rawId: { value: bytes }, response: { value: response } })
+	return credential
+}
 PublicKeyCredential.isConditionalMediationAvailable = async () => true
 navigator.credentials.get = async ({ mediation, signal, publicKey }) => {
 	if (publicKey.allowCredentials.length || !publicKey.challenge.byteLength) throw new Error('Not a discoverable challenge')
@@ -66,7 +82,19 @@ navigator.credentials.get = async ({ mediation, signal, publicKey }) => {
 window.fetch = async (url, init) => {
 	const data = JSON.parse(init.body)
 	requests.push({ url, data })
+	if (url === '/account/auth/passkey/enroll') {
+		if (data.action === 'begin') {
+			if (++enrollmentAttempts === 1) return Response.json({ error: 'method_unavailable' }, { status: 403 })
+			return Response.json({ challenge: 'AQID', challengeId: 'enroll-challenge', rpId: location.hostname, userId: 'AQID', userName: 'fixture@example.test', algorithms: [-7] })
+		}
+		if (data.action === 'verify') {
+			enrolled = data
+			return Response.json({ enrolled: true })
+		}
+	}
 	if (url !== '/account/auth/email' || data.acceptance?.terms !== 'v2') throw new Error('Wrong passkey request')
+	if (data.action === 'otp_start') return Response.json({ error: 'unavailable' }, { status: 503 })
+	if (data.action === 'recovery_start') return Response.json({ step: 'recovery_sent' }, { status: 202 })
 	if (data.action === 'passkey_start') {
 		return Response.json({ challenge: 'AQID', challengeId: 'fixture-challenge', rpId: 'localhost', credentials: [] })
 	}
@@ -83,6 +111,14 @@ const until = (predicate) => new Promise((resolve, reject) => {
 })
 hydrate(page, root)
 try {
+	const buttonNamed = (text, scope = ssr) => [...scope.querySelectorAll('button')].find((item) => item.textContent.trim().startsWith(text))
+	const checkbox = ssr.querySelector('input[type=checkbox]')
+	const emailForm = field.form
+	if (!buttonNamed('Email me a code').disabled || !buttonNamed('Continue with Google').disabled) throw new Error('Agreement did not disable auth controls')
+	emailForm.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+	await until(() => ssr.textContent.includes('Accept the current terms'))
+	if (requests.length) throw new Error('An unaccepted agreement sent auth traffic')
+	checkbox.click()
 	await until(() => conditionalSignal)
 	if (ssr !== root.querySelector('section') || field !== root.querySelector('input[type=email]') || getComputedStyle(ssr).display !== 'grid') {
 		throw new Error('SSR markup was replaced or package stylesheet is inactive')
@@ -93,6 +129,27 @@ try {
 	if (!conditionalSignal.aborted || !explicitSignal || requests.length !== 3 || verify.credential_id !== 'AQID' || verify.challenge_id !== 'fixture-challenge') {
 		throw new Error('Explicit passkey did not abort Conditional UI and verify the assertion')
 	}
+	const _setEmail = () => {
+		field.value = 'fixture@example.test'
+		field.dispatchEvent(new InputEvent('input', { bubbles: true }))
+	}
+	_setEmail()
+	buttonNamed('Email me a code').click()
+	await until(() => ssr.textContent.includes('We couldn’t connect'))
+	buttonNamed('Use password').click()
+	await until(() => ssr.querySelector('input[type=password]'))
+	if (requests.filter(({ data }) => data.action === 'otp_start').length !== 1) throw new Error('Password fallback required an OTP retry')
+	buttonNamed('Forgot your password?').click()
+	buttonNamed('Send reset link').click()
+	await until(() => ssr.textContent.includes('If an account exists for this address'))
+	const enroll = buttonNamed('Adicionar uma chave de acesso', root)
+	if (!enroll) throw new Error('Missing localized enrollment action')
+	enroll.click()
+	await until(() => root.textContent.includes('Este método de login não está disponível'))
+	if (enrolled) throw new Error('Rejected enrollment produced a credential')
+	enroll.click()
+	await until(() => root.textContent.includes('Chave de acesso adicionada'))
+	if (enrolled?.challenge_id !== 'enroll-challenge' || enrolled?.attestation_object !== 'AQID' || enrolled.transports[0] !== 'internal') throw new Error('Enrollment lost the attestation')
 	document.body.dataset.authPackageSmoke = 'passed'
 } catch (error) {
 	document.body.dataset.authPackageSmoke = String(error)
@@ -159,7 +216,7 @@ if (chromium) {
 		)
 		assert.match(stdout, /<body data-auth-package-smoke="passed">/)
 		console.info(
-			'Chromium: hydrated seeded Google/email HTML without refetch; verified passkey mediation, cancellation and fallback',
+			'Chromium: hydrated seeded Google/email HTML without refetch; verified agreement gate, passkey assertion and enrollment, OTP 503 password fallback, and recovery',
 		)
 	} finally {
 		server.closeAllConnections()

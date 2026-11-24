@@ -1,4 +1,5 @@
 import {
+	type AuthMethod,
 	authRoutePrefix,
 	type EntryConfig,
 	type Provider,
@@ -9,20 +10,12 @@ import {
 import { createEffect, createSignal, onCleanup, onMount } from 'solid-js'
 
 import { catalogs } from './messages.js'
+import { isErrorCode, postAuthJSON, SignInError, type SignInErrorCode } from './sign-in-request.js'
+import { decodeBase64Url, encodeBase64Url } from './sign-in-webauthn.js'
 
 const errors = catalogs.en.errors
-export const unavailable = errors.unavailable
-export type SignInErrorCode = keyof typeof errors
 
-function isErrorCode(value: unknown): value is SignInErrorCode {
-	return typeof value === 'string' && Object.hasOwn(errors, value)
-}
-
-class SignInError extends Error {
-	constructor(readonly code: SignInErrorCode) {
-		super(code)
-	}
-}
+export { type SignInErrorCode, unavailable } from './sign-in-request.js'
 
 export type SignInStep =
 	| 'choose'
@@ -32,26 +25,17 @@ export type SignInStep =
 	| 'confirm'
 	| 'otp'
 	| 'mfa'
+	| 'recover'
+	| 'recovery_sent'
 type RequestResult = {
 	authorize?: string
 	next?: string
-	step?: 'check_email' | 'mfa'
+	step?: 'check_email' | 'mfa' | 'recovery_sent'
 	flow?: string
 	challenge?: string
 	challengeId?: string
 	rpId?: string
 	credentials?: string[]
-	error?: string
-}
-
-function decode(value: string) {
-	return Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))
-}
-function encode(value: ArrayBuffer) {
-	return btoa(String.fromCharCode(...new Uint8Array(value)))
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=+$/, '')
 }
 
 export type SignInControllerOptions = {
@@ -69,6 +53,12 @@ export type SignInControllerOptions = {
 	conditionalPasskey?: boolean
 	/** Return only versions the user has accepted; undefined means no acceptance. */
 	getAcceptance?: () => Readonly<Record<string, string>> | undefined
+	/** Require the host to explicitly grant agreement before any authentication request. */
+	requireAgreement?: boolean
+	/** The host's current agreement state. Pass a reactive prop or getter. */
+	agreementAccepted?: boolean
+	/** Invoked with the validated provider destination before leaving the page. */
+	beforeOAuthNavigate?: (provider: Provider, target: string) => void | Promise<void>
 }
 
 /** Create under a Solid owner. Requests start on mount and abort on cleanup. */
@@ -94,6 +84,7 @@ export function createSignInController(options: SignInControllerOptions) {
 		return value ? errors[value] : ''
 	}
 	const [busy, setBusy] = createSignal('')
+	const agreementAllowed = () => !options.requireAgreement || options.agreementAccepted === true
 	const [showPassword, setShowPassword] = createSignal(false)
 	const [canPasskey, setCanPasskey] = createSignal(false)
 	const [conditionalReady, setConditionalReady] = createSignal(false)
@@ -131,6 +122,9 @@ export function createSignInController(options: SignInControllerOptions) {
 				!data.providers.every((id) => typeof id === 'string' && Object.hasOwn(providers, id)) ||
 				[data.password, data.signup, data.otp, data.passkey].some(
 					(value) => typeof value !== 'boolean',
+				) ||
+				[data.recovery, data.passkeyEnrollment].some(
+					(value) => value !== undefined && typeof value !== 'boolean',
 				)
 			)
 				throw new Error()
@@ -183,17 +177,12 @@ export function createSignInController(options: SignInControllerOptions) {
 		body: Record<string, unknown>,
 		signal = controller.signal,
 	): Promise<RequestResult> {
-		const res = await fetch(path, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			referrerPolicy: 'origin',
-			redirect: 'error',
-			signal: AbortSignal.any([controller.signal, signal, AbortSignal.timeout(45_000)]),
-			body: JSON.stringify({ ...body, acceptance: options.getAcceptance?.() }),
-		})
-		const data: RequestResult = await res.json()
-		if (!res.ok) throw new SignInError(isErrorCode(data.error) ? data.error : 'unavailable')
-		return data
+		if (!agreementAllowed()) throw new SignInError('acceptance_required')
+		return (await postAuthJSON(
+			path,
+			{ ...body, acceptance: options.getAcceptance?.() },
+			AbortSignal.any([controller.signal, signal]),
+		)) as RequestResult
 	}
 	async function request(action: string, fields: Record<string, unknown> = {}) {
 		const data = await post(`${route}/email`, { action, next, ...fields })
@@ -203,6 +192,10 @@ export function createSignInController(options: SignInControllerOptions) {
 	}
 	async function run(label: string, op: () => Promise<void>) {
 		if (busy() || controller.signal.aborted) return
+		if (!agreementAllowed()) {
+			setErrorCode('acceptance_required')
+			return
+		}
 		attemptedConditional = true
 		stopConditional()
 		setBusy(label)
@@ -222,7 +215,23 @@ export function createSignInController(options: SignInControllerOptions) {
 			const { authorize } = await post(`${route}/start/${provider}`, { next })
 			const target = providerDestination(provider, authorize)
 			if (!target) throw new Error()
+			if (controller.signal.aborted) return
+			if (!agreementAllowed()) throw new SignInError('acceptance_required')
+			await options.beforeOAuthNavigate?.(provider, target)
+			if (!agreementAllowed()) throw new SignInError('acceptance_required')
 			if (!controller.signal.aborted) window.location.assign(target)
+		})
+	}
+	function sendRecovery() {
+		if (!config()?.recovery || step() !== 'recover') return
+		return run('recovery', async () => {
+			const data = await post(`${route}/email`, {
+				action: 'recovery_start',
+				email: email().trim(),
+				next,
+			})
+			if (data.step !== 'recovery_sent') throw new Error()
+			if (!controller.signal.aborted) go('recovery_sent')
 		})
 	}
 	function sendCode() {
@@ -257,6 +266,7 @@ export function createSignInController(options: SignInControllerOptions) {
 			signal,
 		)
 		if (signal.aborted || !challenge || !challengeId || !rpId || !credentials) return
+		if (!agreementAllowed()) throw new SignInError('acceptance_required')
 		// Conditional mediation is for discoverable credentials only. Do not
 		// silently discard an upstream credential restriction.
 		if (autofill && credentials.length) return
@@ -264,11 +274,14 @@ export function createSignInController(options: SignInControllerOptions) {
 			signal,
 			...(autofill && { mediation: 'conditional' as const }),
 			publicKey: {
-				challenge: decode(challenge),
+				challenge: decodeBase64Url(challenge),
 				rpId,
 				...(autofill ? {} : { timeout: 60_000 }),
 				userVerification: 'required',
-				allowCredentials: credentials.map((id) => ({ id: decode(id), type: 'public-key' })),
+				allowCredentials: credentials.map((id) => ({
+					id: decodeBase64Url(id),
+					type: 'public-key',
+				})),
 			},
 		})
 		if (
@@ -280,16 +293,22 @@ export function createSignInController(options: SignInControllerOptions) {
 		const response = assertion.response
 		return {
 			challenge_id: challengeId,
-			credential_id: encode(assertion.rawId),
-			client_data_json: encode(response.clientDataJSON),
-			authenticator_data: encode(response.authenticatorData),
-			signature: encode(response.signature),
-			user_handle: response.userHandle ? encode(response.userHandle) : '',
+			credential_id: encodeBase64Url(assertion.rawId),
+			client_data_json: encodeBase64Url(response.clientDataJSON),
+			authenticator_data: encodeBase64Url(response.authenticatorData),
+			signature: encodeBase64Url(response.signature),
+			user_handle: response.userHandle ? encodeBase64Url(response.userHandle) : '',
 		}
 	}
 
 	function passkey() {
-		if (!canPasskey() || !config()?.passkey) return
+		if (
+			!canPasskey() ||
+			!config()?.passkey ||
+			(step() !== 'choose' && !(step() === 'confirm' && hasVerification))
+		)
+			return
+		// This is a separate sign-in, not a submission of the email proof.
 		return run('passkey', async () => {
 			const fields = await getPasskey(controller.signal, false).catch((error: unknown) => {
 				if (error instanceof DOMException && error.name === 'NotAllowedError') return
@@ -301,6 +320,10 @@ export function createSignInController(options: SignInControllerOptions) {
 	}
 
 	createEffect(() => {
+		if (!agreementAllowed()) {
+			stopConditional()
+			return
+		}
 		if (attemptedConditional || !conditionalReady() || step() !== 'choose' || !config()?.passkey)
 			return
 		// If the host requires an explicit gesture, wait until its reactive consent accessor permits it.
@@ -323,8 +346,9 @@ export function createSignInController(options: SignInControllerOptions) {
 			})
 	})
 
-	function continueWithEmail() {
-		if (config()?.otp) return sendCode()
+	function continueWithEmail(method?: Extract<AuthMethod, 'otp' | 'password'>) {
+		if (method !== 'password' && config()?.otp) return sendCode()
+		if (method === 'otp') return undefined
 		if (config()?.password && !busy()) go('password')
 		return undefined
 	}
@@ -374,6 +398,7 @@ export function createSignInController(options: SignInControllerOptions) {
 		setEmail,
 		error,
 		errorCode,
+		agreementAllowed,
 		busy,
 		showPassword,
 		setShowPassword,
@@ -386,6 +411,7 @@ export function createSignInController(options: SignInControllerOptions) {
 		continueWithEmail,
 		social,
 		sendCode,
+		sendRecovery,
 		verifyCode,
 		passkey,
 		submitPassword,

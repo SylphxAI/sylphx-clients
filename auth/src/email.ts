@@ -1,3 +1,4 @@
+import type { AuthMethod } from './client.js'
 import {
 	type Data,
 	field,
@@ -26,14 +27,18 @@ export async function emailEntry(
 	ctx: {
 		origin: string
 		loginPath: string
-		instance: Record<string, string>
+		scope: { query?: Record<string, string>; bearer?: string }
 		mode: 'server' | 'browser'
 		allowRegistration: boolean
 		redeem(ticket: string): Promise<Data | undefined>
-		session(data: Data): Promise<Response>
+		session(
+			data: Data,
+			method: Exclude<AuthMethod, 'oauth'>,
+			legacyPassword: boolean,
+		): Promise<Response>
 	},
 ) {
-	const { origin, instance, session: issue } = ctx
+	const { origin, scope, session: issue } = ctx
 	const rp = new URL(origin).hostname
 	const action = input.action
 	const email = field(input, 'email', 254)?.trim()
@@ -68,7 +73,7 @@ export async function emailEntry(
 			const target = new URL(ctx.loginPath, origin)
 			target.searchParams.set('next', next)
 			const res = await identity('/v1/client/sign-up', {
-				query: instance,
+				...scope,
 				body: { email, password, redirect_url: target.href },
 			})
 			const data = await json(res)
@@ -126,7 +131,7 @@ export async function emailEntry(
 		default:
 			return problem('not_found', 404)
 	}
-	const res = await identity(path, { query: instance, body })
+	const res = await identity(path, { ...scope, body })
 	const data = await json(res)
 	if (res.status === 401 && data.code === 'mfa_required') {
 		if ((action === 'password' || action === 'verify_signup') && token(data.mfa_challenge))
@@ -182,6 +187,11 @@ export async function emailEntry(
 		if (!confirmed.ok || obj(result.verification).principal_id !== user.id)
 			return refused(confirmed, 'verification_failed')
 		user.email_verified = true
-	} else if (user.email_verified !== true) return problem('verify_email', 403)
-	return issue(result)
+	}
+	const method =
+		action === 'otp_verify' ? 'otp' : action === 'passkey_verify' ? 'passkey' : 'password'
+	const legacyPassword =
+		user.email_verified === false && (action === 'password' || (action === 'mfa' && !verification))
+	if (user.email_verified !== true && !legacyPassword) return problem('verify_email', 403)
+	return issue(result, method, legacyPassword)
 }

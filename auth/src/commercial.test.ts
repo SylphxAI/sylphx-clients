@@ -122,6 +122,9 @@ for (const [action, path, fields] of [
 			sessionId: 'fixture-session-id',
 			user: { id: 'fixture-user', email: 'person@example.test', emailVerified: true },
 			isNewUser: action === 'otp_verify',
+			method:
+				action === 'otp_verify' ? 'otp' : action === 'passkey_verify' ? 'passkey' : 'password',
+			returnTo: '/',
 			acceptance: versions,
 		})
 		expect(calls).toBe(2)
