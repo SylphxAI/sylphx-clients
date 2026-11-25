@@ -76,6 +76,7 @@ type BrowserBindOptions = Pick<
 	'apiKey' | 'baseUrl' | 'fetch' | 'signal' | 'pageLocation' | 'gaMeasurementId'
 >
 const touchLifetime = 30 * 24 * 60 * 60 * 1000
+const gzipMinBytes = 1024
 // Same character and length limits as Signal's ingest validator.
 function isEventIdentifier(value: unknown): value is string {
 	return typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,128}$/.test(value)
@@ -133,6 +134,8 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	const regionPending = !requireExplicitConsent && options.region === undefined && !hasGpc(privacy)
 	let loaded = false
 	let disposed = false
+	// A later grant must not revive events prepared before consent was withdrawn.
+	let collectionEpoch = 0
 	let previous: SignalConsent | undefined
 	const pendingRetries = new Set<() => void>()
 
@@ -167,6 +170,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 	}
 
 	function clearCollection() {
+		collectionEpoch++
 		cancelRetries()
 		pendingTouch = undefined
 		pendingPath = undefined
@@ -317,7 +321,9 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			const ads = allowsAds(resolveEffectiveConsent(privacy))
 			const { capturedAt: _, ...campaign } = cleanAttribution(attribution, ads)
 			if (!canIngest()) return false
-			const body = JSON.stringify({
+			const epoch = collectionEpoch
+			const stillAllowed = () => canSend(ads) && epoch === collectionEpoch
+			const json = JSON.stringify({
 				consent: 'granted',
 				events: [
 					{
@@ -334,21 +340,43 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 				],
 			})
 			// Application getters/serializers can run synchronously before the send.
-			if (!canSend(ads)) return false
+			if (!stillAllowed()) return false
+			let body: BodyInit = json
+			const headers: Record<string, string> = {
+				'X-Sylphx-Key': ingest.apiKey,
+				'Content-Type': 'application/json',
+			}
+			try {
+				if (typeof CompressionStream === 'function') {
+					const utf8 = new Blob([json])
+					if (utf8.size >= gzipMinBytes) {
+						const stream = utf8.stream().pipeThrough(new CompressionStream('gzip'))
+						// Fetch keepalive and retries need a buffered, reusable body, not a stream.
+						const compressed = await new Response(stream).arrayBuffer()
+						if (compressed.byteLength < utf8.size) {
+							body = compressed
+							headers['Content-Encoding'] = 'gzip'
+						}
+					}
+				}
+			} catch {
+				/* Compression is optional; send the original JSON. */
+			}
+			if (!stillAllowed()) return false
 			const send = () => (ingest.fetch ?? fetch)(endpoint, {
 				method: 'POST',
 				keepalive: true,
 				credentials: 'omit',
 				redirect: 'error',
 				referrerPolicy: 'no-referrer',
-				headers: { 'X-Sylphx-Key': ingest.apiKey, 'Content-Type': 'application/json' },
+				headers,
 				body,
 			})
 			const response = await send()
 			if (response.status !== 503) return response.ok
-			if (!canSend(ads) || !(await waitForRetry(retryDelay(response.headers)))) return false
-			if (!canSend(ads)) return false
-			// Replay the same serialized body, including its event ID for server-side dedupe.
+			if (!stillAllowed() || !(await waitForRetry(retryDelay(response.headers)))) return false
+			if (!stillAllowed()) return false
+			// Replay the same prepared body, including its event ID for server-side dedupe.
 			return (await send()).ok
 		} catch {
 			return false
@@ -419,6 +447,23 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		capture: capture as () => (
 			true extends Explicit ? SignalAttribution | undefined : SignalAttribution
 		),
+		/** Set an opaque, non-PII ID for future consented events. Never persisted. */
+		identify(id: string): boolean {
+			if (disposed || !isEventIdentifier(id)) return false
+			distinctId = id
+			return true
+		},
+		/** Clear in-memory identity and page-view dedupe on logout, without changing consent. */
+		reset(): void {
+			distinctId = undefined
+			sessionId = undefined
+			viewed = undefined
+			// Do not revive configured IDs if consent is later withdrawn and granted again.
+			if (ingest) {
+				ingest.distinctId = undefined
+				ingest.sessionId = undefined
+			}
+		},
 		/** Best-effort authenticated keepalive fetch. Caller properties take precedence over attribution. */
 		async track(event: SignalEventInput): Promise<boolean> {
 			if (disposed || !endpoint) return false
