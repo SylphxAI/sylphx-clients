@@ -11968,6 +11968,19 @@
                   "type": "bool"
                 },
                 {
+                  "field": "database.spec.roles",
+                  "flag": "--spec.roles",
+                  "repeated": true,
+                  "summary": "Non-owner PostgreSQL login roles managed for this database, at most 16 distinct lowercase names. ConnectDatabase can select a declared role once it is reconciled and login-verified.",
+                  "type": "string"
+                },
+                {
+                  "field": "database.spec.roles_set",
+                  "flag": "--spec.roles-set",
+                  "summary": "On Update, send true with an empty roles list to remove all declared roles. A non-empty list replaces the declaration without this flag. An empty list without the flag is omitted. Reads always report false.",
+                  "type": "bool"
+                },
+                {
                   "field": "validate_only",
                   "flag": "--dry-run",
                   "summary": "Validate and print the result without writing (validate_only).",
@@ -12043,6 +12056,19 @@
                   "field": "database.spec.client_allowlist_set",
                   "flag": "--spec.client-allowlist-set",
                   "summary": "Stores `client_allowlist` as given, including an empty list that re-opens the endpoint. An empty repeated field is not a change on its own, so Update sends `client_allowlist_set` (or `clientAllowlistSet`) as `true` when it means to clear the list; any non-empty `client_allowlist` is stored whether or not this is set. Reads always report `false`.",
+                  "type": "bool"
+                },
+                {
+                  "field": "database.spec.roles",
+                  "flag": "--spec.roles",
+                  "repeated": true,
+                  "summary": "Non-owner PostgreSQL login roles managed for this database, at most 16 distinct lowercase names. ConnectDatabase can select a declared role once it is reconciled and login-verified.",
+                  "type": "string"
+                },
+                {
+                  "field": "database.spec.roles_set",
+                  "flag": "--spec.roles-set",
+                  "summary": "On Update, send true with an empty roles list to remove all declared roles. A non-empty list replaces the declaration without this flag. An empty list without the flag is omitted. Reads always report false.",
                   "type": "bool"
                 },
                 {
@@ -12132,6 +12158,12 @@
                     "direct",
                     "read_replica"
                   ]
+                },
+                {
+                  "field": "role",
+                  "flag": "--role",
+                  "summary": "Declared non-owner login role to use with POOLED or DIRECT. When omitted, ConnectDatabase uses the default login for the selected profile.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{name=orgs/*/projects/*/envs/*/databases/*}:connect",

@@ -532,6 +532,8 @@ func dataDatabaseSpec() []def.Field {
 		{Name: "deletion_protection", Kind: def.Bool, Doc: "While set, Delete fails with DELETION_PROTECTED."},
 		{Name: "client_allowlist", Kind: def.String, Repeated: true, Doc: "Address ranges allowed to connect to the database's endpoint. An entry is an IPv4 or IPv6 range like `203.0.113.0/24` or `2001:db8::/32`, at most 50, applied on both the pooled and the direct host a connection can reach. A connection from any other address is refused at the endpoint with the database's own answer (SQLSTATE 28000), before it reaches Postgres; a connection from a listed address is served as usual. Empty serves every address (the field absent), so clearing it re-opens the endpoint. Send `client_allowlist_set` to store an empty list."},
 		{Name: "client_allowlist_set", Kind: def.Bool, Doc: "Stores `client_allowlist` as given, including an empty list that re-opens the endpoint. An empty repeated field is not a change on its own, so Update sends `client_allowlist_set` (or `clientAllowlistSet`) as `true` when it means to clear the list; any non-empty `client_allowlist` is stored whether or not this is set. Reads always report `false`."},
+		{Name: "roles", Kind: def.String, Repeated: true, Doc: "Non-owner PostgreSQL login roles managed for this database, at most 16 distinct lowercase names. ConnectDatabase can select a declared role once it is reconciled and login-verified."},
+		{Name: "roles_set", Kind: def.Bool, Doc: "On Update, send true with an empty roles list to remove all declared roles. A non-empty list replaces the declaration without this flag. An empty list without the flag is omitted. Reads always report false."},
 	}
 }
 

@@ -16721,6 +16721,17 @@
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
                     "type": "string"
+                  },
+                  "roles": {
+                    "description": "Non-owner PostgreSQL login roles managed for this database, at most 16\ndistinct lowercase names. ConnectDatabase can select a declared role once\nit is reconciled and login-verified.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "roles_set": {
+                    "description": "On Update, send true with an empty roles list to remove all declared\nroles. A non-empty list replaces the declaration without this flag.\nAn empty list without the flag is omitted. Reads always report false.",
+                    "type": "boolean"
                   }
                 },
                 "type": "object"
@@ -16839,6 +16850,17 @@
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
                     "type": "string"
+                  },
+                  "roles": {
+                    "description": "Non-owner PostgreSQL login roles managed for this database, at most 16\ndistinct lowercase names. ConnectDatabase can select a declared role once\nit is reconciled and login-verified.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "roles_set": {
+                    "description": "On Update, send true with an empty roles list to remove all declared\nroles. A non-empty list replaces the declaration without this flag.\nAn empty list without the flag is omitted. Reads always report false.",
+                    "type": "boolean"
                   }
                 },
                 "type": "object"
@@ -16944,6 +16966,10 @@
               "direct",
               "read_replica"
             ],
+            "type": "string"
+          },
+          "role": {
+            "description": "Declared non-owner login role to use with POOLED or DIRECT. When omitted,\nConnectDatabase uses the default login for the selected profile.",
             "type": "string"
           }
         },
@@ -54302,6 +54328,17 @@
                   "region": {
                     "description": "The region; default the project's home region. Changing it moves the data\nby signed export and import.",
                     "type": "string"
+                  },
+                  "roles": {
+                    "description": "Non-owner PostgreSQL login roles managed for this database, at most 16\ndistinct lowercase names. ConnectDatabase can select a declared role once\nit is reconciled and login-verified.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "roles_set": {
+                    "description": "On Update, send true with an empty roles list to remove all declared\nroles. A non-empty list replaces the declaration without this flag.\nAn empty list without the flag is omitted. Reads always report false.",
+                    "type": "boolean"
                   }
                 },
                 "type": "object"

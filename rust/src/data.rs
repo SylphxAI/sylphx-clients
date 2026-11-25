@@ -329,6 +329,10 @@ pub struct ConnectDatabaseRequest {
     /// reader is configured the call fails with INVALID_STATE.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile: Option<ConnectionProfile>,
+    /// Declared non-owner login role to use with POOLED or DIRECT. When omitted,
+    /// ConnectDatabase uses the default login for the selected profile.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub role: String,
 }
 
 /// The response of ConnectDatabase.
@@ -785,6 +789,20 @@ pub struct DatabaseSpec {
         alias = "clientAllowlistSet"
     )]
     pub client_allowlist_set: bool,
+    /// Non-owner PostgreSQL login roles managed for this database, at most 16
+    /// distinct lowercase names. ConnectDatabase can select a declared role once
+    /// it is reconciled and login-verified.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub roles: Vec<String>,
+    /// On Update, send true with an empty roles list to remove all declared
+    /// roles. A non-empty list replaces the declaration without this flag.
+    /// An empty list without the flag is omitted. Reads always report false.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "rolesSet"
+    )]
+    pub roles_set: bool,
 }
 
 /// DatabaseStatus is the observed state of a Database.

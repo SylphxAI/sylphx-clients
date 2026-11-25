@@ -196,6 +196,11 @@ export interface ConnectDatabaseRequest {
 	 * reader is configured the call fails with INVALID_STATE.
 	 */
 	profile?: ConnectionProfile
+	/**
+	 * Declared non-owner login role to use with POOLED or DIRECT. When omitted,
+	 * ConnectDatabase uses the default login for the selected profile.
+	 */
+	role?: string
 }
 
 /** The response of ConnectDatabase. */
@@ -412,6 +417,18 @@ export interface DatabaseSpec {
 	 * stored whether or not this is set. Reads always report `false`.
 	 */
 	clientAllowlistSet?: boolean
+	/**
+	 * Non-owner PostgreSQL login roles managed for this database, at most 16
+	 * distinct lowercase names. ConnectDatabase can select a declared role once
+	 * it is reconciled and login-verified.
+	 */
+	roles?: string[]
+	/**
+	 * On Update, send true with an empty roles list to remove all declared
+	 * roles. A non-empty list replaces the declaration without this flag.
+	 * An empty list without the flag is omitted. Reads always report false.
+	 */
+	rolesSet?: boolean
 }
 
 /** DatabaseStatus is the observed state of a Database. */
@@ -1682,6 +1699,7 @@ runtime.registerSchemas({
 		['deletionProtection', 'deletion_protection'],
 		['clientAllowlist', 'client_allowlist'],
 		['clientAllowlistSet', 'client_allowlist_set'],
+		['rolesSet', 'roles_set'],
 	],
 	'sylphx.data.v1.DatabaseStatus': [
 		['observedGeneration', 'observed_generation'],

@@ -54476,6 +54476,25 @@
             "kind": "enum",
             "name": "sylphx.data.v1.ConnectionProfile"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Declared non-owner login role to use with POOLED or DIRECT. When omitted,\nConnectDatabase uses the default login for the selected profile.",
+          "filterable": false,
+          "name": "role",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.data.v1.ConnectDatabaseRequest",
@@ -55572,6 +55591,44 @@
           "filterable": false,
           "name": "client_allowlist_set",
           "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Non-owner PostgreSQL login roles managed for this database, at most 16\ndistinct lowercase names. ConnectDatabase can select a declared role once\nit is reconciled and login-verified.",
+          "filterable": false,
+          "name": "roles",
+          "number": 7,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "On Update, send true with an empty roles list to remove all declared\nroles. A non-empty list replaces the declaration without this flag.\nAn empty list without the flag is omitted. Reads always report false.",
+          "filterable": false,
+          "name": "roles_set",
+          "number": 8,
           "oneof": null,
           "optional": false,
           "repeated": false,
