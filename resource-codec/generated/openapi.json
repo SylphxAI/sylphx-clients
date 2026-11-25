@@ -25302,7 +25302,7 @@
             "readOnly": true
           },
           "uid": {
-            "description": "`src_<cell><ulid>`; never reused.",
+            "description": "Stable `slnk_` TypeID of the Hosting source binding slot.",
             "readOnly": true,
             "type": "string"
           }
@@ -25330,7 +25330,7 @@
             "type": "string"
           },
           "repository": {
-            "description": "The repository, `<owner>/<name>`.",
+            "description": "Repository path, including any subgroup segments.",
             "type": "string",
             "x-sylphx-immutable": true
           }
@@ -140273,7 +140273,7 @@
     },
     "/v1/orgs/{org}/projects/{project}/source_links": {
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nLists source links in a project.",
+        "description": "Lists the project's configured source bindings. Environment and explicit\nservice bindings are separate links. A configured source whose authority\ncannot be verified is not an empty collection.",
         "operationId": "hosting_source_links_list",
         "parameters": [
           {
@@ -140353,11 +140353,17 @@
           "403": {
             "$ref": "#/components/responses/Problem"
           },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Lists source links in a project.",
+        "summary": "Lists the project's configured source bindings. Environment and explicit service bindings are separate links. A configured source whose authority cannot be verified is not an empty collection.",
         "tags": [
           "hosting"
         ],
@@ -140366,11 +140372,12 @@
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
           "INVALID_FIELD",
-          "PAGE_TOKEN_MISMATCH"
+          "PAGE_TOKEN_MISMATCH",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
         ],
         "x-sylphx-method": "hosting.source_links.list",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "post": {
@@ -140607,7 +140614,7 @@
         "x-sylphx-stage": "preview"
       },
       "get": {
-        "description": "Not available yet: this method answers 501 UNIMPLEMENTED.\n\nGets a source link.",
+        "description": "Gets a source link.",
         "operationId": "hosting_source_links_get",
         "parameters": [
           {
@@ -140658,6 +140665,9 @@
           "404": {
             "$ref": "#/components/responses/Problem"
           },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -140670,11 +140680,11 @@
         "x-sylphx-errors": [
           "UNAUTHENTICATED",
           "PERMISSION_DENIED",
-          "RESOURCE_NOT_FOUND"
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
         ],
         "x-sylphx-method": "hosting.source_links.get",
         "x-sylphx-permission": "hosting:read",
-        "x-sylphx-served": false,
         "x-sylphx-stage": "preview"
       },
       "patch": {

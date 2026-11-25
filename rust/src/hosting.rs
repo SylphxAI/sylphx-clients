@@ -1435,7 +1435,7 @@ pub struct SourceLink {
     /// Field behavior: `identifier`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
-    /// `src_<cell><ulid>`; never reused.
+    /// Stable `slnk_` TypeID of the Hosting source binding slot.
     ///
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1464,7 +1464,7 @@ pub struct SourceLinkSpec {
     /// Field behavior: `required`, `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub connection: String,
-    /// The repository, `<owner>/<name>`.
+    /// Repository path, including any subgroup segments.
     ///
     /// Field behavior: `required`, `immutable`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -2878,7 +2878,7 @@ impl<'a, T: crate::runtime::Transport> SourceLinksCollection<'a, T> {
     ///
     /// `GET /v1/{name=orgs/*/projects/*/source_links/*}` · permission `hosting:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
     pub async fn get(
         &self,
         request: GetSourceLinkRequest,
@@ -2900,11 +2900,13 @@ impl<'a, T: crate::runtime::Transport> SourceLinksCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists source links in a project.
+    /// Lists the project's configured source bindings. Environment and explicit
+    /// service bindings are separate links. A configured source whose authority
+    /// cannot be verified is not an empty collection.
     ///
     /// `GET /v1/{parent=orgs/*/projects/*}/source_links` · permission `hosting:read` · effect `read`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
     pub async fn list(
         &self,
         request: ListSourceLinksRequest,

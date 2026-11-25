@@ -78129,7 +78129,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "`src_<cell><ulid>`; never reused.",
+          "doc": "Stable `slnk_` TypeID of the Hosting source binding slot.",
           "filterable": false,
           "name": "uid",
           "number": 2,
@@ -78233,7 +78233,7 @@
             "IMMUTABLE"
           ],
           "cli_flag": "",
-          "doc": "The repository, `<owner>/<name>`.",
+          "doc": "Repository path, including any subgroup segments.",
           "filterable": true,
           "name": "repository",
           "number": 2,
@@ -177934,7 +177934,8 @@
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
-                "RESOURCE_NOT_FOUND"
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
               ],
               "http": {
                 "body": null,
@@ -177961,7 +177962,6 @@
               "request": "sylphx.hosting.v1.GetSourceLinkRequest",
               "resource_field": null,
               "response": "sylphx.hosting.v1.SourceLink",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "get"
@@ -177969,13 +177969,15 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists source links in a project.",
+              "doc": "Lists the project's configured source bindings. Environment and explicit\nservice bindings are separate links. A configured source whose authority\ncannot be verified is not an empty collection.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
                 "PERMISSION_DENIED",
                 "INVALID_FIELD",
-                "PAGE_TOKEN_MISMATCH"
+                "PAGE_TOKEN_MISMATCH",
+                "RESOURCE_NOT_FOUND",
+                "UNAVAILABLE"
               ],
               "http": {
                 "body": null,
@@ -178010,7 +178012,6 @@
               "request": "sylphx.hosting.v1.ListSourceLinksRequest",
               "resource_field": null,
               "response": "sylphx.hosting.v1.ListSourceLinksResponse",
-              "served": false,
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"

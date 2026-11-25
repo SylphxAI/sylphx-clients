@@ -840,7 +840,7 @@ func hostingServiceStatus() []def.Field {
 func hostingSourceLinkSpec() []def.Field {
 	return []def.Field{
 		{Name: "connection", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "The forge Connection (the Sylphx App installation)."},
-		{Name: "repository", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "The repository, `<owner>/<name>`."},
+		{Name: "repository", Kind: def.String, Flags: def.Required | def.Immutable, Doc: "Repository path, including any subgroup segments."},
 		{Name: "production_branch", Kind: def.String, Doc: "The branch production Services ship from; default the repository's default branch."},
 		{Name: "previews_enabled", Kind: def.Bool, Doc: "Build a Preview for every pull request."},
 	}

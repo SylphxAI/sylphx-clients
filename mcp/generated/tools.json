@@ -23823,7 +23823,7 @@
         "readOnlyHint": true,
         "title": "Gets a source link."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Gets a source link.",
+      "description": "Gets a source link.",
       "effect": "read",
       "http": "GET /v1/{name=orgs/*/projects/*/source_links/*}",
       "input_schema": {
@@ -23844,7 +23844,6 @@
       "long_running": false,
       "method_id": "hosting.source_links.get",
       "permission": "hosting:read",
-      "served": false,
       "tool": "hosting_source_links_get"
     },
     {
@@ -23853,9 +23852,9 @@
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
-        "title": "Lists source links in a project."
+        "title": "Lists the project's configured source bindings. Environment and explicit service bindings are separate links. A configured source whose authority cannot be verified is not an empty collection."
       },
-      "description": "Not available yet (answers 501 UNIMPLEMENTED). Lists source links in a project.",
+      "description": "Lists the project's configured source bindings. Environment and explicit\nservice bindings are separate links. A configured source whose authority\ncannot be verified is not an empty collection.",
       "effect": "read",
       "http": "GET /v1/{parent=orgs/*/projects/*}/source_links",
       "input_schema": {
@@ -23893,7 +23892,6 @@
       "long_running": false,
       "method_id": "hosting.source_links.list",
       "permission": "hosting:read",
-      "served": false,
       "tool": "hosting_source_links_list"
     },
     {
@@ -23968,7 +23966,7 @@
                     "type": "string"
                   },
                   "repository": {
-                    "description": "The repository, `<owner>/<name>`.",
+                    "description": "Repository path, including any subgroup segments.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   }
@@ -24077,7 +24075,7 @@
                     "type": "string"
                   },
                   "repository": {
-                    "description": "The repository, `<owner>/<name>`.",
+                    "description": "Repository path, including any subgroup segments.",
                     "type": "string",
                     "x-sylphx-immutable": true
                   }

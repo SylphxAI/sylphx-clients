@@ -693,7 +693,7 @@ export interface ServingRouteRule {
 export interface SourceLink {
 	/** `orgs/{org}/projects/{project}/source_links/{source_link}`. */
 	name?: string
-	/** `src_<cell><ulid>`; never reused. */
+	/** Stable `slnk_` TypeID of the Hosting source binding slot. */
 	readonly uid?: string
 	/** Resource metadata. */
 	meta?: common.ResourceMeta
@@ -707,7 +707,7 @@ export interface SourceLink {
 export interface SourceLinkSpec {
 	/** The forge Connection (the Sylphx App installation). */
 	connection?: string
-	/** The repository, `<owner>/<name>`. */
+	/** Repository path, including any subgroup segments. */
 	repository?: string
 	/**
 	 * The branch production Services ship from; default the repository's default
@@ -1540,7 +1540,7 @@ export class SourceLinksCollection {
 	 *
 	 * `GET /v1/{name=orgs/*\/projects/*\/source_links/*}` · permission `hosting:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
 	 */
 	async get(request: GetSourceLinkRequest): Promise<SourceLink> {
 		return this.client.call<SourceLink>({
@@ -1552,11 +1552,13 @@ export class SourceLinksCollection {
 	}
 
 	/**
-	 * Lists source links in a project.
+	 * Lists the project's configured source bindings. Environment and explicit
+	 * service bindings are separate links. A configured source whose authority
+	 * cannot be verified is not an empty collection.
 	 *
 	 * `GET /v1/{parent=orgs/*\/projects/*}/source_links` · permission `hosting:read` · effect `read`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
 	 */
 	async list(request: ListSourceLinksRequest): Promise<ListSourceLinksResponse> {
 		return this.client.call<ListSourceLinksResponse>({
