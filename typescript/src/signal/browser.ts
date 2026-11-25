@@ -77,6 +77,7 @@ type BrowserBindOptions = Pick<
 >
 const touchLifetime = 30 * 24 * 60 * 60 * 1000
 const gzipMinBytes = 1024
+const maxBatchEvents = 500
 // Same character and length limits as Signal's ingest validator.
 function isEventIdentifier(value: unknown): value is string {
 	return typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,128}$/.test(value)
@@ -301,43 +302,60 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		return canIngest() && (!ads || allowsAds(resolveEffectiveConsent(privacy)))
 	}
 
-	async function emit(
-		event: SignalEventInput,
-		attribution: SignalAttribution,
+	async function emitEvents(
+		events: readonly SignalEventInput[],
+		attribution?: SignalAttribution,
 		path?: string,
 	): Promise<boolean> {
-		if (!ingest || !endpoint || !canIngest()) return false
+		if (disposed || !ingest || !endpoint) return false
 		try {
-			const { eventName, eventId, eventTime, properties, numericValue, isError, latencyMs } = event
-			if (
-				!isEventIdentifier(eventName) ||
-				(eventId !== undefined && !isEventIdentifier(eventId)) ||
-				(distinctId !== undefined && !isEventIdentifier(distinctId)) ||
-				(sessionId !== undefined && !isEventIdentifier(sessionId)) ||
-				(numericValue !== undefined && !Number.isFinite(numericValue)) ||
-				(latencyMs !== undefined && (!Number.isFinite(latencyMs) || latencyMs < 0))
-			)
-				return false
+			if (!Array.isArray(events)) return false
+			const count = events.length
+			if (count === 0 || count > maxBatchEvents) return false
+			attribution ??= capture()
+			if (!attribution || !canIngest()) return false
 			const ads = allowsAds(resolveEffectiveConsent(privacy))
 			const { capturedAt: _, ...campaign } = cleanAttribution(attribution, ads)
-			if (!canIngest()) return false
 			const epoch = collectionEpoch
 			const stillAllowed = () => canSend(ads) && epoch === collectionEpoch
+			// Snapshot and validate the entire batch before assigning IDs or building a payload.
+			const inputs: SignalEventInput[] = []
+			for (let i = 0; i < count; i++) {
+				const event: SignalEventInput | undefined = events[i]
+				if (!event) return false
+				const { eventName, eventId, eventTime, properties, numericValue, isError, latencyMs } = event
+				if (
+					!isEventIdentifier(eventName) ||
+					(eventId !== undefined && !isEventIdentifier(eventId)) ||
+					(numericValue !== undefined && !Number.isFinite(numericValue)) ||
+					(latencyMs !== undefined && (!Number.isFinite(latencyMs) || latencyMs < 0))
+				)
+					return false
+				inputs.push({ eventName, eventId, eventTime, properties, numericValue, isError, latencyMs })
+			}
+			if (
+				!stillAllowed() ||
+				(distinctId !== undefined && !isEventIdentifier(distinctId)) ||
+				(sessionId !== undefined && !isEventIdentifier(sessionId))
+			)
+				return false
+			let identity: { distinct_id: string; session_id: string } | undefined
+			const now = new Date().toISOString()
 			const json = JSON.stringify({
 				consent: 'granted',
-				events: [
-					{
-						event_id: eventId ?? crypto.randomUUID(),
-						event_name: eventName,
+				events: inputs.map((event) => ({
+					event_id: event.eventId ?? crypto.randomUUID(),
+					event_name: event.eventName,
+					...(identity ??= {
 						distinct_id: (distinctId ??= crypto.randomUUID()),
 						session_id: (sessionId ??= crypto.randomUUID()),
-						event_time: eventTime ?? new Date().toISOString(),
-						properties: { ...campaign, ...properties, ...(path === undefined ? {} : { path }) },
-						numeric_value: numericValue,
-						is_error: isError ?? false,
-						latency_ms: latencyMs,
-					},
-				],
+					}),
+					event_time: event.eventTime ?? now,
+					properties: { ...campaign, ...event.properties, ...(path === undefined ? {} : { path }) },
+					numeric_value: event.numericValue,
+					is_error: event.isError ?? false,
+					latency_ms: event.latencyMs,
+				})),
 			})
 			// Application getters/serializers can run synchronously before the send.
 			if (!stillAllowed()) return false
@@ -376,7 +394,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			if (response.status !== 503) return response.ok
 			if (!stillAllowed() || !(await waitForRetry(retryDelay(response.headers)))) return false
 			if (!stillAllowed()) return false
-			// Replay the same prepared body, including its event ID for server-side dedupe.
+			// Replay the same prepared body, including its event IDs for server-side dedupe.
 			return (await send()).ok
 		} catch {
 			return false
@@ -399,7 +417,7 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 		// Mark before starting fetch, including concurrent calls and ambiguous network failures.
 		viewed = { path, locationPath: route(new URL(window.location.href)) }
 		if (!allowsAds(resolveEffectiveConsent(privacy))) stripSignalClickIds(url)
-		return emit({ eventName: 'page_view', properties, eventId }, attribution, route(url))
+		return emitEvents([{ eventName: 'page_view', properties, eventId }], attribution, route(url))
 	}
 
 	function refresh() {
@@ -465,10 +483,12 @@ export function createSignalBrowser<Explicit extends boolean = false>(
 			}
 		},
 		/** Best-effort authenticated keepalive fetch. Caller properties take precedence over attribution. */
-		async track(event: SignalEventInput): Promise<boolean> {
-			if (disposed || !endpoint) return false
-			const attribution = capture()
-			return attribution ? emit(event, attribution) : false
+		track(event: SignalEventInput): Promise<boolean> {
+			return emitEvents([event])
+		},
+		/** Send 1–500 events in one request. Invalid identifiers reject the entire batch. */
+		trackBatch(events: readonly SignalEventInput[]): Promise<boolean> {
+			return emitEvents(events)
 		},
 		/** Emit once per route. Before consent, only default mode can keep the path; neither keeps properties or the ID. */
 		async pageView(

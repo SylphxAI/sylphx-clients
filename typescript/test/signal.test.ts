@@ -828,6 +828,132 @@ test('track sends the exact Signal wire payload and authenticated keepalive requ
 	signal.dispose()
 })
 
+test('trackBatch sends ordered events once with shared identity and per-event attribution', async () => {
+	const { writes, cookieWrites } = browser()
+	const { ingest, calls, batches } = ingestTransport()
+	const signal = createSignalBrowser({ requireExplicitConsent: true, ingest })
+	signal.setConsent('analytics_only')
+	expect(signal.identify('signed-in-user')).toBe(true)
+
+	const time = '2026-01-02T03:04:05.123Z'
+	const events = [
+		{ eventName: 'round.start', eventId: 'round:1:start', eventTime: time },
+		{ eventName: 'round.end', eventId: 'round:1:end', properties: { utm_source: 'caller' } },
+		{ eventName: 'score', numericValue: 42, isError: true, latencyMs: 1.5 },
+	] as const satisfies readonly SignalEventInput[]
+	expect(await signal.trackBatch(events)).toBe(true)
+	expect(calls).toHaveLength(1)
+	expect(calls[0]?.url).toBe('https://api.sylphx.com/v1/analytics/events:batch')
+	expect(calls[0]?.init?.method).toBe('POST')
+	const [first, second] = batches()[0].events
+	const session = first.session_id
+	const now = second.event_time
+	expect(session).toEqual(expect.any(String))
+	expect(new Date(now).toISOString()).toBe(now)
+	expect(batches()).toEqual([
+		{
+			consent: 'granted',
+			events: [
+				{
+					event_id: 'round:1:start',
+					event_name: 'round.start',
+					distinct_id: 'signed-in-user',
+					session_id: session,
+					event_time: time,
+					properties: { utm_source: 'source' },
+					is_error: false,
+				},
+				{
+					event_id: 'round:1:end',
+					event_name: 'round.end',
+					distinct_id: 'signed-in-user',
+					session_id: session,
+					event_time: now,
+					properties: { utm_source: 'caller' },
+					is_error: false,
+				},
+				{
+					event_id: expect.stringMatching(/^[\da-f-]{36}$/),
+					event_name: 'score',
+					distinct_id: 'signed-in-user',
+					session_id: session,
+					event_time: now,
+					properties: { utm_source: 'source' },
+					numeric_value: 42,
+					is_error: true,
+					latency_ms: 1.5,
+				},
+			],
+		},
+	])
+	expect(await signal.track({ eventName: 'round.next' })).toBe(true)
+	expect(batches()[1].events[0]).toMatchObject({
+		distinct_id: 'signed-in-user',
+		session_id: session,
+	})
+	expect(writes.map(([name]) => name)).toEqual([consentStorageSlot, touchStorageSlot])
+	expect(cookieWrites()).toBe(0)
+	signal.dispose()
+})
+
+test('trackBatch rejects invalid bounds or any invalid event without allocating IDs or sending', async () => {
+	browser()
+	const { ingest, calls } = ingestTransport()
+	const signal = createSignalBrowser({ region: 'ROW', ingest })
+	const event = { eventName: 'visit' }
+	const randomUUID = mock(() => 'unused-id')
+	override('crypto', { randomUUID })
+	for (const input of [
+		{ 0: event, length: 1 },
+		[],
+		Array.from({ length: 501 }, () => event),
+		Object.assign(new Array<SignalEventInput>(2), { 0: event }),
+		[event, { eventName: 'not valid' }],
+		[event, { eventName: 'x'.repeat(129) }],
+		[event, { ...event, eventId: '' }],
+		[event, { ...event, eventId: 'not valid' }],
+		[event, { ...event, numericValue: Number.POSITIVE_INFINITY }],
+		[event, { ...event, latencyMs: -1 }],
+	]) {
+		expect(await signal.trackBatch(input as readonly SignalEventInput[])).toBe(false)
+	}
+	expect(randomUUID).not.toHaveBeenCalled()
+	expect(calls).toHaveLength(0)
+	signal.dispose()
+	expect(await signal.trackBatch([event])).toBe(false)
+	expect(calls).toHaveLength(0)
+})
+
+test.each([
+	'missing consent',
+	'denied',
+	'Sec-GPC',
+	'navigator GPC',
+] as const)('trackBatch does not send, mint or store IDs with %s', async (mode) => {
+	const { nav, writes, cookieWrites } = browser()
+	nav.globalPrivacyControl = mode === 'navigator GPC'
+	const { ingest, calls } = ingestTransport()
+	const randomUUID = mock(() => 'unused-id')
+	override('crypto', { randomUUID })
+	const signal = createSignalBrowser({
+		requireExplicitConsent: true,
+		gpc: mode === 'Sec-GPC',
+		ingest,
+	})
+	if (mode === 'denied') signal.setConsent('denied')
+	else if (mode !== 'missing consent') signal.setConsent('granted')
+	expect(await signal.trackBatch([{ eventName: 'round.start' }, { eventName: 'round.end' }])).toBe(
+		false,
+	)
+	expect(calls).toHaveLength(0)
+	expect(randomUUID).not.toHaveBeenCalled()
+	expect(writes.map(([name]) => name)).toEqual(
+		mode === 'missing consent' ? [] : [consentStorageSlot],
+	)
+	expect(cookieWrites()).toBe(0)
+	signal.dispose()
+})
+
 test('identify validates opaque IDs and uses them only in future consented events', async () => {
 	const { location, values, writes, cookieWrites, nav } = browser()
 	location.href = 'https://example.com/landing'
@@ -949,6 +1075,7 @@ test('ingest fails closed for absent configuration, unsafe endpoints and invalid
 	]) {
 		const disabled = createSignalBrowser({ region: 'ROW', ingest: invalid })
 		expect(await disabled.track({ eventName: 'visit' })).toBe(false)
+		expect(await disabled.trackBatch([{ eventName: 'visit' }])).toBe(false)
 		expect(await disabled.pageView()).toBe(false)
 		disabled.dispose()
 	}
@@ -1049,6 +1176,53 @@ test('uses gzip at exactly 1024 UTF-8 bytes and reuses the same buffered request
 	signal.dispose()
 })
 
+test('trackBatch compresses across the UTF-8 threshold and retries identical bytes once', async () => {
+	const { signal, calls } = gzipBrowser(() => unavailable('0'))
+	const note = 'é'.repeat(180)
+	const events = Array.from({ length: 2 }, (_, i) => ({
+		...gzipEvent,
+		eventId: `batch:${i}`,
+		properties: { note },
+	}))
+	expect(await signal.trackBatch(events)).toBe(false)
+	expect(calls).toHaveLength(2)
+	expect(new Headers(calls[0]?.init?.headers).get('Content-Encoding')).toBe('gzip')
+	const body = calls[0]?.init?.body
+	if (!(body instanceof ArrayBuffer)) throw new Error('Expected a buffered gzip body')
+	const json = gunzipSync(new Uint8Array(body)).toString('utf8')
+	expect(json.length).toBeLessThan(1024)
+	expect(new TextEncoder().encode(json).byteLength).toBeGreaterThanOrEqual(1024)
+	expect(JSON.parse(json)).toEqual({
+		consent: 'granted',
+		events: events.map((event) => ({
+			event_id: event.eventId,
+			event_name: event.eventName,
+			distinct_id: 'anon',
+			session_id: 'session',
+			event_time: event.eventTime,
+			properties: { note },
+			is_error: false,
+		})),
+	})
+	expect(calls[1]).toEqual(calls[0])
+	expect(calls[1]?.init?.body).toBe(body)
+	signal.dispose()
+})
+
+test('trackBatch sends exactly 500 events without splitting the request', async () => {
+	const { signal, calls } = gzipBrowser()
+	const events = Array.from({ length: 500 }, (_, i) => ({ ...gzipEvent, eventId: `batch:${i}` }))
+	expect(await signal.trackBatch(events)).toBe(true)
+	expect(calls).toHaveLength(1)
+	const body = calls[0]?.init?.body
+	if (!(body instanceof ArrayBuffer)) throw new Error('Expected a buffered gzip body')
+	const wire = JSON.parse(gunzipSync(new Uint8Array(body)).toString('utf8'))
+	expect(wire.events.map((event: { event_id: string }) => event.event_id)).toEqual(
+		events.map((event) => event.eventId),
+	)
+	signal.dispose()
+})
+
 test.each([
 	'small',
 	'missing',
@@ -1088,51 +1262,57 @@ test.each([
 	signal.dispose()
 })
 
-test.each([
-	'denied',
-	'denied then granted',
-	'analytics_only',
-	'gpc',
-	'disposed',
-] as const)('cancels delivery when collection becomes %s during compression', async (action) => {
-	const { signal, calls, nav } = gzipBrowser()
-	const NativeCompressionStream = CompressionStream
-	const entered = Promise.withResolvers<void>()
-	const resume = Promise.withResolvers<void>()
-	override(
-		'CompressionStream',
-		class {
-			readonly writable: WritableStream<BufferSource>
-			readonly readable: ReadableStream<Uint8Array>
+for (const method of ['track', 'trackBatch'] as const) {
+	test.each([
+		'denied',
+		'denied then granted',
+		'analytics_only',
+		'gpc',
+		'disposed',
+	] as const)(`${method}: cancels delivery when collection becomes %s during compression`, async (action) => {
+		const { signal, calls, nav } = gzipBrowser()
+		const NativeCompressionStream = CompressionStream
+		const entered = Promise.withResolvers<void>()
+		const resume = Promise.withResolvers<void>()
+		override(
+			'CompressionStream',
+			class {
+				readonly writable: WritableStream<BufferSource>
+				readonly readable: ReadableStream<Uint8Array>
 
-			constructor() {
-				const gate = new TransformStream<BufferSource, BufferSource>({
-					async transform(chunk, controller) {
-						entered.resolve()
-						await resume.promise
-						controller.enqueue(chunk)
-					},
-				})
-				this.writable = gate.writable
-				this.readable = gate.readable.pipeThrough(new NativeCompressionStream('gzip'))
-			}
-		},
-	)
-	const sent = signal.track({ ...gzipEvent, properties: { note: noteAtSize(1024) } })
-	// If compression is accidentally bypassed, fail immediately rather than hang on the barrier.
-	await Promise.race([entered.promise, sent])
-	expect(calls).toHaveLength(0)
-	if (action === 'disposed') signal.dispose()
-	else if (action === 'gpc') nav.globalPrivacyControl = true
-	else if (action === 'denied then granted') {
-		signal.setConsent('denied')
-		signal.setConsent('granted')
-	} else signal.setConsent(action)
-	resume.resolve()
-	expect(await sent).toBe(false)
-	expect(calls).toHaveLength(0)
-	signal.dispose()
-})
+				constructor() {
+					const gate = new TransformStream<BufferSource, BufferSource>({
+						async transform(chunk, controller) {
+							entered.resolve()
+							await resume.promise
+							controller.enqueue(chunk)
+						},
+					})
+					this.writable = gate.writable
+					this.readable = gate.readable.pipeThrough(new NativeCompressionStream('gzip'))
+				}
+			},
+		)
+		const event = { ...gzipEvent, properties: { note: noteAtSize(1024) } }
+		const sent =
+			method === 'track'
+				? signal.track(event)
+				: signal.trackBatch([event, { ...gzipEvent, eventId: 'second' }])
+		// If compression is accidentally bypassed, fail immediately rather than hang on the barrier.
+		await Promise.race([entered.promise, sent])
+		expect(calls).toHaveLength(0)
+		if (action === 'disposed') signal.dispose()
+		else if (action === 'gpc') nav.globalPrivacyControl = true
+		else if (action === 'denied then granted') {
+			signal.setConsent('denied')
+			signal.setConsent('granted')
+		} else signal.setConsent(action)
+		resume.resolve()
+		expect(await sent).toBe(false)
+		expect(calls).toHaveLength(0)
+		signal.dispose()
+	})
+}
 
 describe('Signal browser ingest retries', () => {
 	afterEach(() => {
