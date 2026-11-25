@@ -308,6 +308,11 @@ pub(crate) async fn generated(
             );
         }
     }
+    if method.method == "access.api_keys.create" {
+        if let Some(notice) = key_expiry_notice(&result, format) {
+            eprintln!("{notice}");
+        }
+    }
     if method.paginates && root.get_flag("all") {
         result = follow_pages(client, method, args, result).await?;
     }
@@ -319,6 +324,28 @@ pub(crate) async fn generated(
         println!("{text}");
     }
     Ok(())
+}
+
+/// Keep the warning visible even with machine-readable output, without
+/// changing stdout or printing any of the key material on stderr.
+fn key_expiry_notice(result: &Value, format: Format) -> Option<String> {
+    let expires_at = result
+        .get("effective_expires_at")
+        .or_else(|| result.pointer("/spec/expire_time"));
+    let display = match expires_at? {
+        Value::String(time) => time.as_str(),
+        Value::Null => "none",
+        _ => return None,
+    };
+    if result["expiry_clamped_by_caller"] == true {
+        Some(format!(
+            "Warning: the API key expires at {display} because the issuing key expires then. A full, unscoped Owner/Admin device login can request a later expiry explicitly; for a key with no expiry, use the web console."
+        ))
+    } else if format == Format::Name {
+        Some(format!("Effective API key expiry: {display}"))
+    } else {
+        None
+    }
 }
 
 /// Reads the Resource first and sends its etag with the write.
@@ -473,4 +500,30 @@ async fn wait(client: &Client, mut op: Value) -> Result<Value, Failure> {
         }
         _ => op,
     })
+}
+
+#[cfg(test)]
+mod key_expiry_tests {
+    use super::*;
+
+    #[test]
+    fn key_create_warning_is_visible_in_machine_output_modes() {
+        let created = json!({"effective_expires_at": "2030-01-02T03:04:05Z", "expiry_clamped_by_caller": true,
+            "status": {"secret": "must-not-be-in-notice"}});
+        for format in [Format::Json, Format::Yaml, Format::Table, Format::Name] {
+            let notice = key_expiry_notice(&created, format).unwrap();
+            assert!(notice.starts_with("Warning: the API key expires at 2030-01-02T03:04:05Z"));
+            assert!(!notice.contains("must-not-be-in-notice"));
+        }
+    }
+
+    #[test]
+    fn name_only_create_reports_effective_expiry_separately() {
+        let created = json!({"effective_expires_at": null, "expiry_clamped_by_caller": false});
+        assert_eq!(
+            key_expiry_notice(&created, Format::Name).as_deref(),
+            Some("Effective API key expiry: none")
+        );
+        assert_eq!(key_expiry_notice(&created, Format::Json), None);
+    }
 }
