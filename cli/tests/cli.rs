@@ -369,6 +369,57 @@ async fn run(sb: &Sandbox, url: &str, args: &[&str]) -> std::process::Output {
         .unwrap()
 }
 
+#[tokio::test]
+async fn secret_bindings_only_exposes_metadata_reads() {
+    let sb = Sandbox::new("secret-bindings-read-only");
+    let (url, log) = serve(vec![(400, json!({}))]).await;
+    let out = run(&sb, &url, &["secrets", "secret-bindings", "--help"]).await;
+    assert!(out.status.success());
+    let help = String::from_utf8(out.stdout).unwrap();
+    let prose = help.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(prose.contains("sylphx secrets create"), "{help}");
+    assert!(
+        prose.contains("sylphx secrets secret-versions create"),
+        "{help}"
+    );
+    for verb in ["create", "update", "delete", "bind"] {
+        assert!(!help
+            .lines()
+            .any(|l| l.split_whitespace().next() == Some(verb)));
+        let args = if verb == "bind" {
+            vec!["secrets", "bind"]
+        } else {
+            vec!["secrets", "secret-bindings", verb]
+        };
+        let out = run(&sb, &url, &args).await;
+        assert_eq!(out.status.code(), Some(2));
+        let err = String::from_utf8(out.stderr).unwrap();
+        assert!(err.contains("unrecognized subcommand"), "{err}");
+    }
+    assert!(log.lock().is_empty());
+
+    let binding = format!("{ENV}/secret_bindings/synthetic-binding");
+    let (url, log) = serve(vec![
+        (200, json!({"secret_bindings": [{"name": binding}]})),
+        (200, json!({"name": binding})),
+    ])
+    .await;
+    for (verb, positional) in [("list", ENV), ("get", binding.as_str())] {
+        let out = run(&sb, &url, &["secrets", "secret-bindings", verb, positional]).await;
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    let log = log.lock();
+    assert_eq!(log.len(), 2);
+    assert!(log[0]
+        .line
+        .starts_with(&format!("GET /v1/{ENV}/secret_bindings ")));
+    assert!(log[1].line.starts_with(&format!("GET /v1/{binding} ")));
+}
+
 /// Admission's done Operation does not mean the Release is serving. Both
 /// porcelain writes must read the Release's current live pointer before exit 0.
 #[tokio::test(flavor = "multi_thread")]

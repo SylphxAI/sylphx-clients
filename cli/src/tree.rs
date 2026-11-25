@@ -150,7 +150,25 @@ impl MethodCmd {
 }
 
 pub fn load() -> Tree {
-    serde_json::from_str(TREE).expect("generated/commands.json is valid")
+    let mut tree: Tree = serde_json::from_str(TREE).expect("generated/commands.json is valid");
+    // The generated contract includes binding mutations, but the public API
+    // currently serves only get/list. Do not advertise or dispatch those writes.
+    let is_supported = |m: &MethodCmd| {
+        !matches!(
+            m.method.as_str(),
+            "secrets.secret_bindings.create"
+                | "secrets.secret_bindings.update"
+                | "secrets.secret_bindings.delete"
+        )
+    };
+    if let Some(service) = tree.services.iter_mut().find(|s| s.noun == "secrets") {
+        service.commands.retain(is_supported);
+        service.porcelain.retain(|p| is_supported(&p.command));
+        for collection in &mut service.collections {
+            collection.commands.retain(is_supported);
+        }
+    }
+    tree
 }
 
 fn arg_id(flag: &str) -> String {
@@ -297,7 +315,15 @@ pub fn service_commands(tree: &Tree, hand_written: &[(&str, &str)]) -> Vec<Comma
                 }
                 let mut cc = Command::new(c.noun.clone())
                     .aliases(c.aliases.iter().cloned())
-                    .about(format!("`{}`: {}", c.collection, c.resource_type))
+                    .about(
+                        if s.noun == "secrets" && c.collection == "secret_bindings" {
+                            "Read-only binding metadata. For environment-wide secrets, use \
+                         `sylphx secrets create` then `sylphx secrets secret-versions create`."
+                                .to_string()
+                        } else {
+                            format!("`{}`: {}", c.collection, c.resource_type)
+                        },
+                    )
                     .subcommand_required(true)
                     .arg_required_else_help(true);
                 for m in served_methods {
