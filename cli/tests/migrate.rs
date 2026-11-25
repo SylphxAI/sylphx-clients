@@ -203,15 +203,48 @@ async fn postgres_migration_proof() {
                 "CREATE SCHEMA atlas_schema_revisions;
                 CREATE TABLE atlas_schema_revisions.atlas_schema_revisions (
                 version text PRIMARY KEY, hash text NOT NULL, type integer NOT NULL,
-                applied integer NOT NULL, total integer NOT NULL, error text, error_stmt text)",
+                applied integer NOT NULL, total integer NOT NULL, error text, error_stmt text,
+                executed_at timestamptz)",
             )
             .await
             .unwrap();
             let mut hash = Sha256::new();
             hash.update(file.as_bytes());
             hash.update(old.as_bytes());
-            sqlx::query("INSERT INTO atlas_schema_revisions.atlas_schema_revisions VALUES ('200',$1,2,1,1,NULL,NULL)")
-                .bind(STANDARD.encode(hash.finalize())).execute(&mut pg).await.unwrap();
+            sqlx::query(
+                "INSERT INTO atlas_schema_revisions.atlas_schema_revisions
+                         VALUES ('200',$1,2,1,1,NULL,NULL,'2026-01-01 00:00:00.000001+00')",
+            )
+            .bind(STANDARD.encode(hash.finalize()))
+            .execute(&mut pg)
+            .await
+            .unwrap();
+            // A lower filename appeared after 200 ran, just one microsecond later.
+            let late_file = "150_atlas_late.sql";
+            let late_sql = "CREATE TABLE atlas_late (id int);";
+            project.write(late_file, late_sql);
+            pg.execute(late_sql).await.unwrap();
+            let mut hash = Sha256::new();
+            hash.update(late_file.as_bytes());
+            hash.update(late_sql.as_bytes());
+            sqlx::query(
+                "INSERT INTO atlas_schema_revisions.atlas_schema_revisions
+                         VALUES ('150',$1,2,1,1,NULL,NULL,NULL)",
+            )
+            .bind(STANDARD.encode(hash.finalize()))
+            .execute(&mut pg)
+            .await
+            .unwrap();
+            let out = project.run("status", Some(url.as_str()));
+            assert_eq!(out.status.code(), Some(1));
+            assert!(String::from_utf8_lossy(&out.stderr)
+                .contains("Atlas revision 150 has no executed_at"));
+            pg.execute(
+                "UPDATE atlas_schema_revisions.atlas_schema_revisions
+                        SET executed_at = '2026-01-01 00:00:00.000002+00' WHERE version = '150'",
+            )
+            .await
+            .unwrap();
         }
         if sqlx {
             pg.execute("CREATE TABLE _sqlx_migrations (version bigint PRIMARY KEY, checksum bytea NOT NULL, success boolean NOT NULL)").await.unwrap();
@@ -224,8 +257,12 @@ async fn postgres_migration_proof() {
         let state = read(project.run("status", Some(url.as_str())), 0);
         assert_eq!(
             state["applied"].as_array().unwrap().len(),
-            usize::from(atlas || sqlx)
+            usize::from(atlas || sqlx) + usize::from(atlas)
         );
+        if atlas {
+            assert_eq!(state["applied"][0]["id"], "150");
+            assert_eq!(state["applied"][0]["source"], "atlas");
+        }
         let no_ledger: bool =
             sqlx::query_scalar("SELECT to_regclass('public._sylphx_migrations') IS NULL")
                 .fetch_one(&mut pg)
@@ -250,8 +287,14 @@ async fn postgres_migration_proof() {
             ["100", "300"]
         );
         let state = read(project.run("apply", Some(url.as_str())), 0);
+        let imported = state["applied"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == "200")
+            .unwrap();
         assert_eq!(
-            state["applied"][1]["source"],
+            imported["source"],
             if atlas && sqlx {
                 "atlas_and_sqlx"
             } else if atlas {
@@ -263,7 +306,7 @@ async fn postgres_migration_proof() {
             }
         );
         assert_eq!(
-            state["applied"][1]["sha256"],
+            imported["sha256"],
             format!("{:x}", Sha256::digest(old.as_bytes()))
         );
         let valid_index: bool = sqlx::query_scalar(

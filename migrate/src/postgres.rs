@@ -8,7 +8,7 @@ use sqlx::{
 
 use super::{
     baseline::Legacy,
-    history::{self, Recorded, Report, Source},
+    history::{self, AtlasRevision, Recorded, Report, Source},
     lint::{self, Diagnostic},
     runtime_roles::{self, sync_runtime_role_grants},
     valid_id, Files, Migration, ReleaseTarget, Result, SourceTree,
@@ -83,19 +83,32 @@ async fn history<'a>(db: &mut PgConnection, files: &'a Files) -> Result<(bool, R
         atlas_found = true;
         let query = format!(
             "SELECT version, hash, COALESCE(type = 2 AND applied = total AND applied >= 0
-                        AND NULLIF(error, '') IS NULL AND NULLIF(error_stmt, '') IS NULL, false)
+                        AND NULLIF(error, '') IS NULL AND NULLIF(error_stmt, '') IS NULL, false),
+                        (EXTRACT(EPOCH FROM executed_at) * 1000000)::bigint
                         FROM {name} ORDER BY version"
         );
-        for (raw, hash, complete) in sqlx::query_as::<_, (String, String, bool)>(&query)
-            .fetch_all(&mut *db)
-            .await
-            .map_err(|_| "cannot read Atlas migration ledger")?
+        for (raw, hash, complete, executed_at_us) in
+            sqlx::query_as::<_, (String, String, bool, Option<i64>)>(&query)
+                .fetch_all(&mut *db)
+                .await
+                .map_err(|_| "cannot read Atlas migration ledger")?
         {
             let id = valid_id(&raw).ok_or("Atlas ledger contains a non-canonical migration ID")?;
             if !complete {
                 return Err(format!("Atlas revision {id} is incomplete, baselined or manually resolved; reconcile it before cutover"));
             }
-            if atlas.insert(id, hash).is_some() {
+            let executed_at_us =
+                executed_at_us.ok_or_else(|| format!("Atlas revision {id} has no executed_at"))?;
+            if atlas
+                .insert(
+                    id,
+                    AtlasRevision {
+                        hash,
+                        executed_at_us,
+                    },
+                )
+                .is_some()
+            {
                 return Err(format!("duplicate Atlas revision {id}"));
             }
         }

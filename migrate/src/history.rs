@@ -50,6 +50,11 @@ pub(super) struct Recorded {
     pub(super) done: bool,
 }
 
+pub(super) struct AtlasRevision {
+    pub hash: String,
+    pub executed_at_us: i64,
+}
+
 #[derive(Serialize)]
 pub struct File<'a> {
     pub id: String,
@@ -78,10 +83,52 @@ pub struct Report<'a> {
     pub(super) imports: Vec<(i64, Source)>,
 }
 
+fn verify_atlas(files: &Files, atlas: &BTreeMap<i64, AtlasRevision>) -> Result<()> {
+    let mut applied = atlas
+        .iter()
+        .map(|(id, revision)| (&files[id], revision))
+        .collect::<Vec<_>>();
+    applied.sort_by_key(|(m, _)| &m.file);
+    let linear = applied
+        .windows(2)
+        .all(|pair| pair[0].1.executed_at_us <= pair[1].1.executed_at_us);
+
+    // Atlas v1.3.0 stores a SHA-256 prefix of filename + SQL bytes from the
+    // directory used at apply time. For an additive non-linear history, a
+    // lower filename applied later was not in that prefix. Hash the remaining
+    // files in filename (not execution) order. If the applied rows cannot
+    // reproduce a prefix, refuse the import; never consult atlas.sum.
+    let mut prefix = Sha256::new();
+    for (idx, (m, revision)) in applied.iter().enumerate() {
+        if !linear {
+            prefix = Sha256::new();
+            for (prior, prior_revision) in &applied[..idx] {
+                if prior_revision.executed_at_us <= revision.executed_at_us {
+                    prefix.update(prior.file.as_bytes());
+                    prefix.update(prior.sql.as_bytes());
+                }
+            }
+        }
+        prefix.update(m.file.as_bytes());
+        prefix.update(m.sql.as_bytes());
+        if STANDARD.encode(prefix.clone().finalize()) != revision.hash {
+            return Err(format!(
+                "Atlas checksum drift or unsupported revision lineage for migration {}",
+                m.id
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "history_tests.rs"]
+mod tests;
+
 pub(super) fn reconcile<'a>(
     files: &'a Files,
     canonical: &BTreeMap<i64, Recorded>,
-    atlas: &BTreeMap<i64, String>,
+    atlas: &BTreeMap<i64, AtlasRevision>,
     sqlx: &BTreeMap<i64, Vec<u8>>,
     initialized: bool,
 ) -> Result<Report<'a>> {
@@ -106,27 +153,7 @@ pub(super) fn reconcile<'a>(
             ));
         }
     }
-    // Atlas v1.3.0 stores the cumulative SHA-256 of name+bytes, not a
-    // per-file hash. Verify the historical applied set in Atlas filename order,
-    // excluding new pending files. Never consult or generate atlas.sum.
-    {
-        let mut prefix = Sha256::new();
-        let mut applied = atlas
-            .iter()
-            .map(|(id, hash)| (&files[id], hash))
-            .collect::<Vec<_>>();
-        applied.sort_by_key(|(m, _)| &m.file);
-        for (m, legacy_hash) in applied {
-            prefix.update(m.file.as_bytes());
-            prefix.update(m.sql.as_bytes());
-            if &STANDARD.encode(prefix.clone().finalize()) != legacy_hash {
-                return Err(format!(
-                    "Atlas checksum drift or unsupported revision lineage for migration {}",
-                    m.id
-                ));
-            }
-        }
-    }
+    verify_atlas(files, atlas)?;
     let mut report = Report {
         applied: Vec::new(),
         pending: Vec::new(),
