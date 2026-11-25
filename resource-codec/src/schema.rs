@@ -416,4 +416,29 @@ mod tests {
         assert!(field_at(&ix, "sylphx.data.v1.Database", "meta.labels").is_some());
         assert!(field_at(&ix, "sylphx.data.v1.Database", "spec.nope").is_none());
     }
+
+    #[test]
+    fn oauth_client_schema_accepts_jwt_access_token_format_and_client_secret_post() {
+        let ix = Index::embedded();
+        let oauth_client = "sylphx.auth.v1.OauthClient";
+        let payload = json!({
+            "meta": {"display_name": "Client"},
+            "spec": {
+                "client_type": "confidential",
+                "token_endpoint_auth_method": "client_secret_post",
+                "grant_types": ["client_credentials"],
+                "scopes": ["openid"],
+                "resource_uri": "https://api.example.com/resource",
+                "access_token_format": "jwt"
+            }
+        });
+        validate(&ix, oauth_client, &payload, "").unwrap();
+        let names = field_at(&ix, oauth_client, "spec.access_token_format").unwrap();
+        assert_eq!(names.name, "access_token_format");
+        let auth_enum = ix.enum_("sylphx.auth.v1.TokenEndpointAuthMethod").unwrap();
+        assert!(auth_enum
+            .values
+            .iter()
+            .any(|v| v.wire == "client_secret_post"));
+    }
 }

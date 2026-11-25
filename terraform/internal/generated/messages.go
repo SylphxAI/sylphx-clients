@@ -109,7 +109,7 @@ func accessUsageLimits() []def.Field {
 func authOauthClientSpec() []def.Field {
 	return []def.Field{
 		{Name: "client_type", Kind: def.Enum, Values: []string{"confidential", "public"}, Flags: def.Required | def.Immutable, Doc: "Confidential or public."},
-		{Name: "token_endpoint_auth_method", Kind: def.Enum, Values: []string{"none", "client_secret_basic", "private_key_jwt"}, Flags: def.Required, Doc: "How the client authenticates at the token endpoint."},
+		{Name: "token_endpoint_auth_method", Kind: def.Enum, Values: []string{"none", "client_secret_basic", "private_key_jwt", "client_secret_post"}, Flags: def.Required, Doc: "How the client authenticates at the token endpoint."},
 		{Name: "redirect_uris", Kind: def.String, Repeated: true, Doc: "Exact redirect URIs."},
 		{Name: "grant_types", Kind: def.Enum, Values: []string{"authorization_code", "refresh_token", "device_code", "client_credentials"}, Repeated: true, Doc: "Allowed grants. May be empty for a client that only serves a protected resource."},
 		{Name: "scopes", Kind: def.String, Repeated: true, Doc: "Scopes the client may request."},
@@ -130,7 +130,7 @@ func authOauthClientStatus() []def.Field {
 		{Name: "observed_generation", Kind: def.Int64, Flags: def.OutputOnly, Doc: "The generation this status was computed from."},
 		{Name: "conditions", Kind: def.Message, Msg: commonCondition, Flags: def.OutputOnly, Repeated: true, Doc: "Ready, Reconciling, Stalled."},
 		{Name: "client_id", Kind: def.String, Flags: def.OutputOnly, Doc: "The OAuth `client_id`."},
-		{Name: "client_secret", Kind: def.String, Flags: def.OutputOnly | def.Sensitive, Doc: "The client secret, for `client_secret_basic`; set only in the responses of Create and RollSecret."},
+		{Name: "client_secret", Kind: def.String, Flags: def.OutputOnly | def.Sensitive, Doc: "The client secret, for `client_secret_basic` and `client_secret_post`; set only in the responses of Create and RollSecret."},
 		{Name: "client_secret_last4", Kind: def.String, Flags: def.OutputOnly, Doc: "The last four characters of the client secret."},
 	}
 }

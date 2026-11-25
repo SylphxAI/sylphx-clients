@@ -2653,8 +2653,8 @@ pub struct OauthClientStatus {
         alias = "clientId"
     )]
     pub client_id: String,
-    /// The client secret, for `client_secret_basic`; set only in the responses of
-    /// Create and RollSecret.
+    /// The client secret, for `client_secret_basic` and `client_secret_post`; set
+    /// only in the responses of Create and RollSecret.
     ///
     /// Field behavior: `output_only`, `sensitive`.
     #[serde(
@@ -4157,6 +4157,8 @@ pub enum TokenEndpointAuthMethod {
     ClientSecretBasic,
     /// A JWT signed by a key in the client's JWKS.
     PrivateKeyJwt,
+    /// Client ID and secret in the POST request body.
+    ClientSecretPost,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -4168,6 +4170,7 @@ impl TokenEndpointAuthMethod {
             Self::None => "none",
             Self::ClientSecretBasic => "client_secret_basic",
             Self::PrivateKeyJwt => "private_key_jwt",
+            Self::ClientSecretPost => "client_secret_post",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -4178,6 +4181,7 @@ impl TokenEndpointAuthMethod {
             "none" => Self::None,
             "client_secret_basic" => Self::ClientSecretBasic,
             "private_key_jwt" => Self::PrivateKeyJwt,
+            "client_secret_post" => Self::ClientSecretPost,
             other => Self::Unknown(other.to_string()),
         }
     }

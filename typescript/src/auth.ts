@@ -1176,8 +1176,8 @@ export interface OauthClientStatus {
 	/** The OAuth `client_id`. */
 	readonly clientId?: string
 	/**
-	 * The client secret, for `client_secret_basic`; set only in the responses of
-	 * Create and RollSecret.
+	 * The client secret, for `client_secret_basic` and `client_secret_post`; set
+	 * only in the responses of Create and RollSecret.
 	 */
 	readonly clientSecret?: string
 	/** The last four characters of the client secret. */
@@ -1636,7 +1636,7 @@ export type SessionRevokeReason = 'sign_out' | 'user' | 'admin' | 'session_limit
 export type SessionState = 'active' | 'revoked' | 'expired' | (string & {})
 
 /** How a client authenticates at the token endpoint. */
-export type TokenEndpointAuthMethod = 'none' | 'client_secret_basic' | 'private_key_jwt' | (string & {})
+export type TokenEndpointAuthMethod = 'none' | 'client_secret_basic' | 'private_key_jwt' | 'client_secret_post' | (string & {})
 
 runtime.registerSchemas({
 	'sylphx.auth.v1.AcceptInvitationRequest': [

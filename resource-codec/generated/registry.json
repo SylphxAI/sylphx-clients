@@ -1352,6 +1352,12 @@
           "number": 3,
           "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_PRIVATE_KEY_JWT",
           "wire": "private_key_jwt"
+        },
+        {
+          "doc": "Client ID and secret in the POST request body.",
+          "number": 4,
+          "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_CLIENT_SECRET_POST",
+          "wire": "client_secret_post"
         }
       ]
     },
@@ -33973,7 +33979,7 @@
             "OUTPUT_ONLY"
           ],
           "cli_flag": "",
-          "doc": "The client secret, for `client_secret_basic`; set only in the responses of\nCreate and RollSecret.",
+          "doc": "The client secret, for `client_secret_basic` and `client_secret_post`; set\nonly in the responses of Create and RollSecret.",
           "filterable": false,
           "name": "client_secret",
           "number": 11,

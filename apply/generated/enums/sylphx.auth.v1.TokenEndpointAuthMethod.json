@@ -16,6 +16,11 @@
       "number": 3,
       "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_PRIVATE_KEY_JWT",
       "wire": "private_key_jwt"
+    },
+    {
+      "number": 4,
+      "proto_name": "TOKEN_ENDPOINT_AUTH_METHOD_CLIENT_SECRET_POST",
+      "wire": "client_secret_post"
     }
   ]
 }

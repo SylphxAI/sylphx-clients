@@ -7293,7 +7293,8 @@
                   "values": [
                     "none",
                     "client_secret_basic",
-                    "private_key_jwt"
+                    "private_key_jwt",
+                    "client_secret_post"
                   ]
                 },
                 {
@@ -7423,7 +7424,8 @@
                   "values": [
                     "none",
                     "client_secret_basic",
-                    "private_key_jwt"
+                    "private_key_jwt",
+                    "client_secret_post"
                   ]
                 },
                 {
