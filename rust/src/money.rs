@@ -4168,7 +4168,7 @@ pub struct MerchantAccount {
     pub processor_warnings: Vec<String>,
 }
 
-/// Preconditions for dispatching with an exact hold and a bounded monthly fuse.
+/// Preconditions for claiming an exact hold before dispatch.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct PlatformUsageHoldClaimPreconditions {
@@ -4190,9 +4190,8 @@ pub struct PlatformUsageHoldClaimPreconditions {
         alias = "upperBoundPicousd"
     )]
     pub upper_bound_picousd: String,
-    /// Largest permitted positive monthly fuse, in USD cents.
-    ///
-    /// Field behavior: `required`.
+    /// Largest permitted positive monthly fuse, in USD cents. Required unless
+    /// exact_hold_only is true.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -4200,6 +4199,15 @@ pub struct PlatformUsageHoldClaimPreconditions {
         alias = "maxMonthlyFuseUsdMinor"
     )]
     pub max_monthly_fuse_usd_minor: i64,
+    /// Match the exact hold without imposing an additional caller ceiling on
+    /// the payer's monthly fuse. Money still checks backing and the payer's own
+    /// fuse, when configured. Mutually exclusive with max_monthly_fuse_usd_minor.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "exactHoldOnly"
+    )]
+    pub exact_hold_only: bool,
 }
 
 /// Authority to dispatch and, separately, a deadline to submit the terminal
@@ -4295,6 +4303,15 @@ pub struct PlatformUsageHoldReceipt {
         alias = "verifiedMonthlyFuseUsdMinor"
     )]
     pub verified_monthly_fuse_usd_minor: i64,
+    /// True only on a fresh exact_hold_only claim after checking Money policy.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "verifiedExactHold"
+    )]
+    pub verified_exact_hold: bool,
 }
 
 /// A Portal Session is a hosted page where a subject manages its

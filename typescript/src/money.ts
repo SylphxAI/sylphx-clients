@@ -1918,14 +1918,23 @@ export interface MerchantAccount {
 	readonly processorWarnings?: string[]
 }
 
-/** Preconditions for dispatching with an exact hold and a bounded monthly fuse. */
+/** Preconditions for claiming an exact hold before dispatch. */
 export interface PlatformUsageHoldClaimPreconditions {
 	/** The uid returned by ReservePlatformUsageHold. */
 	holdUid?: string
 	/** Exact reserved upper bound, as a decimal string in pico-USD. */
 	upperBoundPicousd?: string
-	/** Largest permitted positive monthly fuse, in USD cents. */
+	/**
+	 * Largest permitted positive monthly fuse, in USD cents. Required unless
+	 * exact_hold_only is true.
+	 */
 	maxMonthlyFuseUsdMinor?: string
+	/**
+	 * Match the exact hold without imposing an additional caller ceiling on
+	 * the payer's monthly fuse. Money still checks backing and the payer's own
+	 * fuse, when configured. Mutually exclusive with max_monthly_fuse_usd_minor.
+	 */
+	exactHoldOnly?: boolean
 }
 
 /**
@@ -1963,6 +1972,8 @@ export interface PlatformUsageHoldReceipt {
 	replayed?: boolean
 	/** Positive only on a fresh claim that verified the requested fuse ceiling. */
 	readonly verifiedMonthlyFuseUsdMinor?: string
+	/** True only on a fresh exact_hold_only claim after checking Money policy. */
+	readonly verifiedExactHold?: boolean
 }
 
 /**
@@ -4024,6 +4035,7 @@ runtime.registerSchemas({
 		['holdUid', 'hold_uid'],
 		['upperBoundPicousd', 'upper_bound_picousd'],
 		['maxMonthlyFuseUsdMinor', 'max_monthly_fuse_usd_minor'],
+		['exactHoldOnly', 'exact_hold_only'],
 	],
 	'sylphx.money.v1.PlatformUsageHoldReceipt': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -4036,6 +4048,7 @@ runtime.registerSchemas({
 		['releasedPicousd', 'released_picousd'],
 		['ledgerTransactionId', 'ledger_transaction_id'],
 		['verifiedMonthlyFuseUsdMinor', 'verified_monthly_fuse_usd_minor'],
+		['verifiedExactHold', 'verified_exact_hold'],
 	],
 	'sylphx.money.v1.PortalSession': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],

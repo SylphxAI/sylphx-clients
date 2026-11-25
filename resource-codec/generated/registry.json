@@ -99423,7 +99423,7 @@
       "package": "sylphx.money.v1"
     },
     {
-      "doc": "Preconditions for dispatching with an exact hold and a bounded monthly fuse.",
+      "doc": "Preconditions for claiming an exact hold before dispatch.",
       "fields": [
         {
           "behaviors": [
@@ -99465,10 +99465,10 @@
         },
         {
           "behaviors": [
-            "REQUIRED"
+            "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Largest permitted positive monthly fuse, in USD cents.",
+          "doc": "Largest permitted positive monthly fuse, in USD cents. Required unless\nexact_hold_only is true.",
           "filterable": false,
           "name": "max_monthly_fuse_usd_minor",
           "number": 3,
@@ -99480,6 +99480,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Match the exact hold without imposing an additional caller ceiling on\nthe payer's monthly fuse. Money still checks backing and the payer's own\nfuse, when configured. Mutually exclusive with max_monthly_fuse_usd_minor.",
+          "filterable": false,
+          "name": "exact_hold_only",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],
@@ -99750,6 +99769,25 @@
           "type": {
             "kind": "scalar",
             "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "True only on a fresh exact_hold_only claim after checking Money policy.",
+          "filterable": false,
+          "name": "verified_exact_hold",
+          "number": 16,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
           }
         }
       ],

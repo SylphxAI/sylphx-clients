@@ -32695,14 +32695,18 @@
         "type": "object"
       },
       "sylphx.money.v1.PlatformUsageHoldClaimPreconditions": {
-        "description": "Preconditions for dispatching with an exact hold and a bounded monthly fuse.",
+        "description": "Preconditions for claiming an exact hold before dispatch.",
         "properties": {
+          "exact_hold_only": {
+            "description": "Match the exact hold without imposing an additional caller ceiling on\nthe payer's monthly fuse. Money still checks backing and the payer's own\nfuse, when configured. Mutually exclusive with max_monthly_fuse_usd_minor.",
+            "type": "boolean"
+          },
           "hold_uid": {
             "description": "The uid returned by ReservePlatformUsageHold.",
             "type": "string"
           },
           "max_monthly_fuse_usd_minor": {
-            "description": "Largest permitted positive monthly fuse, in USD cents.",
+            "description": "Largest permitted positive monthly fuse, in USD cents. Required unless\nexact_hold_only is true.",
             "format": "int64",
             "type": "string"
           },
@@ -32713,8 +32717,7 @@
         },
         "required": [
           "hold_uid",
-          "upper_bound_picousd",
-          "max_monthly_fuse_usd_minor"
+          "upper_bound_picousd"
         ],
         "type": "object"
       },
@@ -32777,6 +32780,11 @@
           "upper_bound_picousd": {
             "description": "Maximum amount authorized by the hold, in pico-USD.",
             "type": "string"
+          },
+          "verified_exact_hold": {
+            "description": "True only on a fresh exact_hold_only claim after checking Money policy.",
+            "readOnly": true,
+            "type": "boolean"
           },
           "verified_monthly_fuse_usd_minor": {
             "description": "Positive only on a fresh claim that verified the requested fuse ceiling.",
