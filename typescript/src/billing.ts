@@ -1079,7 +1079,7 @@ export class MetersCollection {
 	}
 
 	/**
-	 * Lists meters. Anonymous-readable: the pricing page renders from it.
+	 * Lists meters. Requires authentication with the `billing:read` permission.
 	 *
 	 * `GET /v1/meters` · permission `billing:read` · effect `read`
 	 *
@@ -1132,7 +1132,7 @@ export class PlansCollection {
 	}
 
 	/**
-	 * Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.
+	 * Lists the plans the caller can see. Requires authentication with the `billing:read` permission.
 	 *
 	 * `GET /v1/plans` · permission `billing:read` · effect `read`
 	 *

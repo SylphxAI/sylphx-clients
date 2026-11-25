@@ -2305,7 +2305,7 @@ impl<'a, T: crate::runtime::Transport> MetersCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists meters. Anonymous-readable: the pricing page renders from it.
+    /// Lists meters. Requires authentication with the `billing:read` permission.
     ///
     /// `GET /v1/meters` · permission `billing:read` · effect `read`
     ///
@@ -2378,7 +2378,7 @@ impl<'a, T: crate::runtime::Transport> PlansCollection<'a, T> {
         self.client.call(http).await
     }
 
-    /// Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.
+    /// Lists the plans the caller can see. Requires authentication with the `billing:read` permission.
     ///
     /// `GET /v1/plans` · permission `billing:read` · effect `read`
     ///

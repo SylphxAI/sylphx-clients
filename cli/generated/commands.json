@@ -7672,7 +7672,7 @@
               "paginates": true,
               "permission": "billing:read",
               "positional": null,
-              "summary": "Lists meters. Anonymous-readable: the pricing page renders from it.",
+              "summary": "Lists meters. Requires authentication with the `billing:read` permission.",
               "verb": "list"
             }
           ],
@@ -7730,7 +7730,7 @@
               "paginates": true,
               "permission": "billing:read",
               "positional": null,
-              "summary": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+              "summary": "Lists the plans the caller can see. Requires authentication with the `billing:read` permission.",
               "verb": "list"
             }
           ],

@@ -55346,7 +55346,7 @@
     },
     "/v1/meters": {
       "get": {
-        "description": "Lists meters. Anonymous-readable: the pricing page renders from it.",
+        "description": "Lists meters. Requires authentication with the `billing:read` permission.",
         "operationId": "billing_meters_list",
         "parameters": [
           {
@@ -55414,7 +55414,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Lists meters. Anonymous-readable: the pricing page renders from it.",
+        "summary": "Lists meters. Requires authentication with the `billing:read` permission.",
         "tags": [
           "billing"
         ],
@@ -145282,7 +145282,7 @@
     },
     "/v1/plans": {
       "get": {
-        "description": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+        "description": "Lists the plans the caller can see. Requires authentication with the `billing:read` permission.",
         "operationId": "billing_plans_list",
         "parameters": [
           {
@@ -145350,7 +145350,7 @@
             "$ref": "#/components/responses/Problem"
           }
         },
-        "summary": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+        "summary": "Lists the plans the caller can see. Requires authentication with the `billing:read` permission.",
         "tags": [
           "billing"
         ],

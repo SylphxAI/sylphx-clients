@@ -169369,7 +169369,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists meters. Anonymous-readable: the pricing page renders from it.",
+              "doc": "Lists meters. Requires authentication with the `billing:read` permission.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
@@ -169456,7 +169456,7 @@
             {
               "cancellable": false,
               "cli_verb": "",
-              "doc": "Lists the plans the caller can see. Anonymous-readable: the pricing page renders from it.",
+              "doc": "Lists the plans the caller can see. Requires authentication with the `billing:read` permission.",
               "effect": "read",
               "errors": [
                 "UNAUTHENTICATED",
