@@ -8,7 +8,7 @@
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct BuildAttempt {
-    /// The attempt's name. Only listing is supported.
+    /// The attempt's name, also used when reading its logs.
     ///
     /// Field behavior: `identifier`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -286,6 +286,63 @@ pub struct Placement {
     /// Replicas per cell; default 1.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub replicas: i32,
+}
+
+/// The request of ReadBuildAttemptLogs.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReadBuildAttemptLogsRequest {
+    /// The exact canonical attempt name returned by ListBuildAttempts.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// Resume after this cursor from the same attempt and principal.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// The response of ReadBuildAttemptLogs.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ReadBuildAttemptLogsResponse {
+    /// Redacted build container output, in order. Container streams are combined.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lines: Vec<String>,
+    /// Cursor after this page; it can also be used after a terminal page.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+    /// True if another page can be read immediately.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "hasMore"
+    )]
+    pub has_more: bool,
+    /// True when the attempt is terminal and the retained output window is drained.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub done: bool,
+    /// Latest recorded attempt state. A successful build need not be serving.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<BuildAttemptState>,
 }
 
 /// A Release is an immutable desired state of an environment's workloads.
@@ -1293,6 +1350,38 @@ impl<'a, T: crate::runtime::Transport> BuildAttemptsCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Reads a bounded page of the native build container's retained output,
+    /// oldest first. These logs are separate from standalone Build runs.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/build_attempts/*}:readLogs` · permission `release:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `UNAVAILABLE`.
+    pub async fn read_logs(
+        &self,
+        request: ReadBuildAttemptLogsRequest,
+    ) -> Result<ReadBuildAttemptLogsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:readLogs",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/build_attempts/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }
 

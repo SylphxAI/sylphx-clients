@@ -43703,7 +43703,7 @@
             "readOnly": true
           },
           "name": {
-            "description": "The attempt's name. Only listing is supported.",
+            "description": "The attempt's name, also used when reading its logs.",
             "type": "string"
           },
           "reason": {
@@ -43978,6 +43978,58 @@
             "description": "Replicas per cell; default 1.",
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.release.v1.ReadBuildAttemptLogsRequest": {
+        "description": "The request of ReadBuildAttemptLogs.",
+        "properties": {
+          "name": {
+            "description": "The exact canonical attempt name returned by ListBuildAttempts.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/BuildAttempt"
+          },
+          "page_token": {
+            "description": "Resume after this cursor from the same attempt and principal.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.release.v1.ReadBuildAttemptLogsResponse": {
+        "description": "The response of ReadBuildAttemptLogs.",
+        "properties": {
+          "done": {
+            "description": "True when the attempt is terminal and the retained output window is drained.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "has_more": {
+            "description": "True if another page can be read immediately.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "lines": {
+            "description": "Redacted build container output, in order. Container streams are combined.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Cursor after this page; it can also be used after a terminal page.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.release.v1.BuildAttemptState",
+            "description": "Latest recorded attempt state. A successful build need not be serving.",
+            "readOnly": true
           }
         },
         "type": "object"
@@ -74966,6 +75018,104 @@
           "UNAVAILABLE"
         ],
         "x-sylphx-method": "release.build_attempts.list",
+        "x-sylphx-permission": "release:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/build_attempts/{build_attempt}:readLogs": {
+      "get": {
+        "description": "Reads a bounded page of the native build container's retained output,\noldest first. These logs are separate from standalone Build runs.",
+        "operationId": "release_build_attempts_read_logs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "build_attempt",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Resume after this cursor from the same attempt and principal.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.release.v1.ReadBuildAttemptLogsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Reads a bounded page of the native build container's retained output, oldest first. These logs are separate from standalone Build runs.",
+        "tags": [
+          "release"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "PAGE_TOKEN_MISMATCH",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "release.build_attempts.read_logs",
         "x-sylphx-permission": "release:read",
         "x-sylphx-stage": "preview"
       }

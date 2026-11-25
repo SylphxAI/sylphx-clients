@@ -43089,6 +43089,41 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Reads a bounded page of the native build container's retained output, oldest first. These logs are separate from standalone Build runs."
+      },
+      "description": "Reads a bounded page of the native build container's retained output,\noldest first. These logs are separate from standalone Build runs.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/build_attempts/*}:readLogs",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ReadBuildAttemptLogs.",
+        "properties": {
+          "name": {
+            "description": "The exact canonical attempt name returned by ListBuildAttempts.",
+            "type": "string",
+            "x-sylphx-resource-reference": "release.sylphx.com/BuildAttempt"
+          },
+          "page_token": {
+            "description": "Resume after this cursor from the same attempt and principal.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "release.build_attempts.read_logs",
+      "permission": "release:read",
+      "tool": "release_build_attempts_read_logs"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,

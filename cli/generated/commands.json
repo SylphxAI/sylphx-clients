@@ -27113,6 +27113,28 @@
               },
               "summary": "Lists the latest native build attempt per service for one exact commit, newest first. Use this to follow a push even before a Release exists. An empty result means no matching attempts were observed. An unreadable store returns an error. This does not list standalone Build runs.",
               "verb": "list"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "page_token",
+                  "flag": "--page-token",
+                  "summary": "Resume after this cursor from the same attempt and principal.",
+                  "type": "string"
+                }
+              ],
+              "http": "GET /v1/{name=orgs/*/projects/*/envs/*/build_attempts/*}:readLogs",
+              "method": "release.build_attempts.read_logs",
+              "permission": "release:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "name",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}/build_attempts/{build_attempt}"
+              },
+              "summary": "Reads a bounded page of the native build container's retained output, oldest first. These logs are separate from standalone Build runs.",
+              "verb": "read-logs"
             }
           ],
           "noun": "build-attempts",

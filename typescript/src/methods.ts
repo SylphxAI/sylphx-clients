@@ -7690,6 +7690,16 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'release:read',
 	},
+	'release.build_attempts.read_logs': {
+		id: 'release.build_attempts.read_logs',
+		httpMethod: 'GET',
+		template: '/v1/{name=orgs/*/projects/*/envs/*/build_attempts/*}:readLogs',
+		pathParams: [['name', 'orgs/*/projects/*/envs/*/build_attempts/*']],
+		queryParams: ['page_token'],
+		longRunning: false,
+		effect: 'read',
+		permission: 'release:read',
+	},
 	'release.releases.deploy': {
 		id: 'release.releases.deploy',
 		httpMethod: 'POST',

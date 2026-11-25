@@ -51,6 +51,11 @@ pub fn logs_command() -> Command {
     Command::new("logs")
         .about("Print a build's log; with --follow, keep printing until the build ends")
         .long_about("Prints the log of a Build created by `sylphx build run --no-tree`, oldest line first: the command's stdout to stdout, its stderr and the platform's `sylphx:` lines to stderr. <BUILD> is a build name (orgs/{org}/projects/{project}/builds/{build}) or the id of a build in the linked project. With --follow the command waits for new lines and returns when the build has ended; without it, it prints what is written now.\n\nExample: sylphx build logs b01j8x --follow")
+        .after_long_help("For Hosting, pass the build attempt name from release build-attempts list, or its bda_ ID in the linked environment. Hosting output combines the build container streams. The latest --show-cursor value on stderr can be passed to --cursor to resume.")
+        .arg(Arg::new("cursor").long("cursor").value_name("TOKEN")
+            .help("Resume a Hosting build attempt after this cursor"))
+        .arg(Arg::new("show-cursor").long("show-cursor").action(ArgAction::SetTrue)
+            .help("Print the Hosting log cursor to stderr after each page"))
         .arg(Arg::new("build").value_name("BUILD").required(true).index(1)
             .help("The build name or id"))
         .arg(Arg::new("follow").long("follow").short('f').action(ArgAction::SetTrue)
@@ -61,6 +66,14 @@ pub fn logs_command() -> Command {
 pub async fn logs(client: Result<Client, Failure>, m: &ArgMatches) -> Result<(), Failure> {
     let client = client?;
     let arg = m.get_one::<String>("build").cloned().unwrap_or_default();
+    if native_logs::is_attempt(&arg) {
+        return native_logs::run(&client, &arg, m).await;
+    }
+    if m.get_one::<String>("cursor").is_some() || m.get_flag("show-cursor") {
+        return Err(Failure::Usage(
+            "--cursor and --show-cursor require a Hosting build attempt".into(),
+        ));
+    }
     let name = if arg.starts_with("orgs/") {
         arg
     } else {

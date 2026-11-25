@@ -132202,7 +132202,7 @@
             "IDENTIFIER"
           ],
           "cli_flag": "",
-          "doc": "The attempt's name. Only listing is supported.",
+          "doc": "The attempt's name, also used when reading its logs.",
           "filterable": false,
           "name": "name",
           "number": 1,
@@ -132982,6 +132982,153 @@
         }
       ],
       "name": "sylphx.release.v1.Placement",
+      "package": "sylphx.release.v1"
+    },
+    {
+      "doc": "The request of ReadBuildAttemptLogs.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The exact canonical attempt name returned by ListBuildAttempts.",
+          "filterable": false,
+          "name": "name",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "release.sylphx.com/BuildAttempt",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Resume after this cursor from the same attempt and principal.",
+          "filterable": false,
+          "name": "page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.release.v1.ReadBuildAttemptLogsRequest",
+      "package": "sylphx.release.v1"
+    },
+    {
+      "doc": "The response of ReadBuildAttemptLogs.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Redacted build container output, in order. Container streams are combined.",
+          "filterable": false,
+          "name": "lines",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Cursor after this page; it can also be used after a terminal page.",
+          "filterable": false,
+          "name": "next_page_token",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "True if another page can be read immediately.",
+          "filterable": false,
+          "name": "has_more",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "True when the attempt is terminal and the retained output window is drained.",
+          "filterable": false,
+          "name": "done",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Latest recorded attempt state. A successful build need not be serving.",
+          "filterable": false,
+          "name": "state",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.release.v1.BuildAttemptState"
+          }
+        }
+      ],
+      "name": "sylphx.release.v1.ReadBuildAttemptLogsResponse",
       "package": "sylphx.release.v1"
     },
     {
@@ -192343,6 +192490,50 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Reads a bounded page of the native build container's retained output,\noldest first. These logs are separate from standalone Build runs.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "RESOURCE_NOT_FOUND",
+                "INVALID_FIELD",
+                "PAGE_TOKEN_MISMATCH",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": null,
+                "method": "GET",
+                "path_params": [
+                  {
+                    "field": "name",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}/build_attempts/{build_attempt}",
+                    "pattern": "orgs/*/projects/*/envs/*/build_attempts/*"
+                  }
+                ],
+                "query_params": [
+                  "page_token"
+                ],
+                "template": "/v1/{name=orgs/*/projects/*/envs/*/build_attempts/*}:readLogs"
+              },
+              "id": "release.build_attempts.read_logs",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "default",
+              "page": null,
+              "permission": "release:read",
+              "proto": "sylphx.release.v1.ReleaseService.ReadBuildAttemptLogs",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.release.v1.ReadBuildAttemptLogsRequest",
+              "resource_field": null,
+              "response": "sylphx.release.v1.ReadBuildAttemptLogsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "read_logs"
             }
           ],
           "name": "build_attempts",

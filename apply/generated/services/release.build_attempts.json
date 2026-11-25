@@ -12,6 +12,15 @@
           },
           "id": "release.build_attempts.list",
           "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_token"
+            ]
+          },
+          "id": "release.build_attempts.read_logs",
+          "kind": "custom"
         }
       ],
       "resource_type": "release.sylphx.com/BuildAttempt"

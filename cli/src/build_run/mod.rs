@@ -33,6 +33,7 @@ mod git_deps;
 mod history;
 mod image;
 mod labels;
+mod native_logs;
 mod pack_guest;
 mod packs;
 mod redact;

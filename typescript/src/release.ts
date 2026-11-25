@@ -10,7 +10,7 @@ import type * as common from './common.js'
  * environment and source commit. It does not imply that a Release exists.
  */
 export interface BuildAttempt {
-	/** The attempt's name. Only listing is supported. */
+	/** The attempt's name, also used when reading its logs. */
 	name?: string
 	/** Stable identity of this attempt. */
 	readonly uid?: string
@@ -138,6 +138,28 @@ export interface Placement {
 	attributes?: Record<string, string>
 	/** Replicas per cell; default 1. */
 	replicas?: number
+}
+
+/** The request of ReadBuildAttemptLogs. */
+export interface ReadBuildAttemptLogsRequest {
+	/** The exact canonical attempt name returned by ListBuildAttempts. */
+	name: string
+	/** Resume after this cursor from the same attempt and principal. */
+	pageToken?: string
+}
+
+/** The response of ReadBuildAttemptLogs. */
+export interface ReadBuildAttemptLogsResponse {
+	/** Redacted build container output, in order. Container streams are combined. */
+	readonly lines?: string[]
+	/** Cursor after this page; it can also be used after a terminal page. */
+	readonly nextPageToken?: string
+	/** True if another page can be read immediately. */
+	readonly hasMore?: boolean
+	/** True when the attempt is terminal and the retained output window is drained. */
+	readonly done?: boolean
+	/** Latest recorded attempt state. A successful build need not be serving. */
+	readonly state?: BuildAttemptState
 }
 
 /**
@@ -393,6 +415,13 @@ runtime.registerSchemas({
 	'sylphx.release.v1.Placement': [
 		['attributes', 'attributes', undefined, 'map'],
 	],
+	'sylphx.release.v1.ReadBuildAttemptLogsRequest': [
+		['pageToken', 'page_token'],
+	],
+	'sylphx.release.v1.ReadBuildAttemptLogsResponse': [
+		['nextPageToken', 'next_page_token'],
+		['hasMore', 'has_more'],
+	],
 	'sylphx.release.v1.Release': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.release.v1.ReleaseSpec'],
@@ -613,6 +642,24 @@ export class BuildAttemptsCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Reads a bounded page of the native build container's retained output,
+	 * oldest first. These logs are separate from standalone Build runs.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/build_attempts/*}:readLogs` · permission `release:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`, `UNAVAILABLE`.
+	 */
+	async readLogs(request: ReadBuildAttemptLogsRequest): Promise<ReadBuildAttemptLogsResponse> {
+		return this.client.call<ReadBuildAttemptLogsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/build_attempts/*', 'name')}:readLogs`,
+			query: { page_token: request.pageToken },
+			responseType: 'sylphx.release.v1.ReadBuildAttemptLogsResponse',
+			mutation: false,
+		})
 	}
 }
 
