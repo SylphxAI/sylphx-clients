@@ -2955,7 +2955,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-cli"
-version = "0.29.66"
+version = "0.29.67"
 dependencies = [
  "base64 0.23.1",
  "clap",
@@ -2987,7 +2987,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-mcp"
-version = "0.29.66"
+version = "0.29.67"
 dependencies = [
  "rmcp",
  "serde",
@@ -3013,7 +3013,7 @@ dependencies = [
 
 [[package]]
 name = "sylphx-migrate"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "base64 0.22.1",
  "serde",
