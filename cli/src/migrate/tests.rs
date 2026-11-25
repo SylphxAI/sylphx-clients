@@ -152,3 +152,41 @@ async fn legacy_autocommit_postgres_proof() {
         .await
         .unwrap();
 }
+
+#[test]
+fn runtime_role_flags_are_repeatable_and_override_the_environment() {
+    for action in [vec!["apply"], vec!["plan", "--release"]] {
+        let mut argv = vec!["migrate"];
+        argv.extend(action);
+        let matches = super::command().try_get_matches_from(&argv).unwrap();
+        let (_, args) = matches.subcommand().unwrap();
+        assert!(super::runtime_roles(args, None).unwrap().is_empty());
+        let env_roles =
+            super::runtime_roles(args, Some("worker_runtime,api_runtime".into())).unwrap();
+        assert_eq!(env_roles.as_slice(), ["api_runtime", "worker_runtime"]);
+        for malformed in [
+            "",
+            "api_runtime,",
+            "api_runtime, api_runtime",
+            "pg_reserved",
+        ] {
+            assert!(super::runtime_roles(args, Some(malformed.into())).is_err());
+        }
+
+        argv.extend([
+            "--grant-runtime-role",
+            "worker_runtime",
+            "--grant-runtime-role",
+            "api_runtime",
+        ]);
+        let matches = super::command().try_get_matches_from(argv).unwrap();
+        let (_, args) = matches.subcommand().unwrap();
+        let roles = super::runtime_roles(args, Some("pg_ignored".into())).unwrap();
+        assert_eq!(roles.as_slice(), env_roles.as_slice());
+    }
+    for action in ["plan", "status", "lint"] {
+        assert!(super::command()
+            .try_get_matches_from(["migrate", action, "--grant-runtime-role", "api_runtime"])
+            .is_err());
+    }
+}

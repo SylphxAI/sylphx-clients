@@ -3,10 +3,11 @@ use crate::Failure;
 use clap::{value_parser, Arg, ArgMatches, Command};
 use serde::Deserialize;
 use std::{
+    ffi::OsString,
     fs,
     path::{Path, PathBuf},
 };
-use sylphx_migrate::{Apply, ReleaseTarget, SourceTree};
+use sylphx_migrate::{Apply, ReleaseTarget, RuntimeRoles, SourceTree};
 type Result<T> = std::result::Result<T, String>;
 
 pub(crate) fn command() -> Command {
@@ -46,13 +47,38 @@ pub(crate) fn command() -> Command {
                         .long("release")
                         .action(clap::ArgAction::SetTrue)
                         .hide(true),
-                ),
+                )
+                .arg(runtime_role_arg().requires("release")),
             Command::new("lint").about("Lint every SQL file without contacting PostgreSQL"),
             Command::new("apply")
                 .about("Lint and execute pending SQL against DATABASE_URL")
-                .arg(Arg::new("release-seal").long("release-seal").hide(true)),
+                .arg(Arg::new("release-seal").long("release-seal").hide(true))
+                .arg(runtime_role_arg()),
             Command::new("status").about("Read target history and reconcile it with local SQL"),
         ])
+}
+
+fn runtime_role_arg() -> Arg {
+    Arg::new("grant-runtime-role")
+        .long("grant-runtime-role")
+        .action(clap::ArgAction::Append)
+        .value_name("ROLE")
+        .help("Grant runtime access to this login (repeatable). Falls back to comma-separated SYLPHX_MIGRATE_RUNTIME_ROLES only when absent")
+}
+
+fn runtime_roles(args: &ArgMatches, fallback: Option<OsString>) -> Result<RuntimeRoles> {
+    if let Some(explicit) = args.get_many::<String>("grant-runtime-role") {
+        return RuntimeRoles::new(explicit);
+    }
+    match fallback {
+        None => Ok(RuntimeRoles::default()),
+        Some(roles) => RuntimeRoles::new(
+            roles
+                .to_str()
+                .ok_or("SYLPHX_MIGRATE_RUNTIME_ROLES must be UTF-8")?
+                .split(','),
+        ),
+    }
 }
 
 #[derive(Deserialize)]
@@ -134,6 +160,14 @@ pub(crate) async fn run(args: &ArgMatches) -> std::result::Result<(), Failure> {
         None
     };
     let release_plan = action == "plan" && args.get_flag("release");
+    let files = if release_plan || action == "apply" {
+        files.with_runtime_roles(
+            runtime_roles(args, std::env::var_os("SYLPHX_MIGRATE_RUNTIME_ROLES"))
+                .map_err(Failure::Usage)?,
+        )
+    } else {
+        files
+    };
     let key = if release_plan || seal.is_some() {
         "MIGRATOR_DATABASE_URL"
     } else {

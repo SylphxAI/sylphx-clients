@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgConnectOptions, PgConnection};
 use url::Url;
 
-use crate::{postgres, Apply, Report, Result, SourceTree};
+use crate::{postgres, runtime_roles, Apply, Report, Result, SourceTree};
 
 #[derive(Serialize)]
 pub struct ReleaseTarget {
@@ -120,13 +120,24 @@ pub struct ReleasePlan {
 
 impl SourceTree {
     pub fn seal(&self, target: &ReleaseTarget, report: &Report<'_>) -> Result<String> {
-        let bytes = serde_json::to_vec(&(
-            "sylphx-release-migrate-v1",
-            target,
-            &self.baseline_sha,
-            &report.applied,
-            &report.pending,
-        ))
+        let bytes = if self.runtime_roles.is_empty() {
+            serde_json::to_vec(&(
+                "sylphx-release-migrate-v1",
+                target,
+                &self.baseline_sha,
+                &report.applied,
+                &report.pending,
+            ))
+        } else {
+            serde_json::to_vec(&(
+                "sylphx-release-migrate-v2",
+                target,
+                &self.baseline_sha,
+                &report.applied,
+                &report.pending,
+                self.runtime_roles.as_slice(),
+            ))
+        }
         .map_err(|_| "cannot encode migration plan")?;
         Ok(format!("{:x}", Sha256::digest(bytes)))
     }
@@ -141,6 +152,7 @@ impl SourceTree {
             return Err("native migration source is empty".into());
         }
         target.check_session(conn).await?;
+        runtime_roles::verify(conn, &self.runtime_roles).await?;
         let report = self.inspect(conn).await?;
         // Pending SQL must pass the runner's lint before a release can roll.
         let pending = report
@@ -176,6 +188,48 @@ impl SourceTree {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn runtime_roles_version_and_bind_the_seal_without_changing_v1() {
+        let target = ReleaseTarget {
+            host: "127.0.0.1".into(),
+            port: 5432,
+            database: "fixture".into(),
+            role: "writer".into(),
+            verified_network: false,
+        };
+        let mut tree = SourceTree::from_blobs(
+            vec![(
+                "1_fixture.sql".into(),
+                "CREATE TABLE fixture (id bigint);".into(),
+            )],
+            None,
+        )
+        .unwrap();
+        let report = Report {
+            applied: vec![],
+            pending: vec![crate::File {
+                id: "1".into(),
+                file: "1_fixture.sql",
+                sha256: &tree.files[&1].sha256,
+                source: None,
+            }],
+            imports: vec![],
+        };
+        let legacy = tree.seal(&target, &report).unwrap();
+        assert_eq!(
+            legacy,
+            "c9ab6c8a146e5e401448e295004cd20a0ac43e3ace4a4c7b50577e8ce2c29c51"
+        );
+        tree.runtime_roles = crate::RuntimeRoles::new(["api_runtime"]).unwrap();
+        let one = tree.seal(&target, &report).unwrap();
+        assert_ne!(legacy, one);
+        tree.runtime_roles = crate::RuntimeRoles::new(["worker_runtime", "api_runtime"]).unwrap();
+        let two = tree.seal(&target, &report).unwrap();
+        assert_ne!(one, two);
+        tree.runtime_roles = crate::RuntimeRoles::new(["api_runtime", "worker_runtime"]).unwrap();
+        assert_eq!(two, tree.seal(&target, &report).unwrap());
+    }
 
     #[test]
     fn target_url_requires_an_unambiguous_verified_network_identity() {

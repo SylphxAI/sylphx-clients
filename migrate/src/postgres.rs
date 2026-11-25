@@ -10,6 +10,7 @@ use super::{
     baseline::Legacy,
     history::{self, Recorded, Report, Source},
     lint::{self, Diagnostic},
+    runtime_roles::{self, sync_runtime_role_grants},
     valid_id, Files, Migration, ReleaseTarget, Result, SourceTree,
 };
 
@@ -171,6 +172,7 @@ async fn apply_locked<'a>(
     release: Option<(&ReleaseTarget, &str)>,
 ) -> Result<Apply<'a>> {
     let files = &tree.files;
+    let roles = &tree.runtime_roles;
     // A legacy writer must be fenced before cutover (it doesn't read this
     // ledger). Additionally refuse overlap with a currently running default
     // Atlas process, as well as all Sylphx runner sessions.
@@ -207,6 +209,7 @@ async fn apply_locked<'a>(
             return Err("native migration plan changed before apply; no writes made".into());
         }
     }
+    runtime_roles::verify(&mut tx, roles).await?;
     let mut diagnostics = Vec::new();
     let mut pending = Vec::new();
     for m in files
@@ -234,13 +237,24 @@ async fn apply_locked<'a>(
         )
         .await
         .map_err(|_| "cannot create canonical migration ledger in public")?;
+        tx.execute("REVOKE ALL ON TABLE public._sylphx_migrations FROM PUBLIC")
+            .await
+            .map_err(|_| "cannot revoke PUBLIC privileges on the canonical migration ledger")?;
         for (id, source) in report.imports {
             record(&mut *tx, &files[&id], source, true, &[]).await?;
         }
     }
+    if pending.is_empty() {
+        // Also reconcile an existing database without replaying migration SQL.
+        sync_runtime_role_grants(&mut tx, roles).await?;
+    } else {
+        // In particular, do not commit a fresh ledger if default ACLs grant a
+        // runtime role writes. The revoke above only removes PUBLIC grants.
+        runtime_roles::assert_ledger_read_only(&mut tx, roles).await?;
+    }
     tx.commit()
         .await
-        .map_err(|_| "cannot commit canonical ledger import")?;
+        .map_err(|_| "cannot commit canonical ledger import or runtime reconciliation")?;
     for (m, checked) in pending {
         if checked.concurrent {
             // A concurrent build/drop cannot share a commit with its receipt.
@@ -274,20 +288,21 @@ async fn apply_locked<'a>(
                     .map_err(|_| "cannot restore migration session lock_timeout")?;
             }
             replay?;
-            let updated = sqlx::query(
-                "UPDATE public._sylphx_migrations SET finished_at = clock_timestamp()
-                                       WHERE id = $1 AND sha256 = $2 AND finished_at IS NULL",
-            )
-            .bind(m.id)
-            .bind(&m.sha256)
-            .execute(&mut *db)
-            .await
-            .map_err(|_| format!("cannot confirm concurrent migration {}", m.id))?;
-            if updated.rows_affected() != 1 {
-                return Err(format!(
-                    "could not confirm exact receipt for migration {}",
-                    m.id
-                ));
+            if roles.is_empty() {
+                confirm_concurrent(&mut *db, m).await?;
+            } else {
+                let mut tx = db
+                    .begin()
+                    .await
+                    .map_err(|_| "cannot start concurrent migration receipt transaction")?;
+                confirm_concurrent(&mut *tx, m).await?;
+                sync_runtime_role_grants(&mut tx, roles).await?;
+                tx.commit().await.map_err(|_| {
+                    format!(
+                        "cannot confirm commit for migration {}; inspect ledger before retrying",
+                        m.id
+                    )
+                })?;
             }
         } else {
             let mut tx = db
@@ -297,6 +312,7 @@ async fn apply_locked<'a>(
             for span in checked.spans {
                 execute(&mut *tx, m, &m.sql[span]).await?;
             }
+            sync_runtime_role_grants(&mut tx, roles).await?;
             record(&mut *tx, m, Source::Sylphx, true, &checked.overrides).await?;
             tx.commit().await.map_err(|_| {
                 format!(
@@ -313,6 +329,25 @@ async fn apply_locked<'a>(
         );
     }
     Ok(Apply::Applied(report))
+}
+
+async fn confirm_concurrent<'e>(db: impl PgExecutor<'e>, m: &Migration) -> Result<()> {
+    let updated = sqlx::query(
+        "UPDATE public._sylphx_migrations SET finished_at = clock_timestamp()
+                               WHERE id = $1 AND sha256 = $2 AND finished_at IS NULL",
+    )
+    .bind(m.id)
+    .bind(&m.sha256)
+    .execute(db)
+    .await
+    .map_err(|_| format!("cannot confirm concurrent migration {}", m.id))?;
+    if updated.rows_affected() != 1 {
+        return Err(format!(
+            "could not confirm exact receipt for migration {}",
+            m.id
+        ));
+    }
+    Ok(())
 }
 
 async fn execute<'e>(db: impl PgExecutor<'e>, migration: &Migration, sql: &str) -> Result<()> {

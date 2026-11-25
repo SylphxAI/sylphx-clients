@@ -3,6 +3,7 @@ mod baseline;
 mod history;
 mod lint;
 mod postgres;
+mod runtime_roles;
 mod sql;
 
 use std::{collections::BTreeMap, fs, path::Path};
@@ -15,6 +16,7 @@ type Files = BTreeMap<i64, Migration>;
 pub use history::{File, Report, Source};
 pub use lint::Diagnostic;
 pub use postgres::{connect, Apply};
+pub use runtime_roles::RuntimeRoles;
 
 mod release;
 pub use release::{ReleasePlan, ReleaseTarget};
@@ -22,6 +24,7 @@ pub use release::{ReleasePlan, ReleaseTarget};
 pub struct SourceTree {
     files: Files,
     baseline_sha: Option<String>,
+    runtime_roles: RuntimeRoles,
 }
 
 struct Migration {
@@ -110,7 +113,14 @@ impl SourceTree {
         Ok(Self {
             files,
             baseline_sha,
+            runtime_roles: RuntimeRoles::default(),
         })
+    }
+
+    /// Set the additive runtime grants for apply and bind them to release seals.
+    pub fn with_runtime_roles(mut self, roles: RuntimeRoles) -> Self {
+        self.runtime_roles = roles;
+        self
     }
 
     pub fn lint(&self) -> Vec<Diagnostic<'_>> {
