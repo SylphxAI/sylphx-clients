@@ -1,0 +1,21 @@
+{
+  "name": "sylphx.notify.v1.MaskedAliasState",
+  "package": "sylphx.notify.v1",
+  "values": [
+    {
+      "number": 1,
+      "proto_name": "MASKED_ALIAS_STATE_ACTIVE",
+      "wire": "active"
+    },
+    {
+      "number": 2,
+      "proto_name": "MASKED_ALIAS_STATE_PAUSED",
+      "wire": "paused"
+    },
+    {
+      "number": 3,
+      "proto_name": "MASKED_ALIAS_STATE_REVOKED",
+      "wire": "revoked"
+    }
+  ]
+}

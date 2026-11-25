@@ -1,0 +1,46 @@
+{
+  "collections": [
+    {
+      "methods": [
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "notify.masked_aliases.get",
+          "kind": "get"
+        },
+        {
+          "http": {
+            "query_params": [
+              "page_size",
+              "page_token"
+            ]
+          },
+          "id": "notify.masked_aliases.list",
+          "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": [
+              "masked_alias_id",
+              "validate_only"
+            ]
+          },
+          "id": "notify.masked_aliases.create",
+          "kind": "create"
+        },
+        {
+          "http": {
+            "query_params": [
+              "update_mask",
+              "validate_only"
+            ]
+          },
+          "id": "notify.masked_aliases.update",
+          "kind": "update"
+        }
+      ],
+      "resource_type": "notify.sylphx.com/MaskedAlias"
+    }
+  ]
+}

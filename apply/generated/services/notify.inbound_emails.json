@@ -6,6 +6,13 @@
           "http": {
             "query_params": []
           },
+          "id": "notify.inbound_emails.raw",
+          "kind": "custom"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
           "id": "notify.inbound_emails.get",
           "kind": "get"
         },

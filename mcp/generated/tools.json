@@ -38738,6 +38738,12 @@
                 "x-sylphx-immutable": true,
                 "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
               },
+              "masked_alias": {
+                "description": "A masked alias to send as. Submission is not enabled for masked aliases.",
+                "type": "string",
+                "x-sylphx-immutable": true,
+                "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
+              },
               "meta": {
                 "additionalProperties": false,
                 "description": "Resource metadata.",
@@ -39008,10 +39014,25 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "access": {
+                    "description": "The access mode for a hosted mailbox; unset defaults to API.",
+                    "enum": [
+                      "api",
+                      "full"
+                    ],
+                    "type": "string"
+                  },
                   "address": {
                     "description": "The address, for example `support@example.com`.",
                     "type": "string",
                     "x-sylphx-immutable": true
+                  },
+                  "aliases": {
+                    "description": "Additional receiving addresses, for a hosted mailbox.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
                   },
                   "append_sent": {
                     "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
@@ -39092,11 +39113,41 @@
                     "writeOnly": true,
                     "x-sylphx-sensitive": true
                   },
+                  "owner_customer_org_id": {
+                    "description": "Customer organization that owns a hosted mailbox. Empty for platform-owned mailboxes.",
+                    "type": "string"
+                  },
                   "password": {
                     "description": "The login password of both servers; write-only, sealed at rest.",
                     "type": "string",
                     "writeOnly": true,
                     "x-sylphx-sensitive": true
+                  },
+                  "quota_bytes": {
+                    "description": "The hosted mailbox storage limit, in bytes.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "retention": {
+                    "additionalProperties": false,
+                    "description": "The hosted mailbox retention policy.",
+                    "properties": {
+                      "mail_days": {
+                        "description": "Days to retain hosted mail. Unset means no age-based removal.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "raw_days": {
+                        "description": "Days to retain the raw message.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "shared": {
+                    "description": "Whether a platform-owned hosted mailbox is marked as shared. Does not grant access.",
+                    "type": "boolean"
                   },
                   "smtp": {
                     "additionalProperties": false,
@@ -39128,6 +39179,10 @@
                       "host"
                     ],
                     "type": "object"
+                  },
+                  "spam_folder": {
+                    "description": "Folder used for spam in a hosted mailbox.",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -39223,10 +39278,25 @@
                 "additionalProperties": false,
                 "description": "Desired state.",
                 "properties": {
+                  "access": {
+                    "description": "The access mode for a hosted mailbox; unset defaults to API.",
+                    "enum": [
+                      "api",
+                      "full"
+                    ],
+                    "type": "string"
+                  },
                   "address": {
                     "description": "The address, for example `support@example.com`.",
                     "type": "string",
                     "x-sylphx-immutable": true
+                  },
+                  "aliases": {
+                    "description": "Additional receiving addresses, for a hosted mailbox.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
                   },
                   "append_sent": {
                     "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
@@ -39307,11 +39377,41 @@
                     "writeOnly": true,
                     "x-sylphx-sensitive": true
                   },
+                  "owner_customer_org_id": {
+                    "description": "Customer organization that owns a hosted mailbox. Empty for platform-owned mailboxes.",
+                    "type": "string"
+                  },
                   "password": {
                     "description": "The login password of both servers; write-only, sealed at rest.",
                     "type": "string",
                     "writeOnly": true,
                     "x-sylphx-sensitive": true
+                  },
+                  "quota_bytes": {
+                    "description": "The hosted mailbox storage limit, in bytes.",
+                    "format": "int64",
+                    "type": "string"
+                  },
+                  "retention": {
+                    "additionalProperties": false,
+                    "description": "The hosted mailbox retention policy.",
+                    "properties": {
+                      "mail_days": {
+                        "description": "Days to retain hosted mail. Unset means no age-based removal.",
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "raw_days": {
+                        "description": "Days to retain the raw message.",
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "shared": {
+                    "description": "Whether a platform-owned hosted mailbox is marked as shared. Does not grant access.",
+                    "type": "boolean"
                   },
                   "smtp": {
                     "additionalProperties": false,
@@ -39343,6 +39443,10 @@
                       "host"
                     ],
                     "type": "object"
+                  },
+                  "spam_folder": {
+                    "description": "Folder used for spam in a hosted mailbox.",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -39470,6 +39574,631 @@
       "method_id": "notify.mailboxes.erase_address",
       "permission": "notify:write",
       "tool": "notify_mailboxes_erase_address"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a masked alias."
+      },
+      "description": "Gets a masked alias.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/masked_aliases/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for GetMaskedAlias.",
+        "properties": {
+          "name": {
+            "description": "The name resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.masked_aliases.get",
+      "permission": "notify:read",
+      "tool": "notify_masked_aliases_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the masked alias collection."
+      },
+      "description": "Lists the masked alias collection.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*}/masked_aliases",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for ListMaskedAliases.",
+        "properties": {
+          "page_size": {
+            "description": "The requested page size.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The token returned by a previous call.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.masked_aliases.list",
+      "permission": "notify:read",
+      "tool": "notify_masked_aliases_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a masked alias."
+      },
+      "description": "Creates a masked alias.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/masked_aliases",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for CreateMaskedAlias.",
+        "properties": {
+          "masked_alias": {
+            "additionalProperties": false,
+            "description": "The resource to create.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata, including the etag.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "The resource name.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "address": {
+                    "description": "An unused address on a receiving domain in this environment.",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "mailbox": {
+                    "description": "The hosted mailbox that receives the alias's mail.",
+                    "type": "string",
+                    "x-sylphx-immutable": true,
+                    "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+                  },
+                  "reply_mode": {
+                    "description": "Defaults to DISABLED. Does not grant outbound permission.",
+                    "enum": [
+                      "disabled",
+                      "reverse_alias"
+                    ],
+                    "type": "string"
+                  },
+                  "state": {
+                    "description": "Defaults to ACTIVE on creation. REVOKED never transitions again.",
+                    "enum": [
+                      "active",
+                      "paused",
+                      "revoked"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "address",
+                  "mailbox"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "masked_alias_id": {
+            "description": "The ID; generated if not provided.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
+          },
+          "validate_only": {
+            "description": "Validate without creating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "masked_alias"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.masked_aliases.create",
+      "permission": "notify:write",
+      "tool": "notify_masked_aliases_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Updates a masked alias."
+      },
+      "description": "Updates a masked alias.",
+      "effect": "write",
+      "http": "PATCH /v1/{masked_alias.name=orgs/*/projects/*/envs/*/masked_aliases/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for UpdateMaskedAlias.",
+        "properties": {
+          "masked_alias": {
+            "additionalProperties": false,
+            "description": "The resource to update.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata, including the etag.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "The resource name.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "Desired state.",
+                "properties": {
+                  "address": {
+                    "description": "An unused address on a receiving domain in this environment.",
+                    "type": "string",
+                    "x-sylphx-immutable": true
+                  },
+                  "mailbox": {
+                    "description": "The hosted mailbox that receives the alias's mail.",
+                    "type": "string",
+                    "x-sylphx-immutable": true,
+                    "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+                  },
+                  "reply_mode": {
+                    "description": "Defaults to DISABLED. Does not grant outbound permission.",
+                    "enum": [
+                      "disabled",
+                      "reverse_alias"
+                    ],
+                    "type": "string"
+                  },
+                  "state": {
+                    "description": "Defaults to ACTIVE on creation. REVOKED never transitions again.",
+                    "enum": [
+                      "active",
+                      "paused",
+                      "revoked"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "address",
+                  "mailbox"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "update_mask": {
+            "description": "The fields to update. Only spec.state and spec.reply_mode can change.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without updating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "masked_alias"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.masked_aliases.update",
+      "permission": "notify:write",
+      "tool": "notify_masked_aliases_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets a app password."
+      },
+      "description": "Gets a app password.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for GetAppPassword.",
+        "properties": {
+          "name": {
+            "description": "The name resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.app_passwords.get",
+      "permission": "notify:read",
+      "tool": "notify_app_passwords_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists the app password collection."
+      },
+      "description": "Lists the app password collection.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/app_passwords",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for ListAppPasswords.",
+        "properties": {
+          "page_size": {
+            "description": "The requested page size.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The token returned by a previous call.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.app_passwords.list",
+      "permission": "notify:read",
+      "tool": "notify_app_passwords_list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Creates a app password."
+      },
+      "description": "Creates a app password.",
+      "effect": "write",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/app_passwords",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for CreateAppPassword.",
+        "properties": {
+          "app_password": {
+            "additionalProperties": false,
+            "description": "The resource to create.",
+            "properties": {
+              "meta": {
+                "additionalProperties": false,
+                "description": "Resource metadata.",
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, unindexed annotations.",
+                    "type": "object"
+                  },
+                  "display_name": {
+                    "description": "Caller-writable human-readable name.",
+                    "type": "string"
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Caller-writable, indexed labels (AIP-122 label rules).",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "name": {
+                "description": "The resource name.",
+                "type": "string"
+              },
+              "spec": {
+                "additionalProperties": false,
+                "description": "The password's metadata.",
+                "properties": {
+                  "expire_time": {
+                    "description": "The expiration time, if set.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "label": {
+                    "description": "A device or client label.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "label"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "spec"
+            ],
+            "type": "object"
+          },
+          "app_password_id": {
+            "description": "The ID; generated if not provided.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          },
+          "validate_only": {
+            "description": "Validate without creating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "app_password"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.app_passwords.create",
+      "permission": "notify:write",
+      "tool": "notify_app_passwords_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Deletes the app password."
+      },
+      "description": "Deletes the app password.",
+      "effect": "destructive",
+      "http": "DELETE /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for DeleteAppPassword.",
+        "properties": {
+          "confirm": {
+            "const": true,
+            "description": "Must be true: this call destroys or revokes.",
+            "type": "boolean"
+          },
+          "etag": {
+            "description": "The resource etag.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          },
+          "validate_only": {
+            "description": "Validate without deleting.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.app_passwords.delete",
+      "permission": "notify:write",
+      "tool": "notify_app_passwords_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Returns the retained raw MIME of a message as base64 in JSON. Erased or expired messages have no raw response."
+      },
+      "description": "Returns the retained raw MIME of a message as base64 in JSON.\nErased or expired messages have no raw response.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}:raw",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "Request for GetInboundEmailRaw.",
+        "properties": {
+          "name": {
+            "description": "The inbound email resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_emails.raw",
+      "permission": "notify:read",
+      "tool": "notify_inbound_emails_raw"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Gets an inbound email."
+      },
+      "description": "Gets an inbound email.",
+      "effect": "read",
+      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of GetInboundEmail.",
+        "properties": {
+          "name": {
+            "description": "The name of the inbound email to get.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_emails.get",
+      "permission": "notify:read",
+      "tool": "notify_inbound_emails_get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Lists a mailbox's inbound email in feed order, oldest first."
+      },
+      "description": "Lists a mailbox's inbound email in feed order, oldest first.",
+      "effect": "read",
+      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/inbound_emails",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of ListInboundEmails.",
+        "properties": {
+          "filter": {
+            "description": "AIP-160 filter over labels and filterable fields.",
+            "type": "string"
+          },
+          "order_by": {
+            "description": "AIP-132 ordering over filterable fields.",
+            "type": "string"
+          },
+          "page_size": {
+            "description": "At most this many; default 50, clamped to 1000.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "`next_page_token` of the previous page.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The mailbox to list in.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "notify.inbound_emails.list",
+      "permission": "notify:read",
+      "tool": "notify_inbound_emails_list"
     },
     {
       "annotations": {
@@ -40033,85 +40762,6 @@
       "method_id": "notify.mailbox_connect_links.create",
       "permission": "notify:write",
       "tool": "notify_mailbox_connect_links_create"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": false,
-        "readOnlyHint": true,
-        "title": "Gets an inbound email."
-      },
-      "description": "Gets an inbound email.",
-      "effect": "read",
-      "http": "GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of GetInboundEmail.",
-        "properties": {
-          "name": {
-            "description": "The name of the inbound email to get.",
-            "type": "string",
-            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "notify.inbound_emails.get",
-      "permission": "notify:read",
-      "tool": "notify_inbound_emails_get"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": false,
-        "readOnlyHint": true,
-        "title": "Lists a mailbox's inbound email in feed order, oldest first."
-      },
-      "description": "Lists a mailbox's inbound email in feed order, oldest first.",
-      "effect": "read",
-      "http": "GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/inbound_emails",
-      "input_schema": {
-        "additionalProperties": false,
-        "description": "The request of ListInboundEmails.",
-        "properties": {
-          "filter": {
-            "description": "AIP-160 filter over labels and filterable fields.",
-            "type": "string"
-          },
-          "order_by": {
-            "description": "AIP-132 ordering over filterable fields.",
-            "type": "string"
-          },
-          "page_size": {
-            "description": "At most this many; default 50, clamped to 1000.",
-            "format": "int32",
-            "type": "integer"
-          },
-          "page_token": {
-            "description": "`next_page_token` of the previous page.",
-            "type": "string"
-          },
-          "parent": {
-            "description": "The mailbox to list in.",
-            "type": "string",
-            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
-          }
-        },
-        "required": [
-          "parent"
-        ],
-        "type": "object"
-      },
-      "long_running": false,
-      "method_id": "notify.inbound_emails.list",
-      "permission": "notify:read",
-      "tool": "notify_inbound_emails_list"
     },
     {
       "annotations": {

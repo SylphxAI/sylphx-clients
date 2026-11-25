@@ -14351,7 +14351,8 @@
           "BUDGET_EXHAUSTED",
           "NO_LOG_STREAMS_MAPPED",
           "DEVICE_LOST",
-          "FAILED_PRECONDITION"
+          "FAILED_PRECONDITION",
+          "COMPLAINT_FUSE_ACTIVE"
         ],
         "type": "string"
       },
@@ -36502,6 +36503,87 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.AppPassword": {
+        "description": "A hosted mailbox's app password. The secret is returned only on creation.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata."
+          },
+          "name": {
+            "description": "The resource name.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.AppPasswordSpec",
+            "description": "The password's metadata."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.AppPasswordStatus",
+            "description": "Observed state and the one-time secret.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "The immutable unique identifier.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.AppPasswordSpec": {
+        "description": "The app password's label and expiration.",
+        "properties": {
+          "expire_time": {
+            "description": "The expiration time, if set.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "label": {
+            "description": "A device or client label.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.AppPasswordStatus": {
+        "description": "The app password's creation result.",
+        "properties": {
+          "conditions": {
+            "description": "Resource conditions, if any.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "create_time": {
+            "description": "The time of creation.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "The generation this status describes.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "password": {
+            "description": "Only the create response includes the secret.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.ApplyPhoneNumberRouteRequest": {
         "description": "Apply or reconcile the SAME operation after a lost response. Resupply a\ncurrent token with the same operation id and route; readback precedes retry.\nCredentials are removed before hashing/persistence. No unattended credential\nrefresh or background retry occurs; the provider continues executing calls.",
         "properties": {
@@ -36841,6 +36923,33 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.CreateAppPasswordRequest": {
+        "description": "Request for CreateAppPassword.",
+        "properties": {
+          "app_password": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.AppPassword",
+            "description": "The resource to create."
+          },
+          "app_password_id": {
+            "description": "The ID; generated if not provided.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          },
+          "validate_only": {
+            "description": "Validate without creating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "app_password"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.CreateBroadcastRequest": {
         "description": "The request of CreateBroadcast.",
         "properties": {
@@ -36973,6 +37082,33 @@
         "required": [
           "parent",
           "mailbox"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.CreateMaskedAliasRequest": {
+        "description": "Request for CreateMaskedAlias.",
+        "properties": {
+          "masked_alias": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias",
+            "description": "The resource to create."
+          },
+          "masked_alias_id": {
+            "description": "The ID; generated if not provided.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
+          },
+          "validate_only": {
+            "description": "Validate without creating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parent",
+          "masked_alias"
         ],
         "type": "object"
       },
@@ -37158,6 +37294,28 @@
         "required": [
           "parent",
           "template"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.DeleteAppPasswordRequest": {
+        "description": "Request for DeleteAppPassword.",
+        "properties": {
+          "etag": {
+            "description": "The resource etag.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          },
+          "validate_only": {
+            "description": "Validate without deleting.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
         ],
         "type": "object"
       },
@@ -37692,6 +37850,16 @@
             "readOnly": true,
             "type": "string"
           },
+          "outbound_paused": {
+            "description": "Whether the sending domain is latched by the complaint fuse.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "pool": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.Pool",
+            "description": "Outbound pool associated with this resource, when applicable.",
+            "readOnly": true
+          },
           "receiving_state": {
             "$ref": "#/components/schemas/sylphx.notify.v1.EmailDomainReceivingState",
             "description": "Whether the platform receives mail for the domain.",
@@ -37747,6 +37915,20 @@
         },
         "type": "object"
       },
+      "sylphx.notify.v1.GetAppPasswordRequest": {
+        "description": "Request for GetAppPassword.",
+        "properties": {
+          "name": {
+            "description": "The name resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "sylphx.notify.v1.GetBroadcastRequest": {
         "description": "The request of GetBroadcast.",
         "properties": {
@@ -37773,6 +37955,33 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetInboundEmailRawRequest": {
+        "description": "Request for GetInboundEmailRaw.",
+        "properties": {
+          "name": {
+            "description": "The inbound email resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/InboundEmail"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetInboundEmailRawResponse": {
+        "description": "Response for GetInboundEmailRaw.",
+        "properties": {
+          "raw": {
+            "contentEncoding": "base64",
+            "description": "The original MIME bytes. Clients should treat the contents as untrusted.",
+            "readOnly": true,
+            "type": "string",
+            "x-sylphx-sensitive": true
+          }
+        },
         "type": "object"
       },
       "sylphx.notify.v1.GetInboundEmailRequest": {
@@ -37866,6 +38075,20 @@
             "description": "The name of the mailbox to get.",
             "type": "string",
             "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.GetMaskedAliasRequest": {
+        "description": "Request for GetMaskedAlias.",
+        "properties": {
+          "name": {
+            "description": "The name resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
           }
         },
         "required": [
@@ -38013,9 +38236,49 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.InboundAttachment": {
+        "description": "Metadata about an inbound attachment.",
+        "properties": {
+          "content_id": {
+            "description": "The Content-ID, if present.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "filename": {
+            "description": "The supplied filename, if any.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "mime_type": {
+            "description": "The attachment's media type.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sha256": {
+            "description": "SHA-256 of the attachment bytes, hex.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "size_bytes": {
+            "description": "The decoded size in bytes.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.InboundEmail": {
         "description": "An Inbound Email is one mail a mailbox holds, received or sent, kept as\nevidence: parsed once, never changed except by erasure. Consumers read the\nfeed in `sequence` order.",
         "properties": {
+          "attachments": {
+            "description": "Attachment metadata. Bytes are available only as part of the retained raw message.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.InboundAttachment"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
           "automated": {
             "description": "Sent by software: Auto-Submitted, Precedence bulk or list, auto-reply\nheaders, or a delivery report.",
             "readOnly": true,
@@ -38357,6 +38620,46 @@
           "archived"
         ],
         "type": "string"
+      },
+      "sylphx.notify.v1.ListAppPasswordsRequest": {
+        "description": "Request for ListAppPasswords.",
+        "properties": {
+          "page_size": {
+            "description": "The requested page size.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The token returned by a previous call.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/AppPassword"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListAppPasswordsResponse": {
+        "description": "Response for ListAppPasswords.",
+        "properties": {
+          "app_passwords": {
+            "description": "The resources.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.AppPassword"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Continuation token, if any.",
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "sylphx.notify.v1.ListBroadcastsRequest": {
         "description": "The request of ListBroadcasts.",
@@ -38785,6 +39088,46 @@
           },
           "next_page_token": {
             "description": "The token of the next page; empty on the last page.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListMaskedAliasesRequest": {
+        "description": "Request for ListMaskedAliases.",
+        "properties": {
+          "page_size": {
+            "description": "The requested page size.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_token": {
+            "description": "The token returned by a previous call.",
+            "type": "string"
+          },
+          "parent": {
+            "description": "The parent resource name.",
+            "type": "string",
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.ListMaskedAliasesResponse": {
+        "description": "Response for ListMaskedAliases.",
+        "properties": {
+          "masked_aliases": {
+            "description": "The resources.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "description": "Continuation token, if any.",
             "type": "string"
           }
         },
@@ -39319,6 +39662,14 @@
         ],
         "type": "object"
       },
+      "sylphx.notify.v1.MailboxAccess": {
+        "description": "Access modes for hosted mailboxes.",
+        "enum": [
+          "api",
+          "full"
+        ],
+        "type": "string"
+      },
       "sylphx.notify.v1.MailboxAuthKind": {
         "description": "How a connected Mailbox logs in.",
         "enum": [
@@ -39562,13 +39913,40 @@
         ],
         "type": "string"
       },
+      "sylphx.notify.v1.MailboxRetention": {
+        "description": "Retention for hosted mailbox data.",
+        "properties": {
+          "mail_days": {
+            "description": "Days to retain hosted mail. Unset means no age-based removal.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "raw_days": {
+            "description": "Days to retain the raw message.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.MailboxSpec": {
         "description": "MailboxSpec is the caller-writable state of a Mailbox.",
         "properties": {
+          "access": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MailboxAccess",
+            "description": "The access mode for a hosted mailbox; unset defaults to API."
+          },
           "address": {
             "description": "The address, for example `support@example.com`.",
             "type": "string",
             "x-sylphx-immutable": true
+          },
+          "aliases": {
+            "description": "Additional receiving addresses, for a hosted mailbox.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "append_sent": {
             "description": "Save a copy of mail sent as this mailbox to its Sent folder (IMAP\nAPPEND); off when the provider saves one itself.",
@@ -39610,15 +39988,36 @@
             "writeOnly": true,
             "x-sylphx-sensitive": true
           },
+          "owner_customer_org_id": {
+            "description": "Customer organization that owns a hosted mailbox. Empty for platform-owned mailboxes.",
+            "type": "string"
+          },
           "password": {
             "description": "The login password of both servers; write-only, sealed at rest.",
             "type": "string",
             "writeOnly": true,
             "x-sylphx-sensitive": true
           },
+          "quota_bytes": {
+            "description": "The hosted mailbox storage limit, in bytes.",
+            "format": "int64",
+            "type": "string"
+          },
+          "retention": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MailboxRetention",
+            "description": "The hosted mailbox retention policy."
+          },
+          "shared": {
+            "description": "Whether a platform-owned hosted mailbox is marked as shared. Does not grant access.",
+            "type": "boolean"
+          },
           "smtp": {
             "$ref": "#/components/schemas/sylphx.notify.v1.MailServer",
             "description": "SMTP submission, for a connected mailbox."
+          },
+          "spam_folder": {
+            "description": "Folder used for spam in a hosted mailbox.",
+            "type": "string"
           }
         },
         "required": [
@@ -39649,6 +40048,12 @@
             "readOnly": true,
             "type": "string"
           },
+          "last_receive_time": {
+            "description": "The last time the hosted mailbox received mail.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
           "oauth_refresh_token_set": {
             "description": "Whether an OAuth refresh token is stored.",
             "readOnly": true,
@@ -39668,10 +40073,20 @@
             "readOnly": true,
             "type": "string"
           },
+          "outbound_paused": {
+            "description": "Whether the hosted address domain is latched in the managed-send service.\nThis is not a readback of the external SMTP listener policy.",
+            "readOnly": true,
+            "type": "boolean"
+          },
           "password_set": {
             "description": "Whether a password is stored.",
             "readOnly": true,
             "type": "boolean"
+          },
+          "pool": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.Pool",
+            "description": "Outbound pool associated with this resource, when applicable.",
+            "readOnly": true
           },
           "reconnect_required": {
             "description": "The provider refused the refresh token (revoked, expired, or the\naccount's password changed): the mailbox neither polls nor sends until a\nconnect link naming it, or a new `oauth_refresh_token`, reconnects it.",
@@ -39680,6 +40095,12 @@
           },
           "sent_folder": {
             "description": "The Sent folder found on the server.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "used_bytes": {
+            "description": "The hosted mailbox's storage usage.",
+            "format": "int64",
             "readOnly": true,
             "type": "string"
           }
@@ -39712,6 +40133,120 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.MaskedAlias": {
+        "description": "A MaskedAlias receives mail into a hosted mailbox without exposing its address.",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
+            "description": "Resource metadata, including the etag."
+          },
+          "name": {
+            "description": "The resource name.",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAliasSpec",
+            "description": "Desired state."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAliasStatus",
+            "description": "Observed state.",
+            "readOnly": true
+          },
+          "uid": {
+            "description": "The alias's immutable unique identifier.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.MaskedAliasReplyMode": {
+        "description": "Reply policy of a masked alias.",
+        "enum": [
+          "disabled",
+          "reverse_alias"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.MaskedAliasSpec": {
+        "description": "Desired state of a masked alias.",
+        "properties": {
+          "address": {
+            "description": "An unused address on a receiving domain in this environment.",
+            "type": "string",
+            "x-sylphx-immutable": true
+          },
+          "mailbox": {
+            "description": "The hosted mailbox that receives the alias's mail.",
+            "type": "string",
+            "x-sylphx-immutable": true,
+            "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          },
+          "reply_mode": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAliasReplyMode",
+            "description": "Defaults to DISABLED. Does not grant outbound permission."
+          },
+          "state": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAliasState",
+            "description": "Defaults to ACTIVE on creation. REVOKED never transitions again."
+          }
+        },
+        "required": [
+          "address",
+          "mailbox"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.MaskedAliasState": {
+        "description": "Lifecycle of a masked alias.",
+        "enum": [
+          "active",
+          "paused",
+          "revoked"
+        ],
+        "type": "string"
+      },
+      "sylphx.notify.v1.MaskedAliasStatus": {
+        "description": "Observed state of a masked alias.",
+        "properties": {
+          "blocked_count": {
+            "description": "Number of recipient attempts refused while paused or revoked.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          },
+          "can_send": {
+            "description": "Whether outbound submission is enabled. Always false on the free tier.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "conditions": {
+            "description": "Resource conditions, if any.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.common.v1.Condition"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "last_blocked_time": {
+            "description": "Most recent such refusal.",
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "observed_generation": {
+            "description": "The generation this status describes.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "sylphx.notify.v1.Message": {
@@ -39771,6 +40306,12 @@
             "type": "string",
             "x-sylphx-immutable": true,
             "x-sylphx-resource-reference": "notify.sylphx.com/Mailbox"
+          },
+          "masked_alias": {
+            "description": "A masked alias to send as. Submission is not enabled for masked aliases.",
+            "type": "string",
+            "x-sylphx-immutable": true,
+            "x-sylphx-resource-reference": "notify.sylphx.com/MaskedAlias"
           },
           "meta": {
             "$ref": "#/components/schemas/sylphx.common.v1.ResourceMeta",
@@ -40129,6 +40670,14 @@
           "email_address"
         ],
         "type": "object"
+      },
+      "sylphx.notify.v1.Pool": {
+        "description": "Managed outbound email pool.",
+        "enum": [
+          "a",
+          "c"
+        ],
+        "type": "string"
       },
       "sylphx.notify.v1.Preference": {
         "description": "A Preference is a recipient's choice for one topic: which channels may carry\nit. Admission honors it, and unsubscribe links write it. The id is the\ntopic.",
@@ -41183,6 +41732,27 @@
         },
         "required": [
           "mailbox"
+        ],
+        "type": "object"
+      },
+      "sylphx.notify.v1.UpdateMaskedAliasRequest": {
+        "description": "Request for UpdateMaskedAlias.",
+        "properties": {
+          "masked_alias": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias",
+            "description": "The resource to update."
+          },
+          "update_mask": {
+            "description": "The fields to update. Only spec.state and spec.reply_mode can change.",
+            "type": "string"
+          },
+          "validate_only": {
+            "description": "Validate without updating.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "masked_alias"
         ],
         "type": "object"
       },
@@ -103602,6 +104172,434 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}/app_passwords": {
+      "get": {
+        "description": "Lists the app password collection.",
+        "operationId": "notify_app_passwords_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mailbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The requested page size.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The token returned by a previous call.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListAppPasswordsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the app password collection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "notify.app_passwords.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Creates a app password.",
+        "operationId": "notify_app_passwords_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mailbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The ID; generated if not provided.",
+            "in": "query",
+            "name": "app_password_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without creating.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.AppPassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.AppPassword"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates a app password.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "RESOURCE_ALREADY_EXISTS",
+          "FAILED_PRECONDITION"
+        ],
+        "x-sylphx-method": "notify.app_passwords.create",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}/app_passwords/{app_password}": {
+      "delete": {
+        "description": "Deletes the app password.",
+        "operationId": "notify_app_passwords_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mailbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "app_password",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The resource etag.",
+            "in": "query",
+            "name": "etag",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without deleting.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Deletes the app password.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "destructive",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "ETAG_MISMATCH"
+        ],
+        "x-sylphx-method": "notify.app_passwords.delete",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      },
+      "get": {
+        "description": "Gets a app password.",
+        "operationId": "notify_app_passwords_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mailbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "app_password",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.AppPassword"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets a app password.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "notify.app_passwords.get",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}/inbound_emails": {
       "get": {
         "description": "Lists a mailbox's inbound email in feed order, oldest first.",
@@ -103812,6 +104810,98 @@
         "x-sylphx-stage": "preview"
       }
     },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}/inbound_emails/{inbound_email}:raw": {
+      "get": {
+        "description": "Returns the retained raw MIME of a message as base64 in JSON.\nErased or expired messages have no raw response.",
+        "operationId": "notify_inbound_emails_raw",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mailbox",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "inbound_email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.GetInboundEmailRawResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Returns the retained raw MIME of a message as base64 in JSON. Erased or expired messages have no raw response.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "UNAVAILABLE"
+        ],
+        "x-sylphx-method": "notify.inbound_emails.raw",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      }
+    },
     "/v1/orgs/{org}/projects/{project}/envs/{env}/mailboxes/{mailbox}:eraseAddress": {
       "post": {
         "description": "Removes an address's personal data from every inbound email of the\nmailbox that it sent or that names it, keeping the dedupe keys so a poll\nnever brings the mail back.",
@@ -103922,6 +105012,414 @@
           "IDEMPOTENCY_IN_PROGRESS"
         ],
         "x-sylphx-method": "notify.mailboxes.erase_address",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/masked_aliases": {
+      "get": {
+        "description": "Lists the masked alias collection.",
+        "operationId": "notify_masked_aliases_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The requested page size.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The token returned by a previous call.",
+            "in": "query",
+            "name": "page_token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.ListMaskedAliasesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Lists the masked alias collection.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "notify.masked_aliases.list",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      },
+      "post": {
+        "description": "Creates a masked alias.",
+        "operationId": "notify_masked_aliases_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The ID; generated if not provided.",
+            "in": "query",
+            "name": "masked_alias_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without creating.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Creates a masked alias.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "RESOURCE_ALREADY_EXISTS",
+          "FAILED_PRECONDITION"
+        ],
+        "x-sylphx-method": "notify.masked_aliases.create",
+        "x-sylphx-permission": "notify:write",
+        "x-sylphx-stage": "preview"
+      }
+    },
+    "/v1/orgs/{org}/projects/{project}/envs/{env}/masked_aliases/{masked_alias}": {
+      "get": {
+        "description": "Gets a masked alias.",
+        "operationId": "notify_masked_aliases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "masked_alias",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Gets a masked alias.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "read",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD"
+        ],
+        "x-sylphx-method": "notify.masked_aliases.get",
+        "x-sylphx-permission": "notify:read",
+        "x-sylphx-stage": "preview"
+      },
+      "patch": {
+        "description": "Updates a masked alias.",
+        "operationId": "notify_masked_aliases_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "masked_alias",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The fields to update. Only spec.state and spec.reply_mode can change.",
+            "in": "query",
+            "name": "update_mask",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated field paths.",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Validate without updating.",
+            "in": "query",
+            "name": "validate_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SylphxVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sylphx.notify.v1.MaskedAlias"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Updates a masked alias.",
+        "tags": [
+          "notify"
+        ],
+        "x-sylphx-effect": "write",
+        "x-sylphx-errors": [
+          "UNAUTHENTICATED",
+          "PERMISSION_DENIED",
+          "RESOURCE_NOT_FOUND",
+          "INVALID_FIELD",
+          "ETAG_MISMATCH",
+          "FAILED_PRECONDITION"
+        ],
+        "x-sylphx-method": "notify.masked_aliases.update",
         "x-sylphx-permission": "notify:write",
         "x-sylphx-stage": "preview"
       }
@@ -106516,6 +108014,9 @@
           "409": {
             "$ref": "#/components/responses/Problem"
           },
+          "412": {
+            "$ref": "#/components/responses/Problem"
+          },
           "422": {
             "$ref": "#/components/responses/Problem"
           },
@@ -106543,6 +108044,7 @@
           "RATE_LIMITED",
           "DESTINATION_COUNTRY_NOT_ALLOWED",
           "BUDGET_EXHAUSTED",
+          "COMPLAINT_FUSE_ACTIVE",
           "INVALID_STATE"
         ],
         "x-sylphx-method": "notify.messages.create",

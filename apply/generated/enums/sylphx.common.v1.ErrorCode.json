@@ -196,6 +196,11 @@
       "number": 39,
       "proto_name": "ERROR_CODE_FAILED_PRECONDITION",
       "wire": "FAILED_PRECONDITION"
+    },
+    {
+      "number": 40,
+      "proto_name": "ERROR_CODE_COMPLAINT_FUSE_ACTIVE",
+      "wire": "COMPLAINT_FUSE_ACTIVE"
     }
   ]
 }

@@ -1,0 +1,22 @@
+{
+  "collection": "masked_aliases",
+  "controller": "",
+  "deletion_protection": false,
+  "fail_mode": "",
+  "in_snapshot": false,
+  "kind": "MaskedAlias",
+  "message": "sylphx.notify.v1.MaskedAlias",
+  "meters": [],
+  "parent_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+  "pattern": "orgs/{org}/projects/{project}/envs/{env}/masked_aliases/{masked_alias}",
+  "plural": "maskedAliases",
+  "priority_chunk": false,
+  "reconciled": false,
+  "service": "notify",
+  "shape": "spec_status",
+  "singular": "maskedAlias",
+  "stale_bound": null,
+  "storage": "service",
+  "terraform": false,
+  "type": "notify.sylphx.com/MaskedAlias"
+}

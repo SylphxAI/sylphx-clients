@@ -1,0 +1,24 @@
+{
+  "fields": [
+    {
+      "behaviors": [
+        "OUTPUT_ONLY"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "raw",
+      "number": 1,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": null,
+      "sensitive": true,
+      "type": {
+        "kind": "scalar",
+        "scalar": "bytes"
+      }
+    }
+  ],
+  "name": "sylphx.notify.v1.GetInboundEmailRawResponse",
+  "package": "sylphx.notify.v1"
+}

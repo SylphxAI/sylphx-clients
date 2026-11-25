@@ -441,6 +441,8 @@ pub enum ErrorCode {
     /// FAILED_PRECONDITION / 409: a released manifest owns a requested resource
     /// field. Change the declaration in the named file and key path, then release.
     FailedPrecondition,
+    /// FAILED_PRECONDITION / 412: outbound mail is blocked by the complaint fuse or sending entitlement.
+    ComplaintFuseActive,
     /// A value this SDK version does not know.
     Unknown(String),
 }
@@ -488,6 +490,7 @@ impl ErrorCode {
             Self::NoLogStreamsMapped => "NO_LOG_STREAMS_MAPPED",
             Self::DeviceLost => "DEVICE_LOST",
             Self::FailedPrecondition => "FAILED_PRECONDITION",
+            Self::ComplaintFuseActive => "COMPLAINT_FUSE_ACTIVE",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -534,6 +537,7 @@ impl ErrorCode {
             "NO_LOG_STREAMS_MAPPED" => Self::NoLogStreamsMapped,
             "DEVICE_LOST" => Self::DeviceLost,
             "FAILED_PRECONDITION" => Self::FailedPrecondition,
+            "COMPLAINT_FUSE_ACTIVE" => Self::ComplaintFuseActive,
             other => Self::Unknown(other.to_string()),
         }
     }

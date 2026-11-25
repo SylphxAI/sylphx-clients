@@ -399,6 +399,25 @@
         "kind": "scalar",
         "scalar": "string"
       }
+    },
+    {
+      "behaviors": [
+        "OPTIONAL",
+        "IMMUTABLE"
+      ],
+      "cli_flag": "",
+      "filterable": false,
+      "name": "masked_alias",
+      "number": 29,
+      "oneof": null,
+      "optional": false,
+      "repeated": false,
+      "resource_reference": "notify.sylphx.com/MaskedAlias",
+      "sensitive": false,
+      "type": {
+        "kind": "scalar",
+        "scalar": "string"
+      }
     }
   ],
   "name": "sylphx.notify.v1.Message",

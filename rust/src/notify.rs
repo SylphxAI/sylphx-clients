@@ -58,6 +58,88 @@ pub struct AdoptSmsNumberRequest {
     pub validate_only: bool,
 }
 
+/// A hosted mailbox's app password. The secret is returned only on creation.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AppPassword {
+    /// The resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The immutable unique identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// The password's metadata.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<AppPasswordSpec>,
+    /// Observed state and the one-time secret.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<AppPasswordStatus>,
+}
+
+/// The app password's label and expiration.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AppPasswordSpec {
+    /// A device or client label.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub label: String,
+    /// The expiration time, if set.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "expireTime"
+    )]
+    pub expire_time: String,
+}
+
+/// The app password's creation result.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AppPasswordStatus {
+    /// The generation this status describes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Resource conditions, if any.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// The time of creation.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "createTime"
+    )]
+    pub create_time: String,
+    /// Only the create response includes the secret.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub password: String,
+}
+
 /// Apply or reconcile the SAME operation after a lost response. Resupply a
 /// current token with the same operation id and route; readback precedes retry.
 /// Credentials are removed before hashing/persistence. No unattended credential
@@ -402,6 +484,40 @@ pub struct ConnectPhoneNumberRequest {
     pub validate_only: bool,
 }
 
+/// Request for CreateAppPassword.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateAppPasswordRequest {
+    /// The parent resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The ID; generated if not provided.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "appPasswordId"
+    )]
+    pub app_password_id: String,
+    /// The resource to create.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "appPassword"
+    )]
+    pub app_password: Option<AppPassword>,
+    /// Validate without creating.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
 /// The request of CreateBroadcast.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -561,6 +677,40 @@ pub struct CreateMailboxRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mailbox: Option<Mailbox>,
     /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Request for CreateMaskedAlias.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct CreateMaskedAliasRequest {
+    /// The parent resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The ID; generated if not provided.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maskedAliasId"
+    )]
+    pub masked_alias_id: String,
+    /// The resource to create.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "maskedAlias"
+    )]
+    pub masked_alias: Option<MaskedAlias>,
+    /// Validate without creating.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -767,6 +917,27 @@ pub struct CreateTemplateRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub template: Option<Template>,
     /// Validate and return the result without writing anything.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
+/// Request for DeleteAppPassword.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct DeleteAppPasswordRequest {
+    /// The name resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The resource etag.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub etag: String,
+    /// Validate without deleting.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -1350,6 +1521,20 @@ pub struct EmailDomainStatus {
         alias = "receivingVerifyTime"
     )]
     pub receiving_verify_time: String,
+    /// Whether the sending domain is latched by the complaint fuse.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "outboundPaused"
+    )]
+    pub outbound_paused: bool,
+    /// Outbound pool associated with this resource, when applicable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pool: Option<Pool>,
 }
 
 /// The request of EraseMailboxAddress.
@@ -1382,6 +1567,17 @@ pub struct EraseMailboxAddressResponse {
     pub erased_count: i64,
 }
 
+/// Request for GetAppPassword.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetAppPasswordRequest {
+    /// The name resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
 /// The request of GetBroadcast.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -1402,6 +1598,28 @@ pub struct GetEmailDomainRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// Request for GetInboundEmailRaw.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetInboundEmailRawRequest {
+    /// The inbound email resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Response for GetInboundEmailRaw.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetInboundEmailRawResponse {
+    /// The original MIME bytes. Clients should treat the contents as untrusted.
+    ///
+    /// Field behavior: `output_only`, `sensitive`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub raw: String,
 }
 
 /// The request of GetInboundEmail.
@@ -1475,6 +1693,17 @@ pub struct GetMailboxOauthAppRequest {
 #[non_exhaustive]
 pub struct GetMailboxRequest {
     /// The name of the mailbox to get.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+}
+
+/// Request for GetMaskedAlias.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct GetMaskedAliasRequest {
+    /// The name resource name.
     ///
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
@@ -1589,6 +1818,50 @@ pub struct GetTemplateRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// Metadata about an inbound attachment.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct InboundAttachment {
+    /// The supplied filename, if any.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub filename: String,
+    /// The attachment's media type.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "mimeType"
+    )]
+    pub mime_type: String,
+    /// The decoded size in bytes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "sizeBytes"
+    )]
+    pub size_bytes: i64,
+    /// The Content-ID, if present.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "contentId"
+    )]
+    pub content_id: String,
+    /// SHA-256 of the attachment bytes, hex.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub sha256: String,
 }
 
 /// An Inbound Email is one mail a mailbox holds, received or sent, kept as
@@ -1748,6 +2021,11 @@ pub struct InboundEmail {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub message: String,
+    /// Attachment metadata. Bytes are available only as part of the retained raw message.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<InboundAttachment>,
 }
 
 /// The unified SMS and voice inbox, ordered by its resumable sequence.
@@ -2000,6 +2278,47 @@ pub struct InboxItem {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state: Option<InboxItemState>,
+}
+
+/// Request for ListAppPasswords.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListAppPasswordsRequest {
+    /// The parent resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The requested page size.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// The token returned by a previous call.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// Response for ListAppPasswords.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListAppPasswordsResponse {
+    /// The resources.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "appPasswords")]
+    pub app_passwords: Vec<AppPassword>,
+    /// Continuation token, if any.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
 }
 
 /// The request of ListBroadcasts.
@@ -2469,6 +2788,51 @@ pub struct ListMailboxesResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mailboxes: Vec<Mailbox>,
     /// The token of the next page; empty on the last page.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "nextPageToken"
+    )]
+    pub next_page_token: String,
+}
+
+/// Request for ListMaskedAliases.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListMaskedAliasesRequest {
+    /// The parent resource name.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// The requested page size.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageSize"
+    )]
+    pub page_size: i32,
+    /// The token returned by a previous call.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "pageToken"
+    )]
+    pub page_token: String,
+}
+
+/// Response for ListMaskedAliases.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct ListMaskedAliasesResponse {
+    /// The resources.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "maskedAliases"
+    )]
+    pub masked_aliases: Vec<MaskedAlias>,
+    /// Continuation token, if any.
     #[serde(
         default,
         skip_serializing_if = "crate::runtime::is_default",
@@ -3294,6 +3658,26 @@ pub struct MailboxOauthAppStatus {
     pub scopes: Vec<String>,
 }
 
+/// Retention for hosted mailbox data.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MailboxRetention {
+    /// Days to retain the raw message.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "rawDays"
+    )]
+    pub raw_days: i32,
+    /// Days to retain hosted mail. Unset means no age-based removal.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "mailDays"
+    )]
+    pub mail_days: i32,
+}
+
 /// MailboxSpec is the caller-writable state of a Mailbox.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -3370,6 +3754,40 @@ pub struct MailboxSpec {
         alias = "oauthRefreshToken"
     )]
     pub oauth_refresh_token: String,
+    /// The access mode for a hosted mailbox; unset defaults to API.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access: Option<MailboxAccess>,
+    /// Additional receiving addresses, for a hosted mailbox.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
+    /// The hosted mailbox storage limit, in bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "quotaBytes"
+    )]
+    pub quota_bytes: i64,
+    /// The hosted mailbox retention policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retention: Option<MailboxRetention>,
+    /// Folder used for spam in a hosted mailbox.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "spamFolder"
+    )]
+    pub spam_folder: String,
+    /// Customer organization that owns a hosted mailbox. Empty for platform-owned mailboxes.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "ownerCustomerOrgId"
+    )]
+    pub owner_customer_org_id: String,
+    /// Whether a platform-owned hosted mailbox is marked as shared. Does not grant access.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub shared: bool,
 }
 
 /// MailboxStatus is the observed state of a Mailbox.
@@ -3452,6 +3870,40 @@ pub struct MailboxStatus {
         alias = "reconnectRequired"
     )]
     pub reconnect_required: bool,
+    /// Whether the hosted address domain is latched in the managed-send service.
+    /// This is not a readback of the external SMTP listener policy.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "outboundPaused"
+    )]
+    pub outbound_paused: bool,
+    /// Outbound pool associated with this resource, when applicable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pool: Option<Pool>,
+    /// The hosted mailbox's storage usage.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "usedBytes"
+    )]
+    pub used_bytes: i64,
+    /// The last time the hosted mailbox received mail.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastReceiveTime"
+    )]
+    pub last_receive_time: String,
 }
 
 /// The request of MarkInboxItemRead.
@@ -3474,6 +3926,106 @@ pub struct MarkInboxItemUnreadRequest {
     /// Field behavior: `required`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub name: String,
+}
+
+/// A MaskedAlias receives mail into a hosted mailbox without exposing its address.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MaskedAlias {
+    /// The resource name.
+    ///
+    /// Field behavior: `identifier`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub name: String,
+    /// The alias's immutable unique identifier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub uid: String,
+    /// Resource metadata, including the etag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<crate::common::ResourceMeta>,
+    /// Desired state.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<MaskedAliasSpec>,
+    /// Observed state.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<MaskedAliasStatus>,
+}
+
+/// Desired state of a masked alias.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MaskedAliasSpec {
+    /// An unused address on a receiving domain in this environment.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub address: String,
+    /// The hosted mailbox that receives the alias's mail.
+    ///
+    /// Field behavior: `required`, `immutable`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub mailbox: String,
+    /// Defaults to ACTIVE on creation. REVOKED never transitions again.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<MaskedAliasState>,
+    /// Defaults to DISABLED. Does not grant outbound permission.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "replyMode")]
+    pub reply_mode: Option<MaskedAliasReplyMode>,
+}
+
+/// Observed state of a masked alias.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MaskedAliasStatus {
+    /// The generation this status describes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "observedGeneration"
+    )]
+    pub observed_generation: i64,
+    /// Resource conditions, if any.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditions: Vec<crate::common::Condition>,
+    /// Number of recipient attempts refused while paused or revoked.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "blockedCount"
+    )]
+    pub blocked_count: i64,
+    /// Most recent such refusal.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "lastBlockedTime"
+    )]
+    pub last_blocked_time: String,
+    /// Whether outbound submission is enabled. Always false on the free tier.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "canSend"
+    )]
+    pub can_send: bool,
 }
 
 /// A Message is one notification to one recipient on one topic. Notify admits
@@ -3623,6 +4175,15 @@ pub struct Message {
     /// Field behavior: `immutable`.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "replyTo")]
     pub reply_to: Option<String>,
+    /// A masked alias to send as. Submission is not enabled for masked aliases.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "maskedAlias"
+    )]
+    pub masked_alias: String,
 }
 
 /// What a message to a test recipient rendered to.
@@ -5164,6 +5725,35 @@ pub struct UpdateMailboxRequest {
     pub validate_only: bool,
 }
 
+/// Request for UpdateMaskedAlias.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct UpdateMaskedAliasRequest {
+    /// The resource to update.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "maskedAlias"
+    )]
+    pub masked_alias: Option<MaskedAlias>,
+    /// The fields to update. Only spec.state and spec.reply_mode can change.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "updateMask"
+    )]
+    pub update_mask: String,
+    /// Validate without updating.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "validateOnly"
+    )]
+    pub validate_only: bool,
+}
+
 /// The request of UpdateMessageTopic.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -5946,6 +6536,57 @@ impl crate::runtime::QueryValue for MailServerSecurity {
     }
 }
 
+/// Access modes for hosted mailboxes.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MailboxAccess {
+    /// API-only access.
+    Api,
+    /// API and standard mail client access.
+    Full,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl MailboxAccess {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Api => "api",
+            Self::Full => "full",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "api" => Self::Api,
+            "full" => Self::Full,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for MailboxAccess {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MailboxAccess {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for MailboxAccess {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// How a connected Mailbox logs in.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -6163,6 +6804,112 @@ impl crate::runtime::QueryValue for MailboxOauthProvider {
     }
 }
 
+/// Reply policy of a masked alias.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MaskedAliasReplyMode {
+    /// Replies are disabled.
+    Disabled,
+    /// Requests reverse alias replies when supported. Does not enable submission.
+    ReverseAlias,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl MaskedAliasReplyMode {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Disabled => "disabled",
+            Self::ReverseAlias => "reverse_alias",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "disabled" => Self::Disabled,
+            "reverse_alias" => Self::ReverseAlias,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for MaskedAliasReplyMode {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MaskedAliasReplyMode {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for MaskedAliasReplyMode {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Lifecycle of a masked alias.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MaskedAliasState {
+    /// Accepts incoming mail.
+    Active,
+    /// Accepts and silently discards incoming mail until resumed.
+    Paused,
+    /// Permanently blocks mail and reserves the address.
+    Revoked,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl MaskedAliasState {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Active => "active",
+            Self::Paused => "paused",
+            Self::Revoked => "revoked",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "active" => Self::Active,
+            "paused" => Self::Paused,
+            "revoked" => Self::Revoked,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for MaskedAliasState {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MaskedAliasState {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for MaskedAliasState {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 /// The state of a Message.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -6229,6 +6976,57 @@ impl<'de> serde::Deserialize<'de> for MessageState {
 }
 
 impl crate::runtime::QueryValue for MessageState {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// Managed outbound email pool.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Pool {
+    /// Hosted mailbox submission.
+    A,
+    /// Public managed mail, including dedicated bulk egress.
+    C,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl Pool {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::A => "a",
+            Self::C => "c",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "a" => Self::A,
+            "c" => Self::C,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for Pool {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Pool {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for Pool {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
@@ -6505,6 +7303,27 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
         }
     }
 
+    /// The `masked_aliases` collection.
+    pub fn masked_aliases(&self) -> MaskedAliasesCollection<'a, T> {
+        MaskedAliasesCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `app_passwords` collection.
+    pub fn app_passwords(&self) -> AppPasswordsCollection<'a, T> {
+        AppPasswordsCollection {
+            client: self.client,
+        }
+    }
+
+    /// The `inbound_emails` collection.
+    pub fn inbound_emails(&self) -> InboundEmailsCollection<'a, T> {
+        InboundEmailsCollection {
+            client: self.client,
+        }
+    }
+
     /// The `mailbox_oauth_apps` collection.
     pub fn mailbox_oauth_apps(&self) -> MailboxOauthAppsCollection<'a, T> {
         MailboxOauthAppsCollection {
@@ -6515,13 +7334,6 @@ impl<'a, T: crate::runtime::Transport> NotifyApi<'a, T> {
     /// The `mailbox_connect_links` collection.
     pub fn mailbox_connect_links(&self) -> MailboxConnectLinksCollection<'a, T> {
         MailboxConnectLinksCollection {
-            client: self.client,
-        }
-    }
-
-    /// The `inbound_emails` collection.
-    pub fn inbound_emails(&self) -> InboundEmailsCollection<'a, T> {
-        InboundEmailsCollection {
             client: self.client,
         }
     }
@@ -8327,7 +9139,7 @@ impl<'a, T: crate::runtime::Transport> MessagesCollection<'a, T> {
     ///
     /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/messages` · permission `notify:send` · effect `write`
     ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `RATE_LIMITED`, `DESTINATION_COUNTRY_NOT_ALLOWED`, `BUDGET_EXHAUSTED`, `INVALID_STATE`.
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `RATE_LIMITED`, `DESTINATION_COUNTRY_NOT_ALLOWED`, `BUDGET_EXHAUSTED`, `COMPLAINT_FUSE_ACTIVE`, `INVALID_STATE`.
     pub async fn create(
         &self,
         request: CreateMessageRequest,
@@ -8590,6 +9402,418 @@ impl<'a, T: crate::runtime::Transport> MailboxesCollection<'a, T> {
             effect_ids: false,
         };
         self.client.call(http).await
+    }
+}
+
+/// `masked_aliases` of Sylphx Notify: Resource type `notify.sylphx.com/MaskedAlias`.
+pub struct MaskedAliasesCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> MaskedAliasesCollection<'a, T> {
+    /// Gets a masked alias.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/masked_aliases/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetMaskedAliasRequest,
+    ) -> Result<MaskedAlias, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/masked_aliases/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists the masked alias collection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*}/masked_aliases` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn list(
+        &self,
+        request: ListMaskedAliasesRequest,
+    ) -> Result<ListMaskedAliasesResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/masked_aliases",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListMaskedAliasesRequest,
+    ) -> Result<Vec<MaskedAlias>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.masked_aliases);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates a masked alias.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/masked_aliases` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `FAILED_PRECONDITION`.
+    pub async fn create(
+        &self,
+        request: CreateMaskedAliasRequest,
+    ) -> Result<MaskedAlias, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/masked_aliases",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("masked_alias_id", &request.masked_alias_id);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.masked_alias)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Updates a masked alias.
+    ///
+    /// `PATCH /v1/{masked_alias.name=orgs/*/projects/*/envs/*/masked_aliases/*}` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `ETAG_MISMATCH`, `FAILED_PRECONDITION`.
+    pub async fn update(
+        &self,
+        request: UpdateMaskedAliasRequest,
+    ) -> Result<MaskedAlias, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                request
+                    .masked_alias
+                    .as_ref()
+                    .map(|v| v.name.as_str())
+                    .unwrap_or(""),
+                "orgs/*/projects/*/envs/*/masked_aliases/*",
+                "masked_alias.name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("update_mask", &request.update_mask);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "PATCH",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.masked_alias)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `app_passwords` of Sylphx Notify: Resource type `notify.sylphx.com/AppPassword`.
+pub struct AppPasswordsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> AppPasswordsCollection<'a, T> {
+    /// Gets a app password.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn get(
+        &self,
+        request: GetAppPasswordRequest,
+    ) -> Result<AppPassword, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists the app password collection.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/app_passwords` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+    pub async fn list(
+        &self,
+        request: ListAppPasswordsRequest,
+    ) -> Result<ListAppPasswordsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/app_passwords",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/mailboxes/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListAppPasswordsRequest,
+    ) -> Result<Vec<AppPassword>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.app_passwords);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
+    }
+
+    /// Creates a app password.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/app_passwords` · permission `notify:write` · effect `write`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `FAILED_PRECONDITION`.
+    pub async fn create(
+        &self,
+        request: CreateAppPasswordRequest,
+    ) -> Result<AppPassword, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/app_passwords",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/mailboxes/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("app_password_id", &request.app_password_id);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body(&request.app_password)?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Deletes the app password.
+    ///
+    /// `DELETE /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*}` · permission `notify:write` · effect `destructive`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `ETAG_MISMATCH`.
+    pub async fn delete(
+        &self,
+        request: DeleteAppPasswordRequest,
+    ) -> Result<crate::runtime::Empty, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*",
+                "name"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("etag", &request.etag);
+        query.push("validate_only", &request.validate_only);
+        let http = crate::runtime::HttpRequest {
+            method: "DELETE",
+            path,
+            query: query.0,
+            body: None,
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+}
+
+/// `inbound_emails` of Sylphx Notify: Resource type `notify.sylphx.com/InboundEmail`.
+pub struct InboundEmailsCollection<'a, T> {
+    client: &'a crate::runtime::Client<T>,
+}
+
+impl<'a, T: crate::runtime::Transport> InboundEmailsCollection<'a, T> {
+    /// Returns the retained raw MIME of a message as base64 in JSON.
+    /// Erased or expired messages have no raw response.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}:raw` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+    pub async fn raw(
+        &self,
+        request: GetInboundEmailRawRequest,
+    ) -> Result<GetInboundEmailRawResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}:raw",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Gets an inbound email.
+    ///
+    /// `GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+    pub async fn get(
+        &self,
+        request: GetInboundEmailRequest,
+    ) -> Result<InboundEmail, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}",
+            crate::runtime::path_param(
+                &request.name,
+                "orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*",
+                "name"
+            )?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Lists a mailbox's inbound email in feed order, oldest first.
+    ///
+    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/inbound_emails` · permission `notify:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+    pub async fn list(
+        &self,
+        request: ListInboundEmailsRequest,
+    ) -> Result<ListInboundEmailsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/inbound_emails",
+            crate::runtime::path_param(
+                &request.parent,
+                "orgs/*/projects/*/envs/*/mailboxes/*",
+                "parent"
+            )?
+        );
+        let mut query = crate::runtime::Query::default();
+        query.push("page_size", &request.page_size);
+        query.push("page_token", &request.page_token);
+        query.push("filter", &request.filter);
+        query.push("order_by", &request.order_by);
+        let http = crate::runtime::HttpRequest {
+            method: "GET",
+            path,
+            query: query.0,
+            body: None,
+            mutation: false,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
+    }
+
+    /// Every page of [`Self::list`], collected.
+    pub async fn list_all(
+        &self,
+        mut request: ListInboundEmailsRequest,
+    ) -> Result<Vec<InboundEmail>, crate::runtime::Error> {
+        let mut items = Vec::new();
+        loop {
+            let page = self.list(request.clone()).await?;
+            items.extend(page.inbound_emails);
+            if page.next_page_token.is_empty() {
+                return Ok(items);
+            }
+            request.page_token = page.next_page_token;
+        }
     }
 }
 
@@ -8883,93 +10107,6 @@ impl<'a, T: crate::runtime::Transport> MailboxConnectLinksCollection<'a, T> {
             effect_ids: false,
         };
         self.client.call(http).await
-    }
-}
-
-/// `inbound_emails` of Sylphx Notify: Resource type `notify.sylphx.com/InboundEmail`.
-pub struct InboundEmailsCollection<'a, T> {
-    client: &'a crate::runtime::Client<T>,
-}
-
-impl<'a, T: crate::runtime::Transport> InboundEmailsCollection<'a, T> {
-    /// Gets an inbound email.
-    ///
-    /// `GET /v1/{name=orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*}` · permission `notify:read` · effect `read`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
-    pub async fn get(
-        &self,
-        request: GetInboundEmailRequest,
-    ) -> Result<InboundEmail, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}",
-            crate::runtime::path_param(
-                &request.name,
-                "orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*",
-                "name"
-            )?
-        );
-        let query = crate::runtime::Query::default();
-        let http = crate::runtime::HttpRequest {
-            method: "GET",
-            path,
-            query: query.0,
-            body: None,
-            mutation: false,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Lists a mailbox's inbound email in feed order, oldest first.
-    ///
-    /// `GET /v1/{parent=orgs/*/projects/*/envs/*/mailboxes/*}/inbound_emails` · permission `notify:read` · effect `read`
-    ///
-    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
-    pub async fn list(
-        &self,
-        request: ListInboundEmailsRequest,
-    ) -> Result<ListInboundEmailsResponse, crate::runtime::Error> {
-        let path = format!(
-            "/v1/{}/inbound_emails",
-            crate::runtime::path_param(
-                &request.parent,
-                "orgs/*/projects/*/envs/*/mailboxes/*",
-                "parent"
-            )?
-        );
-        let mut query = crate::runtime::Query::default();
-        query.push("page_size", &request.page_size);
-        query.push("page_token", &request.page_token);
-        query.push("filter", &request.filter);
-        query.push("order_by", &request.order_by);
-        let http = crate::runtime::HttpRequest {
-            method: "GET",
-            path,
-            query: query.0,
-            body: None,
-            mutation: false,
-            origin: None,
-            effect_ids: false,
-        };
-        self.client.call(http).await
-    }
-
-    /// Every page of [`Self::list`], collected.
-    pub async fn list_all(
-        &self,
-        mut request: ListInboundEmailsRequest,
-    ) -> Result<Vec<InboundEmail>, crate::runtime::Error> {
-        let mut items = Vec::new();
-        loop {
-            let page = self.list(request.clone()).await?;
-            items.extend(page.inbound_emails);
-            if page.next_page_token.is_empty() {
-                return Ok(items);
-            }
-            request.page_token = page.next_page_token;
-        }
     }
 }
 

@@ -1024,6 +1024,8 @@ func notifyEmailDomainStatus() []def.Field {
 		{Name: "dkim_selector", Kind: def.String, Flags: def.OutputOnly, Doc: "The DKIM selector in use."},
 		{Name: "receiving_state", Kind: def.Enum, Values: []string{"disabled", "pending", "verified", "degraded"}, Flags: def.OutputOnly, Doc: "Whether the platform receives mail for the domain."},
 		{Name: "receiving_verify_time", Kind: def.Timestamp, Flags: def.OutputOnly, Doc: "When the MX records last verified."},
+		{Name: "outbound_paused", Kind: def.Bool, Flags: def.OutputOnly, Doc: "Whether the sending domain is latched by the complaint fuse."},
+		{Name: "pool", Kind: def.Enum, Values: []string{"a", "c"}, Flags: def.OutputOnly, Doc: "Outbound pool associated with this resource, when applicable."},
 	}
 }
 

@@ -23,6 +23,40 @@ export interface AdoptSmsNumberRequest {
 	validateOnly?: boolean
 }
 
+/** A hosted mailbox's app password. The secret is returned only on creation. */
+export interface AppPassword {
+	/** The resource name. */
+	name?: string
+	/** The immutable unique identifier. */
+	readonly uid?: string
+	/** Resource metadata. */
+	meta?: common.ResourceMeta
+	/** The password's metadata. */
+	spec?: AppPasswordSpec
+	/** Observed state and the one-time secret. */
+	readonly status?: AppPasswordStatus
+}
+
+/** The app password's label and expiration. */
+export interface AppPasswordSpec {
+	/** A device or client label. */
+	label?: string
+	/** The expiration time, if set. */
+	expireTime?: string
+}
+
+/** The app password's creation result. */
+export interface AppPasswordStatus {
+	/** The generation this status describes. */
+	readonly observedGeneration?: string
+	/** Resource conditions, if any. */
+	readonly conditions?: common.Condition[]
+	/** The time of creation. */
+	readonly createTime?: string
+	/** Only the create response includes the secret. */
+	readonly password?: string
+}
+
 /**
  * Apply or reconcile the SAME operation after a lost response. Resupply a
  * current token with the same operation id and route; readback precedes retry.
@@ -160,6 +194,18 @@ export interface ConnectPhoneNumberRequest {
 	validateOnly?: boolean
 }
 
+/** Request for CreateAppPassword. */
+export interface CreateAppPasswordRequest {
+	/** The parent resource name. */
+	parent: string
+	/** The ID; generated if not provided. */
+	appPasswordId?: string
+	/** The resource to create. */
+	appPassword: AppPassword
+	/** Validate without creating. */
+	validateOnly?: boolean
+}
+
 /** The request of CreateBroadcast. */
 export interface CreateBroadcastRequest {
 	/** The parent to create in. */
@@ -232,6 +278,18 @@ export interface CreateMailboxRequest {
 	/** The mailbox to create; only caller-writable fields are read. */
 	mailbox: Mailbox
 	/** Validate and return the result without writing anything. */
+	validateOnly?: boolean
+}
+
+/** Request for CreateMaskedAlias. */
+export interface CreateMaskedAliasRequest {
+	/** The parent resource name. */
+	parent: string
+	/** The ID; generated if not provided. */
+	maskedAliasId?: string
+	/** The resource to create. */
+	maskedAlias: MaskedAlias
+	/** Validate without creating. */
 	validateOnly?: boolean
 }
 
@@ -323,6 +381,16 @@ export interface CreateTemplateRequest {
 	/** The template to create; only caller-writable fields are read. */
 	template: Template
 	/** Validate and return the result without writing anything. */
+	validateOnly?: boolean
+}
+
+/** Request for DeleteAppPassword. */
+export interface DeleteAppPasswordRequest {
+	/** The name resource name. */
+	name: string
+	/** The resource etag. */
+	etag?: string
+	/** Validate without deleting. */
 	validateOnly?: boolean
 }
 
@@ -579,6 +647,10 @@ export interface EmailDomainStatus {
 	readonly receivingState?: EmailDomainReceivingState
 	/** When the MX records last verified. */
 	readonly receivingVerifyTime?: string
+	/** Whether the sending domain is latched by the complaint fuse. */
+	readonly outboundPaused?: boolean
+	/** Outbound pool associated with this resource, when applicable. */
+	readonly pool?: Pool
 }
 
 /** The request of EraseMailboxAddress. */
@@ -595,6 +667,12 @@ export interface EraseMailboxAddressResponse {
 	erasedCount?: string
 }
 
+/** Request for GetAppPassword. */
+export interface GetAppPasswordRequest {
+	/** The name resource name. */
+	name: string
+}
+
 /** The request of GetBroadcast. */
 export interface GetBroadcastRequest {
 	/** The name of the broadcast to get. */
@@ -605,6 +683,18 @@ export interface GetBroadcastRequest {
 export interface GetEmailDomainRequest {
 	/** The name of the email domain to get. */
 	name: string
+}
+
+/** Request for GetInboundEmailRaw. */
+export interface GetInboundEmailRawRequest {
+	/** The inbound email resource name. */
+	name: string
+}
+
+/** Response for GetInboundEmailRaw. */
+export interface GetInboundEmailRawResponse {
+	/** The original MIME bytes. Clients should treat the contents as untrusted. */
+	readonly raw?: string
 }
 
 /** The request of GetInboundEmail. */
@@ -646,6 +736,12 @@ export interface GetMailboxOauthAppRequest {
 /** The request of GetMailbox. */
 export interface GetMailboxRequest {
 	/** The name of the mailbox to get. */
+	name: string
+}
+
+/** Request for GetMaskedAlias. */
+export interface GetMaskedAliasRequest {
+	/** The name resource name. */
 	name: string
 }
 
@@ -709,6 +805,20 @@ export interface GetTemplateRequest {
 	name: string
 }
 
+/** Metadata about an inbound attachment. */
+export interface InboundAttachment {
+	/** The supplied filename, if any. */
+	readonly filename?: string
+	/** The attachment's media type. */
+	readonly mimeType?: string
+	/** The decoded size in bytes. */
+	readonly sizeBytes?: string
+	/** The Content-ID, if present. */
+	readonly contentId?: string
+	/** SHA-256 of the attachment bytes, hex. */
+	readonly sha256?: string
+}
+
 /**
  * An Inbound Email is one mail a mailbox holds, received or sent, kept as
  * evidence: parsed once, never changed except by erasure. Consumers read the
@@ -766,6 +876,8 @@ export interface InboundEmail {
 	readonly erased?: boolean
 	/** The Notify Message that sent it, for mail Notify sent as this mailbox. */
 	readonly message?: string
+	/** Attachment metadata. Bytes are available only as part of the retained raw message. */
+	readonly attachments?: InboundAttachment[]
 }
 
 /** The unified SMS and voice inbox, ordered by its resumable sequence. */
@@ -868,6 +980,24 @@ export interface InboxItem {
 	readonly actionUri?: string
 	/** Read, unread, or archived. */
 	readonly state?: InboxItemState
+}
+
+/** Request for ListAppPasswords. */
+export interface ListAppPasswordsRequest {
+	/** The parent resource name. */
+	parent: string
+	/** The requested page size. */
+	pageSize?: number
+	/** The token returned by a previous call. */
+	pageToken?: string
+}
+
+/** Response for ListAppPasswords. */
+export interface ListAppPasswordsResponse {
+	/** The resources. */
+	appPasswords?: AppPassword[]
+	/** Continuation token, if any. */
+	nextPageToken?: string
 }
 
 /** The request of ListBroadcasts. */
@@ -1065,6 +1195,24 @@ export interface ListMailboxesResponse {
 	/** The page. */
 	mailboxes?: Mailbox[]
 	/** The token of the next page; empty on the last page. */
+	nextPageToken?: string
+}
+
+/** Request for ListMaskedAliases. */
+export interface ListMaskedAliasesRequest {
+	/** The parent resource name. */
+	parent: string
+	/** The requested page size. */
+	pageSize?: number
+	/** The token returned by a previous call. */
+	pageToken?: string
+}
+
+/** Response for ListMaskedAliases. */
+export interface ListMaskedAliasesResponse {
+	/** The resources. */
+	maskedAliases?: MaskedAlias[]
+	/** Continuation token, if any. */
 	nextPageToken?: string
 }
 
@@ -1444,6 +1592,14 @@ export interface MailboxOauthAppStatus {
 	readonly scopes?: string[]
 }
 
+/** Retention for hosted mailbox data. */
+export interface MailboxRetention {
+	/** Days to retain the raw message. */
+	rawDays?: number
+	/** Days to retain hosted mail. Unset means no age-based removal. */
+	mailDays?: number
+}
+
 /** MailboxSpec is the caller-writable state of a Mailbox. */
 export interface MailboxSpec {
 	/** Connected or hosted. */
@@ -1484,6 +1640,20 @@ export interface MailboxSpec {
 	 * the token was issued to the environment's Mailbox OAuth App.
 	 */
 	oauthRefreshToken?: string
+	/** The access mode for a hosted mailbox; unset defaults to API. */
+	access?: MailboxAccess
+	/** Additional receiving addresses, for a hosted mailbox. */
+	aliases?: string[]
+	/** The hosted mailbox storage limit, in bytes. */
+	quotaBytes?: string
+	/** The hosted mailbox retention policy. */
+	retention?: MailboxRetention
+	/** Folder used for spam in a hosted mailbox. */
+	spamFolder?: string
+	/** Customer organization that owns a hosted mailbox. Empty for platform-owned mailboxes. */
+	ownerCustomerOrgId?: string
+	/** Whether a platform-owned hosted mailbox is marked as shared. Does not grant access. */
+	shared?: boolean
 }
 
 /** MailboxStatus is the observed state of a Mailbox. */
@@ -1510,6 +1680,17 @@ export interface MailboxStatus {
 	 * connect link naming it, or a new `oauth_refresh_token`, reconnects it.
 	 */
 	readonly reconnectRequired?: boolean
+	/**
+	 * Whether the hosted address domain is latched in the managed-send service.
+	 * This is not a readback of the external SMTP listener policy.
+	 */
+	readonly outboundPaused?: boolean
+	/** Outbound pool associated with this resource, when applicable. */
+	readonly pool?: Pool
+	/** The hosted mailbox's storage usage. */
+	readonly usedBytes?: string
+	/** The last time the hosted mailbox received mail. */
+	readonly lastReceiveTime?: string
 }
 
 /** The request of MarkInboxItemRead. */
@@ -1522,6 +1703,46 @@ export interface MarkInboxItemReadRequest {
 export interface MarkInboxItemUnreadRequest {
 	/** The name of the inbox item. */
 	name: string
+}
+
+/** A MaskedAlias receives mail into a hosted mailbox without exposing its address. */
+export interface MaskedAlias {
+	/** The resource name. */
+	name?: string
+	/** The alias's immutable unique identifier. */
+	readonly uid?: string
+	/** Resource metadata, including the etag. */
+	meta?: common.ResourceMeta
+	/** Desired state. */
+	spec?: MaskedAliasSpec
+	/** Observed state. */
+	readonly status?: MaskedAliasStatus
+}
+
+/** Desired state of a masked alias. */
+export interface MaskedAliasSpec {
+	/** An unused address on a receiving domain in this environment. */
+	address?: string
+	/** The hosted mailbox that receives the alias's mail. */
+	mailbox?: string
+	/** Defaults to ACTIVE on creation. REVOKED never transitions again. */
+	state?: MaskedAliasState
+	/** Defaults to DISABLED. Does not grant outbound permission. */
+	replyMode?: MaskedAliasReplyMode
+}
+
+/** Observed state of a masked alias. */
+export interface MaskedAliasStatus {
+	/** The generation this status describes. */
+	readonly observedGeneration?: string
+	/** Resource conditions, if any. */
+	readonly conditions?: common.Condition[]
+	/** Number of recipient attempts refused while paused or revoked. */
+	readonly blockedCount?: string
+	/** Most recent such refusal. */
+	readonly lastBlockedTime?: string
+	/** Whether outbound submission is enabled. Always false on the free tier. */
+	readonly canSend?: boolean
 }
 
 /**
@@ -1594,6 +1815,8 @@ export interface Message {
 	 * may differ from the From domain. Omit to send without a Reply-To header.
 	 */
 	replyTo?: string
+	/** A masked alias to send as. Submission is not enabled for masked aliases. */
+	maskedAlias?: string
 }
 
 /** What a message to a test recipient rendered to. */
@@ -2280,6 +2503,16 @@ export interface UpdateMailboxRequest {
 	validateOnly?: boolean
 }
 
+/** Request for UpdateMaskedAlias. */
+export interface UpdateMaskedAliasRequest {
+	/** The resource to update. */
+	maskedAlias: MaskedAlias
+	/** The fields to update. Only spec.state and spec.reply_mode can change. */
+	updateMask?: string
+	/** Validate without updating. */
+	validateOnly?: boolean
+}
+
 /** The request of UpdateMessageTopic. */
 export interface UpdateMessageTopicRequest {
 	/** The message topic to update; `name` identifies it. */
@@ -2418,6 +2651,9 @@ export type InboxItemState = 'unread' | 'read' | 'archived' | (string & {})
 /** How a mail server connection is secured. */
 export type MailServerSecurity = 'tls' | 'starttls' | (string & {})
 
+/** Access modes for hosted mailboxes. */
+export type MailboxAccess = 'api' | 'full' | (string & {})
+
 /** How a connected Mailbox logs in. */
 export type MailboxAuthKind = 'password' | 'oauth' | (string & {})
 
@@ -2430,8 +2666,17 @@ export type MailboxKind = 'connected' | 'hosted' | (string & {})
 /** An OAuth provider of connected mailboxes. */
 export type MailboxOauthProvider = 'google' | 'microsoft' | (string & {})
 
+/** Reply policy of a masked alias. */
+export type MaskedAliasReplyMode = 'disabled' | 'reverse_alias' | (string & {})
+
+/** Lifecycle of a masked alias. */
+export type MaskedAliasState = 'active' | 'paused' | 'revoked' | (string & {})
+
 /** The state of a Message. */
 export type MessageState = 'accepted' | 'suppressed' | 'delivering' | 'delivered' | 'failed' | 'cancelled' | 'rate_limited' | (string & {})
+
+/** Managed outbound email pool. */
+export type Pool = 'a' | 'c' | (string & {})
 
 /** A push platform. */
 export type PushPlatform = 'apns' | 'fcm' | 'web_push' | (string & {})
@@ -2449,6 +2694,19 @@ runtime.registerSchemas({
 		['phoneNumber', 'phone_number'],
 		['messagingProfileId', 'messaging_profile_id'],
 		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.AppPassword': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.notify.v1.AppPasswordSpec'],
+		['status', 'status', 'sylphx.notify.v1.AppPasswordStatus'],
+	],
+	'sylphx.notify.v1.AppPasswordSpec': [
+		['expireTime', 'expire_time'],
+	],
+	'sylphx.notify.v1.AppPasswordStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['createTime', 'create_time'],
 	],
 	'sylphx.notify.v1.ApplyPhoneNumberRouteRequest': [
 		['operationId', 'operation_id'],
@@ -2492,6 +2750,11 @@ runtime.registerSchemas({
 		['providerSessionToken', 'provider_session_token'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.CreateAppPasswordRequest': [
+		['appPasswordId', 'app_password_id'],
+		['appPassword', 'app_password', 'sylphx.notify.v1.AppPassword'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.CreateBroadcastRequest': [
 		['broadcastId', 'broadcast_id'],
 		['broadcast', 'broadcast', 'sylphx.notify.v1.Broadcast'],
@@ -2515,6 +2778,11 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.CreateMailboxRequest': [
 		['mailboxId', 'mailbox_id'],
 		['mailbox', 'mailbox', 'sylphx.notify.v1.Mailbox'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.CreateMaskedAliasRequest': [
+		['maskedAliasId', 'masked_alias_id'],
+		['maskedAlias', 'masked_alias', 'sylphx.notify.v1.MaskedAlias'],
 		['validateOnly', 'validate_only'],
 	],
 	'sylphx.notify.v1.CreateMessageRequest': [
@@ -2549,6 +2817,9 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.CreateTemplateRequest': [
 		['templateId', 'template_id'],
 		['template', 'template', 'sylphx.notify.v1.Template'],
+		['validateOnly', 'validate_only'],
+	],
+	'sylphx.notify.v1.DeleteAppPasswordRequest': [
 		['validateOnly', 'validate_only'],
 	],
 	'sylphx.notify.v1.DeleteBroadcastRequest': [
@@ -2629,13 +2900,17 @@ runtime.registerSchemas({
 		['dkimSelector', 'dkim_selector'],
 		['receivingState', 'receiving_state'],
 		['receivingVerifyTime', 'receiving_verify_time'],
+		['outboundPaused', 'outbound_paused'],
 	],
 	'sylphx.notify.v1.EraseMailboxAddressRequest': [],
 	'sylphx.notify.v1.EraseMailboxAddressResponse': [
 		['erasedCount', 'erased_count'],
 	],
+	'sylphx.notify.v1.GetAppPasswordRequest': [],
 	'sylphx.notify.v1.GetBroadcastRequest': [],
 	'sylphx.notify.v1.GetEmailDomainRequest': [],
+	'sylphx.notify.v1.GetInboundEmailRawRequest': [],
+	'sylphx.notify.v1.GetInboundEmailRawResponse': [],
 	'sylphx.notify.v1.GetInboundEmailRequest': [],
 	'sylphx.notify.v1.GetInboundMessageRequest': [],
 	'sylphx.notify.v1.GetInboundSmsRequest': [],
@@ -2643,6 +2918,7 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetMailboxConnectLinkRequest': [],
 	'sylphx.notify.v1.GetMailboxOauthAppRequest': [],
 	'sylphx.notify.v1.GetMailboxRequest': [],
+	'sylphx.notify.v1.GetMaskedAliasRequest': [],
 	'sylphx.notify.v1.GetMessageRequest': [],
 	'sylphx.notify.v1.GetMessageTopicRequest': [],
 	'sylphx.notify.v1.GetPhoneNumberRequest': [],
@@ -2653,6 +2929,11 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.GetSmsNumberRequest': [],
 	'sylphx.notify.v1.GetSuppressionRequest': [],
 	'sylphx.notify.v1.GetTemplateRequest': [],
+	'sylphx.notify.v1.InboundAttachment': [
+		['mimeType', 'mime_type'],
+		['sizeBytes', 'size_bytes'],
+		['contentId', 'content_id'],
+	],
 	'sylphx.notify.v1.InboundEmail': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['messageId', 'message_id'],
@@ -2666,6 +2947,7 @@ runtime.registerSchemas({
 		['receiveTime', 'receive_time'],
 		['rawSha256', 'raw_sha256'],
 		['sizeBytes', 'size_bytes'],
+		['attachments', 'attachments', 'sylphx.notify.v1.InboundAttachment'],
 	],
 	'sylphx.notify.v1.InboundMessage': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2689,6 +2971,14 @@ runtime.registerSchemas({
 	'sylphx.notify.v1.InboxItem': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['actionUri', 'action_uri'],
+	],
+	'sylphx.notify.v1.ListAppPasswordsRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.notify.v1.ListAppPasswordsResponse': [
+		['appPasswords', 'app_passwords', 'sylphx.notify.v1.AppPassword'],
+		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListBroadcastsRequest': [
 		['pageSize', 'page_size'],
@@ -2769,6 +3059,14 @@ runtime.registerSchemas({
 	],
 	'sylphx.notify.v1.ListMailboxesResponse': [
 		['mailboxes', 'mailboxes', 'sylphx.notify.v1.Mailbox'],
+		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.notify.v1.ListMaskedAliasesRequest': [
+		['pageSize', 'page_size'],
+		['pageToken', 'page_token'],
+	],
+	'sylphx.notify.v1.ListMaskedAliasesResponse': [
+		['maskedAliases', 'masked_aliases', 'sylphx.notify.v1.MaskedAlias'],
 		['nextPageToken', 'next_page_token'],
 	],
 	'sylphx.notify.v1.ListMessageTopicsRequest': [
@@ -2893,6 +3191,10 @@ runtime.registerSchemas({
 		['clientSecretSet', 'client_secret_set'],
 		['redirectUri', 'redirect_uri'],
 	],
+	'sylphx.notify.v1.MailboxRetention': [
+		['rawDays', 'raw_days'],
+		['mailDays', 'mail_days'],
+	],
 	'sylphx.notify.v1.MailboxSpec': [
 		['displayName', 'display_name'],
 		['imap', 'imap', 'sylphx.notify.v1.MailServer'],
@@ -2902,6 +3204,10 @@ runtime.registerSchemas({
 		['authKind', 'auth_kind'],
 		['oauthProvider', 'oauth_provider'],
 		['oauthRefreshToken', 'oauth_refresh_token'],
+		['quotaBytes', 'quota_bytes'],
+		['retention', 'retention', 'sylphx.notify.v1.MailboxRetention'],
+		['spamFolder', 'spam_folder'],
+		['ownerCustomerOrgId', 'owner_customer_org_id'],
 	],
 	'sylphx.notify.v1.MailboxStatus': [
 		['observedGeneration', 'observed_generation'],
@@ -2913,9 +3219,27 @@ runtime.registerSchemas({
 		['oauthRefreshTokenSet', 'oauth_refresh_token_set'],
 		['oauthScopes', 'oauth_scopes'],
 		['reconnectRequired', 'reconnect_required'],
+		['outboundPaused', 'outbound_paused'],
+		['usedBytes', 'used_bytes'],
+		['lastReceiveTime', 'last_receive_time'],
 	],
 	'sylphx.notify.v1.MarkInboxItemReadRequest': [],
 	'sylphx.notify.v1.MarkInboxItemUnreadRequest': [],
+	'sylphx.notify.v1.MaskedAlias': [
+		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
+		['spec', 'spec', 'sylphx.notify.v1.MaskedAliasSpec'],
+		['status', 'status', 'sylphx.notify.v1.MaskedAliasStatus'],
+	],
+	'sylphx.notify.v1.MaskedAliasSpec': [
+		['replyMode', 'reply_mode'],
+	],
+	'sylphx.notify.v1.MaskedAliasStatus': [
+		['observedGeneration', 'observed_generation'],
+		['conditions', 'conditions', 'sylphx.common.v1.Condition'],
+		['blockedCount', 'blocked_count'],
+		['lastBlockedTime', 'last_blocked_time'],
+		['canSend', 'can_send'],
+	],
 	'sylphx.notify.v1.Message': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['templateVersion', 'template_version'],
@@ -2929,6 +3253,7 @@ runtime.registerSchemas({
 		['parentMessageId', 'parent_message_id'],
 		['emailMessageId', 'email_message_id'],
 		['replyTo', 'reply_to'],
+		['maskedAlias', 'masked_alias'],
 	],
 	'sylphx.notify.v1.MessageCapture': [
 		['textBody', 'text_body'],
@@ -3152,6 +3477,11 @@ runtime.registerSchemas({
 		['allowMissing', 'allow_missing'],
 		['validateOnly', 'validate_only'],
 	],
+	'sylphx.notify.v1.UpdateMaskedAliasRequest': [
+		['maskedAlias', 'masked_alias', 'sylphx.notify.v1.MaskedAlias'],
+		['updateMask', 'update_mask'],
+		['validateOnly', 'validate_only'],
+	],
 	'sylphx.notify.v1.UpdateMessageTopicRequest': [
 		['messageTopic', 'message_topic', 'sylphx.notify.v1.MessageTopic'],
 		['updateMask', 'update_mask'],
@@ -3235,12 +3565,16 @@ export class NotifyApi {
 	readonly messages: MessagesCollection
 	/** The `mailboxes` collection. */
 	readonly mailboxes: MailboxesCollection
+	/** The `masked_aliases` collection. */
+	readonly maskedAliases: MaskedAliasesCollection
+	/** The `app_passwords` collection. */
+	readonly appPasswords: AppPasswordsCollection
+	/** The `inbound_emails` collection. */
+	readonly inboundEmails: InboundEmailsCollection
 	/** The `mailbox_oauth_apps` collection. */
 	readonly mailboxOauthApps: MailboxOauthAppsCollection
 	/** The `mailbox_connect_links` collection. */
 	readonly mailboxConnectLinks: MailboxConnectLinksCollection
-	/** The `inbound_emails` collection. */
-	readonly inboundEmails: InboundEmailsCollection
 	/** The `inbox_items` collection. */
 	readonly inboxItems: InboxItemsCollection
 	/** The `broadcasts` collection. */
@@ -3264,9 +3598,11 @@ export class NotifyApi {
 		this.templates = new TemplatesCollection(client)
 		this.messages = new MessagesCollection(client)
 		this.mailboxes = new MailboxesCollection(client)
+		this.maskedAliases = new MaskedAliasesCollection(client)
+		this.appPasswords = new AppPasswordsCollection(client)
+		this.inboundEmails = new InboundEmailsCollection(client)
 		this.mailboxOauthApps = new MailboxOauthAppsCollection(client)
 		this.mailboxConnectLinks = new MailboxConnectLinksCollection(client)
-		this.inboundEmails = new InboundEmailsCollection(client)
 		this.inboxItems = new InboxItemsCollection(client)
 		this.broadcasts = new BroadcastsCollection(client)
 		this.smsNumbers = new SmsNumbersCollection(client)
@@ -4329,7 +4665,7 @@ export class MessagesCollection {
 	 *
 	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/messages` · permission `notify:send` · effect `write`
 	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `RATE_LIMITED`, `DESTINATION_COUNTRY_NOT_ALLOWED`, `BUDGET_EXHAUSTED`, `INVALID_STATE`.
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNKNOWN_FIELD`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_IN_PROGRESS`, `PLAN_LIMIT_REACHED`, `RATE_LIMITED`, `DESTINATION_COUNTRY_NOT_ALLOWED`, `BUDGET_EXHAUSTED`, `COMPLAINT_FUSE_ACTIVE`, `INVALID_STATE`.
 	 */
 	async create(request: CreateMessageRequest): Promise<Message> {
 		return this.client.call<Message>({
@@ -4486,6 +4822,255 @@ export class MailboxesCollection {
 			responseType: 'sylphx.notify.v1.EraseMailboxAddressResponse',
 			mutation: true,
 		})
+	}
+}
+
+/** `masked_aliases` of Sylphx Notify: Resource type `notify.sylphx.com/MaskedAlias`. */
+export class MaskedAliasesCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets a masked alias.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/masked_aliases/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetMaskedAliasRequest): Promise<MaskedAlias> {
+		return this.client.call<MaskedAlias>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/masked_aliases/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.MaskedAlias',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists the masked alias collection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*}/masked_aliases` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async list(request: ListMaskedAliasesRequest): Promise<ListMaskedAliasesResponse> {
+		return this.client.call<ListMaskedAliasesResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/masked_aliases`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.notify.v1.ListMaskedAliasesResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListMaskedAliasesRequest): AsyncGenerator<MaskedAlias> {
+		let next: ListMaskedAliasesRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.maskedAliases ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates a masked alias.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/masked_aliases` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `FAILED_PRECONDITION`.
+	 */
+	async create(request: CreateMaskedAliasRequest): Promise<MaskedAlias> {
+		return this.client.call<MaskedAlias>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/masked_aliases`,
+			query: { masked_alias_id: request.maskedAliasId, validate_only: request.validateOnly },
+			body: request.maskedAlias ?? {},
+			bodyType: 'sylphx.notify.v1.MaskedAlias',
+			responseType: 'sylphx.notify.v1.MaskedAlias',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Updates a masked alias.
+	 *
+	 * `PATCH /v1/{masked_alias.name=orgs/*\/projects/*\/envs/*\/masked_aliases/*}` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `ETAG_MISMATCH`, `FAILED_PRECONDITION`.
+	 */
+	async update(request: UpdateMaskedAliasRequest): Promise<MaskedAlias> {
+		return this.client.call<MaskedAlias>({
+			method: 'PATCH',
+			path: `/v1/${runtime.pathParam(request.maskedAlias?.name, 'orgs/*/projects/*/envs/*/masked_aliases/*', 'masked_alias.name')}`,
+			query: { update_mask: request.updateMask, validate_only: request.validateOnly },
+			body: request.maskedAlias ?? {},
+			bodyType: 'sylphx.notify.v1.MaskedAlias',
+			responseType: 'sylphx.notify.v1.MaskedAlias',
+			mutation: true,
+		})
+	}
+}
+
+/** `app_passwords` of Sylphx Notify: Resource type `notify.sylphx.com/AppPassword`. */
+export class AppPasswordsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Gets a app password.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/mailboxes/*\/app_passwords/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async get(request: GetAppPasswordRequest): Promise<AppPassword> {
+		return this.client.call<AppPassword>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.AppPassword',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists the app password collection.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/mailboxes/*}/app_passwords` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`.
+	 */
+	async list(request: ListAppPasswordsRequest): Promise<ListAppPasswordsResponse> {
+		return this.client.call<ListAppPasswordsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/mailboxes/*', 'parent')}/app_passwords`,
+			query: { page_size: request.pageSize, page_token: request.pageToken },
+			responseType: 'sylphx.notify.v1.ListAppPasswordsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListAppPasswordsRequest): AsyncGenerator<AppPassword> {
+		let next: ListAppPasswordsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.appPasswords ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
+	}
+
+	/**
+	 * Creates a app password.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*\/mailboxes/*}/app_passwords` · permission `notify:write` · effect `write`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `RESOURCE_ALREADY_EXISTS`, `FAILED_PRECONDITION`.
+	 */
+	async create(request: CreateAppPasswordRequest): Promise<AppPassword> {
+		return this.client.call<AppPassword>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/mailboxes/*', 'parent')}/app_passwords`,
+			query: { app_password_id: request.appPasswordId, validate_only: request.validateOnly },
+			body: request.appPassword ?? {},
+			bodyType: 'sylphx.notify.v1.AppPassword',
+			responseType: 'sylphx.notify.v1.AppPassword',
+			mutation: true,
+		})
+	}
+
+	/**
+	 * Deletes the app password.
+	 *
+	 * `DELETE /v1/{name=orgs/*\/projects/*\/envs/*\/mailboxes/*\/app_passwords/*}` · permission `notify:write` · effect `destructive`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `ETAG_MISMATCH`.
+	 */
+	async delete(request: DeleteAppPasswordRequest): Promise<Record<string, never>> {
+		return this.client.call<Record<string, never>>({
+			method: 'DELETE',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/mailboxes/*/app_passwords/*', 'name')}`,
+			query: { etag: request.etag, validate_only: request.validateOnly },
+			mutation: true,
+		})
+	}
+}
+
+/** `inbound_emails` of Sylphx Notify: Resource type `notify.sylphx.com/InboundEmail`. */
+export class InboundEmailsCollection {
+	private readonly client: runtime.Client
+
+	constructor(client: runtime.Client) {
+		this.client = client
+	}
+
+	/**
+	 * Returns the retained raw MIME of a message as base64 in JSON.
+	 * Erased or expired messages have no raw response.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/mailboxes/*\/inbound_emails/*}:raw` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `UNAVAILABLE`.
+	 */
+	async raw(request: GetInboundEmailRawRequest): Promise<GetInboundEmailRawResponse> {
+		return this.client.call<GetInboundEmailRawResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*', 'name')}:raw`,
+			responseType: 'sylphx.notify.v1.GetInboundEmailRawResponse',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Gets an inbound email.
+	 *
+	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/mailboxes/*\/inbound_emails/*}` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
+	 */
+	async get(request: GetInboundEmailRequest): Promise<InboundEmail> {
+		return this.client.call<InboundEmail>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*', 'name')}`,
+			responseType: 'sylphx.notify.v1.InboundEmail',
+			mutation: false,
+		})
+	}
+
+	/**
+	 * Lists a mailbox's inbound email in feed order, oldest first.
+	 *
+	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/mailboxes/*}/inbound_emails` · permission `notify:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
+	 */
+	async list(request: ListInboundEmailsRequest): Promise<ListInboundEmailsResponse> {
+		return this.client.call<ListInboundEmailsResponse>({
+			method: 'GET',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/mailboxes/*', 'parent')}/inbound_emails`,
+			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
+			responseType: 'sylphx.notify.v1.ListInboundEmailsResponse',
+			mutation: false,
+		})
+	}
+
+	/** Every item of every page of `list`. */
+	async *listAll(request: ListInboundEmailsRequest): AsyncGenerator<InboundEmail> {
+		let next: ListInboundEmailsRequest = request
+		for (;;) {
+			const page = await this.list(next)
+			yield* page.inboundEmails ?? []
+			if (page.nextPageToken === undefined || page.nextPageToken === '') return
+			next = { ...request, pageToken: page.nextPageToken }
+		}
 	}
 }
 
@@ -4666,59 +5251,6 @@ export class MailboxConnectLinksCollection {
 			responseType: 'sylphx.notify.v1.MailboxConnectLink',
 			mutation: true,
 		})
-	}
-}
-
-/** `inbound_emails` of Sylphx Notify: Resource type `notify.sylphx.com/InboundEmail`. */
-export class InboundEmailsCollection {
-	private readonly client: runtime.Client
-
-	constructor(client: runtime.Client) {
-		this.client = client
-	}
-
-	/**
-	 * Gets an inbound email.
-	 *
-	 * `GET /v1/{name=orgs/*\/projects/*\/envs/*\/mailboxes/*\/inbound_emails/*}` · permission `notify:read` · effect `read`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`.
-	 */
-	async get(request: GetInboundEmailRequest): Promise<InboundEmail> {
-		return this.client.call<InboundEmail>({
-			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.name, 'orgs/*/projects/*/envs/*/mailboxes/*/inbound_emails/*', 'name')}`,
-			responseType: 'sylphx.notify.v1.InboundEmail',
-			mutation: false,
-		})
-	}
-
-	/**
-	 * Lists a mailbox's inbound email in feed order, oldest first.
-	 *
-	 * `GET /v1/{parent=orgs/*\/projects/*\/envs/*\/mailboxes/*}/inbound_emails` · permission `notify:read` · effect `read`
-	 *
-	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `INVALID_FIELD`, `PAGE_TOKEN_MISMATCH`.
-	 */
-	async list(request: ListInboundEmailsRequest): Promise<ListInboundEmailsResponse> {
-		return this.client.call<ListInboundEmailsResponse>({
-			method: 'GET',
-			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*/mailboxes/*', 'parent')}/inbound_emails`,
-			query: { page_size: request.pageSize, page_token: request.pageToken, filter: request.filter, order_by: request.orderBy },
-			responseType: 'sylphx.notify.v1.ListInboundEmailsResponse',
-			mutation: false,
-		})
-	}
-
-	/** Every item of every page of `list`. */
-	async *listAll(request: ListInboundEmailsRequest): AsyncGenerator<InboundEmail> {
-		let next: ListInboundEmailsRequest = request
-		for (;;) {
-			const page = await this.list(next)
-			yield* page.inboundEmails ?? []
-			if (page.nextPageToken === undefined || page.nextPageToken === '') return
-			next = { ...request, pageToken: page.nextPageToken }
-		}
 	}
 }
 
