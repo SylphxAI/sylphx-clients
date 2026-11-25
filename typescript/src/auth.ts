@@ -1260,7 +1260,10 @@ export interface PortalConfig {
 	logoUri?: string
 	/** The primary color, `#rrggbb`. */
 	primaryColor?: string
-	/** Show Sylphx branding. */
+	/**
+	 * Show Sylphx attribution on the verified custom-domain Account Portal.
+	 * Unset preserves the existing portal presentation.
+	 */
 	sylphxBranding?: boolean
 	/** The hosted sign-in and account portal presentation for this environment. */
 	appearance?: PortalAppearance

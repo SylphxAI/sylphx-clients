@@ -81,7 +81,7 @@
       "name": "sylphx_branding",
       "number": 5,
       "oneof": null,
-      "optional": false,
+      "optional": true,
       "repeated": false,
       "resource_reference": null,
       "sensitive": false,

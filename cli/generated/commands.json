@@ -5444,7 +5444,7 @@
                 {
                   "field": "auth_config.spec.portal.sylphx_branding",
                   "flag": "--spec.portal.sylphx-branding",
-                  "summary": "Show Sylphx branding.",
+                  "summary": "Show Sylphx attribution on the verified custom-domain Account Portal. Unset preserves the existing portal presentation.",
                   "type": "bool"
                 },
                 {

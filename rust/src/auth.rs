@@ -2832,13 +2832,14 @@ pub struct PortalConfig {
         alias = "primaryColor"
     )]
     pub primary_color: String,
-    /// Show Sylphx branding.
+    /// Show Sylphx attribution on the verified custom-domain Account Portal.
+    /// Unset preserves the existing portal presentation.
     #[serde(
         default,
-        skip_serializing_if = "crate::runtime::is_default",
+        skip_serializing_if = "Option::is_none",
         alias = "sylphxBranding"
     )]
-    pub sylphx_branding: bool,
+    pub sylphx_branding: Option<bool>,
     /// The hosted sign-in and account portal presentation for this environment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub appearance: Option<PortalAppearance>,

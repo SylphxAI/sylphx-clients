@@ -8703,7 +8703,7 @@
                         "type": "string"
                       },
                       "sylphx_branding": {
-                        "description": "Show Sylphx branding.",
+                        "description": "Show Sylphx attribution on the verified custom-domain Account Portal.\nUnset preserves the existing portal presentation.",
                         "type": "boolean"
                       },
                       "terms_url": {
