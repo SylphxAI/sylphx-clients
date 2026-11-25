@@ -4230,6 +4230,47 @@
               },
               "summary": "Lists the environment's raw events in a time range, newest first.",
               "verb": "list"
+            },
+            {
+              "effect": "read",
+              "flags": [
+                {
+                  "field": "start_time",
+                  "flag": "--start-time",
+                  "required": true,
+                  "summary": "Inclusive start of the interval, at most 31 days before end_time.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "end_time",
+                  "flag": "--end-time",
+                  "summary": "Exclusive end of the interval; defaults to now.",
+                  "type": "timestamp"
+                },
+                {
+                  "field": "rollup",
+                  "flag": "--rollup",
+                  "summary": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+                  "type": "json"
+                },
+                {
+                  "field": "funnel",
+                  "flag": "--funnel",
+                  "summary": "Ordered conversion steps. Omit for a rollup.",
+                  "type": "json"
+                }
+              ],
+              "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query",
+              "method": "analytics.analytics_events.query",
+              "permission": "analytics:read",
+              "positional": {
+                "arg": "NAME",
+                "default_from_context": false,
+                "field": "parent",
+                "pattern": "orgs/{org}/projects/{project}/envs/{env}"
+              },
+              "summary": "Aggregates deduplicated events in the environment over a bounded interval.",
+              "verb": "query"
             }
           ],
           "noun": "analytics-events",

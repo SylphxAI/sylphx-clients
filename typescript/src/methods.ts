@@ -973,6 +973,17 @@ export const METHODS: Readonly<Record<string, MethodSpec>> = {
 		effect: 'read',
 		permission: 'analytics:read',
 	},
+	'analytics.analytics_events.query': {
+		id: 'analytics.analytics_events.query',
+		httpMethod: 'POST',
+		template: '/v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query',
+		pathParams: [['parent', 'orgs/*/projects/*/envs/*']],
+		queryParams: [],
+		body: '*',
+		longRunning: false,
+		effect: 'read',
+		permission: 'analytics:read',
+	},
 	'artifacts.artifact_references.delete': {
 		id: 'artifacts.artifact_references.delete',
 		httpMethod: 'DELETE',

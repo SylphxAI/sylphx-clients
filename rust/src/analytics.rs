@@ -109,6 +109,102 @@ pub struct AnalyticsEvent {
     pub source: Option<EventSource>,
 }
 
+/// Conversion for one funnel step and breakdown value.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AnalyticsFunnelStep {
+    /// Zero-based step position in the request.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "stepIndex"
+    )]
+    pub step_index: i32,
+    /// The event name of the step.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "eventName"
+    )]
+    pub event_name: String,
+    /// The breakdown value; empty for an unsegmented funnel.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "breakdownValue"
+    )]
+    pub breakdown_value: String,
+    /// Distinct subjects that reached this step in this breakdown.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64"
+    )]
+    pub subjects: i64,
+    /// Percentage of first-step subjects who reached this step (0–100).
+    /// Zero if there were no first-step subjects.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "conversionFromStartPct"
+    )]
+    pub conversion_from_start_pct: f64,
+    /// Percentage of previous-step subjects who reached this step (0–100).
+    /// The first step uses its own count as denominator; zero when it is zero.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "conversionFromPreviousPct"
+    )]
+    pub conversion_from_previous_pct: f64,
+}
+
+/// Aggregate for one UTC bucket, event name, and set of dimensions.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AnalyticsRollupBucket {
+    /// The UTC start of the bucket.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "bucketStart"
+    )]
+    pub bucket_start: String,
+    /// The event name.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "eventName"
+    )]
+    pub event_name: String,
+    /// The values of the requested group-by keys.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub dimensions: std::collections::BTreeMap<String, String>,
+    /// Deduplicated event count.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "eventCount"
+    )]
+    pub event_count: i64,
+    /// Exact number of distinct subjects.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "uniqueSubjects"
+    )]
+    pub unique_subjects: i64,
+    /// The numeric sum, present when sum_property was requested.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "propertySum"
+    )]
+    pub property_sum: Option<f64>,
+}
+
 /// The request of BatchEvents. A batch has at most 500 events and 1 MiB
 /// compressed; `Content-Encoding: gzip` is accepted. `Idempotency-Key` on the
 /// request makes a whole retried batch a no-op in the store.
@@ -301,6 +397,48 @@ pub struct EventResult {
     pub reason: String,
 }
 
+/// The longest ordered prefix reached by each subject within a conversion window.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct FunnelQuery {
+    /// Two to 16 event names in step order. Each step must occur at a strictly
+    /// later event timestamp than the prior step, inside the query interval.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<String>,
+    /// Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days).
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "conversionWindowSeconds"
+    )]
+    pub conversion_window_seconds: i64,
+    /// A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.
+    /// Each step in a chain must have the same string value. Missing and
+    /// non-string values are grouped with the empty string. Omit for one funnel.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "breakdownProperty"
+    )]
+    pub breakdown_property: Option<String>,
+    /// Up to four exact string matches, all of which must hold on every step.
+    /// Keys use the same grammar as breakdown_property; values are at most 128 bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+    /// Maximum breakdown values returned. Defaults to 50; clamped to 1–200.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
+}
+
 /// The request of ListAnalyticsEvents.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -375,6 +513,98 @@ pub struct ListAnalyticsEventsResponse {
         alias = "nextPageToken"
     )]
     pub next_page_token: String,
+}
+
+/// The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QueryAnalyticsEventsRequest {
+    /// The environment whose events to query.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub parent: String,
+    /// Inclusive start of the interval, at most 31 days before end_time.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "startTime"
+    )]
+    pub start_time: String,
+    /// Exclusive end of the interval; defaults to now.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "endTime"
+    )]
+    pub end_time: String,
+    /// Time buckets, counts, and an optional property sum. Omit for a funnel.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rollup: Option<RollupQuery>,
+    /// Ordered conversion steps. Omit for a rollup.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub funnel: Option<FunnelQuery>,
+}
+
+/// The response of QueryAnalyticsEvents. Only the requested result is populated.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct QueryAnalyticsEventsResponse {
+    /// Buckets ordered by newest start, then event name and dimension values ascending.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "rollupBuckets"
+    )]
+    pub rollup_buckets: Vec<AnalyticsRollupBucket>,
+    /// Steps in request order within each breakdown, ranked by starters descending
+    /// then by breakdown value ascending.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "funnelSteps")]
+    pub funnel_steps: Vec<AnalyticsFunnelStep>,
+}
+
+/// A time-bucketed aggregate over deduplicated events.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RollupQuery {
+    /// The width of each UTC bucket.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<RollupInterval>,
+    /// Up to 16 event names to include. Empty includes all names.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "eventNames")]
+    pub event_names: Vec<String>,
+    /// Up to four distinct top-level string property keys to group by. Missing
+    /// and non-string values are grouped with the empty string. A dot in a key
+    /// is literal, not a path. Keys match ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "groupByProperties"
+    )]
+    pub group_by_properties: Vec<String>,
+    /// A top-level numeric property to sum. Missing and non-numeric values
+    /// contribute zero. Uses the same key grammar as group_by_properties.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "sumProperty"
+    )]
+    pub sum_property: Option<String>,
+    /// Up to four exact string matches, all of which must hold on each event.
+    /// Keys use the same grammar as group_by_properties; values are at most 128 bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+    /// Maximum buckets returned. Defaults to 100; clamped to 1–500.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
 }
 
 /// The app's analytics consent, as sent with a batch.
@@ -534,6 +764,57 @@ impl crate::runtime::QueryValue for EventStatus {
     }
 }
 
+/// The width of a UTC rollup bucket.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum RollupInterval {
+    /// One UTC hour.
+    Hour,
+    /// One UTC calendar day.
+    Day,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl RollupInterval {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Hour => "hour",
+            Self::Day => "day",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "hour" => Self::Hour,
+            "day" => Self::Day,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for RollupInterval {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RollupInterval {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for RollupInterval {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
 impl<T: crate::runtime::Transport> crate::runtime::Client<T> {
     /// Sylphx Analytics (`preview`).
     pub fn analytics(&self) -> AnalyticsApi<'_, T> {
@@ -641,5 +922,31 @@ impl<'a, T: crate::runtime::Transport> AnalyticsEventsCollection<'a, T> {
             }
             request.page_token = page.next_page_token;
         }
+    }
+
+    /// Aggregates deduplicated events in the environment over a bounded interval.
+    ///
+    /// `POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query` · permission `analytics:read` · effect `read`
+    ///
+    /// Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+    pub async fn query(
+        &self,
+        request: QueryAnalyticsEventsRequest,
+    ) -> Result<QueryAnalyticsEventsResponse, crate::runtime::Error> {
+        let path = format!(
+            "/v1/{}/analytics_events:query",
+            crate::runtime::path_param(&request.parent, "orgs/*/projects/*/envs/*", "parent")?
+        );
+        let query = crate::runtime::Query::default();
+        let http = crate::runtime::HttpRequest {
+            method: "POST",
+            path,
+            query: query.0,
+            body: Some(crate::runtime::body_without(&request, &["parent"])?),
+            mutation: true,
+            origin: None,
+            effect_ids: false,
+        };
+        self.client.call(http).await
     }
 }

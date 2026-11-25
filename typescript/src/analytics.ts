@@ -55,6 +55,44 @@ export interface AnalyticsEvent {
 	readonly source?: EventSource
 }
 
+/** Conversion for one funnel step and breakdown value. */
+export interface AnalyticsFunnelStep {
+	/** Zero-based step position in the request. */
+	stepIndex?: number
+	/** The event name of the step. */
+	eventName?: string
+	/** The breakdown value; empty for an unsegmented funnel. */
+	breakdownValue?: string
+	/** Distinct subjects that reached this step in this breakdown. */
+	subjects?: string
+	/**
+	 * Percentage of first-step subjects who reached this step (0–100).
+	 * Zero if there were no first-step subjects.
+	 */
+	conversionFromStartPct?: number
+	/**
+	 * Percentage of previous-step subjects who reached this step (0–100).
+	 * The first step uses its own count as denominator; zero when it is zero.
+	 */
+	conversionFromPreviousPct?: number
+}
+
+/** Aggregate for one UTC bucket, event name, and set of dimensions. */
+export interface AnalyticsRollupBucket {
+	/** The UTC start of the bucket. */
+	bucketStart?: string
+	/** The event name. */
+	eventName?: string
+	/** The values of the requested group-by keys. */
+	dimensions?: Record<string, string>
+	/** Deduplicated event count. */
+	eventCount?: string
+	/** Exact number of distinct subjects. */
+	uniqueSubjects?: string
+	/** The numeric sum, present when sum_property was requested. */
+	propertySum?: number
+}
+
 /**
  * The request of BatchEvents. A batch has at most 500 events and 1 MiB
  * compressed; `Content-Encoding: gzip` is accepted. `Idempotency-Key` on the
@@ -168,6 +206,30 @@ export interface EventResult {
 	reason?: string
 }
 
+/** The longest ordered prefix reached by each subject within a conversion window. */
+export interface FunnelQuery {
+	/**
+	 * Two to 16 event names in step order. Each step must occur at a strictly
+	 * later event timestamp than the prior step, inside the query interval.
+	 */
+	steps?: string[]
+	/** Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days). */
+	conversionWindowSeconds?: string
+	/**
+	 * A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.
+	 * Each step in a chain must have the same string value. Missing and
+	 * non-string values are grouped with the empty string. Omit for one funnel.
+	 */
+	breakdownProperty?: string
+	/**
+	 * Up to four exact string matches, all of which must hold on every step.
+	 * Keys use the same grammar as breakdown_property; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
+	/** Maximum breakdown values returned. Defaults to 50; clamped to 1–200. */
+	limit?: number
+}
+
 /** The request of ListAnalyticsEvents. */
 export interface ListAnalyticsEventsRequest {
 	/** The parent to list in. */
@@ -197,6 +259,57 @@ export interface ListAnalyticsEventsResponse {
 	nextPageToken?: string
 }
 
+/** The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel. */
+export interface QueryAnalyticsEventsRequest {
+	/** The environment whose events to query. */
+	parent: string
+	/** Inclusive start of the interval, at most 31 days before end_time. */
+	startTime: string
+	/** Exclusive end of the interval; defaults to now. */
+	endTime?: string
+	/** Time buckets, counts, and an optional property sum. Omit for a funnel. */
+	rollup?: RollupQuery
+	/** Ordered conversion steps. Omit for a rollup. */
+	funnel?: FunnelQuery
+}
+
+/** The response of QueryAnalyticsEvents. Only the requested result is populated. */
+export interface QueryAnalyticsEventsResponse {
+	/** Buckets ordered by newest start, then event name and dimension values ascending. */
+	rollupBuckets?: AnalyticsRollupBucket[]
+	/**
+	 * Steps in request order within each breakdown, ranked by starters descending
+	 * then by breakdown value ascending.
+	 */
+	funnelSteps?: AnalyticsFunnelStep[]
+}
+
+/** A time-bucketed aggregate over deduplicated events. */
+export interface RollupQuery {
+	/** The width of each UTC bucket. */
+	interval?: RollupInterval
+	/** Up to 16 event names to include. Empty includes all names. */
+	eventNames?: string[]
+	/**
+	 * Up to four distinct top-level string property keys to group by. Missing
+	 * and non-string values are grouped with the empty string. A dot in a key
+	 * is literal, not a path. Keys match ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.
+	 */
+	groupByProperties?: string[]
+	/**
+	 * A top-level numeric property to sum. Missing and non-numeric values
+	 * contribute zero. Uses the same key grammar as group_by_properties.
+	 */
+	sumProperty?: string
+	/**
+	 * Up to four exact string matches, all of which must hold on each event.
+	 * Keys use the same grammar as group_by_properties; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
+	/** Maximum buckets returned. Defaults to 100; clamped to 1–500. */
+	limit?: number
+}
+
 /** The app's analytics consent, as sent with a batch. */
 export type AnalyticsConsent = 'granted' | 'denied' | (string & {})
 
@@ -205,6 +318,9 @@ export type EventSource = 'client' | 'server' | (string & {})
 
 /** What became of one event of a batch. */
 export type EventStatus = 'accepted' | 'duplicate' | 'rejected' | (string & {})
+
+/** The width of a UTC rollup bucket. */
+export type RollupInterval = 'hour' | 'day' | (string & {})
 
 runtime.registerSchemas({
 	'sylphx.analytics.v1.AnalyticsEvent': [
@@ -217,6 +333,21 @@ runtime.registerSchemas({
 		['sessionId', 'session_id'],
 		['properties', 'properties', undefined, 'json'],
 		['context', 'context', 'sylphx.analytics.v1.EventContext'],
+	],
+	'sylphx.analytics.v1.AnalyticsFunnelStep': [
+		['stepIndex', 'step_index'],
+		['eventName', 'event_name'],
+		['breakdownValue', 'breakdown_value'],
+		['conversionFromStartPct', 'conversion_from_start_pct'],
+		['conversionFromPreviousPct', 'conversion_from_previous_pct'],
+	],
+	'sylphx.analytics.v1.AnalyticsRollupBucket': [
+		['bucketStart', 'bucket_start'],
+		['eventName', 'event_name'],
+		['dimensions', 'dimensions', undefined, 'map'],
+		['eventCount', 'event_count'],
+		['uniqueSubjects', 'unique_subjects'],
+		['propertySum', 'property_sum'],
 	],
 	'sylphx.analytics.v1.BatchEventsRequest': [
 		['events', 'events', 'sylphx.analytics.v1.EventInput'],
@@ -245,6 +376,11 @@ runtime.registerSchemas({
 	'sylphx.analytics.v1.EventResult': [
 		['eventId', 'event_id'],
 	],
+	'sylphx.analytics.v1.FunnelQuery': [
+		['conversionWindowSeconds', 'conversion_window_seconds'],
+		['breakdownProperty', 'breakdown_property'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
+	],
 	'sylphx.analytics.v1.ListAnalyticsEventsRequest': [
 		['startTime', 'start_time'],
 		['endTime', 'end_time'],
@@ -256,6 +392,22 @@ runtime.registerSchemas({
 	'sylphx.analytics.v1.ListAnalyticsEventsResponse': [
 		['analyticsEvents', 'analytics_events', 'sylphx.analytics.v1.AnalyticsEvent'],
 		['nextPageToken', 'next_page_token'],
+	],
+	'sylphx.analytics.v1.QueryAnalyticsEventsRequest': [
+		['startTime', 'start_time'],
+		['endTime', 'end_time'],
+		['rollup', 'rollup', 'sylphx.analytics.v1.RollupQuery'],
+		['funnel', 'funnel', 'sylphx.analytics.v1.FunnelQuery'],
+	],
+	'sylphx.analytics.v1.QueryAnalyticsEventsResponse': [
+		['rollupBuckets', 'rollup_buckets', 'sylphx.analytics.v1.AnalyticsRollupBucket'],
+		['funnelSteps', 'funnel_steps', 'sylphx.analytics.v1.AnalyticsFunnelStep'],
+	],
+	'sylphx.analytics.v1.RollupQuery': [
+		['eventNames', 'event_names'],
+		['groupByProperties', 'group_by_properties'],
+		['sumProperty', 'sum_property'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
 	],
 })
 
@@ -331,5 +483,23 @@ export class AnalyticsEventsCollection {
 			if (page.nextPageToken === undefined || page.nextPageToken === '') return
 			next = { ...request, pageToken: page.nextPageToken }
 		}
+	}
+
+	/**
+	 * Aggregates deduplicated events in the environment over a bounded interval.
+	 *
+	 * `POST /v1/{parent=orgs/*\/projects/*\/envs/*}/analytics_events:query` · permission `analytics:read` · effect `read`
+	 *
+	 * Errors: `UNAUTHENTICATED`, `PERMISSION_DENIED`, `INVALID_FIELD`, `UNAVAILABLE`.
+	 */
+	async query(request: QueryAnalyticsEventsRequest): Promise<QueryAnalyticsEventsResponse> {
+		return this.client.call<QueryAnalyticsEventsResponse>({
+			method: 'POST',
+			path: `/v1/${runtime.pathParam(request.parent, 'orgs/*/projects/*/envs/*', 'parent')}/analytics_events:query`,
+			body: runtime.omit(request, ['parent']),
+			bodyType: 'sylphx.analytics.v1.QueryAnalyticsEventsRequest',
+			responseType: 'sylphx.analytics.v1.QueryAnalyticsEventsResponse',
+			mutation: true,
+		})
 	}
 }

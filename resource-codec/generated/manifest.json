@@ -736,6 +736,25 @@
       ]
     },
     {
+      "doc": "The width of a UTC rollup bucket.",
+      "name": "sylphx.analytics.v1.RollupInterval",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "One UTC hour.",
+          "number": 1,
+          "proto_name": "ROLLUP_INTERVAL_HOUR",
+          "wire": "hour"
+        },
+        {
+          "doc": "One UTC calendar day.",
+          "number": 2,
+          "proto_name": "ROLLUP_INTERVAL_DAY",
+          "wire": "day"
+        }
+      ]
+    },
+    {
       "doc": "ArtifactKind is what an Artifact is.",
       "name": "sylphx.artifacts.v1.ArtifactKind",
       "package": "sylphx.artifacts.v1",
@@ -22163,6 +22182,227 @@
       "package": "sylphx.analytics.v1"
     },
     {
+      "doc": "Conversion for one funnel step and breakdown value.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Zero-based step position in the request.",
+          "filterable": false,
+          "name": "step_index",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The event name of the step.",
+          "filterable": false,
+          "name": "event_name",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The breakdown value; empty for an unsegmented funnel.",
+          "filterable": false,
+          "name": "breakdown_value",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Distinct subjects that reached this step in this breakdown.",
+          "filterable": false,
+          "name": "subjects",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Percentage of first-step subjects who reached this step (0–100).\nZero if there were no first-step subjects.",
+          "filterable": false,
+          "name": "conversion_from_start_pct",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Percentage of previous-step subjects who reached this step (0–100).\nThe first step uses its own count as denominator; zero when it is zero.",
+          "filterable": false,
+          "name": "conversion_from_previous_pct",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsFunnelStep",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "Aggregate for one UTC bucket, event name, and set of dimensions.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The UTC start of the bucket.",
+          "filterable": false,
+          "name": "bucket_start",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The event name.",
+          "filterable": false,
+          "name": "event_name",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The values of the requested group-by keys.",
+          "filterable": false,
+          "name": "dimensions",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Deduplicated event count.",
+          "filterable": false,
+          "name": "event_count",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Exact number of distinct subjects.",
+          "filterable": false,
+          "name": "unique_subjects",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The numeric sum, present when sum_property was requested.",
+          "filterable": false,
+          "name": "property_sum",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsRollupBucket",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "The request of BatchEvents. A batch has at most 500 events and 1 MiB\ncompressed; `Content-Encoding: gzip` is accepted. `Idempotency-Key` on the\nrequest makes a whole retried batch a no-op in the store.",
       "fields": [
         {
@@ -22700,6 +22940,111 @@
       "package": "sylphx.analytics.v1"
     },
     {
+      "doc": "The longest ordered prefix reached by each subject within a conversion window.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+          "filterable": false,
+          "name": "steps",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days).",
+          "filterable": false,
+          "name": "conversion_window_seconds",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
+          "filterable": false,
+          "name": "breakdown_property",
+          "number": 3,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches, all of which must hold on every step.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",
+          "filterable": false,
+          "name": "limit",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.FunnelQuery",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "The request of ListAnalyticsEvents.",
       "fields": [
         {
@@ -22878,6 +23223,273 @@
         }
       ],
       "name": "sylphx.analytics.v1.ListAnalyticsEventsResponse",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The environment whose events to query.",
+          "filterable": false,
+          "name": "parent",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": "analytics.sylphx.com/AnalyticsEvent",
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "Inclusive start of the interval, at most 31 days before end_time.",
+          "filterable": false,
+          "name": "start_time",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Exclusive end of the interval; defaults to now.",
+          "filterable": false,
+          "name": "end_time",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+          "filterable": false,
+          "name": "rollup",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.RollupQuery"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Ordered conversion steps. Omit for a rollup.",
+          "filterable": false,
+          "name": "funnel",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.FunnelQuery"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.QueryAnalyticsEventsRequest",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "The response of QueryAnalyticsEvents. Only the requested result is populated.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Buckets ordered by newest start, then event name and dimension values ascending.",
+          "filterable": false,
+          "name": "rollup_buckets",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsRollupBucket"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Steps in request order within each breakdown, ranked by starters descending\nthen by breakdown value ascending.",
+          "filterable": false,
+          "name": "funnel_steps",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsFunnelStep"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.QueryAnalyticsEventsResponse",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "A time-bucketed aggregate over deduplicated events.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The width of each UTC bucket.",
+          "filterable": false,
+          "name": "interval",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.RollupInterval"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to 16 event names to include. Empty includes all names.",
+          "filterable": false,
+          "name": "event_names",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four distinct top-level string property keys to group by. Missing\nand non-string values are grouped with the empty string. A dot in a key\nis literal, not a path. Keys match ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.",
+          "filterable": false,
+          "name": "group_by_properties",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A top-level numeric property to sum. Missing and non-numeric values\ncontribute zero. Uses the same key grammar as group_by_properties.",
+          "filterable": false,
+          "name": "sum_property",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches, all of which must hold on each event.\nKeys use the same grammar as group_by_properties; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum buckets returned. Defaults to 100; clamped to 1–500.",
+          "filterable": false,
+          "name": "limit",
+          "number": 6,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.RollupQuery",
       "package": "sylphx.analytics.v1"
     },
     {
@@ -162464,6 +163076,46 @@
               "supports_validate_only": false,
               "validate_only_unsupported": false,
               "verb": "list"
+            },
+            {
+              "cancellable": false,
+              "cli_verb": "",
+              "doc": "Aggregates deduplicated events in the environment over a bounded interval.",
+              "effect": "read",
+              "errors": [
+                "UNAUTHENTICATED",
+                "PERMISSION_DENIED",
+                "INVALID_FIELD",
+                "UNAVAILABLE"
+              ],
+              "http": {
+                "body": "*",
+                "method": "POST",
+                "path_params": [
+                  {
+                    "field": "parent",
+                    "named_pattern": "orgs/{org}/projects/{project}/envs/{env}",
+                    "pattern": "orgs/*/projects/*/envs/*"
+                  }
+                ],
+                "query_params": [],
+                "template": "/v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query"
+              },
+              "id": "analytics.analytics_events.query",
+              "kind": "custom",
+              "lro": null,
+              "mcp": "core",
+              "page": null,
+              "permission": "analytics:read",
+              "proto": "sylphx.analytics.v1.AnalyticsService.QueryAnalyticsEvents",
+              "publishable_ok": false,
+              "rate_class": "default",
+              "request": "sylphx.analytics.v1.QueryAnalyticsEventsRequest",
+              "resource_field": null,
+              "response": "sylphx.analytics.v1.QueryAnalyticsEventsResponse",
+              "supports_validate_only": false,
+              "validate_only_unsupported": false,
+              "verb": "query"
             }
           ],
           "name": "analytics_events",

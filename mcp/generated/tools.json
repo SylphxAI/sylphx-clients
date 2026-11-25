@@ -6836,6 +6836,135 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Aggregates deduplicated events in the environment over a bounded interval."
+      },
+      "description": "Aggregates deduplicated events in the environment over a bounded interval.",
+      "effect": "read",
+      "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query",
+      "input_schema": {
+        "additionalProperties": false,
+        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+        "properties": {
+          "end_time": {
+            "description": "Exclusive end of the interval; defaults to now.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "funnel": {
+            "additionalProperties": false,
+            "description": "Ordered conversion steps. Omit for a rollup.",
+            "properties": {
+              "breakdown_property": {
+                "description": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
+                "type": "string"
+              },
+              "conversion_window_seconds": {
+                "description": "Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days).",
+                "format": "int64",
+                "type": "string"
+              },
+              "limit": {
+                "description": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches, all of which must hold on every step.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "steps": {
+                "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "steps",
+              "conversion_window_seconds"
+            ],
+            "type": "object"
+          },
+          "parent": {
+            "description": "The environment whose events to query.",
+            "type": "string",
+            "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
+          },
+          "rollup": {
+            "additionalProperties": false,
+            "description": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+            "properties": {
+              "event_names": {
+                "description": "Up to 16 event names to include. Empty includes all names.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "group_by_properties": {
+                "description": "Up to four distinct top-level string property keys to group by. Missing\nand non-string values are grouped with the empty string. A dot in a key\nis literal, not a path. Keys match ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "interval": {
+                "description": "The width of each UTC bucket.",
+                "enum": [
+                  "hour",
+                  "day"
+                ],
+                "type": "string"
+              },
+              "limit": {
+                "description": "Maximum buckets returned. Defaults to 100; clamped to 1–500.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches, all of which must hold on each event.\nKeys use the same grammar as group_by_properties; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "sum_property": {
+                "description": "A top-level numeric property to sum. Missing and non-numeric values\ncontribute zero. Uses the same key grammar as group_by_properties.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "interval"
+            ],
+            "type": "object"
+          },
+          "start_time": {
+            "description": "Inclusive start of the interval, at most 31 days before end_time.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "long_running": false,
+      "method_id": "analytics.analytics_events.query",
+      "permission": "analytics:read",
+      "tool": "analytics_analytics_events_query"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": true,
@@ -52804,6 +52933,131 @@
       },
       "name": "analytics_analytics_events_list",
       "x-sylphx-method": "analytics.analytics_events.list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Aggregates deduplicated events in the environment over a bounded interval."
+      },
+      "description": "Aggregates deduplicated events in the environment over a bounded interval.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+        "properties": {
+          "end_time": {
+            "description": "Exclusive end of the interval; defaults to now.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "funnel": {
+            "additionalProperties": false,
+            "description": "Ordered conversion steps. Omit for a rollup.",
+            "properties": {
+              "breakdown_property": {
+                "description": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
+                "type": "string"
+              },
+              "conversion_window_seconds": {
+                "description": "Seconds allowed from the first step, inclusive; 1 to 2592000 (30 days).",
+                "format": "int64",
+                "type": "string"
+              },
+              "limit": {
+                "description": "Maximum breakdown values returned. Defaults to 50; clamped to 1–200.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches, all of which must hold on every step.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "steps": {
+                "description": "Two to 16 event names in step order. Each step must occur at a strictly\nlater event timestamp than the prior step, inside the query interval.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "steps",
+              "conversion_window_seconds"
+            ],
+            "type": "object"
+          },
+          "parent": {
+            "description": "The environment whose events to query.",
+            "type": "string",
+            "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
+          },
+          "rollup": {
+            "additionalProperties": false,
+            "description": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+            "properties": {
+              "event_names": {
+                "description": "Up to 16 event names to include. Empty includes all names.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "group_by_properties": {
+                "description": "Up to four distinct top-level string property keys to group by. Missing\nand non-string values are grouped with the empty string. A dot in a key\nis literal, not a path. Keys match ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "interval": {
+                "description": "The width of each UTC bucket.",
+                "enum": [
+                  "hour",
+                  "day"
+                ],
+                "type": "string"
+              },
+              "limit": {
+                "description": "Maximum buckets returned. Defaults to 100; clamped to 1–500.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches, all of which must hold on each event.\nKeys use the same grammar as group_by_properties; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "sum_property": {
+                "description": "A top-level numeric property to sum. Missing and non-numeric values\ncontribute zero. Uses the same key grammar as group_by_properties.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "interval"
+            ],
+            "type": "object"
+          },
+          "start_time": {
+            "description": "Inclusive start of the interval, at most 31 days before end_time.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "name": "analytics_analytics_events_query",
+      "x-sylphx-method": "analytics.analytics_events.query"
     },
     {
       "annotations": {

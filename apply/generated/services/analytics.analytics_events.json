@@ -22,6 +22,13 @@
           },
           "id": "analytics.analytics_events.list",
           "kind": "list"
+        },
+        {
+          "http": {
+            "query_params": []
+          },
+          "id": "analytics.analytics_events.query",
+          "kind": "custom"
         }
       ],
       "resource_type": "analytics.sylphx.com/AnalyticsEvent"
