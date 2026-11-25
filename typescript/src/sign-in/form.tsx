@@ -108,7 +108,7 @@ function localizedError(problem: unknown, copy: ContinueSignInCopy, fallback: st
 }
 
 /** The one form, shared by embedded pages and the Account Portal. No SDK context required. */
-export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: ContinueSignInCopy; emailFirst?: boolean }) {
+export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: ContinueSignInCopy; emailFirst?: boolean; signInHeading?: string }) {
 	const copy = options.copy ?? englishCopy
 	const { productName, endpoints, next, termsUrl, privacyUrl, emailOtpEnabled = true } = options
 	/* Only documents the product set are linked; an unset one is never filled in. */
@@ -461,7 +461,7 @@ export function ContinueSignInForm(options: ContinueSignInOptions & { copy?: Con
 				<>
 					<h1 id={`${id}-title`}>
 						{step === 'email'
-							? format(copy.signIn, productName)
+							? (options.signInHeading ?? format(copy.signIn, productName))
 							: step === 'code'
 								? copy.checkEmail
 								: copy.usePassword}
