@@ -552,6 +552,49 @@ pub mod int64 {
     }
 }
 
+/// Repeated 64-bit integers as a JSON array of strings. Accept integer
+/// elements on input, just as for scalar 64-bit fields.
+pub mod vec_int64 {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    struct Wire<T>(T);
+
+    impl<T: std::fmt::Display> Serialize for Wire<T> {
+        fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            super::int64::serialize(&self.0, s)
+        }
+    }
+
+    impl<'de, T> Deserialize<'de> for Wire<T>
+    where
+        T: std::str::FromStr + Deserialize<'de>,
+        T::Err: std::fmt::Display,
+    {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            super::int64::deserialize(d).map(Self)
+        }
+    }
+
+    pub fn serialize<S: Serializer, T: std::fmt::Display>(
+        v: &[T],
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        s.collect_seq(v.iter().map(Wire))
+    }
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: std::str::FromStr + Deserialize<'de>,
+        T::Err: std::fmt::Display,
+    {
+        Ok(Vec::<Wire<T>>::deserialize(d)?
+            .into_iter()
+            .map(|v| v.0)
+            .collect())
+    }
+}
+
 /// `optional int64` / `optional uint64` as an optional JSON string.
 pub mod opt_int64 {
     use serde::{Deserialize, Deserializer, Serializer};

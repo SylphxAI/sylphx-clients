@@ -77,6 +77,27 @@ export interface AnalyticsFunnelStep {
 	conversionFromPreviousPct?: number
 }
 
+/** Aggregate for one UTC cohort start and breakdown value. */
+export interface AnalyticsRetentionCohort {
+	/** The UTC start of the cohort period. */
+	cohortStart?: string
+	/** The entry-event breakdown value; empty for an unsegmented cohort. */
+	breakdownValue?: string
+	/** Distinct subjects entering the cohort. */
+	cohortSize?: string
+	/**
+	 * Distinct subjects who fired the return event in each period, after or at
+	 * their own cohort-entry time and before the query's exclusive end. Index 0
+	 * is the entry period; the array length is periods + 1.
+	 */
+	retainedSubjects?: string[]
+	/**
+	 * Percentage of the cohort retained in each period (0–100), or zero when
+	 * cohort_size is zero. The array length is periods + 1.
+	 */
+	retentionPcts?: number[]
+}
+
 /** Aggregate for one UTC bucket, event name, and set of dimensions. */
 export interface AnalyticsRollupBucket {
 	/** The UTC start of the bucket. */
@@ -259,7 +280,7 @@ export interface ListAnalyticsEventsResponse {
 	nextPageToken?: string
 }
 
-/** The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel. */
+/** The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention. */
 export interface QueryAnalyticsEventsRequest {
 	/** The environment whose events to query. */
 	parent: string
@@ -267,10 +288,12 @@ export interface QueryAnalyticsEventsRequest {
 	startTime: string
 	/** Exclusive end of the interval; defaults to now. */
 	endTime?: string
-	/** Time buckets, counts, and an optional property sum. Omit for a funnel. */
+	/** Time buckets, counts, and an optional property sum. */
 	rollup?: RollupQuery
-	/** Ordered conversion steps. Omit for a rollup. */
+	/** Ordered conversion steps. */
 	funnel?: FunnelQuery
+	/** Calendar cohorts and exact subject retention by period. */
+	retention?: RetentionQuery
 }
 
 /** The response of QueryAnalyticsEvents. Only the requested result is populated. */
@@ -282,6 +305,37 @@ export interface QueryAnalyticsEventsResponse {
 	 * then by breakdown value ascending.
 	 */
 	funnelSteps?: AnalyticsFunnelStep[]
+	/** Cohorts ordered by newest start, then size descending and breakdown value ascending. */
+	retentionCohorts?: AnalyticsRetentionCohort[]
+}
+
+/**
+ * Exact subject retention by UTC calendar period. A subject enters at their
+ * first qualifying cohort event in the query interval.
+ */
+export interface RetentionQuery {
+	/** The event that qualifies a subject for a cohort. */
+	cohortEvent?: string
+	/** The event that counts as a return. Defaults to cohort_event when omitted. */
+	returnEvent?: string
+	/** The UTC calendar unit for both cohort entry and return periods. */
+	interval?: RetentionInterval
+	/** Number of periods after period 0. Defaults to 7; clamped to 1–30. */
+	periods?: number
+	/**
+	 * A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value
+	 * comes from the first qualifying cohort event, never from a return event.
+	 * Omit for unsegmented cohorts. Missing and non-string values are grouped
+	 * with the empty string. A dot in a key is literal, not a path.
+	 */
+	breakdownProperty?: string
+	/**
+	 * Up to four exact string matches required on the cohort-entry event only.
+	 * Keys use the same grammar as breakdown_property; values are at most 128 bytes.
+	 */
+	propertyFilters?: Record<string, string>
+	/** Maximum cohort rows returned. Defaults to 100; clamped to 1–500. */
+	limit?: number
 }
 
 /** A time-bucketed aggregate over deduplicated events. */
@@ -319,6 +373,9 @@ export type EventSource = 'client' | 'server' | (string & {})
 /** What became of one event of a batch. */
 export type EventStatus = 'accepted' | 'duplicate' | 'rejected' | (string & {})
 
+/** The width of a UTC retention period. */
+export type RetentionInterval = 'day' | 'week' | (string & {})
+
 /** The width of a UTC rollup bucket. */
 export type RollupInterval = 'hour' | 'day' | (string & {})
 
@@ -340,6 +397,13 @@ runtime.registerSchemas({
 		['breakdownValue', 'breakdown_value'],
 		['conversionFromStartPct', 'conversion_from_start_pct'],
 		['conversionFromPreviousPct', 'conversion_from_previous_pct'],
+	],
+	'sylphx.analytics.v1.AnalyticsRetentionCohort': [
+		['cohortStart', 'cohort_start'],
+		['breakdownValue', 'breakdown_value'],
+		['cohortSize', 'cohort_size'],
+		['retainedSubjects', 'retained_subjects'],
+		['retentionPcts', 'retention_pcts'],
 	],
 	'sylphx.analytics.v1.AnalyticsRollupBucket': [
 		['bucketStart', 'bucket_start'],
@@ -398,10 +462,18 @@ runtime.registerSchemas({
 		['endTime', 'end_time'],
 		['rollup', 'rollup', 'sylphx.analytics.v1.RollupQuery'],
 		['funnel', 'funnel', 'sylphx.analytics.v1.FunnelQuery'],
+		['retention', 'retention', 'sylphx.analytics.v1.RetentionQuery'],
 	],
 	'sylphx.analytics.v1.QueryAnalyticsEventsResponse': [
 		['rollupBuckets', 'rollup_buckets', 'sylphx.analytics.v1.AnalyticsRollupBucket'],
 		['funnelSteps', 'funnel_steps', 'sylphx.analytics.v1.AnalyticsFunnelStep'],
+		['retentionCohorts', 'retention_cohorts', 'sylphx.analytics.v1.AnalyticsRetentionCohort'],
+	],
+	'sylphx.analytics.v1.RetentionQuery': [
+		['cohortEvent', 'cohort_event'],
+		['returnEvent', 'return_event'],
+		['breakdownProperty', 'breakdown_property'],
+		['propertyFilters', 'property_filters', undefined, 'map'],
 	],
 	'sylphx.analytics.v1.RollupQuery': [
 		['eventNames', 'event_names'],

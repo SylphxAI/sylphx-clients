@@ -736,6 +736,25 @@
       ]
     },
     {
+      "doc": "The width of a UTC retention period.",
+      "name": "sylphx.analytics.v1.RetentionInterval",
+      "package": "sylphx.analytics.v1",
+      "values": [
+        {
+          "doc": "One UTC calendar day.",
+          "number": 1,
+          "proto_name": "RETENTION_INTERVAL_DAY",
+          "wire": "day"
+        },
+        {
+          "doc": "One UTC ISO week starting Monday at 00:00:00Z.",
+          "number": 2,
+          "proto_name": "RETENTION_INTERVAL_WEEK",
+          "wire": "week"
+        }
+      ]
+    },
+    {
       "doc": "The width of a UTC rollup bucket.",
       "name": "sylphx.analytics.v1.RollupInterval",
       "package": "sylphx.analytics.v1",
@@ -22416,6 +22435,98 @@
       "package": "sylphx.analytics.v1"
     },
     {
+      "doc": "Aggregate for one UTC cohort start and breakdown value.",
+      "fields": [
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The UTC start of the cohort period.",
+          "filterable": false,
+          "name": "cohort_start",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "well_known",
+            "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "The entry-event breakdown value; empty for an unsegmented cohort.",
+          "filterable": false,
+          "name": "breakdown_value",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Distinct subjects entering the cohort.",
+          "filterable": false,
+          "name": "cohort_size",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Distinct subjects who fired the return event in each period, after or at\ntheir own cohort-entry time and before the query's exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
+          "filterable": false,
+          "name": "retained_subjects",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int64"
+          }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Percentage of the cohort retained in each period (0–100), or zero when\ncohort_size is zero. The array length is periods + 1.",
+          "filterable": false,
+          "name": "retention_pcts",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "double"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.AnalyticsRetentionCohort",
+      "package": "sylphx.analytics.v1"
+    },
+    {
       "doc": "Aggregate for one UTC bucket, event name, and set of dimensions.",
       "fields": [
         {
@@ -23351,7 +23462,7 @@
       "package": "sylphx.analytics.v1"
     },
     {
-      "doc": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+      "doc": "The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.",
       "fields": [
         {
           "behaviors": [
@@ -23415,7 +23526,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+          "doc": "Time buckets, counts, and an optional property sum.",
           "filterable": false,
           "name": "rollup",
           "number": 4,
@@ -23434,7 +23545,7 @@
             "OPTIONAL"
           ],
           "cli_flag": "",
-          "doc": "Ordered conversion steps. Omit for a rollup.",
+          "doc": "Ordered conversion steps.",
           "filterable": false,
           "name": "funnel",
           "number": 5,
@@ -23446,6 +23557,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.analytics.v1.FunnelQuery"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Calendar cohorts and exact subject retention by period.",
+          "filterable": false,
+          "name": "retention",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.RetentionQuery"
           }
         }
       ],
@@ -23488,9 +23618,169 @@
             "kind": "message",
             "name": "sylphx.analytics.v1.AnalyticsFunnelStep"
           }
+        },
+        {
+          "behaviors": [],
+          "cli_flag": "",
+          "doc": "Cohorts ordered by newest start, then size descending and breakdown value ascending.",
+          "filterable": false,
+          "name": "retention_cohorts",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.analytics.v1.AnalyticsRetentionCohort"
+          }
         }
       ],
       "name": "sylphx.analytics.v1.QueryAnalyticsEventsResponse",
+      "package": "sylphx.analytics.v1"
+    },
+    {
+      "doc": "Exact subject retention by UTC calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
+      "fields": [
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The event that qualifies a subject for a cohort.",
+          "filterable": false,
+          "name": "cohort_event",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "The event that counts as a return. Defaults to cohort_event when omitted.",
+          "filterable": false,
+          "name": "return_event",
+          "number": 2,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "REQUIRED"
+          ],
+          "cli_flag": "",
+          "doc": "The UTC calendar unit for both cohort entry and return periods.",
+          "filterable": false,
+          "name": "interval",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "enum",
+            "name": "sylphx.analytics.v1.RetentionInterval"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
+          "filterable": false,
+          "name": "periods",
+          "number": 4,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
+          "filterable": false,
+          "name": "breakdown_property",
+          "number": 5,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+          "filterable": false,
+          "name": "property_filters",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "map",
+            "value": {
+              "kind": "scalar",
+              "scalar": "string"
+            }
+          }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL"
+          ],
+          "cli_flag": "",
+          "doc": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
+          "filterable": false,
+          "name": "limit",
+          "number": 7,
+          "oneof": null,
+          "optional": true,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "int32"
+          }
+        }
+      ],
+      "name": "sylphx.analytics.v1.RetentionQuery",
       "package": "sylphx.analytics.v1"
     },
     {

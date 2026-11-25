@@ -6846,7 +6846,7 @@
       "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/analytics_events:query",
       "input_schema": {
         "additionalProperties": false,
-        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.",
         "properties": {
           "end_time": {
             "description": "Exclusive end of the interval; defaults to now.",
@@ -6855,7 +6855,7 @@
           },
           "funnel": {
             "additionalProperties": false,
-            "description": "Ordered conversion steps. Omit for a rollup.",
+            "description": "Ordered conversion steps.",
             "properties": {
               "breakdown_property": {
                 "description": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
@@ -6897,9 +6897,57 @@
             "type": "string",
             "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
           },
+          "retention": {
+            "additionalProperties": false,
+            "description": "Calendar cohorts and exact subject retention by period.",
+            "properties": {
+              "breakdown_property": {
+                "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
+                "type": "string"
+              },
+              "cohort_event": {
+                "description": "The event that qualifies a subject for a cohort.",
+                "type": "string"
+              },
+              "interval": {
+                "description": "The UTC calendar unit for both cohort entry and return periods.",
+                "enum": [
+                  "day",
+                  "week"
+                ],
+                "type": "string"
+              },
+              "limit": {
+                "description": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "periods": {
+                "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "return_event": {
+                "description": "The event that counts as a return. Defaults to cohort_event when omitted.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "cohort_event",
+              "interval"
+            ],
+            "type": "object"
+          },
           "rollup": {
             "additionalProperties": false,
-            "description": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+            "description": "Time buckets, counts, and an optional property sum.",
             "properties": {
               "event_names": {
                 "description": "Up to 16 event names to include. Empty includes all names.",
@@ -53664,7 +53712,7 @@
       "description": "Aggregates deduplicated events in the environment over a bounded interval.",
       "inputSchema": {
         "additionalProperties": false,
-        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.",
         "properties": {
           "end_time": {
             "description": "Exclusive end of the interval; defaults to now.",
@@ -53673,7 +53721,7 @@
           },
           "funnel": {
             "additionalProperties": false,
-            "description": "Ordered conversion steps. Omit for a rollup.",
+            "description": "Ordered conversion steps.",
             "properties": {
               "breakdown_property": {
                 "description": "A top-level property key, matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$.\nEach step in a chain must have the same string value. Missing and\nnon-string values are grouped with the empty string. Omit for one funnel.",
@@ -53715,9 +53763,57 @@
             "type": "string",
             "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
           },
+          "retention": {
+            "additionalProperties": false,
+            "description": "Calendar cohorts and exact subject retention by period.",
+            "properties": {
+              "breakdown_property": {
+                "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
+                "type": "string"
+              },
+              "cohort_event": {
+                "description": "The event that qualifies a subject for a cohort.",
+                "type": "string"
+              },
+              "interval": {
+                "description": "The UTC calendar unit for both cohort entry and return periods.",
+                "enum": [
+                  "day",
+                  "week"
+                ],
+                "type": "string"
+              },
+              "limit": {
+                "description": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "periods": {
+                "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "property_filters": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+                "type": "object"
+              },
+              "return_event": {
+                "description": "The event that counts as a return. Defaults to cohort_event when omitted.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "cohort_event",
+              "interval"
+            ],
+            "type": "object"
+          },
           "rollup": {
             "additionalProperties": false,
-            "description": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+            "description": "Time buckets, counts, and an optional property sum.",
             "properties": {
               "event_names": {
                 "description": "Up to 16 event names to include. Empty includes all names.",

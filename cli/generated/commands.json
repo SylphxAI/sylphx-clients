@@ -4250,13 +4250,19 @@
                 {
                   "field": "rollup",
                   "flag": "--rollup",
-                  "summary": "Time buckets, counts, and an optional property sum. Omit for a funnel.",
+                  "summary": "Time buckets, counts, and an optional property sum.",
                   "type": "json"
                 },
                 {
                   "field": "funnel",
                   "flag": "--funnel",
-                  "summary": "Ordered conversion steps. Omit for a rollup.",
+                  "summary": "Ordered conversion steps.",
+                  "type": "json"
+                },
+                {
+                  "field": "retention",
+                  "flag": "--retention",
+                  "summary": "Calendar cohorts and exact subject retention by period.",
                   "type": "json"
                 }
               ],

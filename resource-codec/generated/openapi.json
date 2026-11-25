@@ -5709,6 +5709,41 @@
         },
         "type": "object"
       },
+      "sylphx.analytics.v1.AnalyticsRetentionCohort": {
+        "description": "Aggregate for one UTC cohort start and breakdown value.",
+        "properties": {
+          "breakdown_value": {
+            "description": "The entry-event breakdown value; empty for an unsegmented cohort.",
+            "type": "string"
+          },
+          "cohort_size": {
+            "description": "Distinct subjects entering the cohort.",
+            "format": "int64",
+            "type": "string"
+          },
+          "cohort_start": {
+            "description": "The UTC start of the cohort period.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "retained_subjects": {
+            "description": "Distinct subjects who fired the return event in each period, after or at\ntheir own cohort-entry time and before the query's exclusive end. Index 0\nis the entry period; the array length is periods + 1.",
+            "items": {
+              "format": "int64",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "retention_pcts": {
+            "description": "Percentage of the cohort retained in each period (0–100), or zero when\ncohort_size is zero. The array length is periods + 1.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.analytics.v1.AnalyticsRollupBucket": {
         "description": "Aggregate for one UTC bucket, event name, and set of dimensions.",
         "properties": {
@@ -6026,7 +6061,7 @@
         "type": "object"
       },
       "sylphx.analytics.v1.QueryAnalyticsEventsRequest": {
-        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.",
+        "description": "The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.",
         "properties": {
           "end_time": {
             "description": "Exclusive end of the interval; defaults to now.",
@@ -6035,16 +6070,20 @@
           },
           "funnel": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelQuery",
-            "description": "Ordered conversion steps. Omit for a rollup."
+            "description": "Ordered conversion steps."
           },
           "parent": {
             "description": "The environment whose events to query.",
             "type": "string",
             "x-sylphx-resource-reference": "analytics.sylphx.com/AnalyticsEvent"
           },
+          "retention": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionQuery",
+            "description": "Calendar cohorts and exact subject retention by period."
+          },
           "rollup": {
             "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
-            "description": "Time buckets, counts, and an optional property sum. Omit for a funnel."
+            "description": "Time buckets, counts, and an optional property sum."
           },
           "start_time": {
             "description": "Inclusive start of the interval, at most 31 days before end_time.",
@@ -6068,6 +6107,13 @@
             },
             "type": "array"
           },
+          "retention_cohorts": {
+            "description": "Cohorts ordered by newest start, then size descending and breakdown value ascending.",
+            "items": {
+              "$ref": "#/components/schemas/sylphx.analytics.v1.AnalyticsRetentionCohort"
+            },
+            "type": "array"
+          },
           "rollup_buckets": {
             "description": "Buckets ordered by newest start, then event name and dimension values ascending.",
             "items": {
@@ -6076,6 +6122,57 @@
             "type": "array"
           }
         },
+        "type": "object"
+      },
+      "sylphx.analytics.v1.RetentionInterval": {
+        "description": "The width of a UTC retention period.",
+        "enum": [
+          "day",
+          "week"
+        ],
+        "type": "string"
+      },
+      "sylphx.analytics.v1.RetentionQuery": {
+        "description": "Exact subject retention by UTC calendar period. A subject enters at their\nfirst qualifying cohort event in the query interval.",
+        "properties": {
+          "breakdown_property": {
+            "description": "A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value\ncomes from the first qualifying cohort event, never from a return event.\nOmit for unsegmented cohorts. Missing and non-string values are grouped\nwith the empty string. A dot in a key is literal, not a path.",
+            "type": "string"
+          },
+          "cohort_event": {
+            "description": "The event that qualifies a subject for a cohort.",
+            "type": "string"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionInterval",
+            "description": "The UTC calendar unit for both cohort entry and return periods."
+          },
+          "limit": {
+            "description": "Maximum cohort rows returned. Defaults to 100; clamped to 1–500.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "periods": {
+            "description": "Number of periods after period 0. Defaults to 7; clamped to 1–30.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "property_filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Up to four exact string matches required on the cohort-entry event only.\nKeys use the same grammar as breakdown_property; values are at most 128 bytes.",
+            "type": "object"
+          },
+          "return_event": {
+            "description": "The event that counts as a return. Defaults to cohort_event when omitted.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cohort_event",
+          "interval"
+        ],
         "type": "object"
       },
       "sylphx.analytics.v1.RollupInterval": {
@@ -70765,11 +70862,15 @@
                   },
                   "funnel": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.FunnelQuery",
-                    "description": "Ordered conversion steps. Omit for a rollup."
+                    "description": "Ordered conversion steps."
+                  },
+                  "retention": {
+                    "$ref": "#/components/schemas/sylphx.analytics.v1.RetentionQuery",
+                    "description": "Calendar cohorts and exact subject retention by period."
                   },
                   "rollup": {
                     "$ref": "#/components/schemas/sylphx.analytics.v1.RollupQuery",
-                    "description": "Time buckets, counts, and an optional property sum. Omit for a funnel."
+                    "description": "Time buckets, counts, and an optional property sum."
                   },
                   "start_time": {
                     "description": "Inclusive start of the interval, at most 31 days before end_time.",

@@ -159,6 +159,52 @@ pub struct AnalyticsFunnelStep {
     pub conversion_from_previous_pct: f64,
 }
 
+/// Aggregate for one UTC cohort start and breakdown value.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct AnalyticsRetentionCohort {
+    /// The UTC start of the cohort period.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "cohortStart"
+    )]
+    pub cohort_start: String,
+    /// The entry-event breakdown value; empty for an unsegmented cohort.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "breakdownValue"
+    )]
+    pub breakdown_value: String,
+    /// Distinct subjects entering the cohort.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        with = "crate::runtime::int64",
+        alias = "cohortSize"
+    )]
+    pub cohort_size: i64,
+    /// Distinct subjects who fired the return event in each period, after or at
+    /// their own cohort-entry time and before the query's exclusive end. Index 0
+    /// is the entry period; the array length is periods + 1.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        with = "crate::runtime::vec_int64",
+        alias = "retainedSubjects"
+    )]
+    pub retained_subjects: Vec<i64>,
+    /// Percentage of the cohort retained in each period (0–100), or zero when
+    /// cohort_size is zero. The array length is periods + 1.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "retentionPcts"
+    )]
+    pub retention_pcts: Vec<f64>,
+}
+
 /// Aggregate for one UTC bucket, event name, and set of dimensions.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -515,7 +561,7 @@ pub struct ListAnalyticsEventsResponse {
     pub next_page_token: String,
 }
 
-/// The request of QueryAnalyticsEvents. Set exactly one of rollup and funnel.
+/// The request of QueryAnalyticsEvents. Set exactly one of rollup, funnel, or retention.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct QueryAnalyticsEventsRequest {
@@ -540,12 +586,15 @@ pub struct QueryAnalyticsEventsRequest {
         alias = "endTime"
     )]
     pub end_time: String,
-    /// Time buckets, counts, and an optional property sum. Omit for a funnel.
+    /// Time buckets, counts, and an optional property sum.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rollup: Option<RollupQuery>,
-    /// Ordered conversion steps. Omit for a rollup.
+    /// Ordered conversion steps.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub funnel: Option<FunnelQuery>,
+    /// Calendar cohorts and exact subject retention by period.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retention: Option<RetentionQuery>,
 }
 
 /// The response of QueryAnalyticsEvents. Only the requested result is populated.
@@ -563,6 +612,65 @@ pub struct QueryAnalyticsEventsResponse {
     /// then by breakdown value ascending.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "funnelSteps")]
     pub funnel_steps: Vec<AnalyticsFunnelStep>,
+    /// Cohorts ordered by newest start, then size descending and breakdown value ascending.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        alias = "retentionCohorts"
+    )]
+    pub retention_cohorts: Vec<AnalyticsRetentionCohort>,
+}
+
+/// Exact subject retention by UTC calendar period. A subject enters at their
+/// first qualifying cohort event in the query interval.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct RetentionQuery {
+    /// The event that qualifies a subject for a cohort.
+    ///
+    /// Field behavior: `required`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "cohortEvent"
+    )]
+    pub cohort_event: String,
+    /// The event that counts as a return. Defaults to cohort_event when omitted.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "returnEvent"
+    )]
+    pub return_event: Option<String>,
+    /// The UTC calendar unit for both cohort entry and return periods.
+    ///
+    /// Field behavior: `required`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<RetentionInterval>,
+    /// Number of periods after period 0. Defaults to 7; clamped to 1–30.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub periods: Option<i32>,
+    /// A top-level key matching ^[A-Za-z_][A-Za-z0-9_.]{0,63}$. Its string value
+    /// comes from the first qualifying cohort event, never from a return event.
+    /// Omit for unsegmented cohorts. Missing and non-string values are grouped
+    /// with the empty string. A dot in a key is literal, not a path.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "breakdownProperty"
+    )]
+    pub breakdown_property: Option<String>,
+    /// Up to four exact string matches required on the cohort-entry event only.
+    /// Keys use the same grammar as breakdown_property; values are at most 128 bytes.
+    #[serde(
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty",
+        alias = "propertyFilters"
+    )]
+    pub property_filters: std::collections::BTreeMap<String, String>,
+    /// Maximum cohort rows returned. Defaults to 100; clamped to 1–500.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
 }
 
 /// A time-bucketed aggregate over deduplicated events.
@@ -759,6 +867,57 @@ impl<'de> serde::Deserialize<'de> for EventStatus {
 }
 
 impl crate::runtime::QueryValue for EventStatus {
+    fn query_value(&self) -> Option<String> {
+        Some(self.as_str().to_string())
+    }
+}
+
+/// The width of a UTC retention period.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum RetentionInterval {
+    /// One UTC calendar day.
+    Day,
+    /// One UTC ISO week starting Monday at 00:00:00Z.
+    Week,
+    /// A value this SDK version does not know.
+    Unknown(String),
+}
+
+impl RetentionInterval {
+    /// The wire string.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Day => "day",
+            Self::Week => "week",
+            Self::Unknown(s) => s.as_str(),
+        }
+    }
+
+    /// Parses a wire string; unknown values are kept.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "day" => Self::Day,
+            "week" => Self::Week,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
+impl serde::Serialize for RetentionInterval {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RetentionInterval {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = <String as serde::Deserialize>::deserialize(d)?;
+        Ok(Self::from_wire(&s))
+    }
+}
+
+impl crate::runtime::QueryValue for RetentionInterval {
     fn query_value(&self) -> Option<String> {
         Some(self.as_str().to_string())
     }
