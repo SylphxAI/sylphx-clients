@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgConnectOptions, PgConnection};
 use url::Url;
 
-use crate::{postgres, runtime_roles, Apply, Report, Result, SourceTree};
+use crate::{postgres, runtime_roles, Apply, Report, Result, RuntimeRoles, SourceTree};
 
 #[derive(Serialize)]
 pub struct ReleaseTarget {
@@ -120,7 +120,16 @@ pub struct ReleasePlan {
 
 impl SourceTree {
     pub fn seal(&self, target: &ReleaseTarget, report: &Report<'_>) -> Result<String> {
-        let bytes = if self.runtime_roles.is_empty() {
+        self.seal_with_runtime_roles(target, report, &self.runtime_roles)
+    }
+
+    fn seal_with_runtime_roles(
+        &self,
+        target: &ReleaseTarget,
+        report: &Report<'_>,
+        roles: &RuntimeRoles,
+    ) -> Result<String> {
+        let bytes = if roles.is_empty() {
             serde_json::to_vec(&(
                 "sylphx-release-migrate-v1",
                 target,
@@ -135,7 +144,7 @@ impl SourceTree {
                 &self.baseline_sha,
                 &report.applied,
                 &report.pending,
-                self.runtime_roles.as_slice(),
+                roles.as_slice(),
             ))
         }
         .map_err(|_| "cannot encode migration plan")?;
@@ -148,11 +157,22 @@ impl SourceTree {
         conn: &mut PgConnection,
         target: &ReleaseTarget,
     ) -> Result<ReleasePlan> {
+        self.release_plan_with_runtime_roles(conn, target, &self.runtime_roles)
+            .await
+    }
+
+    /// Plan against an authoritative role list without rebuilding the SQL source tree.
+    pub async fn release_plan_with_runtime_roles(
+        &self,
+        conn: &mut PgConnection,
+        target: &ReleaseTarget,
+        roles: &RuntimeRoles,
+    ) -> Result<ReleasePlan> {
         if self.files.is_empty() {
             return Err("native migration source is empty".into());
         }
         target.check_session(conn).await?;
-        runtime_roles::verify(conn, &self.runtime_roles).await?;
+        runtime_roles::verify(conn, roles).await?;
         let report = self.inspect(conn).await?;
         // Pending SQL must pass the runner's lint before a release can roll.
         let pending = report
@@ -170,7 +190,7 @@ impl SourceTree {
             })
             .collect::<Result<_>>()?;
         Ok(ReleasePlan {
-            seal: self.seal(target, &report)?,
+            seal: self.seal_with_runtime_roles(target, &report, roles)?,
             pending,
         })
     }

@@ -6,7 +6,7 @@ use sqlx::{PgConnection, Postgres, Transaction};
 use crate::Result;
 
 /// Canonical runtime role list shared by the grant fence and the release seal.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct RuntimeRoles(Vec<String>);
 
 impl RuntimeRoles {
