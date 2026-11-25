@@ -1862,6 +1862,15 @@ pub struct InboundAttachment {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
     pub sha256: String,
+    /// Stable per-attachment identifier within the inbound email.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "attachmentId"
+    )]
+    pub attachment_id: String,
 }
 
 /// An Inbound Email is one mail a mailbox holds, received or sent, kept as
@@ -2026,6 +2035,16 @@ pub struct InboundEmail {
     /// Field behavior: `output_only`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<InboundAttachment>,
+    /// Stable RFC 5322 / JMAP thread correlation identifier derived from
+    /// References, In-Reply-To, Message-ID, or provider metadata.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "providerThreadId"
+    )]
+    pub provider_thread_id: String,
 }
 
 /// The unified SMS and voice inbox, ordered by its resumable sequence.
@@ -3545,6 +3564,45 @@ pub struct MailboxConnectLink {
     pub error_code: String,
 }
 
+/// JMAP endpoint and capability metadata for a hosted mailbox.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct MailboxJmap {
+    /// Whether tenant JMAP gateway access is active for this mailbox.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "crate::runtime::is_default")]
+    pub enabled: bool,
+    /// Public JMAP session discovery URL (RFC 8620), empty when unavailable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "sessionUrl"
+    )]
+    pub session_url: String,
+    /// Public JMAP API URL, empty when unavailable.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(
+        default,
+        skip_serializing_if = "crate::runtime::is_default",
+        alias = "apiUrl"
+    )]
+    pub api_url: String,
+    /// JMAP capability URNs advertised for this mailbox.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<String>,
+    /// Authentication schemes accepted at the JMAP gateway (for example `app_password`).
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "authSchemes")]
+    pub auth_schemes: Vec<String>,
+}
+
 /// A Mailbox OAuth App is the platform customer's own OAuth client at Google
 /// or Microsoft. End users consent to it, so the consent screen names the
 /// customer's app and never Sylphx, and every `OAUTH` mailbox of its provider
@@ -3904,6 +3962,11 @@ pub struct MailboxStatus {
         alias = "lastReceiveTime"
     )]
     pub last_receive_time: String,
+    /// JMAP gateway endpoint and capability metadata for hosted mailboxes.
+    ///
+    /// Field behavior: `output_only`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jmap: Option<MailboxJmap>,
 }
 
 /// The request of MarkInboxItemRead.

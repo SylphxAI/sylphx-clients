@@ -38255,6 +38255,11 @@
       "sylphx.notify.v1.InboundAttachment": {
         "description": "Metadata about an inbound attachment.",
         "properties": {
+          "attachment_id": {
+            "description": "Stable per-attachment identifier within the inbound email.",
+            "readOnly": true,
+            "type": "string"
+          },
           "content_id": {
             "description": "The Content-ID, if present.",
             "readOnly": true,
@@ -38344,6 +38349,11 @@
           },
           "parent_message_id": {
             "description": "In-Reply-To: the Message-ID this answers, without angle brackets.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_thread_id": {
+            "description": "Stable RFC 5322 / JMAP thread correlation identifier derived from\nReferences, In-Reply-To, Message-ID, or provider metadata.",
             "readOnly": true,
             "type": "string"
           },
@@ -39815,6 +39825,43 @@
         ],
         "type": "string"
       },
+      "sylphx.notify.v1.MailboxJmap": {
+        "description": "JMAP endpoint and capability metadata for a hosted mailbox.",
+        "properties": {
+          "api_url": {
+            "description": "Public JMAP API URL, empty when unavailable.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "auth_schemes": {
+            "description": "Authentication schemes accepted at the JMAP gateway (for example `app_password`).",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "capabilities": {
+            "description": "JMAP capability URNs advertised for this mailbox.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "enabled": {
+            "description": "Whether tenant JMAP gateway access is active for this mailbox.",
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "session_url": {
+            "description": "Public JMAP session discovery URL (RFC 8620), empty when unavailable.",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "sylphx.notify.v1.MailboxKind": {
         "description": "How a Mailbox receives mail.",
         "enum": [
@@ -40052,6 +40099,11 @@
             },
             "readOnly": true,
             "type": "array"
+          },
+          "jmap": {
+            "$ref": "#/components/schemas/sylphx.notify.v1.MailboxJmap",
+            "description": "JMAP gateway endpoint and capability metadata for hosted mailboxes.",
+            "readOnly": true
           },
           "last_error": {
             "description": "The last poll's error; empty after a clean poll.",

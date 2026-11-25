@@ -116276,6 +116276,25 @@
             "kind": "scalar",
             "scalar": "string"
           }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable per-attachment identifier within the inbound email.",
+          "filterable": false,
+          "name": "attachment_id",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.notify.v1.InboundAttachment",
@@ -116700,6 +116719,25 @@
           "type": {
             "kind": "message",
             "name": "sylphx.notify.v1.InboundAttachment"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Stable RFC 5322 / JMAP thread correlation identifier derived from\nReferences, In-Reply-To, Message-ID, or provider metadata.",
+          "filterable": false,
+          "name": "provider_thread_id",
+          "number": 29,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
           }
         }
       ],
@@ -120832,6 +120870,108 @@
       "package": "sylphx.notify.v1"
     },
     {
+      "doc": "JMAP endpoint and capability metadata for a hosted mailbox.",
+      "fields": [
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Whether tenant JMAP gateway access is active for this mailbox.",
+          "filterable": false,
+          "name": "enabled",
+          "number": 1,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "bool"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Public JMAP session discovery URL (RFC 8620), empty when unavailable.",
+          "filterable": false,
+          "name": "session_url",
+          "number": 2,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Public JMAP API URL, empty when unavailable.",
+          "filterable": false,
+          "name": "api_url",
+          "number": 3,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "JMAP capability URNs advertised for this mailbox.",
+          "filterable": false,
+          "name": "capabilities",
+          "number": 4,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "Authentication schemes accepted at the JMAP gateway (for example `app_password`).",
+          "filterable": false,
+          "name": "auth_schemes",
+          "number": 5,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ],
+      "name": "sylphx.notify.v1.MailboxJmap",
+      "package": "sylphx.notify.v1"
+    },
+    {
       "doc": "A Mailbox OAuth App is the platform customer's own OAuth client at Google\nor Microsoft. End users consent to it, so the consent screen names the\ncustomer's app and never Sylphx, and every `OAUTH` mailbox of its provider\nin the environment refreshes its grant against it. An environment has at\nmost one per provider.",
       "fields": [
         {
@@ -121785,6 +121925,25 @@
           "type": {
             "kind": "well_known",
             "wkt": "timestamp"
+          }
+        },
+        {
+          "behaviors": [
+            "OUTPUT_ONLY"
+          ],
+          "cli_flag": "",
+          "doc": "JMAP gateway endpoint and capability metadata for hosted mailboxes.",
+          "filterable": false,
+          "name": "jmap",
+          "number": 21,
+          "oneof": null,
+          "optional": false,
+          "repeated": false,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "message",
+            "name": "sylphx.notify.v1.MailboxJmap"
           }
         }
       ],

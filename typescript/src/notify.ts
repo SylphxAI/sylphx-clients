@@ -817,6 +817,8 @@ export interface InboundAttachment {
 	readonly contentId?: string
 	/** SHA-256 of the attachment bytes, hex. */
 	readonly sha256?: string
+	/** Stable per-attachment identifier within the inbound email. */
+	readonly attachmentId?: string
 }
 
 /**
@@ -878,6 +880,11 @@ export interface InboundEmail {
 	readonly message?: string
 	/** Attachment metadata. Bytes are available only as part of the retained raw message. */
 	readonly attachments?: InboundAttachment[]
+	/**
+	 * Stable RFC 5322 / JMAP thread correlation identifier derived from
+	 * References, In-Reply-To, Message-ID, or provider metadata.
+	 */
+	readonly providerThreadId?: string
 }
 
 /** The unified SMS and voice inbox, ordered by its resumable sequence. */
@@ -1538,6 +1545,20 @@ export interface MailboxConnectLink {
 	readonly errorCode?: string
 }
 
+/** JMAP endpoint and capability metadata for a hosted mailbox. */
+export interface MailboxJmap {
+	/** Whether tenant JMAP gateway access is active for this mailbox. */
+	readonly enabled?: boolean
+	/** Public JMAP session discovery URL (RFC 8620), empty when unavailable. */
+	readonly sessionUrl?: string
+	/** Public JMAP API URL, empty when unavailable. */
+	readonly apiUrl?: string
+	/** JMAP capability URNs advertised for this mailbox. */
+	readonly capabilities?: string[]
+	/** Authentication schemes accepted at the JMAP gateway (for example `app_password`). */
+	readonly authSchemes?: string[]
+}
+
 /**
  * A Mailbox OAuth App is the platform customer's own OAuth client at Google
  * or Microsoft. End users consent to it, so the consent screen names the
@@ -1691,6 +1712,8 @@ export interface MailboxStatus {
 	readonly usedBytes?: string
 	/** The last time the hosted mailbox received mail. */
 	readonly lastReceiveTime?: string
+	/** JMAP gateway endpoint and capability metadata for hosted mailboxes. */
+	readonly jmap?: MailboxJmap
 }
 
 /** The request of MarkInboxItemRead. */
@@ -2933,6 +2956,7 @@ runtime.registerSchemas({
 		['mimeType', 'mime_type'],
 		['sizeBytes', 'size_bytes'],
 		['contentId', 'content_id'],
+		['attachmentId', 'attachment_id'],
 	],
 	'sylphx.notify.v1.InboundEmail': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -2948,6 +2972,7 @@ runtime.registerSchemas({
 		['rawSha256', 'raw_sha256'],
 		['sizeBytes', 'size_bytes'],
 		['attachments', 'attachments', 'sylphx.notify.v1.InboundAttachment'],
+		['providerThreadId', 'provider_thread_id'],
 	],
 	'sylphx.notify.v1.InboundMessage': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
@@ -3176,6 +3201,11 @@ runtime.registerSchemas({
 		['connectedMailbox', 'connected_mailbox'],
 		['errorCode', 'error_code'],
 	],
+	'sylphx.notify.v1.MailboxJmap': [
+		['sessionUrl', 'session_url'],
+		['apiUrl', 'api_url'],
+		['authSchemes', 'auth_schemes'],
+	],
 	'sylphx.notify.v1.MailboxOauthApp': [
 		['meta', 'meta', 'sylphx.common.v1.ResourceMeta'],
 		['spec', 'spec', 'sylphx.notify.v1.MailboxOauthAppSpec'],
@@ -3222,6 +3252,7 @@ runtime.registerSchemas({
 		['outboundPaused', 'outbound_paused'],
 		['usedBytes', 'used_bytes'],
 		['lastReceiveTime', 'last_receive_time'],
+		['jmap', 'jmap', 'sylphx.notify.v1.MailboxJmap'],
 	],
 	'sylphx.notify.v1.MarkInboxItemReadRequest': [],
 	'sylphx.notify.v1.MarkInboxItemUnreadRequest': [],
