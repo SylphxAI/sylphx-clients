@@ -56,6 +56,14 @@ export interface ApiKeySpec {
 	 * the tightest one applies. Unset means no key-level limit.
 	 */
 	limits?: UsageLimits
+	/**
+	 * Exact resource names, never patterns or aliases. Only project and
+	 * environment secret keys accept restrictions at creation. A numbered
+	 * SecretVersion must be in the key's project (and its environment, for an
+	 * environment key); a Connection must be in its organization. An empty
+	 * list adds no resource restriction. Rotation preserves this list.
+	 */
+	resources?: string[]
 }
 
 /** ApiKeyStatus is the observed state of an ApiKey. */

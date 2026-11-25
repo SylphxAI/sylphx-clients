@@ -1378,6 +1378,14 @@
                     },
                     "type": "object"
                   },
+                  "resources": {
+                    "description": "Exact resource names, never patterns or aliases. Only project and\nenvironment secret keys accept restrictions at creation. A numbered\nSecretVersion must be in the key's project (and its environment, for an\nenvironment key); a Connection must be in its organization. An empty\nlist adds no resource restriction. Rotation preserves this list.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-immutable": true
+                  },
                   "scopes": {
                     "description": "Scopes `<service>:<action>`, a subset of the creator's effective scopes.",
                     "items": {
@@ -1525,6 +1533,14 @@
                       }
                     },
                     "type": "object"
+                  },
+                  "resources": {
+                    "description": "Exact resource names, never patterns or aliases. Only project and\nenvironment secret keys accept restrictions at creation. A numbered\nSecretVersion must be in the key's project (and its environment, for an\nenvironment key); a Connection must be in its organization. An empty\nlist adds no resource restriction. Rotation preserves this list.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "x-sylphx-immutable": true
                   },
                   "scopes": {
                     "description": "Scopes `<service>:<action>`, a subset of the creator's effective scopes.",

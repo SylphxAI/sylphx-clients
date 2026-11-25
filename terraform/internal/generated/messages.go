@@ -21,6 +21,7 @@ func accessApiKeySpec() []def.Field {
 		{Name: "label", Kind: def.String, Doc: "A free-form label, for example the talent id a key was minted for."},
 		{Name: "expire_time", Kind: def.Timestamp, Flags: def.Immutable, Doc: "When the key stops verifying; required in unclaimed projects."},
 		{Name: "limits", Kind: def.Message, Msg: accessUsageLimits, Doc: "Usage limits on this key, on top of its project's and the plan tier's; the tightest one applies. Unset means no key-level limit."},
+		{Name: "resources", Kind: def.String, Flags: def.Immutable, Repeated: true, Doc: "Exact resource names, never patterns or aliases. Only project and environment secret keys accept restrictions at creation. A numbered SecretVersion must be in the key's project (and its environment, for an environment key); a Connection must be in its organization. An empty list adds no resource restriction. Rotation preserves this list."},
 	}
 }
 

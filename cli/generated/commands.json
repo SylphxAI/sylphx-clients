@@ -977,6 +977,13 @@
                   "flag": "--spec.limits.ai-tokens-per-minute",
                   "summary": "Sylphx AI tokens per minute, input and output together.",
                   "type": "int"
+                },
+                {
+                  "field": "api_key.spec.resources",
+                  "flag": "--spec.resources",
+                  "repeated": true,
+                  "summary": "Exact resource names, never patterns or aliases. Only project and environment secret keys accept restrictions at creation. A numbered SecretVersion must be in the key's project (and its environment, for an environment key); a Connection must be in its organization. An empty list adds no resource restriction. Rotation preserves this list.",
+                  "type": "string"
                 }
               ],
               "http": "POST /v1/{parent=orgs/*/projects/*/envs/*}/api_keys",

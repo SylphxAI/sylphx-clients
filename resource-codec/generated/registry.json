@@ -6345,6 +6345,26 @@
             "kind": "message",
             "name": "sylphx.access.v1.UsageLimits"
           }
+        },
+        {
+          "behaviors": [
+            "OPTIONAL",
+            "IMMUTABLE"
+          ],
+          "cli_flag": "",
+          "doc": "Exact resource names, never patterns or aliases. Only project and\nenvironment secret keys accept restrictions at creation. A numbered\nSecretVersion must be in the key's project (and its environment, for an\nenvironment key); a Connection must be in its organization. An empty\nlist adds no resource restriction. Rotation preserves this list.",
+          "filterable": false,
+          "name": "resources",
+          "number": 6,
+          "oneof": null,
+          "optional": false,
+          "repeated": true,
+          "resource_reference": null,
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
         }
       ],
       "name": "sylphx.access.v1.ApiKeySpec",

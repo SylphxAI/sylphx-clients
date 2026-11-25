@@ -90,6 +90,15 @@ pub struct ApiKeySpec {
     /// the tightest one applies. Unset means no key-level limit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limits: Option<UsageLimits>,
+    /// Exact resource names, never patterns or aliases. Only project and
+    /// environment secret keys accept restrictions at creation. A numbered
+    /// SecretVersion must be in the key's project (and its environment, for an
+    /// environment key); a Connection must be in its organization. An empty
+    /// list adds no resource restriction. Rotation preserves this list.
+    ///
+    /// Field behavior: `immutable`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resources: Vec<String>,
 }
 
 /// ApiKeyStatus is the observed state of an ApiKey.
